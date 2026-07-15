@@ -27,6 +27,7 @@ import type { DataModel } from '../../_generated/dataModel'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 import { initialBinaryContentVersion } from './contentVersion'
+import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { findCanonicalResource } from './findCanonicalResource'
 
 export type NoteResourceValidation =
@@ -71,35 +72,43 @@ export async function createNoteContent(
   campaignId: CampaignId,
   resourceId: ResourceId,
   operationId: OperationId,
-  now: number,
-): Promise<void> {
+  update: ArrayBuffer,
+  version: VersionStamp,
+): Promise<'completed' | 'operation_id_reused'> {
+  const existing = await findNoteContent(ctx.db, resourceId)
+  if (existing) {
+    if (
+      existing.campaignUuid === campaignId &&
+      existing.creationOperationUuid === operationId &&
+      existing.version.digest === version.digest
+    ) {
+      return 'completed'
+    }
+    return 'operation_id_reused'
+  }
   await ctx.db.insert('resourceNoteContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,
-    state: 'initializing',
-    initializationOperationUuid: operationId,
+    creationOperationUuid: operationId,
+    update,
+    version,
   })
-  await ctx.db.insert('resourceNoteInitializationIntents', {
-    campaignUuid: campaignId,
-    resourceUuid: resourceId,
-    operationUuid: operationId,
-    status: 'pending',
-    attempts: 0,
-    lastAttemptAt: null,
-    lastError: null,
-    createdAt: now,
-  })
+  return 'completed'
+}
+
+export async function prepareNoteContentCreation(
+  update: ArrayBuffer,
+): Promise<VersionStamp | null> {
+  try {
+    decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
+    return await initialBinaryContentVersion(update)
+  } catch {
+    return null
+  }
 }
 
 export async function loadNoteContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {
-  const [content, intents] = await Promise.all([
-    findNoteContent(ctx.db, resourceId),
-    ctx.db
-      .query('resourceNoteInitializationIntents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-      .take(2),
-  ])
-  return { content, intents }
+  return await findNoteContent(ctx.db, resourceId)
 }
 
 type AllocatedNoteBlock = Readonly<{ sourceId: NoteBlockId; block: NoteBlock }>
@@ -113,7 +122,6 @@ export async function prepareNoteContentCopy(
 ): Promise<ContentCopyPreparation> {
   const content = await findNoteContent(ctx.db, sourceResourceId)
   if (!content || content.campaignUuid !== campaignId) return { status: 'integrity_error' }
-  if (content.state !== 'ready') return { status: 'unavailable' }
 
   let blocks: Array<NoteBlock>
   try {
@@ -175,8 +183,7 @@ export async function prepareNoteContentCopy(
           await ctx.db.insert('resourceNoteContents', {
             campaignUuid: campaignId,
             resourceUuid: destinationResourceId,
-            state: 'ready',
-            initializationOperationUuid: operationId,
+            creationOperationUuid: operationId,
             update,
             version,
           })

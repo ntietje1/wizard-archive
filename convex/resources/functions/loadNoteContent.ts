@@ -9,14 +9,9 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
 
   const content = await findNoteContent(ctx.db, resourceId)
   if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
-  return content.state === 'initializing'
-    ? {
-        status: 'initializing' as const,
-        operationId: content.initializationOperationUuid,
-      }
-    : {
-        status: 'ready' as const,
-        update: content.update,
-        version: content.version,
-      }
+  return {
+    status: 'ready' as const,
+    update: content.update,
+    version: content.version,
+  }
 }

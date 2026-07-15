@@ -18,9 +18,13 @@ import type {
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
-import { createLiveResourceContentSource } from './live-resource-content-source'
+import {
+  createLiveResourceContentSource,
+  finalizeLiveContentCreate,
+} from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
 import {
+  deliverExpectedCreateResult,
   readLiveStructureResult,
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
@@ -101,27 +105,33 @@ export function createLiveFileContentSource(
           pending.set(envelope.command.resourceId, current)
         }
         const version = await initialFileContentVersion(source.bytes, metadata)
-        const result = readLiveStructureResult(
-          await backend.create({
-            campaignId,
-            operationId: envelope.operationId,
-            command: toLiveStructureMutationCommand(
-              normalizeResourceStructureCommand(envelope.command),
-            ),
-            uploadSessionId: current.sessionId,
-            metadata,
-            version,
-          }),
+        const delivery = deliverExpectedCreateResult(
+          readLiveStructureResult(
+            await backend.create({
+              campaignId,
+              operationId: envelope.operationId,
+              command: toLiveStructureMutationCommand(
+                normalizeResourceStructureCommand(envelope.command),
+              ),
+              uploadSessionId: current.sessionId,
+              metadata,
+              version,
+            }),
+          ),
+          envelope.operationId,
+          envelope.command.resourceId,
         )
         pending.delete(envelope.command.resourceId)
-        if (result.status !== 'completed') {
-          recording.abandon()
+        if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
           await backend.discard(current.sessionId)
-          return { status: 'received', result }
         }
-        await backend.refresh(envelope.command.resourceId, envelope.command.parentId)
-        recording.completed(result.receipt)
-        return { status: 'received', result }
+        return await finalizeLiveContentCreate(
+          delivery,
+          envelope.command.resourceId,
+          envelope.command.parentId,
+          backend,
+          recording,
+        )
       } catch {
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
       }

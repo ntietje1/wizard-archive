@@ -2,31 +2,50 @@ import * as Y from 'yjs'
 import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
 import { encodeWizardMapDocument } from '@wizard-archive/editor/resources/map-native-document'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
-import type { FunctionReturnType } from 'convex/server'
+import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CanvasSessionSource,
   CanvasSessionState,
   ContentExportResult,
+  CreateCanvasResourceCommand,
+  CreateMapResourceCommand,
   FileContentSource,
   FileContentState,
   MapSessionSource,
   MapSessionState,
 } from '@wizard-archive/editor/resources/content-session-contract'
+import type {
+  CommandDelivery,
+  CommandEnvelope,
+  ResourceStructureCommandResult,
+} from '@wizard-archive/editor/resources/command-contract'
+import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
+import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
 import { createResourceWatchStore } from './resource-watch-store'
+import {
+  deliverExpectedCreateResult,
+  readLiveStructureResult,
+  toLiveStructureMutationCommand,
+} from './live-resource-structure-gateway'
 
 type ResourceContentSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type ResourceContentKind = 'file' | 'map' | 'canvas'
 type ResourceContentState = FileContentState | MapSessionState | CanvasSessionState
 type LiveFileContentStateSource = Pick<FileContentSource, 'dispose' | 'get' | 'subscribe'>
+type LiveMapSessionStateSource = Pick<MapSessionSource, 'dispose' | 'export' | 'get' | 'subscribe'>
+type LiveCanvasSessionStateSource = Pick<
+  CanvasSessionSource,
+  'dispose' | 'export' | 'get' | 'subscribe'
+>
 type LiveContentSourceForKind<TKind extends ResourceContentKind> = TKind extends 'file'
   ? LiveFileContentStateSource
   : TKind extends 'map'
-    ? MapSessionSource
-    : CanvasSessionSource
+    ? LiveMapSessionStateSource
+    : LiveCanvasSessionStateSource
 type ResourceContentStore = ReturnType<
   typeof createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>
 >
@@ -209,4 +228,88 @@ export function createLiveResourceContentSource<TKind extends ResourceContentKin
     subscribe: (resourceId: ResourceId, listener: () => void) =>
       source.subscribe(resourceId, listener),
   } as LiveContentSourceForKind<TKind>
+}
+
+type ContentCreateArgs = FunctionArgs<typeof api.resources.mutations.createMapResource>
+type ContentCreateResult = FunctionReturnType<typeof api.resources.mutations.createMapResource>
+type LiveContentCreateBackend = LiveResourceContentBackend &
+  Readonly<{
+    create(args: ContentCreateArgs): Promise<ContentCreateResult>
+    refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
+  }>
+
+export async function finalizeLiveContentCreate(
+  delivery: CommandDelivery<ResourceStructureCommandResult>,
+  resourceId: ResourceId,
+  parentId: ResourceId | null,
+  backend: Pick<LiveContentCreateBackend, 'refresh'>,
+  recording: ResourceHistoryRecording,
+): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+  if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
+    recording.abandon()
+    return delivery
+  }
+  await backend.refresh(resourceId, parentId)
+  recording.completed(delivery.result.receipt)
+  return delivery
+}
+
+async function createLiveContentResource(
+  campaignId: CampaignId,
+  envelope: CommandEnvelope<CreateMapResourceCommand | CreateCanvasResourceCommand>,
+  backend: LiveContentCreateBackend,
+  beginCreate: () => ResourceHistoryRecording,
+): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+  if (envelope.campaignId !== campaignId) {
+    return { status: 'received', result: { status: 'rejected', reason: 'invalid_command' } }
+  }
+  const recording = beginCreate()
+  try {
+    const delivery = deliverExpectedCreateResult(
+      readLiveStructureResult(
+        await backend.create({
+          campaignId,
+          operationId: envelope.operationId,
+          command: toLiveStructureMutationCommand(
+            normalizeResourceStructureCommand(envelope.command),
+          ),
+        }),
+      ),
+      envelope.operationId,
+      envelope.command.resourceId,
+    )
+    return await finalizeLiveContentCreate(
+      delivery,
+      envelope.command.resourceId,
+      envelope.command.parentId,
+      backend,
+      recording,
+    )
+  } catch {
+    return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
+  }
+}
+
+export function createLiveMapSessionSource(
+  campaignId: CampaignId,
+  backend: LiveContentCreateBackend,
+  beginCreate: () => ResourceHistoryRecording,
+): MapSessionSource {
+  const content = createLiveResourceContentSource('map', backend)
+  return {
+    ...content,
+    create: (envelope) => createLiveContentResource(campaignId, envelope, backend, beginCreate),
+  }
+}
+
+export function createLiveCanvasSessionSource(
+  campaignId: CampaignId,
+  backend: LiveContentCreateBackend,
+  beginCreate: () => ResourceHistoryRecording,
+): CanvasSessionSource {
+  const content = createLiveResourceContentSource('canvas', backend)
+  return {
+    ...content,
+    create: (envelope) => createLiveContentResource(campaignId, envelope, backend, beginCreate),
+  }
 }

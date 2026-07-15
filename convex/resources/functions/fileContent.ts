@@ -8,20 +8,9 @@ import {
   assertVersionStamp,
   initialVersion,
 } from '@wizard-archive/editor/resources/component-version'
-import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
-import { FILE_VIEWER_UNAVAILABLE_REASON } from '@wizard-archive/editor/resources/file-content-contract'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { prepareAssetCopies } from './assetContent'
 import { loadPendingAssetState } from './assetContentState'
-
-const EMPTY_FILE_CONTENT = {
-  classification: 'inert_file',
-  byteSize: 0,
-  detectedFormat: null,
-  extension: null,
-  mediaType: 'application/octet-stream',
-  viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
-} as const
 
 export async function loadFileContentState(ctx: CampaignQueryCtx, resourceId: ResourceId) {
   const content = await ctx.db
@@ -35,21 +24,6 @@ export async function loadFileContentState(ctx: CampaignQueryCtx, resourceId: Re
   const pending = await loadPendingAssetState(ctx, resourceId, content.state)
   if (pending) return pending
   return { status: 'ready' as const, content }
-}
-
-export async function createFileContent(
-  ctx: CampaignMutationCtx,
-  campaignId: CampaignId,
-  resourceId: ResourceId,
-): Promise<void> {
-  await ctx.db.insert('resourceFileContents', {
-    campaignUuid: campaignId,
-    resourceUuid: resourceId,
-    state: 'ready',
-    assetUuid: null,
-    ...EMPTY_FILE_CONTENT,
-    version: await initialFileContentVersion(new Uint8Array(), EMPTY_FILE_CONTENT),
-  })
 }
 
 export async function loadFileContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {

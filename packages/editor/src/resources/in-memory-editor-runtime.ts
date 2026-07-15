@@ -8,7 +8,9 @@ import type {
   CanvasSessionSource,
   CanvasSessionState,
   ContentExportResult,
+  CreateCanvasResourceCommand,
   CreateFileResourceCommand,
+  CreateMapResourceCommand,
   CreateNoteResourceCommand,
   FileContentSource,
   FileContentState,
@@ -34,7 +36,6 @@ import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtim
 import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
-import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
 import { classifyFileResourceSource } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
 import {
@@ -259,38 +260,115 @@ class InMemoryFileContentSource
   }
 }
 
+type InMemoryNativeSessionState = CanvasSessionState | MapSessionState
+
+abstract class InMemoryOwnedSessionSource<
+  TState extends InMemoryNativeSessionState,
+> extends ResourceSessionStore<TState> {
+  constructor(
+    initialState: TState,
+    private readonly campaignId: CampaignId,
+    private readonly executeStructure: ResourceStructureCommandGateway['execute'],
+  ) {
+    super(initialState)
+  }
+
+  protected async createContent(
+    envelope: CommandEnvelope<CreateCanvasResourceCommand | CreateMapResourceCommand>,
+    initialize: () => Promise<void>,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+    return await createOwnedContentResource(
+      envelope,
+      this.campaignId,
+      this.executeStructure,
+      initialize,
+    )
+  }
+
+  protected exportNative(
+    resourceId: ResourceId,
+    encode: (state: Extract<TState, { status: 'ready' }>) => Uint8Array,
+    extension: string,
+    mediaType: string,
+  ): ContentExportResult {
+    const state = this.get(resourceId)
+    if (state.status !== 'ready') return exportPendingState(state)
+    return nativeContentExport(
+      encode(state as Extract<TState, { status: 'ready' }>),
+      extension,
+      mediaType,
+    )
+  }
+}
+
 class InMemoryMapSessionSource
-  extends ResourceSessionStore<MapSessionState>
+  extends InMemoryOwnedSessionSource<MapSessionState>
   implements MapSessionSource
 {
+  async create(
+    envelope: CommandEnvelope<CreateMapResourceCommand>,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+    return await this.createContent(envelope, async () => {
+      const content: MapResourceContent = { imageAssetId: null, layers: [], pins: [] }
+      this.set(envelope.command.resourceId, {
+        status: 'ready',
+        session: localContentSession(
+          { content },
+          initialVersion(await sha256Digest(new TextEncoder().encode(JSON.stringify(content)))),
+        ),
+      })
+    })
+  }
+
   export(resourceId: ResourceId): ContentExportResult {
-    const state = this.get(resourceId)
-    return state.status === 'ready'
-      ? {
-          status: 'ready',
-          bytes: encodeWizardMapDocument(state.session.content),
-          extension: 'wizardmap',
-          mediaType: 'application/vnd.wizard-archive.map+json',
-        }
-      : exportPendingState(state)
+    return this.exportNative(
+      resourceId,
+      (state) => encodeWizardMapDocument(state.session.content),
+      'wizardmap',
+      'application/vnd.wizard-archive.map+json',
+    )
   }
 }
 
 class InMemoryCanvasSessionSource
-  extends ResourceSessionStore<CanvasSessionState>
+  extends InMemoryOwnedSessionSource<CanvasSessionState>
   implements CanvasSessionSource
 {
-  export(resourceId: ResourceId): ContentExportResult {
-    const state = this.get(resourceId)
-    return state.status === 'ready'
-      ? {
-          status: 'ready',
-          bytes: encodeWizardCanvasDocument(state.session.document),
-          extension: 'wizardcanvas',
-          mediaType: 'application/vnd.wizard-archive.canvas',
-        }
-      : exportPendingState(state)
+  async create(
+    envelope: CommandEnvelope<CreateCanvasResourceCommand>,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+    return await this.createContent(envelope, async () => {
+      const document = new Y.Doc()
+      this.set(envelope.command.resourceId, {
+        status: 'ready',
+        session: localContentSession(
+          { document },
+          initialVersion(await sha256Digest(Y.encodeStateAsUpdate(document))),
+        ),
+      })
+    })
   }
+
+  export(resourceId: ResourceId): ContentExportResult {
+    return this.exportNative(
+      resourceId,
+      (state) => encodeWizardCanvasDocument(state.session.document),
+      'wizardcanvas',
+      'application/vnd.wizard-archive.canvas',
+    )
+  }
+}
+
+function nativeContentExport(
+  bytes: Uint8Array,
+  extension: string,
+  mediaType: string,
+): ContentExportResult {
+  return { status: 'ready', bytes, extension, mediaType }
+}
+
+function localContentSession<T extends object>(content: T, version: VersionStamp) {
+  return { ...content, version, awareness: { status: 'unavailable' as const } }
 }
 
 function exportPendingState(
@@ -307,6 +385,31 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
     status: 'received',
     result: { status: 'rejected', reason: 'invalid_command' },
   }
+}
+
+function isCompletedCreate(
+  delivery: CommandDelivery<ResourceStructureCommandResult>,
+  resourceId: ResourceId,
+): boolean {
+  return (
+    delivery.status === 'received' &&
+    delivery.result.status === 'completed' &&
+    delivery.result.receipt.result.type === 'created' &&
+    delivery.result.receipt.result.resourceId === resourceId
+  )
+}
+
+async function createOwnedContentResource(
+  envelope: CommandEnvelope<CreateCanvasResourceCommand | CreateMapResourceCommand>,
+  campaignId: CampaignId,
+  executeStructure: ResourceStructureCommandGateway['execute'],
+  initialize: () => Promise<void>,
+): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+  if (envelope.campaignId !== campaignId) return invalidCreateDelivery()
+  const delivery = await executeStructure(envelope)
+  if (!isCompletedCreate(delivery, envelope.command.resourceId)) return delivery
+  await initialize()
+  return delivery
 }
 
 export function createInMemoryEditorRuntime({
@@ -335,7 +438,9 @@ export function createInMemoryEditorRuntime({
   const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const maps = new InMemoryMapSessionSource({ status: 'loading' })
+  const maps = new InMemoryMapSessionSource({ status: 'loading' }, scope.campaignId, (envelope) =>
+    executeStructure(envelope),
+  )
   for (const entry of content.maps ?? []) {
     maps.set(entry.resourceId, {
       status: 'ready',
@@ -346,7 +451,11 @@ export function createInMemoryEditorRuntime({
       },
     })
   }
-  const canvases = new InMemoryCanvasSessionSource({ status: 'loading' })
+  const canvases = new InMemoryCanvasSessionSource(
+    { status: 'loading' },
+    scope.campaignId,
+    (envelope) => executeStructure(envelope),
+  )
   for (const entry of content.canvases ?? []) {
     canvases.set(entry.resourceId, {
       status: 'ready',
@@ -364,7 +473,7 @@ export function createInMemoryEditorRuntime({
     contentCopy: createInMemoryContentCopyPlanner(kinds, { notes, files, maps, canvases }),
     ...(now ? { now } : {}),
   })
-  const contentAwareStructure: ResourceStructureCommandGateway = {
+  const structureWithKindIndex: ResourceStructureCommandGateway = {
     execute: async (envelope) => {
       const createWasKnown =
         envelope.command.type === 'create' && kinds.has(envelope.command.resourceId)
@@ -376,19 +485,13 @@ export function createInMemoryEditorRuntime({
         !createWasKnown
       ) {
         kinds.set(envelope.command.resourceId, envelope.command.kind)
-        await initializeCreatedContent(envelope.command, envelope.operationId, {
-          notes,
-          files,
-          maps,
-          canvases,
-        })
       }
       return delivery
     },
   }
   const undo = createResourceUndoHistory(
     scope.campaignId,
-    contentAwareStructure,
+    structureWithKindIndex,
     resources.compensation,
   )
   executeStructure = (envelope) => undo.structure.execute(envelope)
@@ -396,8 +499,14 @@ export function createInMemoryEditorRuntime({
     status: 'unavailable',
     reason: 'capability_not_supported',
   } as const
+  const workspaceStructure: ResourceStructureCommandGateway = {
+    execute: (envelope) =>
+      envelope.command.type === 'create' && envelope.command.kind !== 'folder'
+        ? Promise.resolve(invalidCreateDelivery())
+        : undo.structure.execute(envelope),
+  }
   const structure = canEdit
-    ? ({ status: 'available', value: undo.structure } as const)
+    ? ({ status: 'available', value: workspaceStructure } as const)
     : ({ status: 'unavailable', reason: 'unauthorized' } as const)
   const contentSources = { notes, files, maps, canvases }
   let preferencesSnapshot: WorkspacePreferencesSnapshot = {
@@ -444,74 +553,5 @@ export function createInMemoryEditorRuntime({
       for (const source of Object.values(contentSources)) source.dispose()
       resources.dispose()
     },
-  }
-}
-
-async function initializeCreatedContent(
-  command: Extract<
-    Parameters<ResourceStructureCommandGateway['execute']>[0]['command'],
-    { type: 'create' }
-  >,
-  operationId: OperationId,
-  stores: Readonly<{
-    notes: InMemoryNoteSessionSource
-    files: InMemoryFileContentSource
-    maps: InMemoryMapSessionSource
-    canvases: InMemoryCanvasSessionSource
-  }>,
-) {
-  switch (command.kind) {
-    case 'folder':
-      return
-    case 'note':
-      stores.notes.set(command.resourceId, {
-        status: 'initializing',
-        operationId,
-        local: new Y.Doc(),
-      })
-      return
-    case 'file': {
-      const content: FileResourceContent = {
-        assetId: null,
-        classification: FILE_CLASSIFICATION.inert,
-        byteSize: 0,
-        detectedFormat: null,
-        extension: null,
-        mediaType: 'application/octet-stream',
-        viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
-      }
-      stores.files.setReady(
-        command.resourceId,
-        content,
-        await initialFileContentVersion(new Uint8Array(), content),
-        new Uint8Array(),
-      )
-      return
-    }
-    case 'map': {
-      const content: MapResourceContent = { imageAssetId: null, layers: [], pins: [] }
-      stores.maps.set(command.resourceId, {
-        status: 'ready',
-        session: {
-          content,
-          version: initialVersion(
-            await sha256Digest(new TextEncoder().encode(JSON.stringify(content))),
-          ),
-          awareness: { status: 'unavailable' },
-        },
-      })
-      return
-    }
-    case 'canvas': {
-      const content = new Y.Doc()
-      stores.canvases.set(command.resourceId, {
-        status: 'ready',
-        session: {
-          document: content,
-          version: initialVersion(await sha256Digest(Y.encodeStateAsUpdate(content))),
-          awareness: { status: 'unavailable' },
-        },
-      })
-    }
   }
 }

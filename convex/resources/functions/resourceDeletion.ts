@@ -17,7 +17,6 @@ type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
-  noteIntents: Array<Doc<'resourceNoteInitializationIntents'>>
   fileContents: Array<Doc<'resourceFileContents'>>
   mapContents: Array<Doc<'resourceMapContents'>>
   mapPins: Array<Doc<'resourceMapPins'>>
@@ -33,7 +32,6 @@ function createPlan(): ResourceDeletionPlan {
     aliases: [],
     assetsFolders: [],
     noteContents: [],
-    noteIntents: [],
     fileContents: [],
     mapContents: [],
     mapPins: [],
@@ -54,7 +52,6 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
-    plan.noteIntents,
     plan.fileContents,
     plan.mapContents,
     plan.mapPins,
@@ -74,9 +71,8 @@ async function addContent(
     case 'folder':
       return
     case 'note': {
-      const deletion = await loadNoteContentDeletion(ctx, resourceId)
-      if (deletion.content) plan.noteContents.push(deletion.content)
-      plan.noteIntents.push(...deletion.intents)
+      const content = await loadNoteContentDeletion(ctx, resourceId)
+      if (content) plan.noteContents.push(content)
       return
     }
     case 'file': {
@@ -215,7 +211,6 @@ export async function deleteCampaignResources(
     assetsFolders,
     operations,
     noteContents,
-    noteIntents,
     fileContents,
     mapContents,
     mapPins,
@@ -256,10 +251,6 @@ export async function deleteCampaignResources(
       .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
     ctx.db
-      .query('resourceNoteInitializationIntents')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
       .query('resourceFileContents')
       .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
@@ -294,7 +285,6 @@ export async function deleteCampaignResources(
     ...assetsFolders.map((row) => ctx.db.delete(row._id)),
     ...operations.map((row) => ctx.db.delete(row._id)),
     ...noteContents.map((row) => ctx.db.delete(row._id)),
-    ...noteIntents.map((row) => ctx.db.delete(row._id)),
     ...fileContents.map((row) => ctx.db.delete(row._id)),
     ...mapContents.map((row) => ctx.db.delete(row._id)),
     ...mapPins.map((row) => ctx.db.delete(row._id)),

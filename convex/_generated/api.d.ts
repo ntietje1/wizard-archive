@@ -52,7 +52,6 @@ import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
 import type * as resources_functions_ConvexResourceCatalog from "../resources/functions/ConvexResourceCatalog.js";
 import type * as resources_functions_assetContent from "../resources/functions/assetContent.js";
-import type * as resources_functions_bindNoteContent from "../resources/functions/bindNoteContent.js";
 import type * as resources_functions_canvasContent from "../resources/functions/canvasContent.js";
 import type * as resources_functions_contentCopyTypes from "../resources/functions/contentCopyTypes.js";
 import type * as resources_functions_contentVersion from "../resources/functions/contentVersion.js";
@@ -164,7 +163,6 @@ declare const fullApi: ApiFromModules<{
   httpBridge: typeof httpBridge;
   "resources/functions/ConvexResourceCatalog": typeof resources_functions_ConvexResourceCatalog;
   "resources/functions/assetContent": typeof resources_functions_assetContent;
-  "resources/functions/bindNoteContent": typeof resources_functions_bindNoteContent;
   "resources/functions/canvasContent": typeof resources_functions_canvasContent;
   "resources/functions/contentCopyTypes": typeof resources_functions_contentCopyTypes;
   "resources/functions/contentVersion": typeof resources_functions_contentVersion;

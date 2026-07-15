@@ -3,7 +3,8 @@ import { noteDocumentToMarkdown } from '@wizard-archive/editor/notes/document-ma
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type {
   CampaignId,
   OperationId,
@@ -21,19 +22,25 @@ import type {
   CommandDelivery,
   CommandEnvelope,
   ResourceStructureCommandResult,
-  ResourceStructureCommandGateway,
 } from '@wizard-archive/editor/resources/command-contract'
+import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
 import { createResourceWatchStore } from './resource-watch-store'
+import {
+  deliverExpectedCreateResult,
+  readLiveStructureResult,
+  toLiveStructureMutationCommand,
+} from './live-resource-structure-gateway'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
-type BindNoteContentArgs = FunctionArgs<typeof api.resources.mutations.bindNoteContent>
-type BindNoteContentResult = FunctionReturnType<typeof api.resources.mutations.bindNoteContent>
+type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
+type CreateNoteResult = FunctionReturnType<typeof api.resources.mutations.createNoteResource>
 type SaveNoteContentArgs = FunctionArgs<typeof api.resources.mutations.saveNoteContent>
 type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.saveNoteContent>
 
 type LiveNoteContentBackend = Readonly<{
   watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
-  bind(args: BindNoteContentArgs): Promise<BindNoteContentResult>
+  create(args: CreateNoteArgs): Promise<CreateNoteResult>
+  refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
   save(args: SaveNoteContentArgs): Promise<SaveNoteContentResult>
 }>
 
@@ -204,14 +211,6 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
   }
 }
 
-function bindingIssue(reason: Extract<BindNoteContentResult, { status: 'rejected' }>['reason']) {
-  return reason === 'content_missing' || reason === 'resource_missing'
-    ? ('content_missing' as const)
-    : reason === 'already_initialized' || reason === 'operation_mismatch'
-      ? ('version_mismatch' as const)
-      : ('content_corrupt' as const)
-}
-
 function failedNoteState(result: RejectedNoteSave): NoteSessionState {
   switch (result.reason) {
     case 'scope_unavailable':
@@ -228,14 +227,13 @@ function failedNoteState(result: RejectedNoteSave): NoteSessionState {
 
 class LiveNoteSessionSource implements NoteSessionSource {
   readonly #store: NoteStore
-  readonly #localCreates = new Map<ResourceId, LocalCreate>()
-  readonly #pendingCreates = new Map<ResourceId, LocalCreate>()
+  readonly #creates = new Map<ResourceId, LocalCreate>()
   readonly #sessions = new Map<ResourceId, LiveNoteSession>()
 
   constructor(
     private readonly campaignId: CampaignId,
-    private readonly structure: ResourceStructureCommandGateway,
     private readonly backend: LiveNoteContentBackend,
+    private readonly beginCreate: () => ResourceHistoryRecording,
   ) {
     this.#store = createResourceWatchStore<NoteSnapshot, NoteSessionState>(
       backend.watch,
@@ -274,91 +272,65 @@ class LiveNoteSessionSource implements NoteSessionSource {
     local: Y.Doc,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
     if (envelope.campaignId !== this.campaignId) return invalidCreateDelivery()
-    const existing =
-      this.#localCreates.get(envelope.command.resourceId) ??
-      this.#pendingCreates.get(envelope.command.resourceId)
+    const existing = this.#creates.get(envelope.command.resourceId)
     if (existing && (existing.operationId !== envelope.operationId || existing.doc !== local)) {
       return invalidCreateDelivery()
     }
 
-    this.#pendingCreates.set(envelope.command.resourceId, {
+    this.#creates.set(envelope.command.resourceId, {
       operationId: envelope.operationId,
       doc: local,
     })
-
-    const delivery = await this.structure.execute(envelope)
-    if (delivery.status === 'indeterminate') return delivery
-    if (delivery.status === 'not_committed' || delivery.result.status !== 'completed') {
-      this.#removeLocal(envelope.command.resourceId)
-      return delivery
-    }
-    if (
-      delivery.result.receipt.operationId !== envelope.operationId ||
-      delivery.result.receipt.result.type !== 'created' ||
-      delivery.result.receipt.result.resourceId !== envelope.command.resourceId
-    ) {
-      this.#removeLocal(envelope.command.resourceId)
-      return { status: 'not_committed', retryable: false, reason: 'invalid_response' }
-    }
-
-    let binding: BindNoteContentResult
-    try {
-      binding = await this.backend.bind({
-        campaignId: this.campaignId,
-        operationId: envelope.operationId,
-        resourceId: envelope.command.resourceId,
-        update: toArrayBuffer(Y.encodeStateAsUpdate(local)),
-      })
-    } catch {
-      return delivery
-    }
-    if (binding.status === 'rejected') {
-      this.#localCreates.delete(envelope.command.resourceId)
-      this.#clearSession(envelope.command.resourceId)
-      this.#setState(envelope.command.resourceId, {
-        status: 'integrity_error',
-        issue: bindingIssue(binding.reason),
-      })
-      return delivery
-    }
-
-    const version = assertVersionStamp(binding.version)
-    this.#localCreates.delete(envelope.command.resourceId)
-    this.#setReady(envelope.command.resourceId, local, version)
-    return delivery
-  }
-
-  optimisticApplied(envelope: CommandEnvelope<CreateNoteResourceCommand>): void {
-    const pending = this.#pendingCreates.get(envelope.command.resourceId)
-    if (!pending || pending.operationId !== envelope.operationId) return
-    this.#pendingCreates.delete(envelope.command.resourceId)
-    this.#localCreates.set(envelope.command.resourceId, pending)
     this.#setState(envelope.command.resourceId, {
       status: 'initializing',
       operationId: envelope.operationId,
-      local: pending.doc,
+      local,
     })
+    const recording = this.beginCreate()
+    try {
+      const delivery = deliverExpectedCreateResult(
+        readLiveStructureResult(
+          await this.backend.create({
+            campaignId: this.campaignId,
+            operationId: envelope.operationId,
+            command: toLiveStructureMutationCommand(
+              normalizeResourceStructureCommand(envelope.command),
+            ),
+            update: toArrayBuffer(Y.encodeStateAsUpdate(local)),
+          }),
+        ),
+        envelope.operationId,
+        envelope.command.resourceId,
+      )
+      if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
+        recording.abandon()
+        this.#removeLocal(envelope.command.resourceId)
+        return delivery
+      }
+      await this.backend.refresh(envelope.command.resourceId, envelope.command.parentId)
+      recording.completed(delivery.result.receipt)
+      this.#creates.delete(envelope.command.resourceId)
+      this.#setReady(
+        envelope.command.resourceId,
+        local,
+        await initialNoteContentVersion(Y.encodeStateAsUpdate(local)),
+      )
+      return delivery
+    } catch {
+      return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
+    }
   }
 
   dispose(): void {
     this.#store.dispose()
     for (const session of this.#sessions.values()) session.dispose()
+    for (const create of this.#creates.values()) create.doc.destroy()
     this.#sessions.clear()
+    this.#creates.clear()
   }
 
   #apply(resourceId: ResourceId, snapshot: NoteSnapshot): void {
     switch (snapshot.status) {
-      case 'initializing': {
-        const operationId = assertDomainId(DOMAIN_ID_KIND.operation, snapshot.operationId)
-        const local = this.#localCreates.get(resourceId)
-        this.#setState(
-          resourceId,
-          local?.operationId === operationId
-            ? { status: 'initializing', operationId, local: local.doc }
-            : { status: 'loading' },
-        )
-        return
-      }
       case 'unavailable':
       case 'integrity_error':
         this.#clearSession(resourceId)
@@ -388,8 +360,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
   }
 
   #removeLocal(resourceId: ResourceId): void {
-    this.#pendingCreates.delete(resourceId)
-    this.#localCreates.delete(resourceId)
+    this.#creates.delete(resourceId)
     this.#clearSession(resourceId)
     this.#setState(resourceId, { status: 'loading' })
   }
@@ -427,19 +398,8 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
 export function createLiveNoteContentSource(
   campaignId: CampaignId,
-  structure: ResourceStructureCommandGateway,
   backend: LiveNoteContentBackend,
+  beginCreate: () => ResourceHistoryRecording,
 ) {
-  const source = new LiveNoteSessionSource(campaignId, structure, backend)
-  return {
-    create: (envelope: CommandEnvelope<CreateNoteResourceCommand>, local: Y.Doc) =>
-      source.create(envelope, local),
-    dispose: () => source.dispose(),
-    export: (resourceId: ResourceId) => source.export(resourceId),
-    get: (resourceId: ResourceId) => source.get(resourceId),
-    optimisticApplied: (envelope: CommandEnvelope<CreateNoteResourceCommand>) =>
-      source.optimisticApplied(envelope),
-    subscribe: (resourceId: ResourceId, listener: () => void) =>
-      source.subscribe(resourceId, listener),
-  }
+  return new LiveNoteSessionSource(campaignId, backend, beginCreate)
 }

@@ -2,6 +2,7 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceNavigation,
   EditorRuntime,
@@ -14,7 +15,10 @@ import {
 } from './live-resource-structure-gateway'
 import { createResourceUndoHistory } from '@wizard-archive/editor/resources/undo-history'
 import { createLiveNoteContentSource } from './live-note-content-source'
-import { createLiveResourceContentSource } from './live-resource-content-source'
+import {
+  createLiveCanvasSessionSource,
+  createLiveMapSessionSource,
+} from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
 import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
@@ -62,38 +66,34 @@ function createScopedLiveResourceRuntime(
   const compensation = createLiveResourceCompensationGateway(currentScope.campaignId, (args) =>
     convex.mutation(api.resources.mutations.compensateResourceOperation, args),
   )
-  let notes: ReturnType<typeof createLiveNoteContentSource> | null = null
-  const optimistic = createOptimisticResourceStructureRuntime(
-    base.index,
-    authoritativeStructure,
-    Date.now,
-    {
-      applied: (envelope) => {
-        if (envelope.command.type === 'create' && envelope.command.kind === 'note') {
-          notes?.optimisticApplied({
-            ...envelope,
-            command: { ...envelope.command, kind: 'note' },
-          })
-        }
-      },
-    },
-  )
+  const optimistic = createOptimisticResourceStructureRuntime(base.index, authoritativeStructure)
   const undo = createResourceUndoHistory(
     currentScope.campaignId,
     optimistic.structure,
     compensation,
   )
-  notes = createLiveNoteContentSource(currentScope.campaignId, undo.structure, {
-    bind: (args) => convex.mutation(api.resources.mutations.bindNoteContent, args),
-    save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
-    watch: (resourceId, apply) => {
-      const watch = convex.watchQuery(api.resources.queries.loadNoteContent, {
-        campaignId: currentScope.campaignId,
-        resourceId,
-      })
-      return subscribeToWatch(watch, apply)
+  const refresh = async (resourceId: ResourceId, parentId: ResourceId | null) => {
+    await Promise.all([
+      base.loader.ensureResource(resourceId),
+      base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
+    ])
+  }
+  const notes = createLiveNoteContentSource(
+    currentScope.campaignId,
+    {
+      create: (args) => convex.mutation(api.resources.mutations.createNoteResource, args),
+      refresh,
+      save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
+      watch: (resourceId, apply) => {
+        const watch = convex.watchQuery(api.resources.queries.loadNoteContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        })
+        return subscribeToWatch(watch, apply)
+      },
     },
-  })
+    undo.begin,
+  )
   const contentBackend = (kind: 'file' | 'map' | 'canvas'): LiveResourceContentBackend => ({
     watch: (resourceId, apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadContent, {
@@ -117,12 +117,7 @@ function createScopedLiveResourceRuntime(
       discard: async (sessionId) => {
         await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
       },
-      refresh: async (resourceId, parentId) => {
-        await Promise.all([
-          base.loader.ensureResource(resourceId),
-          base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
-        ])
-      },
+      refresh,
       upload: async (source) => {
         const { sessionId, uploadUrl } = await convex.mutation(
           api.storage.mutations.createUploadSession,
@@ -145,8 +140,24 @@ function createScopedLiveResourceRuntime(
     },
     undo.begin,
   )
-  const maps = createLiveResourceContentSource('map', contentBackend('map'))
-  const canvases = createLiveResourceContentSource('canvas', contentBackend('canvas'))
+  const maps = createLiveMapSessionSource(
+    currentScope.campaignId,
+    {
+      ...contentBackend('map'),
+      create: (args) => convex.mutation(api.resources.mutations.createMapResource, args),
+      refresh,
+    },
+    undo.begin,
+  )
+  const canvases = createLiveCanvasSessionSource(
+    currentScope.campaignId,
+    {
+      ...contentBackend('canvas'),
+      create: (args) => convex.mutation(api.resources.mutations.createCanvasResource, args),
+      refresh,
+    },
+    undo.begin,
+  )
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
   const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, base.applyProjection, {
     execute: (args) => convex.mutation(api.resources.mutations.executeBookmarkCommand, args),

@@ -9,11 +9,6 @@ import { initialVersion, sha256Digest } from '@wizard-archive/editor/resources/c
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { advanceNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import type {
-  CommandEnvelope,
-  ResourceStructureCommand,
-  ResourceStructureCommandGateway,
-} from '@wizard-archive/editor/resources/command-contract'
 import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
   NOTE_YJS_FRAGMENT,
@@ -22,8 +17,7 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import { createLiveNoteContentSource } from '../live-note-content-source'
 
-type LiveNoteContentSource = ReturnType<typeof createLiveNoteContentSource>
-type LiveNoteContentBackend = Parameters<typeof createLiveNoteContentSource>[2]
+type LiveNoteContentBackend = Parameters<typeof createLiveNoteContentSource>[1]
 
 const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
 
@@ -45,30 +39,18 @@ function createEnvelope(resourceId: ResourceId, operationId: OperationId) {
 
 function completed(resourceId: ResourceId, operationId: OperationId) {
   return {
-    status: 'received' as const,
-    result: {
-      status: 'completed' as const,
-      receipt: {
-        campaignId,
-        operationId,
-        result: { type: 'created' as const, resourceId },
-        postconditions: [],
-      },
+    status: 'completed' as const,
+    receipt: {
+      campaignId,
+      operationId,
+      result: { type: 'created' as const, resourceId },
+      postconditions: [],
     },
   }
 }
 
-function applyOptimisticNote(
-  source: LiveNoteContentSource,
-  envelope: CommandEnvelope<ResourceStructureCommand>,
-) {
-  if (envelope.command.type !== 'create' || envelope.command.kind !== 'note') {
-    throw new Error('Expected note create')
-  }
-  source.optimisticApplied({
-    ...envelope,
-    command: { ...envelope.command, kind: 'note' },
-  })
+function historyRecording() {
+  return { abandon: vi.fn(), completed: vi.fn() }
 }
 
 async function versionFor(update: ArrayBuffer) {
@@ -93,8 +75,18 @@ function backend() {
     versions.set(id, version)
     return { status: 'completed', resourceId: id, update: canonicalUpdate, version }
   }
+  const create: LiveNoteContentBackend['create'] = ({ operationId, command }) => {
+    if (command.type !== 'create') throw new Error('Expected create command')
+    return Promise.resolve(
+      completed(
+        assertDomainId(DOMAIN_ID_KIND.resource, command.resourceId),
+        assertDomainId(DOMAIN_ID_KIND.operation, operationId),
+      ),
+    )
+  }
   return {
-    bind: vi.fn(),
+    create: vi.fn(create),
+    refresh: vi.fn(() => Promise.resolve()),
     save: vi.fn(save),
     watch: vi.fn((resourceId: ResourceId, apply: (snapshot: never) => void) => {
       listeners.set(resourceId, apply)
@@ -116,38 +108,19 @@ function backend() {
 }
 
 describe('LiveNoteContentSource', () => {
-  it('keeps one local document across indeterminate create retry and authoritative bind', async () => {
+  it('keeps one local document across an indeterminate atomic create retry', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    const delivery = completed(resourceId, operationId)
-    let source: LiveNoteContentSource
     let attempt = 0
-    const structure = {
-      execute: vi.fn(
-        (
-          envelope: CommandEnvelope<ResourceStructureCommand>,
-        ): ReturnType<ResourceStructureCommandGateway['execute']> => {
-          applyOptimisticNote(source, envelope)
-          attempt += 1
-          return Promise.resolve(
-            attempt === 1
-              ? {
-                  status: 'indeterminate' as const,
-                  retryable: true as const,
-                  reason: 'response_lost' as const,
-                }
-              : delivery,
-          )
-        },
-      ),
-    } satisfies ResourceStructureCommandGateway
     const provider = backend()
-    provider.bind.mockImplementation(async ({ update }) => ({
-      status: 'completed',
-      resourceId,
-      version: await versionFor(update),
-    }))
-    source = createLiveNoteContentSource(campaignId, structure, provider)
+    provider.create.mockImplementation(() => {
+      attempt += 1
+      return attempt === 1
+        ? Promise.reject(new Error('response lost'))
+        : Promise.resolve(completed(resourceId, operationId))
+    })
+    const recording = historyRecording()
+    const source = createLiveNoteContentSource(campaignId, provider, () => recording)
     const local = noteBlocksToYDoc(
       [
         {
@@ -172,7 +145,7 @@ describe('LiveNoteContentSource', () => {
       }),
     )
     const rebound = new Y.Doc()
-    Y.applyUpdate(rebound, new Uint8Array(provider.bind.mock.calls[0]![0].update))
+    Y.applyUpdate(rebound, new Uint8Array(provider.create.mock.calls[1]![0].update))
     expect(
       decodeNoteYjsUpdatesToBlocks(
         [{ update: Y.encodeStateAsUpdate(rebound) }],
@@ -191,26 +164,14 @@ describe('LiveNoteContentSource', () => {
     const retainedId = generateDomainId(DOMAIN_ID_KIND.resource)
     const rejectedOperation = generateDomainId(DOMAIN_ID_KIND.operation)
     const retainedOperation = generateDomainId(DOMAIN_ID_KIND.operation)
-    let source: LiveNoteContentSource
-    const structure = {
-      execute: vi.fn((envelope: CommandEnvelope<ResourceStructureCommand>) => {
-        applyOptimisticNote(source, envelope)
-        return Promise.resolve(
-          envelope.operationId === rejectedOperation
-            ? {
-                status: 'received' as const,
-                result: { status: 'rejected' as const, reason: 'invalid_parent' as const },
-              }
-            : {
-                status: 'indeterminate' as const,
-                retryable: true as const,
-                reason: 'connection_lost' as const,
-              },
-        )
-      }),
-    } satisfies ResourceStructureCommandGateway
     const provider = backend()
-    source = createLiveNoteContentSource(campaignId, structure, provider)
+    provider.create.mockImplementation(({ operationId }) => {
+      if (operationId === rejectedOperation) {
+        return Promise.resolve({ status: 'rejected' as const, reason: 'invalid_parent' as const })
+      }
+      return Promise.reject(new Error('connection lost'))
+    })
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
 
     await source.create(createEnvelope(retainedId, retainedOperation), new Y.Doc())
     await source.create(createEnvelope(rejectedId, rejectedOperation), new Y.Doc())
@@ -221,33 +182,19 @@ describe('LiveNoteContentSource', () => {
     )
   })
 
-  it('shows remote initialization as loading and preserves the bound local identity', async () => {
+  it('preserves the local identity when its authoritative snapshot arrives', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    let source: LiveNoteContentSource
-    const structure = {
-      execute: vi.fn((envelope: CommandEnvelope<ResourceStructureCommand>) => {
-        applyOptimisticNote(source, envelope)
-        return Promise.resolve(completed(resourceId, operationId))
-      }),
-    } satisfies ResourceStructureCommandGateway
     const provider = backend()
-    provider.bind.mockImplementation(async ({ update }) => ({
-      status: 'completed',
-      resourceId,
-      version: await versionFor(update),
-    }))
-    source = createLiveNoteContentSource(campaignId, structure, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
 
-    expect(source.get(resourceId)).toEqual({ status: 'loading' })
-    provider.emit(resourceId, { status: 'initializing', operationId })
     expect(source.get(resourceId)).toEqual({ status: 'loading' })
 
     const local = new Y.Doc()
     await source.create(createEnvelope(resourceId, operationId), local)
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
-    const update = provider.bind.mock.calls[0]![0].update
+    const update = provider.create.mock.calls[0]![0].update
     provider.emit(resourceId, { status: 'ready', update, version: ready.session.version })
     expect(source.get(resourceId)).toEqual(ready)
   })
@@ -255,11 +202,11 @@ describe('LiveNoteContentSource', () => {
   it('preserves a loaded document for repeated snapshots of the same version', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const update = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(update)
 
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update, version })
     const first = source.get(resourceId)
     provider.emit(resourceId, { status: 'ready', update, version })
@@ -270,11 +217,11 @@ describe('LiveNoteContentSource', () => {
   it('flushes document-fragment edits through the canonical save backend', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
 
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
@@ -316,10 +263,10 @@ describe('LiveNoteContentSource', () => {
       }
       return await persist(args)
     })
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
@@ -352,10 +299,10 @@ describe('LiveNoteContentSource', () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
     provider.save.mockResolvedValue({ status: 'rejected', reason: 'content_corrupt' })
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
@@ -380,10 +327,10 @@ describe('LiveNoteContentSource', () => {
       const provider = backend()
       const persist = provider.save.getMockImplementation()!
       provider.save.mockRejectedValueOnce(new Error('offline')).mockImplementation(persist)
-      const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+      const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
       const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
       const version = await versionFor(initial)
-      source.get(resourceId)
+      source.subscribe(resourceId, () => {})
       provider.emit(resourceId, { status: 'ready', update: initial, version })
       const ready = source.get(resourceId)
       if (ready.status !== 'ready') throw new Error('Expected ready note')
@@ -406,7 +353,7 @@ describe('LiveNoteContentSource', () => {
   it('merges rapid updates into one incremental save for a large document', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const blocks = Array.from({ length: 200 }, (_, index) => ({
       id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
       type: 'paragraph' as const,
@@ -415,7 +362,7 @@ describe('LiveNoteContentSource', () => {
     const initialDocument = noteBlocksToYDoc(blocks, NOTE_YJS_FRAGMENT)
     const initial = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
     const version = await versionFor(initial)
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
@@ -448,10 +395,10 @@ describe('LiveNoteContentSource', () => {
       })
       return result
     })
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
@@ -490,11 +437,11 @@ describe('LiveNoteContentSource', () => {
       })
       return await persist(args)
     })
-    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
 
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')

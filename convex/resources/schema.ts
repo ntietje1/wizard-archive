@@ -325,27 +325,6 @@ export const resourceCompensationResultValidator = v.union(
   }),
 )
 
-export const bindNoteContentResultValidator = v.union(
-  v.object({
-    status: v.literal('completed'),
-    resourceId: resourceIdValidator,
-    version: versionStampValidator,
-  }),
-  v.object({
-    status: v.literal('rejected'),
-    reason: literals(
-      'invalid_uuid',
-      'resource_missing',
-      'ownership_mismatch',
-      'wrong_kind',
-      'operation_mismatch',
-      'content_missing',
-      'content_corrupt',
-      'already_initialized',
-    ),
-  }),
-)
-
 export const saveNoteContentResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
@@ -538,37 +517,15 @@ export const resourceTables = {
       filterFields: ['campaignUuid'],
     }),
 
-  resourceNoteContents: defineTable(
-    v.union(
-      v.object({
-        campaignUuid: campaignIdValidator,
-        resourceUuid: resourceIdValidator,
-        state: v.literal('initializing'),
-        initializationOperationUuid: operationIdValidator,
-      }),
-      v.object({
-        campaignUuid: campaignIdValidator,
-        resourceUuid: resourceIdValidator,
-        state: v.literal('ready'),
-        initializationOperationUuid: operationIdValidator,
-        update: v.bytes(),
-        version: versionStampValidator,
-      }),
-    ),
-  )
-    .index('by_campaignUuid', ['campaignUuid'])
-    .index('by_resourceUuid', ['resourceUuid']),
-
-  resourceNoteInitializationIntents: defineTable({
+  resourceNoteContents: defineTable({
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,
-    operationUuid: operationIdValidator,
-    status: literals('pending', 'failed'),
-    ...externalEffectAttemptFields,
+    creationOperationUuid: operationIdValidator,
+    update: v.bytes(),
+    version: versionStampValidator,
   })
     .index('by_campaignUuid', ['campaignUuid'])
-    .index('by_resourceUuid', ['resourceUuid'])
-    .index('by_status_and_createdAt', ['status', 'createdAt']),
+    .index('by_resourceUuid', ['resourceUuid']),
 
   resourceFileContents: defineTable({
     campaignUuid: campaignIdValidator,

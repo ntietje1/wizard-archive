@@ -38,7 +38,7 @@ export async function saveNoteContent(
   if (validation.status === 'rejected') return validation
   const resourceId = validation.resourceId
   const content = await findNoteContent(ctx.db, resourceId)
-  if (!content || content.state !== 'ready') {
+  if (!content) {
     return { status: 'rejected', reason: 'content_missing' }
   }
 

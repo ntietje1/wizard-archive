@@ -18,8 +18,6 @@ const diagnosticRequestValidator = v.union(
     type: v.literal('dangling_domain_asset'),
     source: literals('owner', 'file', 'map'),
   }),
-  v.object({ type: v.literal('stale_initialization_intent'), staleBefore: v.number() }),
-  v.object({ type: v.literal('failed_provider_binding') }),
   v.object({ type: v.literal('failed_byte_copy'), staleBefore: v.number() }),
   v.object({ type: v.literal('failed_retirement'), staleBefore: v.number() }),
 )
@@ -29,8 +27,6 @@ const integrityIssueValidator = v.object({
     'resource_without_content',
     'content_without_resource',
     'dangling_domain_asset',
-    'stale_initialization_intent',
-    'failed_provider_binding',
     'failed_byte_copy',
     'failed_retirement',
   ),
@@ -45,8 +41,6 @@ type IntegrityIssue = {
     | 'resource_without_content'
     | 'content_without_resource'
     | 'dangling_domain_asset'
-    | 'stale_initialization_intent'
-    | 'failed_provider_binding'
     | 'failed_byte_copy'
     | 'failed_retirement'
   recordId: string
@@ -317,52 +311,6 @@ async function diagnoseDanglingAsset(
   }
 }
 
-async function diagnoseStaleInitialization(
-  ctx: QueryCtx,
-  pagination: DiagnosticPagination,
-  staleBefore: number,
-) {
-  const page = await ctx.db
-    .query('resourceNoteInitializationIntents')
-    .order('asc')
-    .paginate(pagination)
-  return result(
-    page,
-    collectIssues(page.page, (intent) =>
-      intent.status === 'pending' && intent.createdAt <= staleBefore
-        ? {
-            type: 'stale_initialization_intent',
-            recordId: intent._id,
-            resourceUuid: intent.resourceUuid,
-            assetUuid: null,
-            repair: 'report_only',
-          }
-        : null,
-    ),
-  )
-}
-
-async function diagnoseFailedBinding(ctx: QueryCtx, pagination: DiagnosticPagination) {
-  const page = await ctx.db
-    .query('resourceNoteInitializationIntents')
-    .order('asc')
-    .paginate(pagination)
-  return result(
-    page,
-    collectIssues(page.page, (intent) =>
-      intent.status === 'failed'
-        ? {
-            type: 'failed_provider_binding',
-            recordId: intent._id,
-            resourceUuid: intent.resourceUuid,
-            assetUuid: null,
-            repair: 'report_only',
-          }
-        : null,
-    ),
-  )
-}
-
 async function diagnoseFailedCopy(
   ctx: QueryCtx,
   pagination: DiagnosticPagination,
@@ -422,10 +370,6 @@ async function runDiagnostic(
       return await diagnoseContentWithoutResource(ctx, pagination, diagnostic.kind)
     case 'dangling_domain_asset':
       return await diagnoseDanglingAsset(ctx, pagination, diagnostic.source)
-    case 'stale_initialization_intent':
-      return await diagnoseStaleInitialization(ctx, pagination, diagnostic.staleBefore)
-    case 'failed_provider_binding':
-      return await diagnoseFailedBinding(ctx, pagination)
     case 'failed_byte_copy':
       return await diagnoseFailedCopy(ctx, pagination, diagnostic.staleBefore)
     case 'failed_retirement':

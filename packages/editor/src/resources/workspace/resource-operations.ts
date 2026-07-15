@@ -40,26 +40,28 @@ export async function createWorkspaceResource(
     icon: null,
     color: null,
   }
-  const deliver =
-    kind === 'note'
-      ? (() => {
-          const document = new Y.Doc()
-          return () =>
-            runtime.content.notes.create(
-              {
-                campaignId: runtime.scope.campaignId,
-                operationId,
-                command: { ...command, kind: 'note' },
-              },
-              document,
-            )
-        })()
-      : () =>
-          structure.value.execute({
-            campaignId: runtime.scope.campaignId,
-            operationId,
-            command,
-          })
+  const envelope = { campaignId: runtime.scope.campaignId, operationId, command }
+  const deliver = () => {
+    switch (kind) {
+      case 'folder':
+        return structure.value.execute(envelope)
+      case 'note':
+        return runtime.content.notes.create(
+          { ...envelope, command: { ...command, kind: 'note' } },
+          new Y.Doc(),
+        )
+      case 'map':
+        return runtime.content.maps.create({
+          ...envelope,
+          command: { ...command, kind: 'map' },
+        })
+      case 'canvas':
+        return runtime.content.canvases.create({
+          ...envelope,
+          command: { ...command, kind: 'canvas' },
+        })
+    }
+  }
   await completeWorkspaceCreation(
     runtime,
     resourceId,

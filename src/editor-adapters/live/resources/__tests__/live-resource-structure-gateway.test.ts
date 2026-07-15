@@ -12,7 +12,7 @@ const resourceId = testDomainId('resource', 'live-gateway')
 const command = {
   type: 'create' as const,
   resourceId,
-  kind: 'note' as const,
+  kind: 'folder' as const,
   parentId: null,
   title: canonicalizeResourceTitle('Session Notes'),
   icon: null,

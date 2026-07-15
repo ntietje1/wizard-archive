@@ -27,6 +27,14 @@ export async function createMapContent(
   campaignId: CampaignId,
   resourceId: ResourceId,
 ): Promise<void> {
+  const existing = await ctx.db
+    .query('resourceMapContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+  if (existing) {
+    if (existing.campaignUuid === campaignId) return
+    throw new TypeError('Map content already exists')
+  }
   await ctx.db.insert('resourceMapContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,

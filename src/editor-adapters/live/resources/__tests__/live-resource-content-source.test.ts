@@ -2,8 +2,12 @@ import * as Y from 'yjs'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { testDomainId } from '../../../../../shared/test/domain-id'
-import { createLiveResourceContentSource } from '../live-resource-content-source'
+import {
+  createLiveMapSessionSource,
+  createLiveResourceContentSource,
+} from '../live-resource-content-source'
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 
@@ -85,6 +89,56 @@ describe('LiveResourceContentSource', () => {
     })
 
     unsubscribe()
+    source.dispose()
+  })
+
+  it('rejects a completed kind-owned create with the wrong receipt identity', async () => {
+    const campaignId = testDomainId('campaign', 'map-create-campaign')
+    const resourceId = testDomainId('resource', 'map-create-resource')
+    const operationId = testDomainId('operation', 'map-create-operation')
+    const recording = { abandon: vi.fn(), completed: vi.fn() }
+    const refresh = vi.fn()
+    const source = createLiveMapSessionSource(
+      campaignId,
+      {
+        watch: () => () => undefined,
+        create: () =>
+          Promise.resolve({
+            status: 'completed',
+            receipt: {
+              campaignId,
+              operationId: testDomainId('operation', 'unexpected-operation'),
+              result: { type: 'created', resourceId },
+              postconditions: [],
+            },
+          }),
+        refresh,
+      },
+      () => recording,
+    )
+
+    await expect(
+      source.create({
+        campaignId,
+        operationId,
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'map',
+          parentId: null,
+          title: canonicalizeResourceTitle('Map'),
+          icon: null,
+          color: null,
+        },
+      }),
+    ).resolves.toEqual({
+      status: 'not_committed',
+      retryable: false,
+      reason: 'invalid_response',
+    })
+    expect(recording.abandon).toHaveBeenCalledOnce()
+    expect(recording.completed).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
     source.dispose()
   })
 })

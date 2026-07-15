@@ -2,7 +2,11 @@ import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type {
   CommandDelivery,
   ResourceCompensationResult,
@@ -106,6 +110,19 @@ export function readLiveStructureResult(value: ExecuteResult): ResourceStructure
   return value
 }
 
+export function deliverExpectedCreateResult(
+  result: ResourceStructureCommandResult,
+  operationId: OperationId,
+  resourceId: ResourceId,
+): CommandDelivery<ResourceStructureCommandResult> {
+  if (result.status !== 'completed') return { status: 'received', result }
+  return result.receipt.operationId === operationId &&
+    result.receipt.result.type === 'created' &&
+    result.receipt.result.resourceId === resourceId
+    ? { status: 'received', result }
+    : { status: 'not_committed', retryable: false, reason: 'invalid_response' }
+}
+
 function scopeUnavailable(): CommandDelivery<ResourceStructureCommandResult> {
   return {
     status: 'received',
@@ -195,6 +212,12 @@ export function createLiveResourceStructureGateway(
     execute: async (envelope) => {
       if (envelope.campaignId !== campaignId) {
         return scopeUnavailable()
+      }
+      if (envelope.command.type === 'create' && envelope.command.kind !== 'folder') {
+        return {
+          status: 'received',
+          result: { status: 'rejected', reason: 'invalid_command' },
+        }
       }
 
       let args: ExecuteArgs

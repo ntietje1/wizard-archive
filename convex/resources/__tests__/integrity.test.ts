@@ -15,8 +15,6 @@ describe('resource integrity diagnostics', () => {
     const memberUuid = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const missingContentResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
     const orphanContentResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
-    const staleInitializationResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
-    const failedBindingResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
     const failedCopyResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
     const danglingAssetUuid = generateDomainId(DOMAIN_ID_KIND.asset)
     const sourceAssetUuid = generateDomainId(DOMAIN_ID_KIND.asset)
@@ -58,26 +56,6 @@ describe('resource integrity diagnostics', () => {
         resourceUuid: orphanContentResourceUuid,
         assetUuid: danglingAssetUuid,
       })
-      const staleInitializationId = await ctx.db.insert('resourceNoteInitializationIntents', {
-        campaignUuid,
-        resourceUuid: staleInitializationResourceUuid,
-        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
-        status: 'pending',
-        attempts: 0,
-        lastAttemptAt: null,
-        lastError: null,
-        createdAt,
-      })
-      const failedBindingId = await ctx.db.insert('resourceNoteInitializationIntents', {
-        campaignUuid,
-        resourceUuid: failedBindingResourceUuid,
-        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
-        status: 'failed',
-        attempts: 1,
-        lastAttemptAt: createdAt,
-        lastError: 'provider_binding_failed',
-        createdAt,
-      })
       const failedCopyId = await ctx.db.insert('resourceAssetCopyIntents', {
         campaignUuid,
         resourceUuid: failedCopyResourceUuid,
@@ -101,8 +79,6 @@ describe('resource integrity diagnostics', () => {
       return {
         orphanContentId,
         danglingOwnerId,
-        staleInitializationId,
-        failedBindingId,
         failedCopyId,
         failedRetirementId,
       }
@@ -144,23 +120,6 @@ describe('resource integrity diagnostics', () => {
           expect.objectContaining({
             recordId: fixture.danglingOwnerId,
             assetUuid: danglingAssetUuid,
-            repair: 'report_only',
-          }),
-        ],
-      }),
-    )
-    await expect(
-      diagnose({ type: 'stale_initialization_intent', staleBefore: 20 }),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        issues: [expect.objectContaining({ recordId: fixture.staleInitializationId })],
-      }),
-    )
-    await expect(diagnose({ type: 'failed_provider_binding' })).resolves.toEqual(
-      expect.objectContaining({
-        issues: [
-          expect.objectContaining({
-            recordId: fixture.failedBindingId,
             repair: 'report_only',
           }),
         ],

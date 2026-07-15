@@ -12,12 +12,12 @@ import { FILE_CLASSIFICATION } from '@wizard-archive/editor/resources/file-conte
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignMutation, dmMutation } from '../functions'
+import type { CampaignMutationCtx } from '../functions'
 import {
   executeStructureCommand as executeStructureCommandFn,
   compensateResourceOperation as compensateResourceOperationFn,
 } from './functions/executeStructureCommand'
 import {
-  bindNoteContentResultValidator,
   fileOwnedMetadataValidators,
   resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
@@ -27,11 +27,14 @@ import {
   saveNoteContentResultValidator,
   versionStampValidator,
 } from './schema'
-import { bindNoteContent as bindNoteContentFn } from './functions/bindNoteContent'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { commitUpload } from '../storage/functions/commitUpload'
+import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
+import { createMapContent } from './functions/mapContent'
+import { createCanvasContent } from './functions/canvasContent'
+import { syncNoteSearchProjection } from './functions/resourceSearchProjection'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -39,6 +42,41 @@ type StoredResourceCommandReceipt = Extract<
   StoredResourceStructureCommandResult,
   { status: 'completed' }
 >['receipt']
+type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValidator>
+
+function readStructureCommand(
+  value: StoredResourceStructureCommand,
+): ResourceStructureCommand | StoredResourceStructureCommandResult {
+  try {
+    return resourceStructureCommand(value)
+  } catch (error) {
+    return { status: 'rejected', reason: resourceStructureInputRejection(error) }
+  }
+}
+
+async function createFixedContentResource(
+  ctx: CampaignMutationCtx,
+  args: Readonly<{ operationId: string; command: StoredResourceStructureCommand }>,
+  kind: 'canvas' | 'map',
+  createContent: (
+    ctx: CampaignMutationCtx,
+    campaignId: CampaignMutationCtx['resourceScope']['campaignId'],
+    resourceId: Extract<ResourceStructureCommand, { type: 'create' }>['resourceId'],
+  ) => Promise<void>,
+): Promise<StoredResourceStructureCommandResult> {
+  const command = readStructureCommand(args.command)
+  if ('status' in command) return command
+  if (command.type !== 'create' || command.kind !== kind) {
+    return { status: 'rejected', reason: 'invalid_command' }
+  }
+  const result = await executeStructureCommandFn(ctx, {
+    operationId: args.operationId,
+    command,
+  })
+  if (result.status !== 'completed') return storedResult(result)
+  await createContent(ctx, ctx.resourceScope.campaignId, command.resourceId)
+  return storedResult(result)
+}
 
 function storedReceipt(receipt: ResourceCommandReceipt): StoredResourceCommandReceipt {
   return {
@@ -134,11 +172,10 @@ export const executeStructureCommand = campaignMutation({
   },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
-    let command: ResourceStructureCommand
-    try {
-      command = resourceStructureCommand(args.command)
-    } catch (error) {
-      return { status: 'rejected', reason: resourceStructureInputRejection(error) }
+    const command = readStructureCommand(args.command)
+    if ('status' in command) return command
+    if (command.type === 'create' && command.kind !== 'folder') {
+      return { status: 'rejected', reason: 'invalid_command' }
     }
     const result = await executeStructureCommandFn(ctx, {
       operationId: args.operationId,
@@ -186,19 +223,54 @@ export const executeBookmarkCommand = dmMutation({
   },
 })
 
-export const bindNoteContent = campaignMutation({
+export const createNoteResource = campaignMutation({
   args: {
-    resourceId: resourceIdValidator,
     operationId: operationIdValidator,
+    command: resourceStructureCommandValidator,
     update: v.bytes(),
   },
-  returns: bindNoteContentResultValidator,
-  handler: async (ctx, args) =>
-    await bindNoteContentFn(ctx, {
-      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
-      operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
-      update: args.update,
-    }),
+  returns: resourceStructureCommandResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
+    const command = readStructureCommand(args.command)
+    if ('status' in command) return command
+    if (command.type !== 'create' || command.kind !== 'note') {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
+    const version = await prepareNoteContentCreation(args.update)
+    if (!version) return { status: 'rejected', reason: 'content_integrity_failure' }
+    const result = await executeStructureCommandFn(ctx, {
+      operationId: args.operationId,
+      command,
+    })
+    if (result.status !== 'completed') return storedResult(result)
+    const contentResult = await createNoteContent(
+      ctx,
+      ctx.resourceScope.campaignId,
+      command.resourceId,
+      assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      args.update,
+      version,
+    )
+    if (contentResult === 'operation_id_reused') {
+      return { status: 'rejected', reason: 'operation_id_reused' }
+    }
+    await syncNoteSearchProjection(ctx, command.resourceId, args.update)
+    return storedResult(result)
+  },
+})
+
+export const createMapResource = campaignMutation({
+  args: { operationId: operationIdValidator, command: resourceStructureCommandValidator },
+  returns: resourceStructureCommandResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
+    await createFixedContentResource(ctx, args, 'map', createMapContent),
+})
+
+export const createCanvasResource = campaignMutation({
+  args: { operationId: operationIdValidator, command: resourceStructureCommandValidator },
+  returns: resourceStructureCommandResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
+    await createFixedContentResource(ctx, args, 'canvas', createCanvasContent),
 })
 
 export const saveNoteContent = campaignMutation({
@@ -224,12 +296,8 @@ export const createFileResource = campaignMutation({
   },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
-    let command: ResourceStructureCommand
-    try {
-      command = resourceStructureCommand(args.command)
-    } catch (error) {
-      return { status: 'rejected', reason: resourceStructureInputRejection(error) }
-    }
+    const command = readStructureCommand(args.command)
+    if ('status' in command) return command
     if (command.type !== 'create' || command.kind !== 'file') {
       return { status: 'rejected', reason: 'invalid_command' }
     }
@@ -243,10 +311,25 @@ export const createFileResource = campaignMutation({
       .query('resourceFileContents')
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
       .unique()
-    if (!content || content.campaignUuid !== ctx.resourceScope.campaignId) {
-      throw new TypeError('Created file content is missing')
+    if (content) {
+      if (content.campaignUuid !== ctx.resourceScope.campaignId || content.assetUuid === null) {
+        throw new TypeError('Created file content is inconsistent')
+      }
+      const version = assertVersionStamp(args.version)
+      if (
+        content.byteSize !== args.metadata.byteSize ||
+        content.classification !== args.metadata.classification ||
+        content.detectedFormat !== args.metadata.detectedFormat ||
+        content.extension !== args.metadata.extension ||
+        content.mediaType !== args.metadata.mediaType ||
+        content.version.digest !== version.digest ||
+        content.version.revision !== version.revision ||
+        content.viewerUnavailableReason !== args.metadata.viewerUnavailableReason
+      ) {
+        return { status: 'rejected', reason: 'operation_id_reused' }
+      }
+      return storedResult(result)
     }
-    if (content.assetUuid !== null) return storedResult(result)
 
     const upload = await commitUpload(ctx, { sessionId: args.uploadSessionId })
     const version = assertVersionStamp(args.version)
@@ -260,7 +343,9 @@ export const createFileResource = campaignMutation({
       throw new TypeError('Uploaded file metadata is inconsistent')
     }
     await Promise.all([
-      ctx.db.patch('resourceFileContents', content._id, {
+      ctx.db.insert('resourceFileContents', {
+        campaignUuid: ctx.resourceScope.campaignId,
+        resourceUuid: command.resourceId,
         state: 'ready',
         assetUuid: upload.assetId,
         ...args.metadata,

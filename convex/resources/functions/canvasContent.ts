@@ -27,6 +27,14 @@ export async function createCanvasContent(
   campaignId: CampaignId,
   resourceId: ResourceId,
 ): Promise<void> {
+  const existing = await ctx.db
+    .query('resourceCanvasContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+  if (existing) {
+    if (existing.campaignUuid === campaignId) return
+    throw new TypeError('Canvas content already exists')
+  }
   await ctx.db.insert('resourceCanvasContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,

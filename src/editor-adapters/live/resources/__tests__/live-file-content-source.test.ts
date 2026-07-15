@@ -39,7 +39,7 @@ describe('LiveFileContentSource', () => {
       },
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
     )
-    source.get(resourceId)
+    source.subscribe(resourceId, () => {})
     apply({
       status: 'ready',
       kind: 'file',

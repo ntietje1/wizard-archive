@@ -137,6 +137,14 @@ export type CreateFileResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
   readonly kind: 'file'
 }
 
+export type CreateMapResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
+  readonly kind: 'map'
+}
+
+export type CreateCanvasResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
+  readonly kind: 'canvas'
+}
+
 export type FileResourceSource = Readonly<{
   bytes: Uint8Array
   fileName: string
@@ -168,6 +176,9 @@ export interface MapSessionSource {
   get(resourceId: ResourceId): MapSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
+  create(
+    envelope: CommandEnvelope<CreateMapResourceCommand>,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   dispose(): void
 }
 
@@ -175,5 +186,8 @@ export interface CanvasSessionSource {
   get(resourceId: ResourceId): CanvasSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
+  create(
+    envelope: CommandEnvelope<CreateCanvasResourceCommand>,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   dispose(): void
 }

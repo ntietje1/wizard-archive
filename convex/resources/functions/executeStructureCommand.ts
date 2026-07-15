@@ -50,11 +50,7 @@ import type { ResourceTombstone } from '@wizard-archive/editor/resources/resourc
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import { createCanvasContent } from './canvasContent'
-import { createFileContent } from './fileContent'
 import { findCanonicalResource } from './findCanonicalResource'
-import { createMapContent } from './mapContent'
-import { createNoteContent } from './noteContent'
 import { applyResourceDeletion, planResourceDeletion } from './resourceDeletion'
 import { prepareResourceContentCopies } from './resourceContentCopy'
 import { resourceRecordFromRow, resourceRowFromRecord } from './resourceRecordRow'
@@ -285,39 +281,10 @@ async function loadCompensationGraph(
   return { resources, rows, tombstones: new Map() }
 }
 
-async function createContent(
-  ctx: CampaignMutationCtx,
-  resource: ResourceRecord,
-  operationId: OperationId,
-): Promise<void> {
-  switch (resource.kind) {
-    case 'folder':
-      return
-    case 'note':
-      await createNoteContent(
-        ctx,
-        resource.campaignId,
-        resource.id,
-        operationId,
-        resource.created.at,
-      )
-      return
-    case 'file':
-      await createFileContent(ctx, resource.campaignId, resource.id)
-      return
-    case 'map':
-      await createMapContent(ctx, resource.campaignId, resource.id)
-      return
-    case 'canvas':
-      await createCanvasContent(ctx, resource.campaignId, resource.id)
-  }
-}
-
 async function persistTransition(
   ctx: CampaignMutationCtx,
   loaded: LoadedGraph,
   transition: ResourceGraphTransition,
-  operationId: OperationId,
 ): Promise<void> {
   if (transition.deletedResourceIds.length > 0) {
     const rows = transition.deletedResourceIds.map((resourceId) => {
@@ -354,7 +321,6 @@ async function persistTransition(
         return
       }
       await ctx.db.insert('resources', resourceRowFromRecord(resource))
-      await createContent(ctx, resource, operationId)
       await syncResourceSearchProjection(ctx, resource)
     }),
   )
@@ -682,7 +648,7 @@ async function applyCommand(
     by: actorId,
   })
   const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
-  await persistTransition(ctx, graph, transition, operationId)
+  await persistTransition(ctx, graph, transition)
   return { result: { status: 'completed', receipt: transition.receipt }, compensation }
 }
 
@@ -795,7 +761,7 @@ export async function compensateResourceOperation(
       by: actorId,
     })
     if (!applied) return { status: 'rejected', reason: 'history_conflict' }
-    await persistTransition(ctx, graph, applied.transition, operationId)
+    await persistTransition(ctx, graph, applied.transition)
     await ctx.db.insert('resourceOperations', {
       campaignUuid: campaignId,
       actorMemberUuid: actorId,

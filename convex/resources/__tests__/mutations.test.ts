@@ -234,7 +234,7 @@ describe('resource structure commands', () => {
     })
   })
 
-  it('creates a canonical resource and stores an actor-bound replay receipt', async () => {
+  it('rejects kind-owned creation through the generic structure mutation', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -253,75 +253,35 @@ describe('resource structure commands', () => {
       },
     }
 
-    const first = await asDm(campaign).mutation(
+    const result = await asDm(campaign).mutation(
       api.resources.mutations.executeStructureCommand,
       args,
     )
-    const replay = await asDm(campaign).mutation(
-      api.resources.mutations.executeStructureCommand,
-      args,
-    )
-
-    expect(first.status).toBe('completed')
-    expect(replay).toEqual(first)
+    expect(result).toEqual({ status: 'rejected', reason: 'invalid_command' })
     await t.run(async (ctx) => {
-      const resource = await ctx.db
-        .query('resources')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-        .unique()
-      expect(resource).toEqual(
-        expect.objectContaining({
-          campaignUuid,
-          lifecycle: 'active',
-          resourceUuid: resourceId,
-          title: 'Session Notes',
-        }),
-      )
-      const operations = await ctx.db
-        .query('resourceOperations')
-        .withIndex('by_campaign_and_operation', (query) =>
-          query.eq('campaignUuid', campaignUuid).eq('operationUuid', operationId),
-        )
-        .take(2)
-      expect(operations).toHaveLength(1)
       expect(
         await ctx.db
-          .query('resourceNoteContents')
+          .query('resources')
           .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
           .unique(),
-      ).toEqual(
-        expect.objectContaining({
-          initializationOperationUuid: operationId,
-          state: 'initializing',
-        }),
-      )
-      expect(
-        await ctx.db
-          .query('resourceNoteInitializationIntents')
-          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-          .unique(),
-      ).toEqual(expect.objectContaining({ operationUuid: operationId, status: 'pending' }))
+      ).toBeNull()
     })
   })
 
-  it('binds the creating note document idempotently and rejects replacement content', async () => {
+  it('creates a note and its content atomically and rejects operation replay with replacement content', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
-      campaignId: campaignUuid,
-      operationId,
-      command: {
-        type: 'create',
-        resourceId,
-        kind: 'note',
-        parentId: null,
-        title: 'Note',
-        icon: null,
-        color: null,
-      },
-    })
+    const command = {
+      type: 'create' as const,
+      resourceId,
+      kind: 'note' as const,
+      parentId: null,
+      title: 'Note',
+      icon: null,
+      color: null,
+    }
     const update = makeYjsUpdateWithBlocks([
       {
         id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
@@ -329,21 +289,20 @@ describe('resource structure commands', () => {
         content: [{ type: 'text', text: 'Local edit' }],
       },
     ])
-    const args = { campaignId: campaignUuid, operationId, resourceId, update }
+    const args = { campaignId: campaignUuid, operationId, command, update }
 
-    const first = await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, args)
-    const replay = await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, args)
+    const first = await asDm(campaign).mutation(api.resources.mutations.createNoteResource, args)
+    const replay = await asDm(campaign).mutation(api.resources.mutations.createNoteResource, args)
 
     expect(first).toEqual(
       expect.objectContaining({
         status: 'completed',
-        resourceId,
-        version: expect.objectContaining({ revision: 1 }),
+        receipt: expect.objectContaining({ operationId }),
       }),
     )
     expect(replay).toEqual(first)
     await expect(
-      asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
+      asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
         ...args,
         update: makeYjsUpdateWithBlocks([
           {
@@ -353,7 +312,7 @@ describe('resource structure commands', () => {
           },
         ]),
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'already_initialized' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
     await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceNoteContents')
@@ -361,16 +320,10 @@ describe('resource structure commands', () => {
         .unique()
       expect(content).toEqual(
         expect.objectContaining({
-          state: 'ready',
+          creationOperationUuid: operationId,
           version: expect.objectContaining({ revision: 1 }),
         }),
       )
-      expect(
-        await ctx.db
-          .query('resourceNoteInitializationIntents')
-          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-          .take(1),
-      ).toHaveLength(0)
     })
   })
 
@@ -379,7 +332,14 @@ describe('resource structure commands', () => {
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+    const baseUpdate = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Middle' }],
+      },
+    ])
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
       campaignId: campaignUuid,
       operationId,
       command: {
@@ -391,18 +351,6 @@ describe('resource structure commands', () => {
         icon: null,
         color: null,
       },
-    })
-    const baseUpdate = makeYjsUpdateWithBlocks([
-      {
-        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Middle' }],
-      },
-    ])
-    await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
-      campaignId: campaignUuid,
-      operationId,
-      resourceId,
       update: baseUpdate,
     })
 
@@ -469,7 +417,7 @@ describe('resource structure commands', () => {
         .unique()
       expect(file).toEqual(
         expect.objectContaining({
-          assetUuid: null,
+          assetUuid: expect.any(String),
           version: expect.objectContaining({ revision: 1 }),
         }),
       )
@@ -525,7 +473,7 @@ describe('resource structure commands', () => {
     await execute(campaign, campaignUuid, {
       type: 'create',
       resourceId,
-      kind: 'note',
+      kind: 'folder',
       parentId: null,
       title: canonicalizeResourceTitle('Original'),
       icon: null,
@@ -719,7 +667,8 @@ describe('resource structure commands', () => {
     const canvasId = await createResource(campaign, campaignUuid, 'canvas', sourceRootId, 'Canvas')
     const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
     const noteOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+    const sourceBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
       campaignId: campaignUuid,
       operationId: noteOperationId,
       command: {
@@ -731,12 +680,6 @@ describe('resource structure commands', () => {
         icon: null,
         color: null,
       },
-    })
-    const sourceBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
-    await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
-      campaignId: campaignUuid,
-      operationId: noteOperationId,
-      resourceId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
           id: sourceBlockId,
@@ -869,11 +812,10 @@ describe('resource structure commands', () => {
         .unique()
       expect(noteContent).toEqual(
         expect.objectContaining({
-          state: 'ready',
           version: expect.objectContaining({ revision: 1 }),
         }),
       )
-      if (!noteContent || noteContent.state !== 'ready') throw new Error('Expected copied note')
+      if (!noteContent) throw new Error('Expected copied note')
       const [copiedBlock] = decodeNoteYjsUpdatesToBlocks(
         [{ update: noteContent.update }],
         NOTE_YJS_FRAGMENT,
@@ -1145,6 +1087,13 @@ describe('resource structure commands', () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Note')
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', noteId))
+        .unique()
+      await ctx.db.delete(content!._id)
+    })
 
     await expect(
       execute(campaign, campaignUuid, {
@@ -1152,7 +1101,7 @@ describe('resource structure commands', () => {
         sourceRootIds: [noteId],
         destinationParentId: null,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'content_unavailable' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_integrity_failure' })
     await t.run(async (ctx) => {
       const roots = await ctx.db
         .query('resources')
@@ -1264,12 +1213,6 @@ describe('resource structure commands', () => {
           .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
           .take(1),
       ).toHaveLength(0)
-      expect(
-        await ctx.db
-          .query('resourceNoteInitializationIntents')
-          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
-          .take(1),
-      ).toHaveLength(0)
     })
   })
 
@@ -1330,7 +1273,7 @@ describe('resource structure commands', () => {
     const command = {
       type: 'create' as const,
       resourceId,
-      kind: 'note' as const,
+      kind: 'folder' as const,
       parentId: null,
       title: 'Valid',
       icon: null,
@@ -1425,7 +1368,8 @@ describe('resource structure commands', () => {
     title: string,
   ) {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
-    const result = await execute(campaign, campaignUuid, {
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const command = {
       type: 'create',
       resourceId,
       kind,
@@ -1433,9 +1377,67 @@ describe('resource structure commands', () => {
       title,
       icon: null,
       color: null,
-    })
+    } as const
+    const result =
+      kind === 'folder'
+        ? await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+            campaignId: campaignUuid,
+            operationId,
+            command,
+          })
+        : kind === 'note'
+          ? await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+              campaignId: campaignUuid,
+              operationId,
+              command,
+              update: makeYjsUpdateWithBlocks([]),
+            })
+          : kind === 'map'
+            ? await asDm(campaign).mutation(api.resources.mutations.createMapResource, {
+                campaignId: campaignUuid,
+                operationId,
+                command,
+              })
+            : kind === 'canvas'
+              ? await asDm(campaign).mutation(api.resources.mutations.createCanvasResource, {
+                  campaignId: campaignUuid,
+                  operationId,
+                  command,
+                })
+              : await createEmptyFile(campaign, campaignUuid, operationId, command)
     expect(result.status).toBe('completed')
     return resourceId
+  }
+
+  async function createEmptyFile(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaignUuid: string,
+    operationId: string,
+    command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
+  ) {
+    const bytes = new TextEncoder().encode('x')
+    const metadata = {
+      classification: 'inert_file' as const,
+      byteSize: bytes.byteLength,
+      detectedFormat: null,
+      extension: 'txt',
+      mediaType: 'text/plain',
+      viewerUnavailableReason: 'unsupported_format' as const,
+    }
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([bytes]),
+      'empty.txt',
+    )
+    return await asDm(campaign).mutation(api.resources.mutations.createFileResource, {
+      campaignId: campaignUuid,
+      operationId,
+      command,
+      uploadSessionId: upload.sessionId,
+      metadata,
+      version: await initialFileContentVersion(bytes, metadata),
+    })
   }
 
   async function execute(

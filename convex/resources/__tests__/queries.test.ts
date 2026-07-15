@@ -9,7 +9,10 @@ import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
-import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
+import {
+  storeCommittedTestUploadSession,
+  storeUncommittedTestUploadSession,
+} from '../../_test/storage.helper'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 
 type StoredResourceStructureCommand = FunctionArgs<
@@ -153,12 +156,19 @@ describe('authorized resource projection', () => {
     expect(snapshot.missingResourceIds).toEqual([foreignId])
   })
 
-  it('distinguishes initializing, ready, unauthorized, and missing note content', async () => {
+  it('distinguishes ready, unauthorized, and missing note content', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+    const update = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Ready' }],
+      },
+    ])
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
       campaignId: campaignUuid,
       operationId,
       command: {
@@ -170,6 +180,7 @@ describe('authorized resource projection', () => {
         icon: null,
         color: null,
       },
+      update,
     })
 
     await expect(
@@ -177,34 +188,13 @@ describe('authorized resource projection', () => {
         campaignId: campaignUuid,
         resourceId,
       }),
-    ).resolves.toEqual({ status: 'initializing', operationId })
+    ).resolves.toEqual({ status: 'ready', update, version: expect.any(Object) })
     await expect(
       asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
         campaignId: campaignUuid,
         resourceId,
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
-
-    const update = makeYjsUpdateWithBlocks([
-      {
-        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Ready' }],
-      },
-    ])
-    const bound = await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
-      campaignId: campaignUuid,
-      operationId,
-      resourceId,
-      update,
-    })
-    if (bound.status !== 'completed') throw new Error('Expected note content to bind')
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadNoteContent, {
-        campaignId: campaignUuid,
-        resourceId,
-      }),
-    ).resolves.toEqual({ status: 'ready', update, version: bound.version })
 
     await t.run(async (ctx) => {
       const content = await ctx.db
@@ -239,13 +229,13 @@ describe('authorized resource projection', () => {
         status: 'ready',
         kind: 'file',
         content: {
-          assetId: null,
+          assetId: expect.any(String),
           classification: 'inert_file',
-          byteSize: 0,
+          byteSize: 1,
           detectedFormat: null,
-          extension: null,
-          mediaType: 'application/octet-stream',
-          viewerUnavailableReason: 'empty_file',
+          extension: 'txt',
+          mediaType: 'text/plain',
+          viewerUnavailableReason: 'unsupported_format',
         },
       }),
     )
@@ -380,7 +370,7 @@ describe('authorized resource projection', () => {
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
       campaignId: campaignUuid,
       operationId,
       command: {
@@ -392,11 +382,6 @@ describe('authorized resource projection', () => {
         icon: null,
         color: null,
       },
-    })
-    await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
-      campaignId: campaignUuid,
-      operationId,
-      resourceId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
           id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
@@ -477,12 +462,66 @@ describe('authorized resource projection', () => {
       icon: null,
       color: null,
     }
-    const result = await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
-      campaignId: campaignUuid,
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-      command,
-    })
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const result =
+      kind === 'folder'
+        ? await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+            campaignId: campaignUuid,
+            operationId,
+            command,
+          })
+        : kind === 'note'
+          ? await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+              campaignId: campaignUuid,
+              operationId,
+              command,
+              update: makeYjsUpdateWithBlocks([]),
+            })
+          : kind === 'map'
+            ? await asDm(campaign).mutation(api.resources.mutations.createMapResource, {
+                campaignId: campaignUuid,
+                operationId,
+                command,
+              })
+            : kind === 'canvas'
+              ? await asDm(campaign).mutation(api.resources.mutations.createCanvasResource, {
+                  campaignId: campaignUuid,
+                  operationId,
+                  command,
+                })
+              : await createEmptyFile(campaign, campaignUuid, operationId, command)
     expect(result.status).toBe('completed')
     return resourceId
+  }
+
+  async function createEmptyFile(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaignUuid: string,
+    operationId: string,
+    command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
+  ) {
+    const bytes = new TextEncoder().encode('x')
+    const metadata = {
+      classification: 'inert_file' as const,
+      byteSize: bytes.byteLength,
+      detectedFormat: null,
+      extension: 'txt',
+      mediaType: 'text/plain',
+      viewerUnavailableReason: 'unsupported_format' as const,
+    }
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([bytes]),
+      'empty.txt',
+    )
+    return await asDm(campaign).mutation(api.resources.mutations.createFileResource, {
+      campaignId: campaignUuid,
+      operationId,
+      command,
+      uploadSessionId: upload.sessionId,
+      metadata,
+      version: await initialFileContentVersion(bytes, metadata),
+    })
   }
 })

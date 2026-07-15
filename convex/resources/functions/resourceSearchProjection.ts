@@ -79,5 +79,5 @@ async function loadNoteSearchBody(ctx: CampaignMutationCtx, resourceId: Resource
     .query('resourceNoteContents')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
-  return content?.state === 'ready' ? noteSearchBody(content.update) : ''
+  return content ? noteSearchBody(content.update) : ''
 }

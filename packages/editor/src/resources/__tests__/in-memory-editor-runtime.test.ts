@@ -202,7 +202,7 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
-  it('initializes domain-owned content for local structure creates', async () => {
+  it('creates map resources through the map content owner', async () => {
     const snapshot = emptySnapshot()
     const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
     const core = createInMemoryEditorRuntime({
@@ -215,11 +215,7 @@ describe('createInMemoryEditorRuntime', () => {
       snapshot,
       navigation: navigation(),
     })
-    if (core.runtime.resources.structure.status !== 'available') {
-      throw new Error('Expected structure editing to be available')
-    }
-
-    await core.runtime.resources.structure.value.execute({
+    await core.runtime.content.maps.create({
       campaignId: snapshot.campaignId,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       command: {
