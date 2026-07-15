@@ -39,7 +39,6 @@ import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_rows from "../campaigns/rows.js";
 import type * as campaigns_validation from "../campaigns/validation.js";
-import type * as common_async from "../common/async.js";
 import type * as common_logger from "../common/logger.js";
 import type * as common_pagination from "../common/pagination.js";
 import type * as common_slug from "../common/slug.js";
@@ -146,7 +145,6 @@ declare const fullApi: ApiFromModules<{
   "campaigns/queries": typeof campaigns_queries;
   "campaigns/rows": typeof campaigns_rows;
   "campaigns/validation": typeof campaigns_validation;
-  "common/async": typeof common_async;
   "common/logger": typeof common_logger;
   "common/pagination": typeof common_pagination;
   "common/slug": typeof common_slug;

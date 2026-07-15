@@ -22,7 +22,7 @@ const externalUrlEmbedTargetSchema = z.strictObject({
   name: z.string().trim().min(1).nullable(),
 })
 
-export const embedTargetSchema = z.discriminatedUnion('kind', [
+const embedTargetSchema = z.discriminatedUnion('kind', [
   emptyEmbedTargetSchema,
   resourceEmbedTargetSchema,
   externalUrlEmbedTargetSchema,
@@ -44,17 +44,6 @@ export function parseEmbedTarget(value: unknown): EmbedTarget | null {
   return {
     kind: 'resource',
     resourceId: target.resourceId as ResourceId,
-  }
-}
-
-export function deriveExternalEmbedName(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    const pathSegments = parsed.pathname.split('/').filter(Boolean)
-    const filename = decodeURIComponent(pathSegments[pathSegments.length - 1] ?? '')
-    return filename || parsed.hostname
-  } catch {
-    return null
   }
 }
 

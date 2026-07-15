@@ -19,7 +19,7 @@ export const CAMPAIGN_MEMBER_ROLE = {
   Player: 'Player',
 } as const
 
-export type CampaignMemberRole = (typeof CAMPAIGN_MEMBER_ROLE)[keyof typeof CAMPAIGN_MEMBER_ROLE]
+type CampaignMemberRole = (typeof CAMPAIGN_MEMBER_ROLE)[keyof typeof CAMPAIGN_MEMBER_ROLE]
 
 export const CAMPAIGN_MEMBER_STATUS = {
   Accepted: 'Accepted',
