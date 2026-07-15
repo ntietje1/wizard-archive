@@ -26,6 +26,11 @@ describe('minimal resource architecture', () => {
       'function migrateLegacyBlocks() {}',
     ],
     [
+      'adapter_owned_content_state',
+      'src/editor-adapters/live/resources/resource-watch-store.ts',
+      'const states = new Map<ResourceId, ContentSessionState<null, string>>()',
+    ],
+    [
       'provider_or_composite_identity',
       'packages/editor/src/resources/resource-record.ts',
       'type ProviderId = string',

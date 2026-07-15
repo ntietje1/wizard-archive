@@ -2,12 +2,7 @@ import * as Y from 'yjs'
 import { initialFileContentVersion, initialNoteContentVersion } from './resource-content-version'
 import { initialVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
-import type {
-  ContentSessionState,
-  CreateNoteResourceCommand,
-  NoteContentSource,
-  ResourceContentSource,
-} from './content-session-contract'
+import type { CreateNoteResourceCommand, NoteContentSource } from './content-session-contract'
 import type {
   CommandDelivery,
   CommandEnvelope,
@@ -27,6 +22,7 @@ import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
+import { MutableResourceContentSource } from './mutable-resource-content-source'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -51,41 +47,8 @@ export type InMemoryEditorRuntimeInput = Readonly<{
   now?: () => number
 }>
 
-type ResourceState<TLocal, TReady> = ContentSessionState<TLocal, TReady>
-
-class InMemoryContentSource<TLocal, TReady> implements ResourceContentSource<TLocal, TReady> {
-  readonly #listeners = new Map<ResourceId, Set<() => void>>()
-  readonly #states = new Map<ResourceId, ResourceState<TLocal, TReady>>()
-
-  constructor(ready: ReadonlyArray<ReadyContent<TReady>>) {
-    for (const entry of ready) {
-      this.#states.set(entry.resourceId, {
-        status: 'ready',
-        content: entry.content,
-        version: entry.version,
-      })
-    }
-  }
-
-  get(resourceId: ResourceId): ResourceState<TLocal, TReady> {
-    return this.#states.get(resourceId) ?? { status: 'loading' }
-  }
-
-  subscribe(resourceId: ResourceId, listener: () => void): () => void {
-    const listeners = this.#listeners.get(resourceId) ?? new Set()
-    listeners.add(listener)
-    this.#listeners.set(resourceId, listeners)
-    return () => listeners.delete(listener)
-  }
-
-  set(resourceId: ResourceId, state: ResourceState<TLocal, TReady>): void {
-    this.#states.set(resourceId, state)
-    for (const listener of this.#listeners.get(resourceId) ?? []) listener()
-  }
-}
-
 class InMemoryNoteContentSource
-  extends InMemoryContentSource<Y.Doc, Y.Doc>
+  extends MutableResourceContentSource<Y.Doc, Y.Doc>
   implements NoteContentSource<Y.Doc, Y.Doc>
 {
   readonly #creates = new Map<
@@ -102,7 +65,8 @@ class InMemoryNoteContentSource
     private readonly campaignId: CampaignId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
   ) {
-    super(ready)
+    super()
+    seedReadyContent(this, ready)
   }
 
   async create(
@@ -176,9 +140,18 @@ export function createInMemoryEditorRuntime({
   const notes = new InMemoryNoteContentSource(content.notes ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const files = new InMemoryContentSource<null, FileResourceContent>(content.files ?? [])
-  const maps = new InMemoryContentSource<null, MapResourceContent>(content.maps ?? [])
-  const canvases = new InMemoryContentSource<null, Y.Doc>(content.canvases ?? [])
+  const files = seedReadyContent(
+    new MutableResourceContentSource<null, FileResourceContent>(),
+    content.files ?? [],
+  )
+  const maps = seedReadyContent(
+    new MutableResourceContentSource<null, MapResourceContent>(),
+    content.maps ?? [],
+  )
+  const canvases = seedReadyContent(
+    new MutableResourceContentSource<null, Y.Doc>(),
+    content.canvases ?? [],
+  )
   const resources = createInMemoryResourceRuntime({
     scope,
     initialSnapshot: snapshot,
@@ -250,9 +223,9 @@ async function initializeCreatedContent(
   operationId: OperationId,
   stores: Readonly<{
     notes: InMemoryNoteContentSource
-    files: InMemoryContentSource<null, FileResourceContent>
-    maps: InMemoryContentSource<null, MapResourceContent>
-    canvases: InMemoryContentSource<null, Y.Doc>
+    files: MutableResourceContentSource<null, FileResourceContent>
+    maps: MutableResourceContentSource<null, MapResourceContent>
+    canvases: MutableResourceContentSource<null, Y.Doc>
   }>,
 ) {
   switch (command.kind) {
@@ -302,4 +275,18 @@ async function initializeCreatedContent(
       })
     }
   }
+}
+
+function seedReadyContent<TLocal, TReady>(
+  source: MutableResourceContentSource<TLocal, TReady>,
+  ready: ReadonlyArray<ReadyContent<TReady>>,
+): MutableResourceContentSource<TLocal, TReady> {
+  for (const entry of ready) {
+    source.set(entry.resourceId, {
+      status: 'ready',
+      content: entry.content,
+      version: entry.version,
+    })
+  }
+  return source
 }

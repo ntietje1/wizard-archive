@@ -19,7 +19,7 @@ type ResourceContentKind = 'file' | 'map' | 'canvas'
 type ResourceContent = FileResourceContent | MapResourceContent | Y.Doc
 type ResourceContentState = ContentSessionState<null, ResourceContent>
 type ResourceContentStore = ReturnType<
-  typeof createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>
+  typeof createResourceWatchStore<ResourceContentSnapshot, null, ResourceContent>
 >
 
 export type LiveResourceContentBackend = Readonly<{
@@ -40,7 +40,7 @@ class LiveResourceContentSource implements ResourceContentSource<null, ResourceC
   }
 
   get(resourceId: ResourceId): ResourceContentState {
-    return this.#store.get(resourceId) ?? { status: 'loading' }
+    return this.#store.get(resourceId)
   }
 
   subscribe(resourceId: ResourceId, listener: () => void): () => void {

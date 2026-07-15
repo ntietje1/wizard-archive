@@ -20,6 +20,11 @@ const sourceRules = [
     pattern: /migrateLegacy|stripLegacy|LegacyMedia|createLegacy/,
   },
   {
+    className: 'adapter_owned_content_state',
+    files: /src\/editor-adapters\/live\/resources\/resource-watch-store\.ts$/,
+    pattern: /\b(?:states|listeners)\s*=\s*new Map<ResourceId,/,
+  },
+  {
     className: 'provider_or_composite_identity',
     files: /resources\/(domain-id|resource-record)\.ts$/,
     pattern:

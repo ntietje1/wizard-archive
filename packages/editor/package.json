@@ -82,6 +82,10 @@
       "types": "./dist/resources/content-session-contract.d.mts",
       "default": "./dist/resources/content-session-contract.mjs"
     },
+    "./resources/mutable-content-source": {
+      "types": "./dist/resources/mutable-resource-content-source.d.mts",
+      "default": "./dist/resources/mutable-resource-content-source.mjs"
+    },
     "./resources/content-copy-contract": {
       "types": "./dist/resources/content-copy-contract.d.mts",
       "default": "./dist/resources/content-copy-contract.mjs"
@@ -181,6 +185,7 @@
       "./resources/in-memory-runtime",
       "./resources/in-memory-editor-runtime",
       "./resources/content-session-contract",
+      "./resources/mutable-content-source",
       "./resources/content-copy-contract",
       "./resources/optimism-contract",
       "./resources/optimistic-index",

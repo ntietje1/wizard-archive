@@ -32,7 +32,7 @@ type LiveNoteContentBackend = Readonly<{
 
 type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
 type NoteState = ContentSessionState<Y.Doc, Y.Doc>
-type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteState>>
+type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, Y.Doc, Y.Doc>>
 
 function toArrayBuffer(update: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(update.byteLength)
@@ -73,7 +73,7 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
   }
 
   get(resourceId: ResourceId): NoteState {
-    return this.#store.get(resourceId) ?? { status: 'loading' }
+    return this.#store.get(resourceId)
   }
 
   subscribe(resourceId: ResourceId, listener: () => void): () => void {

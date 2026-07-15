@@ -1,11 +1,12 @@
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { ContentSessionState } from '@wizard-archive/editor/resources/content-session-contract'
+import { MutableResourceContentSource } from '@wizard-archive/editor/resources/mutable-content-source'
 
-export function createResourceWatchStore<TSnapshot, TState>(
+export function createResourceWatchStore<TSnapshot, TLocal, TReady>(
   watch: (resourceId: ResourceId, apply: (snapshot: TSnapshot) => void) => () => void,
   apply: (resourceId: ResourceId, snapshot: TSnapshot) => void,
 ) {
-  const states = new Map<ResourceId, TState>()
-  const listeners = new Map<ResourceId, Set<() => void>>()
+  const source = new MutableResourceContentSource<TLocal, TReady>()
   const watches = new Map<ResourceId, () => void>()
 
   const ensure = (resourceId: ResourceId) => {
@@ -20,22 +21,18 @@ export function createResourceWatchStore<TSnapshot, TState>(
     dispose: () => {
       for (const unsubscribe of watches.values()) unsubscribe()
       watches.clear()
-      listeners.clear()
+      source.dispose()
     },
     get: (resourceId: ResourceId) => {
       ensure(resourceId)
-      return states.get(resourceId)
+      return source.get(resourceId)
     },
-    set: (resourceId: ResourceId, state: TState) => {
-      states.set(resourceId, state)
-      for (const listener of listeners.get(resourceId) ?? []) listener()
+    set: (resourceId: ResourceId, state: ContentSessionState<TLocal, TReady>) => {
+      source.set(resourceId, state)
     },
     subscribe: (resourceId: ResourceId, listener: () => void) => {
       ensure(resourceId)
-      const resourceListeners = listeners.get(resourceId) ?? new Set()
-      resourceListeners.add(listener)
-      listeners.set(resourceId, resourceListeners)
-      return () => resourceListeners.delete(listener)
+      return source.subscribe(resourceId, listener)
     },
   }
 }
