@@ -2,7 +2,6 @@ import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   AuthorizedResourceSnapshot,
   AuthorizedResourceSummary,
@@ -11,13 +10,13 @@ import type {
 } from '@wizard-archive/editor/resources/index-contract'
 import {
   resourceCollectionQueryKey,
-  resourceMatchesCollectionQuery,
   sameResourceProjectionScope,
 } from '@wizard-archive/editor/resources/index-contract'
 import {
   MutableWorkspaceResourceIndex,
   createResourceIndexLoader,
   indexRevision,
+  mergeAuthorizedResourceSnapshots,
 } from '@wizard-archive/editor/resources/workspace-index'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 
@@ -84,52 +83,6 @@ function readSnapshot(value: LoadResourceResult): AuthorizedResourceSnapshot {
   }
 }
 
-function combineSnapshots(
-  scope: ResourceProjectionScope,
-  snapshots: ReadonlyMap<
-    string,
-    Readonly<{ sequence: number; snapshot: AuthorizedResourceSnapshot }>
-  >,
-  sequence: number,
-): AuthorizedResourceSnapshot {
-  const resources = new Map<ResourceId, AuthorizedResourceSummary>()
-  const missingResourceIds = new Set<ResourceId>()
-  const collections = new Map<string, AuthorizedResourceSnapshot['collections'][number]>()
-
-  const orderedSnapshots = Array.from(snapshots.values()).sort(
-    (left, right) => left.sequence - right.sequence,
-  )
-  for (const { snapshot } of orderedSnapshots) {
-    for (const resource of snapshot.resources) {
-      resources.set(resource.id, resource)
-      missingResourceIds.delete(resource.id)
-    }
-    for (const resourceId of snapshot.missingResourceIds) {
-      resources.delete(resourceId)
-      missingResourceIds.add(resourceId)
-    }
-    for (const collection of snapshot.collections) {
-      collections.set(resourceCollectionQueryKey(collection.query), collection)
-    }
-  }
-
-  return {
-    scope,
-    revision: indexRevision(`live-${sequence}`),
-    resources: Array.from(resources.values()),
-    missingResourceIds: Array.from(missingResourceIds),
-    collections: Array.from(collections.values(), (collection) => {
-      const resourceIds: Array<ResourceId> = []
-      for (const resource of resources.values()) {
-        if (resourceMatchesCollectionQuery(resource, collection.query)) {
-          resourceIds.push(resource.id)
-        }
-      }
-      return { ...collection, resourceIds: resourceIds.sort() }
-    }),
-  }
-}
-
 export function createLiveResourceIndexRuntime(
   scope: ResourceProjectionScope,
   queries: LiveResourceIndexQueries,
@@ -148,18 +101,20 @@ export function createLiveResourceIndexRuntime(
     } catch {
       return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
     }
-    if (!sameResourceProjectionScope(scope, snapshot.scope)) {
-      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
-    }
-    const validator = new MutableWorkspaceResourceIndex(scope, indexRevision('live-validation'))
-    if (validator.replaceSnapshot(snapshot).status !== 'applied') {
-      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
-    }
-
     const nextSnapshots = new Map(snapshots)
     const nextSequence = sequence + 1
     nextSnapshots.set(key, { sequence: nextSequence, snapshot })
-    const result = index.replaceSnapshot(combineSnapshots(scope, nextSnapshots, nextSequence))
+    const merged = mergeAuthorizedResourceSnapshots(
+      scope,
+      Array.from(nextSnapshots.values())
+        .sort((left, right) => left.sequence - right.sequence)
+        .map((entry) => entry.snapshot),
+      indexRevision(`live-${nextSequence}`),
+    )
+    if (!merged) {
+      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
+    }
+    const result = index.replaceSnapshot(merged)
     if (result.status !== 'applied' && result.status !== 'duplicate') {
       return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
     }

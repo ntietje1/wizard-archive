@@ -20,6 +20,7 @@ import {
   MutableWorkspaceResourceIndex,
   createResourceIndexLoader,
   indexRevision,
+  mergeAuthorizedResourceSnapshots,
   sortAuthorizedResourceSummaries,
 } from '../workspace-resource-index'
 
@@ -77,6 +78,57 @@ function authorizedSnapshot(
     ...input,
   }
 }
+
+describe('authorized resource snapshot merging', () => {
+  it('owns fragment precedence, missing knowledge, and collection reconciliation', () => {
+    const roots: ResourceCollectionQuery = { parentId: null, lifecycle: 'active' }
+    const first = authorizedSnapshot({
+      resources: [
+        summary(rootId, { kind: 'folder', title: canonicalizeResourceTitle('Root') }),
+        summary(childId, { displayParentId: rootId }),
+      ],
+      missingResourceIds: [],
+      collections: [{ query: roots, resourceIds: [rootId], complete: true }],
+    })
+    const second = authorizedSnapshot({
+      revision: indexRevision('fragment-2'),
+      resources: [
+        summary(rootId, { kind: 'folder', title: canonicalizeResourceTitle('Updated Root') }),
+      ],
+      missingResourceIds: [childId],
+      collections: [],
+    })
+
+    expect(
+      mergeAuthorizedResourceSnapshots(scope, [first, second], indexRevision('merged')),
+    ).toEqual({
+      scope,
+      revision: indexRevision('merged'),
+      resources: [expect.objectContaining({ id: rootId, title: 'Updated Root' })],
+      missingResourceIds: [childId],
+      collections: [{ query: roots, resourceIds: [rootId], complete: true }],
+    })
+  })
+
+  it('rejects fragments that produce an incomplete ancestor spine', () => {
+    const first = authorizedSnapshot({
+      resources: [
+        summary(rootId, { kind: 'folder' }),
+        summary(childId, { displayParentId: rootId }),
+      ],
+      missingResourceIds: [],
+    })
+    const second = authorizedSnapshot({
+      revision: indexRevision('fragment-2'),
+      resources: [],
+      missingResourceIds: [rootId],
+    })
+
+    expect(
+      mergeAuthorizedResourceSnapshots(scope, [first, second], indexRevision('merged')),
+    ).toBeNull()
+  })
+})
 
 describe('MutableWorkspaceResourceIndex', () => {
   it('distinguishes known, missing, and unknown resources and preserves complete visible spines', () => {

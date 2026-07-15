@@ -237,6 +237,48 @@ function createState(snapshot: AuthorizedResourceSnapshot): IndexState | null {
   return { resources, missingResourceIds, collections }
 }
 
+export function mergeAuthorizedResourceSnapshots(
+  scope: ResourceProjectionScope,
+  snapshots: ReadonlyArray<AuthorizedResourceSnapshot>,
+  revision: IndexRevision,
+): AuthorizedResourceSnapshot | null {
+  const resources = new Map<ResourceId, AuthorizedResourceSummary>()
+  const missingResourceIds = new Set<ResourceId>()
+  const collections = new Map<string, StoredCollection>()
+
+  for (const snapshot of snapshots) {
+    if (!sameResourceProjectionScope(scope, snapshot.scope)) return null
+    const state = createState(snapshot)
+    if (!state) return null
+
+    for (const resource of state.resources.values()) {
+      resources.set(resource.id, resource)
+      missingResourceIds.delete(resource.id)
+    }
+    for (const resourceId of state.missingResourceIds) {
+      resources.delete(resourceId)
+      missingResourceIds.add(resourceId)
+    }
+    for (const [key, collection] of state.collections) collections.set(key, collection)
+  }
+
+  const merged: AuthorizedResourceSnapshot = {
+    scope,
+    revision,
+    resources: Array.from(resources.values()),
+    missingResourceIds: Array.from(missingResourceIds),
+    collections: Array.from(collections.values(), (collection) => ({
+      query: collection.query,
+      resourceIds: Array.from(resources.values())
+        .filter((resource) => resourceMatchesCollectionQuery(resource, collection.query))
+        .map((resource) => resource.id)
+        .sort(),
+      complete: collection.complete,
+    })),
+  }
+  return createState(merged) ? merged : null
+}
+
 function applyResourceChange(
   resources: Map<ResourceId, AuthorizedResourceSummary>,
   missingResourceIds: Set<ResourceId>,
