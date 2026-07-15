@@ -39,18 +39,14 @@ export function createLiveResourceBookmarks(
     execute(args: BookmarkArgs): Promise<BookmarkResult>
     watch(apply: (projection: BookmarkProjection) => void): () => void
   }>,
-): Readonly<{ gateway: ResourceBookmarkGateway; dispose(): void }> {
+): Readonly<{ gateway: ResourceBookmarkGateway; start(): void; dispose(): void }> {
   let snapshot:
     | Readonly<{ state: 'unknown' }>
     | Readonly<{ state: 'known'; value: ReadonlySet<ReturnType<typeof resourceId>> }> = {
     state: 'unknown',
   }
   const listeners = new Set<() => void>()
-  const dispose = backend.watch((projection) => {
-    if (applyProjection(projection.snapshot).status !== 'completed') return
-    snapshot = { state: 'known', value: new Set(projection.resourceIds.map(resourceId)) }
-    for (const listener of listeners) listener()
-  })
+  let unsubscribe: (() => void) | null = null
   return {
     gateway: {
       get: () => snapshot,
@@ -83,7 +79,18 @@ export function createLiveResourceBookmarks(
         }
       },
     },
-    dispose,
+    start: () => {
+      if (unsubscribe) return
+      unsubscribe = backend.watch((projection) => {
+        if (applyProjection(projection.snapshot).status !== 'completed') return
+        snapshot = { state: 'known', value: new Set(projection.resourceIds.map(resourceId)) }
+        for (const listener of listeners) listener()
+      })
+    },
+    dispose: () => {
+      unsubscribe?.()
+      unsubscribe = null
+    },
   }
 }
 

@@ -59,6 +59,13 @@ function LoadedLiveWorkspaceRuntimeContent({
     },
     resourceNavigation,
   )
+  if (!resourceCore) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
   return (
     <>
       <LiveWorkspaceRouteEffects resourceLoader={resourceCore.resources.loader} />

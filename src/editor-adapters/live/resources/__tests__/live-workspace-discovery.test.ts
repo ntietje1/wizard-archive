@@ -54,6 +54,7 @@ describe('live workspace discovery', () => {
         return () => {}
       },
     })
+    bookmarks.start()
 
     expect(bookmarks.gateway.get()).toEqual({ state: 'unknown' })
     expect(publish).toBeDefined()

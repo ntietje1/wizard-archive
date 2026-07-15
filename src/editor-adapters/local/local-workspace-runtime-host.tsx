@@ -24,5 +24,7 @@ export function LocalWorkspaceRuntimeHost({
     initialWorkspace,
   })
 
+  if (!runtime) return null
+
   return <ResourceShell {...hostProps} runtime={runtime} />
 }

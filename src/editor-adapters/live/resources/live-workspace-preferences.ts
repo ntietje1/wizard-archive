@@ -8,12 +8,22 @@ export function createLiveWorkspacePreferences(campaignId: CampaignId, convex: C
     save: (change) =>
       convex.mutation(api.workspacePreferences.mutations.change, { campaignId, change }),
   })
-  const watch = convex.watchQuery(api.workspacePreferences.queries.get, { campaignId })
-  const apply = () => {
-    const snapshot = watch.localQueryResult()
-    if (snapshot !== undefined) controller.hydrate(snapshot)
+  let unsubscribe: (() => void) | null = null
+  return {
+    source: controller,
+    start: () => {
+      if (unsubscribe) return
+      const watch = convex.watchQuery(api.workspacePreferences.queries.get, { campaignId })
+      const apply = () => {
+        const snapshot = watch.localQueryResult()
+        if (snapshot !== undefined) controller.hydrate(snapshot)
+      }
+      unsubscribe = watch.onUpdate(apply)
+      apply()
+    },
+    dispose: () => {
+      unsubscribe?.()
+      unsubscribe = null
+    },
   }
-  const unsubscribe = watch.onUpdate(apply)
-  apply()
-  return { source: controller, dispose: unsubscribe }
 }

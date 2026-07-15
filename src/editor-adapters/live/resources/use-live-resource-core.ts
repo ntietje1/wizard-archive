@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
@@ -20,6 +19,7 @@ import type { LiveResourceContentBackend } from './live-resource-content-source'
 import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
+import { useCommittedRuntime } from '../../committed-runtime'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -40,12 +40,9 @@ function subscribeToWatch<T>(
 export function useLiveResourceCore(
   scope: ResourceProjectionScope,
   navigation: ResourceNavigation,
-): EditorRuntime {
+): EditorRuntime | null {
   const convex = useConvex()
-  const [scoped] = useState(() => createScopedLiveResourceRuntime(scope, navigation, convex))
-
-  useEffect(() => scoped.dispose, [scoped])
-  return scoped.runtime
+  return useCommittedRuntime(() => createScopedLiveResourceRuntime(scope, navigation, convex))
 }
 
 function createScopedLiveResourceRuntime(
@@ -203,6 +200,10 @@ function createScopedLiveResourceRuntime(
           ? ({ status: 'available', value: search } as const)
           : unsupported,
       history: unsupported,
+    },
+    start: () => {
+      preferences.start()
+      bookmarks.start()
     },
     dispose: () => {
       for (const source of Object.values(content)) source.dispose()

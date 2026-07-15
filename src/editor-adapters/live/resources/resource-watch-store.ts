@@ -23,10 +23,7 @@ export function createResourceWatchStore<TSnapshot, TState>(
       watches.clear()
       source.dispose()
     },
-    get: (resourceId: ResourceId) => {
-      ensure(resourceId)
-      return source.get(resourceId)
-    },
+    get: (resourceId: ResourceId) => source.get(resourceId),
     set: (resourceId: ResourceId, state: TState) => {
       source.set(resourceId, state)
     },

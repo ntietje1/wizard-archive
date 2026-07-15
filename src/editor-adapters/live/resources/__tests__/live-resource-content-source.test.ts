@@ -67,7 +67,7 @@ describe('LiveResourceContentSource', () => {
     })
     const update = Y.encodeStateAsUpdate(new Y.Doc())
 
-    source.get(resourceId)
+    const unsubscribe = source.subscribe(resourceId, () => {})
     apply({ status: 'ready', kind: 'canvas', update: update.buffer as ArrayBuffer, version })
     expect(source.get(resourceId)).toEqual({
       status: 'ready',
@@ -84,6 +84,7 @@ describe('LiveResourceContentSource', () => {
       issue: 'content_corrupt',
     })
 
+    unsubscribe()
     source.dispose()
   })
 })

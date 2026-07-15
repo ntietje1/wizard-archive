@@ -4,6 +4,7 @@ import { testDomainId } from '../../../../../shared/test/domain-id'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { useLiveResourceCore } from '../use-live-resource-core'
+import type { EditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
 
 const navigation = {
   current: () => null,
@@ -48,39 +49,44 @@ describe('useLiveResourceCore', () => {
       ({ currentScope }) => useLiveResourceCore(currentScope, navigation),
       { initialProps: { currentScope: scope } },
     )
-    const initial = result.current
+    const initial = requireRuntime(result.current)
 
     rerender({ currentScope: { ...scope } })
 
-    expect(result.current.scope).toBe(initial.scope)
-    expect(result.current.resources.index).toBe(initial.resources.index)
-    expect(result.current.resources.loader).toBe(initial.resources.loader)
-    expect(result.current.resources.structure).toBe(initial.resources.structure)
-    expect(result.current.resources.structure.status).toBe('available')
-    expect(result.current.content.notes).toBe(initial.content.notes)
-    expect(result.current.content.files).toBe(initial.content.files)
-    expect(result.current.content.maps).toBe(initial.content.maps)
-    expect(result.current.content.canvases).toBe(initial.content.canvases)
-    expect(result.current.navigation).toBe(navigation)
-    expect(result.current.preferences).toBe(initial.preferences)
-    expect(result.current.resources.access).toEqual({
+    const current = requireRuntime(result.current)
+    expect(current.scope).toBe(initial.scope)
+    expect(current.resources.index).toBe(initial.resources.index)
+    expect(current.resources.loader).toBe(initial.resources.loader)
+    expect(current.resources.structure).toBe(initial.resources.structure)
+    expect(current.resources.structure.status).toBe('available')
+    expect(current.content.notes).toBe(initial.content.notes)
+    expect(current.content.files).toBe(initial.content.files)
+    expect(current.content.maps).toBe(initial.content.maps)
+    expect(current.content.canvases).toBe(initial.content.canvases)
+    expect(current.navigation).toBe(navigation)
+    expect(current.preferences).toBe(initial.preferences)
+    expect(current.resources.access).toEqual({
       status: 'unavailable',
       reason: 'capability_not_supported',
     })
   })
 
   it('replaces every capability at a new actor projection scope boundary', () => {
-    const initial = renderHook(() => useLiveResourceCore(scope, navigation)).result.current
-    const next = renderHook(() =>
-      useLiveResourceCore(
-        {
-          ...scope,
-          actorId: testDomainId('campaignMember', 'other-actor'),
-          projection: 'player',
-        },
-        navigation,
-      ),
-    ).result.current
+    const initial = requireRuntime(
+      renderHook(() => useLiveResourceCore(scope, navigation)).result.current,
+    )
+    const next = requireRuntime(
+      renderHook(() =>
+        useLiveResourceCore(
+          {
+            ...scope,
+            actorId: testDomainId('campaignMember', 'other-actor'),
+            projection: 'player',
+          },
+          navigation,
+        ),
+      ).result.current,
+    )
 
     expect(next.scope).not.toBe(initial.scope)
     expect(next.resources.index).not.toBe(initial.resources.index)
@@ -97,3 +103,8 @@ describe('useLiveResourceCore', () => {
     expect(next.preferences).not.toBe(initial.preferences)
   })
 })
+
+function requireRuntime(runtime: EditorRuntime | null): EditorRuntime {
+  if (!runtime) throw new TypeError('Expected committed runtime')
+  return runtime
+}

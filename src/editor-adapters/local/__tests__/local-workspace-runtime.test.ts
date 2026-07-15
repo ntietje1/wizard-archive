@@ -7,6 +7,7 @@ import {
   SAMPLE_LOCAL_RESOURCE_IDS,
 } from '../sample-local-workspace'
 import { useLocalWorkspaceRuntime } from '../use-local-workspace-runtime'
+import type { EditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
 
 describe('useLocalWorkspaceRuntime', () => {
   it('retains fixture content through the development lifecycle check', () => {
@@ -14,7 +15,9 @@ describe('useLocalWorkspaceRuntime', () => {
       wrapper: ({ children }: { children: ReactNode }) => createElement(StrictMode, null, children),
     })
 
-    expect(result.current.content.notes.get(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)).toMatchObject({
+    expect(
+      requireRuntime(result.current).content.notes.get(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+    ).toMatchObject({
       status: 'ready',
     })
   })
@@ -23,13 +26,20 @@ describe('useLocalWorkspaceRuntime', () => {
     const { result } = renderHook(() => useLocalWorkspaceRuntime({}))
 
     await act(() =>
-      result.current.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' }),
+      requireRuntime(result.current).resources.loader.ensureCollection({
+        parentId: null,
+        lifecycle: 'active',
+      }),
     )
 
     expect(
-      result.current.resources.index.getSnapshot().lookup(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+      requireRuntime(result.current)
+        .resources.index.getSnapshot()
+        .lookup(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
     ).toMatchObject({ state: 'known', value: { title: 'The Lantern Market' } })
-    expect(result.current.content.notes.get(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)).toMatchObject({
+    expect(
+      requireRuntime(result.current).content.notes.get(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+    ).toMatchObject({
       status: 'ready',
     })
   })
@@ -38,7 +48,7 @@ describe('useLocalWorkspaceRuntime', () => {
     const workspace = createSampleLocalWorkspaceFixture({ projection: 'player' })
     const { result } = renderHook(() => useLocalWorkspaceRuntime({ initialWorkspace: workspace }))
 
-    expect(result.current.resources.structure).toEqual({
+    expect(requireRuntime(result.current).resources.structure).toEqual({
       status: 'unavailable',
       reason: 'unauthorized',
     })
@@ -49,8 +59,14 @@ describe('useLocalWorkspaceRuntime', () => {
       useLocalWorkspaceRuntime({ initialResourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap }),
     )
 
-    expect(result.current.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)
-    act(() => result.current.navigation.open(SAMPLE_LOCAL_RESOURCE_IDS.marketNote))
-    expect(result.current.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
+    const runtime = requireRuntime(result.current)
+    expect(runtime.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)
+    act(() => runtime.navigation.open(SAMPLE_LOCAL_RESOURCE_IDS.marketNote))
+    expect(runtime.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
   })
 })
+
+function requireRuntime(runtime: EditorRuntime | null): EditorRuntime {
+  if (!runtime) throw new TypeError('Expected committed runtime')
+  return runtime
+}
