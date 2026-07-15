@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => ({
     entry: editorPackEntries,
     dts: true,
     deps: {
-      alwaysBundle: ['@wizard-archive/ui/**'],
+      skipNodeModulesBundle: true,
     },
     outDir: 'packages/editor/dist',
   },
