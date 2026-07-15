@@ -123,4 +123,38 @@ describe('NoteEditor', () => {
       if (value?.type === 'value') expect(isUuidV7(value.props.valueId)).toBe(true)
     })
   })
+
+  it('stops external file drops without intercepting rich internal transfers', () => {
+    const document = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Drop target' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    render(
+      <NoteEditor
+        document={document}
+        editable
+        label="Drop-protected note"
+        onFlush={() => Promise.resolve()}
+      />,
+    )
+    const dropTarget = screen.getByRole('button', { name: 'Value' })
+    const surface = dropTarget.closest('.resource-note-editor')
+    if (!(surface instanceof HTMLElement)) throw new Error('Expected note editor surface')
+    const received = vi.fn()
+    surface.addEventListener('drop', received)
+
+    fireEvent.drop(dropTarget, {
+      dataTransfer: { files: [new File(['content'], 'outside.txt')], types: ['Files'] },
+    })
+    expect(received).not.toHaveBeenCalled()
+
+    fireEvent.drop(dropTarget, { dataTransfer: { files: [], types: ['text/html'] } })
+    expect(received).toHaveBeenCalledOnce()
+  })
 })

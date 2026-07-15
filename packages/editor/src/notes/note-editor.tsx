@@ -120,7 +120,7 @@ function NoteDocumentEditor({
         if (!event.currentTarget.contains(event.relatedTarget)) void onFlush()
       }}
       onDropCapture={(event) => {
-        if (!editable || !isExternalDrop(event.dataTransfer)) return
+        if (!editable || !isExternalFileDrop(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
       }}
@@ -176,10 +176,6 @@ function NoteDocumentEditor({
   )
 }
 
-function isExternalDrop(dataTransfer: DataTransfer) {
-  return (
-    dataTransfer.files.length > 0 ||
-    dataTransfer.types.includes('text/uri-list') ||
-    dataTransfer.types.includes('text/html')
-  )
+function isExternalFileDrop(dataTransfer: DataTransfer) {
+  return dataTransfer.files.length > 0 || dataTransfer.types.includes('Files')
 }
