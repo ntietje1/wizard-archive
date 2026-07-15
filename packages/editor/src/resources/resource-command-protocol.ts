@@ -15,6 +15,7 @@ import type {
   TrashResourcesCommand,
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
+import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from './resource-command-contract'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
 import type { ResourceKind } from './resource-record'
 
@@ -190,9 +191,13 @@ export function normalizeResourceAccessCommand(
 export function normalizeResourceBookmarkCommand(
   command: ResourceBookmarkCommand,
 ): ResourceBookmarkCommand {
+  const resourceIds = normalizeResourceIdSet(command.resourceIds)
+  if (resourceIds.length > MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES) {
+    throw new TypeError('Bookmark selection is too large')
+  }
   return {
     type: 'setBookmarkState',
-    resourceIds: normalizeResourceIdSet(command.resourceIds),
+    resourceIds,
     bookmarked: normalizeBoolean(command.bookmarked, 'bookmark state'),
   }
 }

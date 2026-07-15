@@ -8,6 +8,7 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
 import { findNoteContent, validateNoteResource } from './noteContent'
+import { syncNoteSearchProjection } from './resourceSearchProjection'
 
 export type BindNoteContentResult =
   | {
@@ -72,9 +73,11 @@ export async function bindNoteContent(
     return { status: 'rejected', reason: 'content_corrupt' }
   }
   if (content.state === 'ready') {
-    return content.version.digest === version.digest
-      ? { status: 'completed', resourceId, version: assertVersionStamp(content.version) }
-      : { status: 'rejected', reason: 'already_initialized' }
+    if (content.version.digest !== version.digest) {
+      return { status: 'rejected', reason: 'already_initialized' }
+    }
+    await syncNoteSearchProjection(ctx, resourceId, content.update)
+    return { status: 'completed', resourceId, version: assertVersionStamp(content.version) }
   }
 
   const intents = await ctx.db
@@ -98,5 +101,6 @@ export async function bindNoteContent(
     version,
   })
   await ctx.db.delete(intents[0]!._id)
+  await syncNoteSearchProjection(ctx, resourceId, args.update)
   return { status: 'completed', resourceId, version }
 }

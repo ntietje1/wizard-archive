@@ -374,6 +374,30 @@ describe('authorized resource projection', () => {
       ],
       snapshot: { resources: [{ id: noteId }], missingResourceIds: [], collections: [] },
     })
+
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'trash', resourceIds: [noteId] },
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query: 'citadel',
+      }),
+    ).resolves.toMatchObject({ results: [] })
+
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'restore', resourceIds: [noteId] },
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query: 'citadel',
+      }),
+    ).resolves.toMatchObject({ results: [{ resourceId: noteId }] })
   })
 
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {

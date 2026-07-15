@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../shared/test/domain-id'
-import { addLiveRecentResource } from '../live-recent-resources'
+import { addLiveRecentResource, getLiveRecentResources } from '../live-recent-resources'
 
 describe('live recent resources', () => {
   const campaignId = testDomainId('campaign', 'recent-resources')
-  const recentResourcesKey = `recent-resources-v1-${campaignId}`
+  const actorId = testDomainId('campaignMember', 'recent-resources')
+  const recentResourcesKey = `recent-resources-v1-${campaignId}-${actorId}`
   let storage: Record<string, string>
 
   beforeEach(() => {
@@ -24,7 +25,7 @@ describe('live recent resources', () => {
 
   it('persists a recent resource entry for the live workspace storage key', () => {
     const resourceId = testDomainId('resource', 'my-note')
-    addLiveRecentResource(campaignId, resourceId)
+    addLiveRecentResource(campaignId, actorId, resourceId)
 
     const stored = JSON.parse(storage[recentResourcesKey])
     expect(stored).toHaveLength(1)
@@ -36,6 +37,15 @@ describe('live recent resources', () => {
     expect(event.detail.key).toBe(recentResourcesKey)
   })
 
+  it('isolates recents by actor within the same campaign', () => {
+    const resourceId = testDomainId('resource', 'actor-note')
+    const otherActorId = testDomainId('campaignMember', 'other-recent-user')
+    addLiveRecentResource(campaignId, actorId, resourceId)
+
+    expect(getLiveRecentResources(campaignId, actorId)).toEqual([resourceId])
+    expect(getLiveRecentResources(campaignId, otherActorId)).toEqual([])
+  })
+
   it('moves the most recent resource to the front and caps the live workspace history', () => {
     const ids = Array.from({ length: 100 }, (_, index) => testDomainId('resource', `note-${index}`))
     storage[recentResourcesKey] = JSON.stringify(
@@ -45,7 +55,7 @@ describe('live recent resources', () => {
       })),
     )
 
-    addLiveRecentResource(campaignId, ids[50]!)
+    addLiveRecentResource(campaignId, actorId, ids[50]!)
 
     const stored = JSON.parse(storage[recentResourcesKey])
     expect(stored).toHaveLength(100)
@@ -66,7 +76,7 @@ describe('live recent resources', () => {
       })),
     )
 
-    addLiveRecentResource(campaignId, newResourceId)
+    addLiveRecentResource(campaignId, actorId, newResourceId)
 
     const stored = JSON.parse(storage[recentResourcesKey])
     expect(stored).toHaveLength(100)

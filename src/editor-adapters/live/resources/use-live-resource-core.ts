@@ -155,8 +155,11 @@ function createScopedLiveResourceRuntime(
       return subscribeToWatch(watch, apply)
     },
   })
-  const search = createLiveWorkspaceSearch(currentScope.campaignId, base.applyProjection, (args) =>
-    convex.query(api.resources.queries.searchResources, args),
+  const search = createLiveWorkspaceSearch(
+    currentScope.campaignId,
+    currentScope.actorId,
+    base.applyProjection,
+    (args) => convex.query(api.resources.queries.searchResources, args),
   )
 
   const unsupported = {

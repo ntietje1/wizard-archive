@@ -9,6 +9,7 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
 import { findNoteContent, validateNoteResource } from './noteContent'
+import { syncNoteSearchProjection } from './resourceSearchProjection'
 
 export type SaveNoteContentResult =
   | {
@@ -53,6 +54,7 @@ export async function saveNoteContent(
       version: merged.version,
     })
   }
+  await syncNoteSearchProjection(ctx, resourceId, merged.update)
   return { status: 'completed', resourceId, update: merged.update, version: merged.version }
 }
 

@@ -3,13 +3,10 @@ import { noteBlocksPlainText } from '../notes/document/plain-text'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../notes/document/headless-yjs'
 import type { NoteSessionSource } from './content-session-contract'
 import type { CampaignId, ResourceId } from './domain-id'
-import type {
-  ResourceBookmarkGateway,
-  WorkspaceSearch,
-  WorkspaceSearchResult,
-} from './editor-runtime-contract'
+import type { ResourceBookmarkGateway, WorkspaceSearch } from './editor-runtime-contract'
 import type { CommandDelivery, ResourceBookmarkCommandResult } from './resource-command-contract'
 import type { ResourceRecord } from './resource-record'
+import { searchResourceDocuments } from './resource-search-policy'
 
 export function createInMemoryBookmarks(
   campaignId: CampaignId,
@@ -86,70 +83,31 @@ function searchResources(
   resources: ReadonlyArray<ResourceRecord>,
   notes: NoteSessionSource,
   query: string,
-): ReadonlyArray<WorkspaceSearchResult> {
-  const normalized = query.trim().toLocaleLowerCase()
-  if (!normalized) return []
-  const titleMatches: Array<Readonly<{ result: WorkspaceSearchResult; score: number }>> = []
-  const bodyMatches: Array<WorkspaceSearchResult> = []
-  for (const resource of resources) {
-    if (resource.lifecycle.state !== 'active') continue
-    const titleMatch = matchResourceTitle(resource, normalized)
-    if (titleMatch) {
-      titleMatches.push(titleMatch)
-      continue
-    }
-    const bodyMatch = matchNoteBody(resource, notes, normalized)
-    if (bodyMatch) bodyMatches.push(bodyMatch)
-  }
-  titleMatches.sort(
-    (left, right) =>
-      right.score - left.score || left.result.resourceId.localeCompare(right.result.resourceId),
+): ReturnType<typeof searchResourceDocuments> {
+  return searchResourceDocuments(
+    resources.flatMap((resource) =>
+      resource.lifecycle.state === 'active'
+        ? [
+            {
+              resourceId: resource.id,
+              title: resource.title,
+              body: resource.kind === 'note' ? noteBody(notes, resource.id) : '',
+            },
+          ]
+        : [],
+    ),
+    query,
   )
-  return [...titleMatches.map(({ result }) => result), ...bodyMatches]
 }
 
-function matchResourceTitle(
-  resource: ResourceRecord,
-  query: string,
-): Readonly<{ result: WorkspaceSearchResult; score: number }> | null {
-  const title = resource.title.toLocaleLowerCase()
-  if (!title.includes(query)) return null
-  return {
-    result: { resourceId: resource.id, match: { type: 'title' } },
-    score: title === query ? 3 : title.startsWith(query) ? 2 : 1,
-  }
-}
-
-function matchNoteBody(
-  resource: ResourceRecord,
-  notes: NoteSessionSource,
-  query: string,
-): WorkspaceSearchResult | null {
-  if (resource.kind !== 'note') return null
-  const state = notes.get(resource.id)
-  if (state.status !== 'ready') return null
-  const text = noteText(state.session.document)
-  const matchIndex = text.toLocaleLowerCase().indexOf(query)
-  return matchIndex < 0
-    ? null
-    : {
-        resourceId: resource.id,
-        match: { type: 'body', text: searchExcerpt(text, matchIndex, query.length) },
-      }
-}
-
-function noteText(document: Parameters<typeof noteYDocToBlocks>[0]): string {
+function noteBody(notes: NoteSessionSource, resourceId: ResourceId): string {
+  const state = notes.get(resourceId)
+  if (state.status !== 'ready') return ''
   let blocks: ReadonlyArray<NoteBlock>
   try {
-    blocks = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
+    blocks = noteYDocToBlocks(state.session.document, NOTE_YJS_FRAGMENT)
   } catch {
     return ''
   }
   return noteBlocksPlainText(blocks)
-}
-
-function searchExcerpt(text: string, index: number, length: number): string {
-  const start = Math.max(0, index - 60)
-  const end = Math.min(text.length, index + length + 100)
-  return `${start > 0 ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`
 }

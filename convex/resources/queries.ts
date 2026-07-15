@@ -18,6 +18,7 @@ import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteConten
 import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
 import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
+import { loadActorBookmarks } from './functions/resourceBookmarks'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
@@ -128,14 +129,7 @@ export const loadBookmarks = dmQuery({
   args: {},
   returns: authorizedResourceBookmarksValidator,
   handler: async (ctx) => {
-    const rows = await ctx.db
-      .query('resourceBookmarks')
-      .withIndex('by_member', (index) =>
-        index
-          .eq('campaignUuid', ctx.resourceScope.campaignId)
-          .eq('memberUuid', ctx.resourceScope.actorId),
-      )
-      .collect()
+    const rows = await loadActorBookmarks(ctx)
     const resourceIds = rows.map((row) => assertDomainId(DOMAIN_ID_KIND.resource, row.resourceUuid))
     return {
       resourceIds,

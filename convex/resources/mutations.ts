@@ -169,10 +169,13 @@ export const executeBookmarkCommand = dmMutation({
     const result = await executeBookmarkCommandFn(
       ctx,
       assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
-      args.command.resourceIds.map((resourceId) =>
-        assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
-      ),
-      args.command.bookmarked,
+      {
+        type: args.command.type,
+        resourceIds: args.command.resourceIds.map((resourceId) =>
+          assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+        ),
+        bookmarked: args.command.bookmarked,
+      },
     )
     return result.status === 'completed'
       ? {

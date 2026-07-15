@@ -58,6 +58,11 @@ import { createNoteContent } from './noteContent'
 import { applyResourceDeletion, planResourceDeletion } from './resourceDeletion'
 import { prepareResourceContentCopies } from './resourceContentCopy'
 import { resourceRecordFromRow, resourceRowFromRecord } from './resourceRecordRow'
+import {
+  copyResourceSearchBody,
+  deleteResourceSearchProjection,
+  syncResourceSearchProjection,
+} from './resourceSearchProjection'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -326,6 +331,9 @@ async function persistTransition(
     await applyResourceDeletion(ctx, deletion)
     await Promise.all([
       ...rows.map((row) => ctx.db.delete(row._id)),
+      ...transition.deletedResourceIds.map((resourceId) =>
+        deleteResourceSearchProjection(ctx, resourceId),
+      ),
       ...transition.tombstones.map((tombstone) =>
         ctx.db.insert('resourceTombstones', {
           resourceUuid: tombstone.resourceId,
@@ -342,10 +350,12 @@ async function persistTransition(
       const row = loaded.rows.get(resource.id)
       if (row) {
         await ctx.db.replace('resources', row._id, resourceRowFromRecord(resource))
+        await syncResourceSearchProjection(ctx, resource)
         return
       }
       await ctx.db.insert('resources', resourceRowFromRecord(resource))
       await createContent(ctx, resource, operationId)
+      await syncResourceSearchProjection(ctx, resource)
     }),
   )
 }
@@ -430,6 +440,9 @@ async function deepCopyResources(
     copies.map(({ destination }) => ctx.db.insert('resources', resourceRowFromRecord(destination))),
   )
   await Promise.all(content.commits.map((commit) => commit()))
+  await Promise.all(
+    copies.map(({ source, destination }) => copyResourceSearchBody(ctx, source.id, destination)),
+  )
 
   return {
     status: 'completed',

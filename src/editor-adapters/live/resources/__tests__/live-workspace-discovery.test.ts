@@ -68,6 +68,7 @@ describe('live workspace discovery', () => {
     const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
     const search = createLiveWorkspaceSearch(
       campaignId,
+      actorId,
       applyProjection,
       vi.fn(() =>
         Promise.resolve({

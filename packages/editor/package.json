@@ -153,6 +153,10 @@
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
     },
+    "./resources/search-policy": {
+      "types": "./dist/resources/resource-search-policy.d.mts",
+      "default": "./dist/resources/resource-search-policy.mjs"
+    },
     "./resources/file-content-contract": {
       "types": "./dist/resources/file-content-contract.d.mts",
       "default": "./dist/resources/file-content-contract.mjs"
@@ -215,6 +219,7 @@
       "./resources/wizard-archive-codec",
       "./resources/wizard-archive-transfer-planner",
       "./resources/editor-runtime-contract",
+      "./resources/search-policy",
       "./resources/file-content-contract",
       "./resources/content-version",
       "./resources/source-classifier"

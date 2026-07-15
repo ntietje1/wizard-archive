@@ -33,7 +33,9 @@ test.describe('editor shell', () => {
 
     await page.getByRole('button', { name: 'The Lantern Market' }).click()
     await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
-    await expect(page.getByLabel('Note content')).toBeVisible()
+    await expect(
+      page.getByRole('textbox', { name: 'The Lantern Market note editor' }),
+    ).toBeVisible()
 
     await page.getByRole('button', { name: 'Open resource panel' }).click()
     await expect(page.getByRole('complementary', { name: 'Resource panel' })).toBeVisible()

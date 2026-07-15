@@ -1,38 +1,58 @@
-import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { MAX_RESOURCE_BOOKMARKS_PER_ACTOR } from '@wizard-archive/editor/resources/command-contract'
 import type {
+  ResourceBookmarkCommand,
   ResourceBookmarkCommandResult,
   ResourceBookmarkReceipt,
 } from '@wizard-archive/editor/resources/command-contract'
+import {
+  RESOURCE_COMMAND_PROTOCOL_VERSION,
+  fingerprintResourceBookmarkCommand,
+  normalizeResourceBookmarkCommand,
+} from '@wizard-archive/editor/resources/command-protocol'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
+import { loadActorBookmarks } from './resourceBookmarks'
 
 export async function executeBookmarkCommand(
   ctx: CampaignMutationCtx,
   operationId: OperationId,
-  resourceIdsInput: ReadonlyArray<ResourceId>,
-  bookmarked: boolean,
+  commandInput: ResourceBookmarkCommand,
 ): Promise<ResourceBookmarkCommandResult> {
-  const resourceIds = Array.from(new Set(resourceIdsInput)).sort()
-  if (resourceIds.length === 0) return { status: 'rejected', reason: 'invalid_command' }
-  const existingOperation = await ctx.db
-    .query('resourceBookmarkOperations')
-    .withIndex('by_campaign_and_operation', (index) =>
-      index.eq('campaignUuid', ctx.resourceScope.campaignId).eq('operationUuid', operationId),
-    )
-    .unique()
+  let command: ResourceBookmarkCommand
+  try {
+    command = normalizeResourceBookmarkCommand(commandInput)
+  } catch (error) {
+    return {
+      status: 'rejected',
+      reason:
+        error instanceof Error && error.message.includes('too large')
+          ? 'selection_too_large'
+          : 'invalid_command',
+    }
+  }
+  const [fingerprint, existingOperation] = await Promise.all([
+    fingerprintResourceBookmarkCommand(command),
+    ctx.db
+      .query('resourceBookmarkOperations')
+      .withIndex('by_campaign_and_operation', (index) =>
+        index.eq('campaignUuid', ctx.resourceScope.campaignId).eq('operationUuid', operationId),
+      )
+      .unique(),
+  ])
   if (existingOperation) {
     if (
       existingOperation.actorMemberUuid !== ctx.resourceScope.actorId ||
-      existingOperation.bookmarked !== bookmarked ||
-      !sameIds(existingOperation.resourceUuids, resourceIds)
+      existingOperation.fingerprint !== fingerprint
     ) {
       return { status: 'rejected', reason: 'operation_id_reused' }
     }
-    return { status: 'completed', receipt: receipt(ctx, operationId, resourceIds, bookmarked) }
+    return { status: 'completed', receipt: receiptFromRow(existingOperation.receipt) }
   }
 
   const resources = await Promise.all(
-    resourceIds.map((resourceId) => findCanonicalResource(ctx.db, resourceId)),
+    command.resourceIds.map((resourceId) => findCanonicalResource(ctx.db, resourceId)),
   )
   if (
     resources.some(
@@ -43,7 +63,7 @@ export async function executeBookmarkCommand(
   }
 
   const existingBookmarks = await Promise.all(
-    resourceIds.map((resourceId) =>
+    command.resourceIds.map((resourceId) =>
       ctx.db
         .query('resourceBookmarks')
         .withIndex('by_member_and_resource', (index) =>
@@ -55,46 +75,67 @@ export async function executeBookmarkCommand(
         .unique(),
     ),
   )
+  if (command.bookmarked) {
+    const current = await loadActorBookmarks(ctx)
+    const additions = existingBookmarks.filter((bookmark) => !bookmark).length
+    if (current.length + additions > MAX_RESOURCE_BOOKMARKS_PER_ACTOR) {
+      return { status: 'rejected', reason: 'selection_too_large' }
+    }
+  }
+
   const now = Date.now()
   await Promise.all(
-    resourceIds.map(async (resourceId, index) => {
+    command.resourceIds.map(async (resourceId, index) => {
       const existing = existingBookmarks[index]
-      if (bookmarked && !existing) {
+      if (command.bookmarked && !existing) {
         await ctx.db.insert('resourceBookmarks', {
           campaignUuid: ctx.resourceScope.campaignId,
           memberUuid: ctx.resourceScope.actorId,
           resourceUuid: resourceId,
           bookmarkedAt: now,
         })
-      } else if (!bookmarked && existing) {
+      } else if (!command.bookmarked && existing) {
         await ctx.db.delete(existing._id)
       }
     }),
   )
+  const receipt = bookmarkReceipt(ctx, operationId, command)
   await ctx.db.insert('resourceBookmarkOperations', {
     campaignUuid: ctx.resourceScope.campaignId,
     actorMemberUuid: ctx.resourceScope.actorId,
     operationUuid: operationId,
-    resourceUuids: resourceIds,
-    bookmarked,
+    protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
+    fingerprint,
+    receipt: { ...receipt, resourceIds: [...receipt.resourceIds] },
   })
-  return { status: 'completed', receipt: receipt(ctx, operationId, resourceIds, bookmarked) }
+  return { status: 'completed', receipt }
 }
 
-function receipt(
+function bookmarkReceipt(
   ctx: CampaignMutationCtx,
   operationId: OperationId,
-  resourceIds: ReadonlyArray<ResourceId>,
-  bookmarked: boolean,
+  command: ResourceBookmarkCommand,
 ): ResourceBookmarkReceipt {
   return {
     campaignId: ctx.resourceScope.campaignId,
     operationId,
-    resourceIds,
-    bookmarked,
+    resourceIds: command.resourceIds,
+    bookmarked: command.bookmarked,
   }
 }
 
-function sameIds(left: ReadonlyArray<string>, right: ReadonlyArray<string>): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index])
+function receiptFromRow(receipt: {
+  campaignId: string
+  operationId: string
+  resourceIds: ReadonlyArray<string>
+  bookmarked: boolean
+}): ResourceBookmarkReceipt {
+  return {
+    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, receipt.campaignId),
+    operationId: assertDomainId(DOMAIN_ID_KIND.operation, receipt.operationId),
+    resourceIds: receipt.resourceIds.map((resourceId) =>
+      assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+    ),
+    bookmarked: receipt.bookmarked,
+  }
 }

@@ -17,7 +17,13 @@ export default defineConfig({
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
     {
+      name: 'public-editor',
+      testMatch: /editor-.*\.spec\.ts/,
+      use: devices['Desktop Chrome'],
+    },
+    {
       name: 'chromium',
+      testIgnore: /editor-.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/user.json',

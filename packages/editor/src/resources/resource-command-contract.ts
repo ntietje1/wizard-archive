@@ -95,6 +95,9 @@ export type ResourceBookmarkCommand = Readonly<{
   bookmarked: boolean
 }>
 
+export const MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES = 100
+export const MAX_RESOURCE_BOOKMARKS_PER_ACTOR = 1_000
+
 export type NoteBlockAccessCommand =
   | Readonly<{
       type: 'setNoteBlockAudienceAccess'
@@ -248,6 +251,7 @@ export type ResourceAccessRejection =
 
 export type ResourceBookmarkRejection =
   | 'invalid_command'
+  | 'selection_too_large'
   | 'ownership_mismatch'
   | 'unauthorized'
   | 'resource_missing'

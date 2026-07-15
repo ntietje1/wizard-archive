@@ -1,7 +1,7 @@
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceBookmarkGateway,
   WorkspaceSearch,
@@ -89,6 +89,7 @@ export function createLiveResourceBookmarks(
 
 export function createLiveWorkspaceSearch(
   campaignId: CampaignId,
+  actorId: CampaignMemberId,
   applyProjection: ApplyProjection,
   search: (
     args: FunctionArgs<typeof api.resources.queries.searchResources>,
@@ -105,9 +106,9 @@ export function createLiveWorkspaceSearch(
         match: result.match,
       }))
     },
-    recent: () => getLiveRecentResources(campaignId),
-    subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, listener),
-    recordOpened: (id) => addLiveRecentResource(campaignId, id),
+    recent: () => getLiveRecentResources(campaignId, actorId),
+    subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, actorId, listener),
+    recordOpened: (id) => addLiveRecentResource(campaignId, actorId, id),
   }
 }
 

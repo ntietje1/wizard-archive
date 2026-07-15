@@ -10,7 +10,7 @@ import {
   finishWorkspaceTrashDrop,
   leaveWorkspaceResourceDrop,
 } from '../workspace-resource-drag'
-import { changeWorkspaceResourcesLifecycle } from './resource-operations'
+import { changeWorkspaceResourcesLifecycle, emptyWorkspaceTrash } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
 import { useEnsureResourceCollection } from './resource-loading'
@@ -63,6 +63,14 @@ export function ResourceTrashControl({
   ) => {
     setConfirmation({ type: 'none' })
     await changeWorkspaceResourcesLifecycle(runtime, resourceIds, type, onReport)
+  }
+  const empty = async () => {
+    setConfirmation({ type: 'none' })
+    await emptyWorkspaceTrash(
+      runtime,
+      resources.map((resource) => resource.id),
+      onReport,
+    )
   }
   const canEmpty = canEdit && collection.state === 'known' && collection.complete
 
@@ -178,12 +186,7 @@ export function ResourceTrashControl({
                 disabled={!canEmpty}
                 className="h-7 rounded px-2 text-xs text-destructive hover:bg-muted disabled:opacity-50"
                 onClick={() =>
-                  confirmation.type === 'empty'
-                    ? void mutate(
-                        resources.map((resource) => resource.id),
-                        'permanentlyDelete',
-                      )
-                    : setConfirmation({ type: 'empty' })
+                  confirmation.type === 'empty' ? void empty() : setConfirmation({ type: 'empty' })
                 }
               >
                 {confirmation.type === 'empty' ? 'Confirm empty trash' : 'Empty Trash'}

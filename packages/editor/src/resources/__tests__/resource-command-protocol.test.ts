@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
+import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from '../domain-id'
+import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from '../resource-command-contract'
 import type {
   NoteBlockAccessCommand,
   ResourceAccessCommand,
@@ -160,5 +161,17 @@ describe('separate command families', () => {
         shared: 1 as unknown as boolean,
       }),
     ).toThrow(/audience state/)
+  })
+
+  it('bounds bookmark command selections after normalization', () => {
+    expect(() =>
+      normalizeResourceBookmarkCommand({
+        type: 'setBookmarkState',
+        resourceIds: Array.from({ length: MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES + 1 }, () =>
+          generateDomainId(DOMAIN_ID_KIND.resource),
+        ),
+        bookmarked: true,
+      }),
+    ).toThrow(/too large/)
   })
 })

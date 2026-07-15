@@ -28,6 +28,7 @@ import {
   parseSerializedAuthoredDestination,
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
+import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -1378,6 +1379,20 @@ describe('resource structure commands', () => {
 
     expect(first).toEqual(replay)
     expect(first).toMatchObject({ status: 'completed', receipt: { resourceIds: [resourceId] } })
+    await t.run(async (ctx) => {
+      const operation = await ctx.db
+        .query('resourceBookmarkOperations')
+        .withIndex('by_campaign_and_operation', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('operationUuid', operationId),
+        )
+        .unique()
+      expect(operation).toMatchObject({
+        protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
+        fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+        receipt: { operationId, resourceIds: [resourceId], bookmarked: true },
+      })
+      expect(operation).not.toHaveProperty('resourceUuids')
+    })
     await expect(
       asDm(campaign).query(api.resources.queries.loadBookmarks, { campaignId: campaignUuid }),
     ).resolves.toMatchObject({

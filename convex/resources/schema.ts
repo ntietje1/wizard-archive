@@ -105,20 +105,23 @@ export const resourceBookmarkCommandValidator = v.object({
   bookmarked: v.boolean(),
 })
 
+const resourceBookmarkReceiptValidator = v.object({
+  campaignId: campaignIdValidator,
+  operationId: operationIdValidator,
+  resourceIds: v.array(resourceIdValidator),
+  bookmarked: v.boolean(),
+})
+
 export const resourceBookmarkCommandResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
-    receipt: v.object({
-      campaignId: campaignIdValidator,
-      operationId: operationIdValidator,
-      resourceIds: v.array(resourceIdValidator),
-      bookmarked: v.boolean(),
-    }),
+    receipt: resourceBookmarkReceiptValidator,
   }),
   v.object({
     status: v.literal('rejected'),
     reason: literals(
       'invalid_command',
+      'selection_too_large',
       'ownership_mismatch',
       'unauthorized',
       'resource_missing',
@@ -507,11 +510,26 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     actorMemberUuid: campaignMemberIdValidator,
     operationUuid: operationIdValidator,
-    resourceUuids: v.array(resourceIdValidator),
-    bookmarked: v.boolean(),
+    protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
+    fingerprint: v.string(),
+    receipt: resourceBookmarkReceiptValidator,
   })
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
+
+  resourceSearchDocuments: defineTable({
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
+    title: v.string(),
+    body: v.string(),
+    searchableText: v.string(),
+  })
+    .index('by_resourceUuid', ['resourceUuid'])
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
+    .searchIndex('search_text', {
+      searchField: 'searchableText',
+      filterFields: ['campaignUuid'],
+    }),
 
   resourceNoteContents: defineTable(
     v.union(
