@@ -11,7 +11,7 @@ const navigation = {
   subscribe: () => () => {},
 }
 
-const convex = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn() }))
+const convex = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), watchQuery: vi.fn() }))
 
 vi.mock('@convex-dev/react-query', () => ({ useConvex: () => convex }))
 
@@ -26,6 +26,21 @@ describe('useLiveResourceCore', () => {
   beforeEach(() => {
     convex.query.mockReset()
     convex.mutation.mockReset()
+    convex.watchQuery.mockReset()
+    convex.watchQuery.mockReturnValue({
+      localQueryResult: () => ({
+        revision: 0,
+        value: {
+          mode: 'editor',
+          sort: { by: 'title', direction: 'ascending' },
+          panels: {
+            left: { size: 288, visible: true },
+            right: { size: 280, visible: false },
+          },
+        },
+      }),
+      onUpdate: () => () => {},
+    })
   })
 
   it('preserves every capability identity within one authoritative scope', () => {
@@ -47,6 +62,7 @@ describe('useLiveResourceCore', () => {
     expect(result.current.content.maps).toBe(initial.content.maps)
     expect(result.current.content.canvases).toBe(initial.content.canvases)
     expect(result.current.navigation).toBe(navigation)
+    expect(result.current.preferences).toBe(initial.preferences)
     expect(result.current.resources.access).toEqual({
       status: 'unavailable',
       reason: 'capability_not_supported',
@@ -78,5 +94,6 @@ describe('useLiveResourceCore', () => {
     expect(next.content.files).not.toBe(initial.content.files)
     expect(next.content.maps).not.toBe(initial.content.maps)
     expect(next.content.canvases).not.toBe(initial.content.canvases)
+    expect(next.preferences).not.toBe(initial.preferences)
   })
 })

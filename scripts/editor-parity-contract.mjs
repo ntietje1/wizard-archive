@@ -60,6 +60,12 @@ export const editorParityContract = {
   },
   deletedPathOwners: [
     {
+      cluster: 'obsolete_package_facade',
+      pattern: /^packages\/editor\/src\/index\.ts$/,
+      owners: ['WIZ-259'],
+      disposition: 'superseded_artifact',
+    },
+    {
       cluster: 'workspace_shell_and_folder_surfaces',
       pattern: /^packages\/editor\/src\/(?:workspace|folders)(?:\/|$)/,
       owners: ['WIZ-260', 'WIZ-261'],

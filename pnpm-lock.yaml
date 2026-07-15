@@ -225,6 +225,9 @@ importers:
       '@blocknote/core':
         specifier: ^0.46.2
         version: 0.46.2(@types/hast@3.0.4)
+      lucide-react:
+        specifier: ^0.541.0
+        version: 0.541.0(react@19.1.1)
       react:
         specifier: ^19.1.1
         version: 19.1.1

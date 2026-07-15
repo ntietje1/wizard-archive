@@ -1,3 +1,5 @@
+import { createElement, StrictMode } from 'react'
+import type { ReactNode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import {
@@ -7,6 +9,16 @@ import {
 import { useLocalWorkspaceRuntime } from '../use-local-workspace-runtime'
 
 describe('useLocalWorkspaceRuntime', () => {
+  it('retains fixture content through the development lifecycle check', () => {
+    const { result } = renderHook(() => useLocalWorkspaceRuntime({}), {
+      wrapper: ({ children }: { children: ReactNode }) => createElement(StrictMode, null, children),
+    })
+
+    expect(result.current.content.notes.get(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)).toMatchObject({
+      status: 'ready',
+    })
+  })
+
   it('loads the canonical fixture without a local filesystem projection', async () => {
     const { result } = renderHook(() => useLocalWorkspaceRuntime({}))
 

@@ -68,23 +68,27 @@ export function selectResourceRoots(
 ): ReadonlyArray<ResourceRecord> {
   if (resourceIds.length > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) return reject('closure_too_large')
   const selected = new Set(resourceIds)
-  return resourceIds
-    .map((resourceId) => requireOwnedResource(graph, campaignId, resourceId))
-    .filter((resource) => {
-      const visited = new Set<ResourceId>([resource.id])
-      let parentId = resource.parentId
-      while (parentId !== null) {
-        if (selected.has(parentId)) return false
-        if (visited.has(parentId)) return reject('hierarchy_cycle')
-        visited.add(parentId)
-        const parent = graph.resources.get(parentId)
-        if (!parent) return reject('invalid_parent')
-        if (parent.campaignId !== campaignId) return reject('ownership_mismatch')
-        parentId = parent.parentId
+  const roots: Array<ResourceRecord> = []
+  for (const resourceId of resourceIds) {
+    const resource = requireOwnedResource(graph, campaignId, resourceId)
+    const visited = new Set<ResourceId>([resource.id])
+    let parentId = resource.parentId
+    let nested = false
+    while (parentId !== null) {
+      if (selected.has(parentId)) {
+        nested = true
+        break
       }
-      return true
-    })
-    .sort((left, right) => left.id.localeCompare(right.id))
+      if (visited.has(parentId)) return reject('hierarchy_cycle')
+      visited.add(parentId)
+      const parent = graph.resources.get(parentId)
+      if (!parent) return reject('invalid_parent')
+      if (parent.campaignId !== campaignId) return reject('ownership_mismatch')
+      parentId = parent.parentId
+    }
+    if (!nested) roots.push(resource)
+  }
+  return roots.sort((left, right) => left.id.localeCompare(right.id))
 }
 
 export function selectResourceClosure(

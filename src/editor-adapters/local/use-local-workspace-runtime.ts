@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createInMemoryEditorRuntime } from '@wizard-archive/editor/resources/in-memory-editor-runtime'
 import type { ResourceNavigation } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
@@ -23,7 +23,14 @@ export function useLocalWorkspaceRuntime({
     })
   })
 
-  useEffect(() => core.dispose, [core])
+  const disposal = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (disposal.current) clearTimeout(disposal.current)
+    return () => {
+      // Defer disposal so React's development cleanup/reconnect cycle can retain the same runtime.
+      disposal.current = setTimeout(core.dispose)
+    }
+  }, [core])
   return core.runtime
 }
 

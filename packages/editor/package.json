@@ -157,6 +157,7 @@
   },
   "dependencies": {
     "@blocknote/core": "^0.46.2",
+    "lucide-react": "^0.541.0",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

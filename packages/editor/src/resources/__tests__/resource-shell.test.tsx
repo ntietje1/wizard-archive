@@ -42,7 +42,8 @@ describe('ResourceShell', () => {
     )
 
     expect(await screen.findByRole('heading', { name: resource.title })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }))
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
 
     expect(await screen.findByText('Resource duplicated')).toBeInTheDocument()
     await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
@@ -64,7 +65,8 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit details' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Resource title' }), {
       target: { value: 'Renamed folder' },
     })
@@ -95,12 +97,13 @@ describe('ResourceShell', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Create resource' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
       target: { value: resource.title },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Folder' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
 
-    expect(await screen.findByText('folder created')).toBeInTheDocument()
+    expect(await screen.findByText('Folder created')).toBeInTheDocument()
     const roots = core.runtime.resources.index
       .getSnapshot()
       .list({ parentId: null, lifecycle: 'active' })
@@ -122,10 +125,11 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: `Delete ${resource.title} forever` }))
+    fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: `Delete ${resource.title} forever` }))
     expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('known')
     fireEvent.click(
-      screen.getByRole('button', { name: `Confirm delete ${resource.title} forever` }),
+      screen.getByRole('menuitem', { name: `Confirm delete ${resource.title} forever` }),
     )
 
     await waitFor(() =>
@@ -165,7 +169,8 @@ describe('ResourceShell', () => {
     render(
       <ResourceShell ariaLabel="Editable resources" runtime={runtime} workspaceName="DM view" />,
     )
-    fireEvent.click(await screen.findByRole('button', { name: `Move ${resource.title} to trash` }))
+    fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: `Move ${resource.title} to trash` }))
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
 
     await waitFor(() =>
@@ -176,6 +181,55 @@ describe('ResourceShell', () => {
     )
     expect(operationIds).toHaveLength(2)
     expect(operationIds[0]).toBe(operationIds[1])
+    core.dispose()
+  })
+
+  it('persists viewer mode and removes editing entry points', async () => {
+    const { core } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'viewer' }))
+    expect(await screen.findByText('Viewer mode — editing is disabled')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create resource' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).not.toBeInTheDocument()
+    expect(core.runtime.preferences.get()).toMatchObject({
+      status: 'ready',
+      snapshot: { value: { mode: 'viewer' } },
+    })
+    core.dispose()
+  })
+
+  it('restores persisted sidebar visibility and the contextual details panel', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Close sidebar' }))
+    expect(screen.queryByRole('navigation', { name: 'Sidebar' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(await screen.findByRole('navigation', { name: 'Sidebar' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open resource panel' }))
+    const panel = await screen.findByRole('complementary', { name: 'Resource panel' })
+    expect(panel).toHaveTextContent(resource.id)
+    expect(core.runtime.preferences.get()).toMatchObject({
+      status: 'ready',
+      snapshot: { value: { panels: { left: { visible: true }, right: { visible: true } } } },
+    })
     core.dispose()
   })
 })

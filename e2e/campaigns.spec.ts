@@ -19,7 +19,7 @@ test.describe.serial('campaign operations', () => {
   test('navigate to campaign editor', async ({ page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, testCampaignName)
-    await expect(page.getByRole('navigation', { name: 'Resources' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible()
   })
 
   test.afterAll(async ({ browser }) => {
