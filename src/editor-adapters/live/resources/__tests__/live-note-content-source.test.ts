@@ -336,6 +336,60 @@ describe('LiveNoteContentSource', () => {
     persisted.destroy()
   })
 
+  it('rehydrates a replacement session from the canonical saved snapshot', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const initialDocument = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Before reload' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const initial = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+    const version = await versionFor(initial)
+    const first = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    first.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const firstReady = first.get(resourceId)
+    if (firstReady.status !== 'ready') throw new Error('Expected ready note')
+    noteTextType(firstReady.session.document).insert(13, ' and saved')
+    await firstReady.session.flush()
+    const persisted = await provider.save.mock.results.at(-1)?.value
+    if (!persisted || persisted.status !== 'completed') throw new Error('Expected saved snapshot')
+    first.dispose()
+    await vi.waitFor(() => expect(provider.releaseAwareness).toHaveBeenCalled())
+
+    const second = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    second.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: persisted.update,
+      version: persisted.version,
+    })
+    const secondReady = second.get(resourceId)
+    if (secondReady.status !== 'ready') throw new Error('Expected rehydrated note')
+    expect(noteTextType(secondReady.session.document).toString()).toBe('Before reload and saved')
+
+    initialDocument.destroy()
+    second.dispose()
+  })
+
   it('stops after a terminal rejection and publishes the truthful session state', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
