@@ -28,7 +28,6 @@ import {
   copyWorkspaceResourceId,
   copyWorkspaceResourceLink,
   duplicateWorkspaceResources,
-  moveWorkspaceResources,
   pasteWorkspaceClipboard,
   setWorkspaceBookmarkState,
   resourceKindLabel,
@@ -40,6 +39,7 @@ export function ResourceContextMenu({
   clipboard,
   onClipboardChange,
   onClose,
+  onRequestMove,
   onReport,
   request,
   resourceIds,
@@ -50,6 +50,7 @@ export function ResourceContextMenu({
   clipboard: WorkspaceClipboard
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   onClose: () => void
+  onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   onReport: WorkspaceReport
   request: ResourceContextMenuRequest
   resourceIds: ReadonlyArray<ResourceId>
@@ -70,7 +71,7 @@ export function ResourceContextMenu({
     return () => document.removeEventListener('pointerdown', close)
   }, [onClose])
 
-  const actions = { onClose, onReport, resource, resourceIds, runtime }
+  const actions = { onClose, onReport, onRequestMove, resource, resourceIds, runtime }
 
   return (
     <div
@@ -140,6 +141,7 @@ function ResourceBookmarkMenuItem({
 type ResourceMenuActions = Readonly<{
   onClose: () => void
   onReport: WorkspaceReport
+  onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   resource: AuthorizedResourceSummary
   resourceIds: ReadonlyArray<ResourceId>
   runtime: EditorRuntime
@@ -241,17 +243,11 @@ function ActiveResourceMenuItems({
           )
         }
       />
-      {resource.displayParentId !== null && (
-        <MenuItem
-          icon={<FolderInput />}
-          label="Move to workspace root"
-          onActivate={() =>
-            runMenuOperation(actions, () =>
-              moveWorkspaceResources(runtime, resourceIds, null, onReport),
-            )
-          }
-        />
-      )}
+      <MenuItem
+        icon={<FolderInput />}
+        label="Move…"
+        onActivate={() => runMenuOperation(actions, () => actions.onRequestMove(resourceIds))}
+      />
     </>
   )
 }

@@ -19,6 +19,7 @@ import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
 import { useEnsureResource } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
+import { ResourceMoveDialog } from './workspace/resource-move-dialog'
 import { ResourceSidebar } from './workspace/resource-sidebar'
 import { ResourceTopbar } from './workspace/resource-topbar'
 import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
@@ -69,6 +70,7 @@ export function ResourceShell({
   const [searchOpen, setSearchOpen] = useState(false)
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
+  const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
   const [contextMenu, setContextMenu] = useState<
     | Readonly<{ status: 'closed' }>
     | Readonly<{
@@ -263,6 +265,16 @@ export function ResourceShell({
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
           onClipboardChange={setClipboard}
           onClose={closeContextMenu}
+          onRequestMove={setMoveResourceIds}
+          onReport={report}
+        />
+      )}
+      {moveResourceIds && (
+        <ResourceMoveDialog
+          resourceIds={moveResourceIds}
+          runtime={runtime}
+          snapshot={snapshot}
+          onClose={() => setMoveResourceIds(null)}
           onReport={report}
         />
       )}

@@ -370,6 +370,46 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('moves resources through the folder target picker', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    await createFolderFromSidebar('Destination')
+    const roots = core.runtime.resources.index
+      .getSnapshot()
+      .list({ parentId: null, lifecycle: 'active' })
+    if (roots.state !== 'known') throw new Error('expected loaded roots')
+    const destinationId = roots.items.find((item) => item.title === 'Destination')?.id
+    if (!destinationId) throw new Error('expected destination folder')
+    fireEvent.contextMenu(screen.getByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move…' }))
+
+    const dialog = within(screen.getByRole('dialog', { name: 'Move resources' }))
+    expect(dialog.getByRole('button', { name: 'Workspace root' })).toBeDisabled()
+    fireEvent.click(dialog.getByRole('button', { name: 'Destination' }))
+
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { displayParentId: destinationId },
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Move resources' })).not.toBeInTheDocument(),
+    )
+    core.dispose()
+  })
+
   it('supports resource clipboard and lifecycle keyboard commands', async () => {
     const { core, resource } = await shellRuntime(true)
 
