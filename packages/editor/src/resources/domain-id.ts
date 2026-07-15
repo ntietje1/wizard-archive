@@ -5,14 +5,12 @@ export const DOMAIN_ID_KIND = {
   campaign: 'campaign',
   campaignMember: 'campaignMember',
   canvasNode: 'canvasNode',
-  exportJob: 'exportJob',
   historyEntry: 'historyEntry',
   importJob: 'importJob',
   mapPin: 'mapPin',
   noteBlock: 'noteBlock',
   operation: 'operation',
   resource: 'resource',
-  resourceShare: 'resourceShare',
   session: 'session',
   snapshot: 'snapshot',
   userProfile: 'userProfile',
@@ -28,14 +26,12 @@ export type AssetId = DomainId<typeof DOMAIN_ID_KIND.asset>
 export type CampaignId = DomainId<typeof DOMAIN_ID_KIND.campaign>
 export type CampaignMemberId = DomainId<typeof DOMAIN_ID_KIND.campaignMember>
 export type CanvasNodeId = DomainId<typeof DOMAIN_ID_KIND.canvasNode>
-export type ExportJobId = DomainId<typeof DOMAIN_ID_KIND.exportJob>
 export type HistoryEntryId = DomainId<typeof DOMAIN_ID_KIND.historyEntry>
 export type ImportJobId = DomainId<typeof DOMAIN_ID_KIND.importJob>
 export type MapPinId = DomainId<typeof DOMAIN_ID_KIND.mapPin>
 export type NoteBlockId = DomainId<typeof DOMAIN_ID_KIND.noteBlock>
 export type OperationId = DomainId<typeof DOMAIN_ID_KIND.operation>
 export type ResourceId = DomainId<typeof DOMAIN_ID_KIND.resource>
-export type ResourceShareId = DomainId<typeof DOMAIN_ID_KIND.resourceShare>
 export type SessionId = DomainId<typeof DOMAIN_ID_KIND.session>
 export type SnapshotId = DomainId<typeof DOMAIN_ID_KIND.snapshot>
 export type UserProfileId = DomainId<typeof DOMAIN_ID_KIND.userProfile>
@@ -45,14 +41,12 @@ export type DomainIdByKind = {
   [DOMAIN_ID_KIND.campaign]: CampaignId
   [DOMAIN_ID_KIND.campaignMember]: CampaignMemberId
   [DOMAIN_ID_KIND.canvasNode]: CanvasNodeId
-  [DOMAIN_ID_KIND.exportJob]: ExportJobId
   [DOMAIN_ID_KIND.historyEntry]: HistoryEntryId
   [DOMAIN_ID_KIND.importJob]: ImportJobId
   [DOMAIN_ID_KIND.mapPin]: MapPinId
   [DOMAIN_ID_KIND.noteBlock]: NoteBlockId
   [DOMAIN_ID_KIND.operation]: OperationId
   [DOMAIN_ID_KIND.resource]: ResourceId
-  [DOMAIN_ID_KIND.resourceShare]: ResourceShareId
   [DOMAIN_ID_KIND.session]: SessionId
   [DOMAIN_ID_KIND.snapshot]: SnapshotId
   [DOMAIN_ID_KIND.userProfile]: UserProfileId

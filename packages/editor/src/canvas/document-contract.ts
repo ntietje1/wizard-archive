@@ -210,9 +210,7 @@ export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | nu
 }
 
 export function normalizeCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
-  return parseCanvasDocumentNode(
-    stripLegacyCanvasRendererFields(stripEphemeralCanvasNodeState(value)),
-  )
+  return parseCanvasDocumentNode(stripEphemeralCanvasNodeState(value))
 }
 
 const documentEdgeKeys = new Set([
@@ -281,14 +279,7 @@ export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | nu
 }
 
 export function normalizeCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
-  return parseCanvasDocumentEdge(stripLegacyCanvasRendererFields(value))
-}
-
-function stripLegacyCanvasRendererFields(value: unknown): unknown {
-  if (!isRecord(value) || !('className' in value)) return value
-
-  const { className: _className, ...documentValue } = value
-  return documentValue
+  return parseCanvasDocumentEdge(value)
 }
 
 export interface CanvasDocumentContent {

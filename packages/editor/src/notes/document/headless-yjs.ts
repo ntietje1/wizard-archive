@@ -1,11 +1,9 @@
 import { blocksToYDoc as bnBlocksToYDoc, yDocToBlocks as bnYDocToBlocks } from '@blocknote/core/yjs'
 import * as Y from 'yjs'
-import { migrateLegacyMediaBlocks, noteDocumentSchema, partialNoteDocumentSchema } from './model'
+import { noteDocumentSchema, partialNoteDocumentSchema } from './model'
 import type { NoteBlock, PartialNoteBlock } from './model'
 import { destroyHeadlessBlockNoteEditor } from './headless-editor-cleanup'
-import { createHeadlessBlockNoteEditor } from './headless-editor'
 import { createHeadlessNoteEditor } from './headless-schema'
-import { headlessLegacyMediaDecodeNoteSchema } from './legacy-media-migration'
 
 export class InvalidNoteYjsDocumentError extends Error {
   readonly cause: unknown
@@ -35,15 +33,11 @@ export function noteBlocksToYDoc(blocks: Array<PartialNoteBlock>, fragment: stri
 }
 
 export function noteYDocToBlocks(doc: Y.Doc, fragment: string): Array<NoteBlock> {
-  const editor = createHeadlessBlockNoteEditor({
-    schema: headlessLegacyMediaDecodeNoteSchema,
-  })
+  const editor = createHeadlessNoteEditor()
   try {
-    return parseMigratedNoteBlocks(
+    return parseNoteBlocks(
       normalizeDecodedNoteBlocks(
-        migrateLegacyMediaBlocks(
-          bnYDocToBlocks(editor, doc, fragment) as Array<Record<string, unknown>>,
-        ),
+        bnYDocToBlocks(editor, doc, fragment) as Array<Record<string, unknown>>,
       ),
     )
   } finally {
@@ -51,7 +45,7 @@ export function noteYDocToBlocks(doc: Y.Doc, fragment: string): Array<NoteBlock>
   }
 }
 
-function parseMigratedNoteBlocks(blocks: unknown): Array<NoteBlock> {
+function parseNoteBlocks(blocks: unknown): Array<NoteBlock> {
   const result = noteDocumentSchema.safeParse(blocks)
   if (!result.success) {
     throw new InvalidNoteYjsDocumentError(result.error)
@@ -147,8 +141,7 @@ export function decodeNoteYjsUpdatesToBlocks(
 }
 
 function parsePartialNoteBlocks(blocks: unknown): Array<PartialNoteBlock> {
-  const normalizedBlocks = Array.isArray(blocks) ? migrateLegacyMediaBlocks(blocks) : blocks
-  const result = partialNoteDocumentSchema.safeParse(normalizedBlocks)
+  const result = partialNoteDocumentSchema.safeParse(blocks)
   if (!result.success) {
     throw new TypeError(
       `noteBlocksToYDoc requires an array of note blocks: ${result.error.message}`,

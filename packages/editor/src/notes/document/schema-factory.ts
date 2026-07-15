@@ -78,14 +78,3 @@ export function createNoteBlockSpecs({
     embed: createEmbedBlockSpec(renderEmbedBlock),
   } satisfies BlockSpecs
 }
-
-export function createLegacyMediaDecodeBlockSpecs({
-  renderEmbedBlock,
-}: {
-  renderEmbedBlock: EmbedBlockRenderer
-}) {
-  return {
-    ...defaultBlockSpecs,
-    embed: createEmbedBlockSpec(renderEmbedBlock),
-  } satisfies BlockSpecs
-}

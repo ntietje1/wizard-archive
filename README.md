@@ -15,62 +15,41 @@
 ![Zod](https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
-A campaign management platform built for Dungeon Masters and their players. Organize your world, share what your players need to see, and keep your secrets safe — all in real time.
+A real-time campaign workspace for Dungeon Masters and their players. Campaign content is modeled as one canonical resource graph with explicit identity, lifecycle, access, and content boundaries.
 
 <!-- TODO: Add screenshot or demo GIF -->
 
 ## Features
 
-### Campaign Management
+### Campaigns and access
 
 - Create and run multiple campaigns with unique invite links
 - Manage players and membership across campaigns
 - Start and track game sessions
 - DM "view-as" mode to preview exactly what a player sees
+- Project only the resources and capabilities available to the active campaign member
 
-### Rich-Text Notes
+### Resources
 
-- Block-based editor powered by BlockNote with slash commands, formatting toolbar, and drag-to-reorder
-- Real-time collaborative editing via Yjs — multiple users can edit the same note simultaneously
-- Wiki-links with autocomplete to connect notes, maps, and files across your campaign
-- Block-level sharing — selectively reveal or hide individual blocks per player
+- Organize folders, notes, canvases, maps, and files in one title-first hierarchy
+- Use stable UUIDv7 identities for routes, embeds, commands, and persistence
+- Move, copy, archive, restore, trash, and permanently delete through one command protocol
+- Resolve active, archived, and trashed collections through one authoritative resource index
 
-### Canvases
+### Editors and content
 
-- Freeform visual workspaces for spatial thinking — sketch, diagram, and lay out ideas on an infinite canvas
-- Drawing tools with adjustable brush sizes, eraser, shapes, sticky notes, and text nodes
-- Embed other campaign content (notes, folders, canvases) as interactive nodes
-- Real-time collaboration with remote cursor visibility
-- Pan, zoom, and fit-to-view navigation
-- Snapshot history with rollback
+- Edit BlockNote documents collaboratively with Yjs
+- Build canvases with text, drawing, and resource embed nodes
+- View campaign maps with resource-linked pins
+- Upload, preview, and download file resources
+- Embed resources by identity or reference external URLs
 
-### Sidebar & Organization
+### Portability and reliability
 
-- Hierarchical content tree with folders, notes, canvases, game maps, and files
-- Drag-and-drop reordering and nesting throughout the app — sidebar items, editor blocks, map pins, and canvas nodes
-- Context menus across the sidebar, editor, and maps for quick actions
-- Soft-delete with trash and recovery
-- Search and slug-based navigation
-- Bookmark items for quick access during sessions
-
-### Game Maps
-
-- Upload map images and place interactive pins linked to sidebar items
-- Pan, zoom, and manage pin visibility per player
-- Link pins directly to notes, files, or folders for in-context detail
-
-### File Management
-
-- Upload and organize campaign assets (images, PDFs, documents)
-- File previews, type detection, and download support
-- Multi-file upload with progress tracking
-
-### Sharing & Permissions
-
-- Three-tier permission model: **none**, **view**, and **edit**
-- Share individual items or entire folders (permissions cascade to children)
-- Share with specific players or all campaign members at once
-- DMs always retain full access — players only see what they're meant to
+- Export and import self-contained Wizard Archive bundles
+- Preserve source aliases for import diagnostics without using them as resource identity
+- Apply optimistic commands with typed receipts and authoritative reconciliation
+- Represent loading, unavailable, unknown, missing, and rejected states explicitly
 
 ### Authentication & Accounts
 
@@ -80,15 +59,13 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 
 ## Tech Stack
 
-| Layer           | Technologies                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| **Frontend**    | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
-| **Editor**      | BlockNote, Yjs, Tiptap                                                                           |
-| **Canvases**    | Custom canvas renderer, Yjs                                                                      |
-| **Maps**        | React Zoom Pan Pinch                                                                             |
-| **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                 |
-| **Validation**  | Zod, Convex Validators                                                                           |
-| **Backend**     | Convex (real-time database, serverless functions, file storage)                                  |
-| **Auth**        | Better Auth (email/password, OAuth, 2FA)                                                         |
-| **Deployment**  | Cloudflare Workers (serverless edge)                                                             |
-| **Tooling**     | Vite+, Vitest, Playwright, React Compiler                                                        |
+| Layer          | Technologies                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| **Frontend**   | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
+| **Editor**     | BlockNote, Yjs                                                                                   |
+| **Canvases**   | Custom canvas editor, Yjs                                                                        |
+| **Validation** | Zod, Convex Validators                                                                           |
+| **Backend**    | Convex (real-time database, serverless functions, file storage)                                  |
+| **Auth**       | Better Auth (email/password, OAuth, 2FA)                                                         |
+| **Deployment** | Cloudflare Workers (serverless edge)                                                             |
+| **Tooling**    | Vite+, Vitest, Playwright, React Compiler                                                        |
