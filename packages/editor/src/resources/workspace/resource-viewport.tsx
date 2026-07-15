@@ -32,6 +32,7 @@ import {
   resourceKindIcon,
   resourcePresentationKey,
 } from './resource-presentation'
+import { NoteEditor } from '../../notes/note-editor'
 
 export function ResourceViewport({
   canEdit,
@@ -78,6 +79,9 @@ export function ResourceViewport({
       />
     )
   }
+  if (resource.kind === 'note') {
+    return <NoteViewport canEdit={canEdit} resource={resource} runtime={runtime} />
+  }
   const state = contentState(resource, runtime)
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
 
@@ -87,6 +91,37 @@ export function ResourceViewport({
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
       data-resource-kind={resource.kind}
       data-workspace-mode={canEdit ? 'editor' : 'viewer'}
+    />
+  )
+}
+
+function NoteViewport({
+  canEdit,
+  resource,
+  runtime,
+}: {
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  const state = runtime.content.notes.get(resource.id)
+  if (state.status === 'initializing') {
+    return (
+      <NoteEditor
+        document={state.local}
+        editable={canEdit}
+        label={`${resource.title} note editor`}
+        onFlush={() => Promise.resolve()}
+      />
+    )
+  }
+  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
+  return (
+    <NoteEditor
+      document={state.session.document}
+      editable={canEdit && !state.session.readonly}
+      label={`${resource.title} note editor`}
+      onFlush={() => state.session.flush()}
     />
   )
 }

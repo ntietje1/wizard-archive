@@ -1,0 +1,26 @@
+.resource-note-editor .bn-container,
+.resource-note-editor .bn-editor {
+  min-height: 100%;
+}
+
+.resource-note-editor .bn-editor {
+  margin-inline: auto;
+  max-width: 56rem;
+  padding: 2.5rem max(3rem, calc((100% - 56rem) / 2));
+}
+
+.resource-note-editor .note-value-inline {
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  padding-inline: 0.25rem;
+  font-family: ui-monospace, monospace;
+}
+
+.resource-note-editor .note-embed-placeholder {
+  display: grid;
+  min-height: 6rem;
+  place-items: center;
+  border: 1px dashed currentColor;
+  border-radius: 0.5rem;
+  opacity: 0.6;
+}

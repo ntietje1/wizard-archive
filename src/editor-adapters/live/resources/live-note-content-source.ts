@@ -74,8 +74,9 @@ class LiveNoteSession implements NoteSession {
     if (this.#disposed) {
       return Promise.resolve({ status: 'rejected', reason: 'scope_unavailable' })
     }
+    if (this.#flushPromise) return this.#flushPromise
     if (!this.#dirty) return Promise.resolve({ status: 'completed', version: this.#version })
-    this.#flushPromise ??= this.#save()
+    this.#flushPromise = this.#save()
     return this.#flushPromise
   }
 
@@ -84,9 +85,9 @@ class LiveNoteSession implements NoteSession {
     if (this.#timer) clearTimeout(this.#timer)
     this.#timer = null
     this.document.off('update', this.#onUpdate)
-    void this.flush()
+    const finalFlush = this.#dirty || this.#flushPromise ? this.flush() : Promise.resolve()
     this.#disposed = true
-    this.document.destroy()
+    void finalFlush.finally(() => this.document.destroy())
   }
 
   readonly #onUpdate = (_update: Uint8Array, origin: unknown) => {

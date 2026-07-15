@@ -14,10 +14,15 @@ function normalizeValueInlineProps(props: Partial<NoteValueProps>): NoteValuePro
   })
 }
 
+export function getValueInlineText(props: Partial<NoteValueProps>): string {
+  const valueProps = normalizeValueInlineProps(props)
+  return valueProps.label || valueProps.expressionSource || 'value'
+}
+
 export function renderValueInlineExternalElement(props: Partial<NoteValueProps>): HTMLElement {
   const valueProps = normalizeValueInlineProps(props)
   const element = document.createElement('span')
-  element.textContent = valueProps.label || valueProps.expressionSource || 'value'
+  element.textContent = getValueInlineText(valueProps)
   for (const [name, value] of getValueInlineExternalAttributes(valueProps)) {
     element.setAttribute(name, value)
   }

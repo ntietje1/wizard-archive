@@ -277,6 +277,43 @@ describe('LiveNoteContentSource', () => {
       ),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'paragraph' })]))
   })
+
+  it('waits for the final save before destroying a disposed document', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    let finishSave: (() => void) | undefined
+    provider.save.mockImplementation(async ({ resourceId: savedResourceId, update }) => {
+      await new Promise<void>((resolve) => {
+        finishSave = resolve
+      })
+      return {
+        status: 'completed',
+        resourceId: savedResourceId,
+        update,
+        version: await versionFor(update),
+      }
+    })
+    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
+    const version = await versionFor(initial)
+
+    source.get(resourceId)
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready note')
+    let destroyed = false
+    ready.session.document.on('destroy', () => {
+      destroyed = true
+    })
+    ready.session.document.getMap('pending-edit').set('value', true)
+
+    source.dispose()
+
+    expect(provider.save).toHaveBeenCalledOnce()
+    expect(destroyed).toBe(false)
+    finishSave?.()
+    await vi.waitFor(() => expect(destroyed).toBe(true))
+  })
 })
 
 function noteTextType(document: Y.Doc): Y.XmlText {
