@@ -305,6 +305,42 @@ describe('ResourceShell', () => {
     })
     core.dispose()
   })
+
+  it('supports resource clipboard and lifecycle keyboard commands', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    await createFolderFromSidebar('Keyboard source')
+    const source = screen.getByRole('button', { name: 'Keyboard source' })
+    fireEvent.click(source)
+    fireEvent.keyDown(source, { key: 'c', ctrlKey: true })
+    const destination = screen.getByRole('button', { name: resource.title })
+    fireEvent.click(destination)
+    fireEvent.keyDown(destination, { key: 'v', ctrlKey: true })
+
+    expect(await screen.findByText('Resource duplicated')).toBeInTheDocument()
+    expect(
+      core.runtime.resources.index
+        .getSnapshot()
+        .list({ parentId: resource.id, lifecycle: 'active' }),
+    ).toMatchObject({ state: 'known', items: [{ title: 'Keyboard source' }] })
+
+    fireEvent.keyDown(destination, { key: 'Delete' })
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { lifecycle: 'trashed' },
+      }),
+    )
+    core.dispose()
+  })
 })
 
 async function createFolderFromSidebar(title: string) {

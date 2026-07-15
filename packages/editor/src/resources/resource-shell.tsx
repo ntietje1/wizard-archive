@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { PointerEvent, ReactNode } from 'react'
+import type { KeyboardEvent, PointerEvent, ReactNode } from 'react'
 import { Menu } from 'lucide-react'
 import type { ResourceId } from './domain-id'
 import type { EditorRuntime } from './editor-runtime-contract'
@@ -14,6 +14,8 @@ import type { WorkspacePanelPreference, WorkspacePreferenceChange } from './work
 import { EMPTY_WORKSPACE_SELECTION, updateWorkspaceSelection } from './workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
 import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
+import { workspaceKeyboardCommand } from './workspace-keyboard'
+import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
 import { useEnsureResource } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
@@ -23,6 +25,11 @@ import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
 import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
 import type { WorkspaceReport } from './workspace/resource-operations'
+import {
+  changeWorkspaceResourcesLifecycle,
+  duplicateWorkspaceResources,
+  pasteWorkspaceClipboard,
+} from './workspace/resource-operations'
 
 export function ResourceShell({
   ariaLabel,
@@ -81,6 +88,44 @@ export function ResourceShell({
     setContextMenu({ status: 'open', request, resourceIds })
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
+  const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    const command = workspaceKeyboardCommand(event)
+    if (!command || !canEdit) return
+    const resourceIds =
+      selection.selectedIds.length > 0
+        ? selection.selectedIds
+        : selectedResourceId
+          ? [selectedResourceId]
+          : []
+    const targetId = selection.focusedId ?? selectedResourceId
+    const target = targetId ? snapshot.lookup(targetId) : { state: 'missing' as const }
+    if (resourceIds.length === 0 || target.state !== 'known') return
+    event.preventDefault()
+    closeContextMenu()
+    const setClipboardOperation = (operation: 'copy' | 'move') =>
+      setClipboard({ status: 'ready', operation, resourceIds })
+    const actions: Record<WorkspaceKeyboardCommand, () => void> = {
+      copy: () => setClipboardOperation('copy'),
+      cut: () => setClipboardOperation('move'),
+      duplicate: () =>
+        void duplicateWorkspaceResources(
+          runtime,
+          resourceIds,
+          target.value.displayParentId,
+          report,
+        ),
+      paste: () => {
+        if (target.value.kind !== 'folder' || target.value.lifecycle !== 'active') return
+        void pasteWorkspaceClipboard(runtime, clipboard, target.value.id, report).then(setClipboard)
+      },
+      trash: () => {
+        if (target.value.lifecycle === 'active') {
+          void changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'trash', report)
+        }
+      },
+    }
+    actions[command]()
+  }
 
   const changePreference = (change: WorkspacePreferenceChange) => {
     void runtime.preferences.change(change).then((result) => {
@@ -101,6 +146,7 @@ export function ResourceShell({
     <section
       aria-label={ariaLabel}
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
+      onKeyDown={handleWorkspaceKeyDown}
     >
       {leftVisible && (
         <ResizableWorkspacePanel

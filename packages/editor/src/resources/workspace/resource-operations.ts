@@ -10,6 +10,8 @@ import type {
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceKind } from '../resource-record'
+import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
+import type { WorkspaceClipboard } from '../workspace-clipboard'
 
 export type WorkspaceReport = (message: string, retry?: () => void) => void
 
@@ -146,6 +148,27 @@ export async function duplicateWorkspaceResources(
       report(deliveryMessage(delivery))
     },
   )
+}
+
+export async function pasteWorkspaceClipboard(
+  runtime: EditorRuntime,
+  clipboard: WorkspaceClipboard,
+  destinationParentId: ResourceId,
+  report: WorkspaceReport,
+): Promise<WorkspaceClipboard> {
+  if (clipboard.status === 'empty' || clipboard.resourceIds.includes(destinationParentId)) {
+    return clipboard
+  }
+  const completed =
+    clipboard.operation === 'copy'
+      ? await duplicateWorkspaceResources(
+          runtime,
+          clipboard.resourceIds,
+          destinationParentId,
+          report,
+        )
+      : await moveWorkspaceResources(runtime, clipboard.resourceIds, destinationParentId, report)
+  return completed && clipboard.operation === 'move' ? EMPTY_WORKSPACE_CLIPBOARD : clipboard
 }
 
 export async function copyWorkspaceResourceLink(

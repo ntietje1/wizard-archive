@@ -23,6 +23,7 @@ import {
   copyWorkspaceResourceLink,
   duplicateWorkspaceResources,
   moveWorkspaceResources,
+  pasteWorkspaceClipboard,
 } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 
@@ -111,12 +112,8 @@ function ActiveResourceMenuItems({
     clipboard.status === 'ready' &&
     !clipboard.resourceIds.includes(destinationId)
   const paste = async () => {
-    if (clipboard.status !== 'ready' || destinationId === null) return
-    const completed =
-      clipboard.operation === 'copy'
-        ? await duplicateWorkspaceResources(runtime, clipboard.resourceIds, destinationId, onReport)
-        : await moveWorkspaceResources(runtime, clipboard.resourceIds, destinationId, onReport)
-    if (completed && clipboard.operation === 'move') onClipboardChange({ status: 'empty' })
+    if (destinationId === null) return
+    onClipboardChange(await pasteWorkspaceClipboard(runtime, clipboard, destinationId, onReport))
   }
   return (
     <>
