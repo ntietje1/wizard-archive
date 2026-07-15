@@ -33,6 +33,14 @@
       "types": "./dist/notes/document/plain-text.d.mts",
       "default": "./dist/notes/document/plain-text.mjs"
     },
+    "./notes/document-markdown": {
+      "types": "./dist/notes/document/markdown.d.mts",
+      "default": "./dist/notes/document/markdown.mjs"
+    },
+    "./canvas/native-document": {
+      "types": "./dist/canvas/native-document.d.mts",
+      "default": "./dist/canvas/native-document.mjs"
+    },
     "./resources/domain-id": {
       "types": "./dist/resources/domain-id.d.mts",
       "default": "./dist/resources/domain-id.mjs"
@@ -161,6 +169,10 @@
       "types": "./dist/resources/file-content-contract.d.mts",
       "default": "./dist/resources/file-content-contract.mjs"
     },
+    "./resources/map-native-document": {
+      "types": "./dist/resources/map-native-document.d.mts",
+      "default": "./dist/resources/map-native-document.mjs"
+    },
     "./resources/content-version": {
       "types": "./dist/resources/resource-content-version.d.mts",
       "default": "./dist/resources/resource-content-version.mjs"
@@ -185,6 +197,7 @@
   "wizardArchive": {
     "backendSafeSubpaths": [
       "./canvas/document-contract",
+      "./canvas/native-document",
       "./notes/document-contract",
       "./notes/document-yjs",
       "./notes/document-text",
@@ -221,6 +234,7 @@
       "./resources/editor-runtime-contract",
       "./resources/search-policy",
       "./resources/file-content-contract",
+      "./resources/map-native-document",
       "./resources/content-version",
       "./resources/source-classifier"
     ]

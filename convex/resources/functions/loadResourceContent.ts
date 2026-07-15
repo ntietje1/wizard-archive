@@ -1,46 +1,16 @@
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignQueryCtx } from '../../functions'
-import { findCanonicalResource } from './findCanonicalResource'
+import { authorizeResourceContent } from './authorizeResourceContent'
+import { loadPendingAssetState } from './assetContentState'
+import { loadFileContentState } from './fileContent'
 import { loadMapContentRows } from './mapContent'
 
 type ResourceContentKind = 'file' | 'map' | 'canvas'
 
-async function initializationOperation(ctx: CampaignQueryCtx, resourceId: ResourceId) {
-  const intents = await ctx.db
-    .query('resourceAssetCopyIntents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .take(501)
-  const operations = new Set(intents.map((intent) => intent.operationUuid))
-  return intents.length > 500 || operations.size !== 1 ? null : intents[0]!.operationUuid
-}
-
-async function pendingAssetState(
-  ctx: CampaignQueryCtx,
-  resourceId: ResourceId,
-  state: 'initializing' | 'ready' | 'failed',
-) {
-  if (state === 'failed') {
-    return { status: 'integrity_error' as const, issue: 'content_missing' as const }
-  }
-  if (state !== 'initializing') return null
-  const operationId = await initializationOperation(ctx, resourceId)
-  return operationId
-    ? { status: 'initializing' as const, operationId }
-    : { status: 'integrity_error' as const, issue: 'version_mismatch' as const }
-}
-
 async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
-  const content = await ctx.db
-    .query('resourceFileContents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
-  if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
-  if (content.campaignUuid !== ctx.resourceScope.campaignId) {
-    return { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
-  }
-  const pending = await pendingAssetState(ctx, resourceId, content.state)
-  if (pending) return pending
+  const state = await loadFileContentState(ctx, resourceId)
+  if (state.status !== 'ready') return state
+  const content = state.content
   return {
     status: 'ready' as const,
     kind: 'file' as const,
@@ -69,7 +39,7 @@ async function loadMapContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
   ) {
     return { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
   }
-  const pending = await pendingAssetState(ctx, resourceId, content.state)
+  const pending = await loadPendingAssetState(ctx, resourceId, content.state)
   if (pending) return pending
   return {
     status: 'ready' as const,
@@ -117,16 +87,8 @@ export async function loadResourceContent(
   resourceId: ResourceId,
   kind: ResourceContentKind,
 ) {
-  const resource = await findCanonicalResource(ctx.db, resourceId)
-  if (!resource || resource.campaignUuid !== ctx.resourceScope.campaignId) {
-    return { status: 'unavailable' as const, reason: 'unauthorized' as const }
-  }
-  if (resource.kind !== kind) {
-    return { status: 'unavailable' as const, reason: 'capability_not_supported' as const }
-  }
-  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    return { status: 'unavailable' as const, reason: 'unauthorized' as const }
-  }
+  const authorization = await authorizeResourceContent(ctx, resourceId, kind)
+  if (authorization.status !== 'authorized') return authorization
   switch (kind) {
     case 'file':
       return await loadFileContent(ctx, resourceId)

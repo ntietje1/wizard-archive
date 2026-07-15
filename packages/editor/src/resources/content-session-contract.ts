@@ -30,6 +30,15 @@ export type ContentPendingState =
   | ContentUnavailableState
   | { readonly status: 'initializing'; readonly operationId: OperationId }
 
+export type ContentExportResult =
+  | ContentUnavailableState
+  | Readonly<{
+      status: 'ready'
+      bytes: Uint8Array
+      extension: string
+      mediaType: string
+    }>
+
 export type SessionAwareness =
   | { readonly status: 'unavailable' }
   | { readonly status: 'available'; readonly collaboratorIds: ReadonlyArray<CampaignMemberId> }
@@ -136,6 +145,7 @@ export type FileResourceSource = Readonly<{
 export interface NoteSessionSource {
   get(resourceId: ResourceId): NoteSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+  export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
   create(
     envelope: CommandEnvelope<CreateNoteResourceCommand>,
     local: Y.Doc,
@@ -146,6 +156,7 @@ export interface NoteSessionSource {
 export interface FileContentSource {
   get(resourceId: ResourceId): FileContentState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+  export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
   create(
     envelope: CommandEnvelope<CreateFileResourceCommand>,
     source: FileResourceSource,
@@ -156,11 +167,13 @@ export interface FileContentSource {
 export interface MapSessionSource {
   get(resourceId: ResourceId): MapSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+  export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
   dispose(): void
 }
 
 export interface CanvasSessionSource {
   get(resourceId: ResourceId): CanvasSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+  export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
   dispose(): void
 }

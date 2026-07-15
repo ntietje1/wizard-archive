@@ -27,10 +27,12 @@ import {
 
 type CreateFileArgs = FunctionArgs<typeof api.resources.mutations.createFileResource>
 type CreateFileResult = FunctionReturnType<typeof api.resources.mutations.createFileResource>
+type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 
 type LiveFileContentBackend = LiveResourceContentBackend &
   Readonly<{
     create(args: CreateFileArgs): Promise<CreateFileResult>
+    download(resourceId: ResourceId): Promise<FileDownloadResult>
     discard(sessionId: Id<'fileStorage'>): Promise<void>
     refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
     upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
@@ -55,6 +57,27 @@ export function createLiveFileContentSource(
   const pending = new Map<ResourceId, PendingFileCreate>()
   return {
     ...content,
+    export: async (resourceId) => {
+      const state = content.get(resourceId)
+      if (state.status !== 'ready') {
+        return state.status === 'initializing' ? { status: 'loading' } : state
+      }
+      const download = await backend.download(resourceId)
+      if (download.status !== 'ready') return download
+      const bytes =
+        download.url === null
+          ? new Uint8Array()
+          : new Uint8Array(await (await fetchFile(download.url)).arrayBuffer())
+      if (bytes.byteLength !== state.content.byteSize) {
+        return { status: 'integrity_error', issue: 'content_corrupt' }
+      }
+      return {
+        status: 'ready',
+        bytes,
+        extension: state.content.extension ?? 'bin',
+        mediaType: state.content.mediaType,
+      }
+    },
     create: async (envelope, source) => {
       if (envelope.campaignId !== campaignId) return invalidCreateDelivery()
       const existing = pending.get(envelope.command.resourceId)
@@ -109,4 +132,10 @@ export function createLiveFileContentSource(
       pending.clear()
     },
   }
+}
+
+async function fetchFile(url: string): Promise<Response> {
+  const response = await fetch(url)
+  if (!response.ok) throw new TypeError('File download failed')
+  return response
 }

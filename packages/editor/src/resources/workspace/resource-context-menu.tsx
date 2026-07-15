@@ -4,6 +4,7 @@ import {
   Clipboard,
   ClipboardPaste,
   Copy,
+  Download,
   ExternalLink,
   FileInput,
   FileUp,
@@ -28,6 +29,7 @@ import {
   copyWorkspaceResourceId,
   copyWorkspaceResourceLink,
   duplicateWorkspaceResources,
+  downloadWorkspaceResource,
   pasteWorkspaceClipboard,
   setWorkspaceBookmarkState,
   resourceKindLabel,
@@ -271,6 +273,15 @@ function ResourceLinkMenuItems({ actions }: { actions: ResourceMenuActions }) {
           runMenuOperation(actions, () => copyWorkspaceResourceId(resource, onReport))
         }
       />
+      {resource.kind !== 'folder' && (
+        <MenuItem
+          icon={<Download />}
+          label="Download"
+          onActivate={() =>
+            runMenuOperation(actions, () => downloadWorkspaceResource(runtime, resource, onReport))
+          }
+        />
+      )}
     </>
   )
 }

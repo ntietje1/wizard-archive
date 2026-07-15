@@ -15,6 +15,7 @@ test.describe('resource mechanics', () => {
     const workspace = await openWorkspace(page)
     const sidebar = workspace.getByRole('navigation', { name: 'Sidebar' })
     const market = sidebar.getByRole('button', { name: 'The Lantern Market' })
+    const invoice = sidebar.getByRole('button', { name: 'Blue-glass Invoice' })
 
     await market.click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Bookmark' }).click()
@@ -46,6 +47,18 @@ test.describe('resource mechanics', () => {
     await expect(details).toContainText('note')
     await expect(details).toContainText('Campaign root')
     await expect(details).toContainText('01980c1a-5e70-7000-8000-000000000401')
+
+    await details.getByRole('button', { name: 'Close sidebar' }).click()
+    await invoice.click()
+    await page.getByRole('button', { name: 'Open resource panel' }).click()
+    await expect(details).toContainText('File metadata')
+    await expect(details).toContainText('85 bytes')
+    await expect(details).toContainText('text/plain')
+    await expect(details).toContainText('txt')
+    const downloadStarted = page.waitForEvent('download')
+    await details.getByRole('button', { name: 'Download' }).click()
+    const download = await downloadStarted
+    expect(download.suggestedFilename()).toBe('Blue-glass Invoice.txt')
   })
 
   test('creates through the folder dashboard and preserves natural titles through undo and redo', async ({

@@ -8,6 +8,7 @@ import {
 } from './functions/projectAuthorizedResources'
 import {
   authorizedResourceSnapshotValidator,
+  fileDownloadSnapshotValidator,
   noteContentSnapshotValidator,
   resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
@@ -19,6 +20,7 @@ import { loadResourceContent as loadResourceContentFn } from './functions/loadRe
 import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
+import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
@@ -122,6 +124,14 @@ export const loadContent = campaignQuery({
   handler: async (ctx, args) => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     return await loadResourceContentFn(ctx, resourceId, args.kind)
+  },
+})
+
+export const loadFileDownload = campaignQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: fileDownloadSnapshotValidator,
+  handler: async (ctx, args) => {
+    return await loadFileDownloadFn(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId))
   },
 })
 

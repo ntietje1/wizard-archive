@@ -104,6 +104,68 @@ export async function createWorkspaceFile(
   )
 }
 
+export async function downloadWorkspaceResource(
+  runtime: EditorRuntime,
+  resource: AuthorizedResourceSummary,
+  report: WorkspaceReport,
+): Promise<void> {
+  if (resource.kind === 'folder') {
+    report('Folders cannot be downloaded directly')
+    return
+  }
+  const retry = () => void downloadWorkspaceResource(runtime, resource, report)
+  try {
+    const source = runtime.content[contentSourceName(resource.kind)]
+    const result = await source.export(resource.id)
+    if (result.status !== 'ready') {
+      report(
+        result.status === 'loading' ? 'Content is still loading' : 'Content is unavailable',
+        retry,
+      )
+      return
+    }
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(
+      new Blob([Uint8Array.from(result.bytes).buffer], { type: result.mediaType }),
+    )
+    link.href = url
+    link.download = resourceDownloadFileName(resource.title, result.extension)
+    link.click()
+    URL.revokeObjectURL(url)
+    report('Download started')
+  } catch {
+    report('Download failed', retry)
+  }
+}
+
+function contentSourceName(kind: Exclude<ResourceKind, 'folder'>) {
+  switch (kind) {
+    case 'note':
+      return 'notes' as const
+    case 'file':
+      return 'files' as const
+    case 'map':
+      return 'maps' as const
+    case 'canvas':
+      return 'canvases' as const
+  }
+}
+
+function resourceDownloadFileName(title: string, extension: string): string {
+  const safeTitle = Array.from(title)
+    .map((character) => {
+      const codePoint = character.codePointAt(0)!
+      return codePoint <= 31 || '<>:"/\\|?*'.includes(character) ? '_' : character
+    })
+    .join('')
+    .replace(/[. ]+$/g, '')
+    .trim()
+  const base = safeTitle || 'Untitled'
+  return base.toLocaleLowerCase().endsWith(`.${extension.toLocaleLowerCase()}`)
+    ? base
+    : `${base}.${extension}`
+}
+
 async function completeWorkspaceCreation(
   runtime: EditorRuntime,
   resourceId: ResourceId,

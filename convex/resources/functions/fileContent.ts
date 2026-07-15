@@ -3,7 +3,7 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMutationCtx } from '../../functions'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import {
   assertVersionStamp,
   initialVersion,
@@ -12,6 +12,7 @@ import { initialFileContentVersion } from '@wizard-archive/editor/resources/cont
 import { FILE_VIEWER_UNAVAILABLE_REASON } from '@wizard-archive/editor/resources/file-content-contract'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { prepareAssetCopies } from './assetContent'
+import { loadPendingAssetState } from './assetContentState'
 
 const EMPTY_FILE_CONTENT = {
   classification: 'inert_file',
@@ -21,6 +22,20 @@ const EMPTY_FILE_CONTENT = {
   mediaType: 'application/octet-stream',
   viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
 } as const
+
+export async function loadFileContentState(ctx: CampaignQueryCtx, resourceId: ResourceId) {
+  const content = await ctx.db
+    .query('resourceFileContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+  if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
+  if (content.campaignUuid !== ctx.resourceScope.campaignId) {
+    return { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
+  }
+  const pending = await loadPendingAssetState(ctx, resourceId, content.state)
+  if (pending) return pending
+  return { status: 'ready' as const, content }
+}
 
 export async function createFileContent(
   ctx: CampaignMutationCtx,

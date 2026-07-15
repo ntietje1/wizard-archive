@@ -1,9 +1,13 @@
 import * as Y from 'yjs'
+import { encodeWizardCanvasDocument } from '../canvas/native-document'
+import { noteDocumentToMarkdown } from '../notes/document/markdown'
 import { initialFileContentVersion, initialNoteContentVersion } from './resource-content-version'
 import { initialVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
 import type {
+  CanvasSessionSource,
   CanvasSessionState,
+  ContentExportResult,
   CreateFileResourceCommand,
   CreateNoteResourceCommand,
   FileContentSource,
@@ -11,6 +15,7 @@ import type {
   FileResourceSource,
   FileResourceContent,
   MapResourceContent,
+  MapSessionSource,
   MapSessionState,
   NoteSessionSource,
   NoteSessionState,
@@ -43,6 +48,7 @@ import {
   createInMemoryWorkspaceSearch,
 } from './in-memory-workspace-discovery'
 import { createInMemoryNoteSession } from './in-memory-note-session'
+import { encodeWizardMapDocument } from './map-native-document'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -50,9 +56,14 @@ type ReadyContent<T> = Readonly<{
   version: VersionStamp
 }>
 
+type ReadyFileContent = ReadyContent<FileResourceContent> &
+  Readonly<{
+    bytes: Uint8Array
+  }>
+
 export type InMemoryEditorContent = Readonly<{
   notes?: ReadonlyArray<ReadyContent<Y.Doc>>
-  files?: ReadonlyArray<ReadyContent<FileResourceContent>>
+  files?: ReadonlyArray<ReadyFileContent>
   maps?: ReadonlyArray<ReadyContent<MapResourceContent>>
   canvases?: ReadonlyArray<ReadyContent<Y.Doc>>
 }>
@@ -136,6 +147,21 @@ class InMemoryNoteSessionSource
     return delivery
   }
 
+  export(resourceId: ResourceId): ContentExportResult {
+    const state = this.get(resourceId)
+    if (state.status !== 'ready') return exportPendingState(state)
+    try {
+      return {
+        status: 'ready',
+        bytes: new TextEncoder().encode(noteDocumentToMarkdown(state.session.document)),
+        extension: 'md',
+        mediaType: 'text/markdown',
+      }
+    } catch {
+      return { status: 'integrity_error', issue: 'content_corrupt' }
+    }
+  }
+
   setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void {
     const previous = this.#sessions.get(resourceId)
     if (previous && previous.document !== document) previous.dispose()
@@ -157,18 +183,31 @@ class InMemoryFileContentSource
   extends ResourceSessionStore<FileContentState>
   implements FileContentSource
 {
+  readonly #bytes = new Map<ResourceId, Uint8Array>()
+
   constructor(
-    ready: ReadonlyArray<ReadyContent<FileResourceContent>>,
+    ready: ReadonlyArray<ReadyFileContent>,
     private readonly campaignId: CampaignId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
   ) {
     super({ status: 'loading' })
     for (const entry of ready) {
-      this.set(entry.resourceId, {
-        status: 'ready',
-        content: entry.content,
-        version: entry.version,
-      })
+      this.setReady(entry.resourceId, entry.content, entry.version, entry.bytes)
+    }
+  }
+
+  export(resourceId: ResourceId): ContentExportResult {
+    const state = this.get(resourceId)
+    if (state.status !== 'ready') return exportPendingState(state)
+    const bytes = this.#bytes.get(resourceId)
+    if (!bytes || bytes.byteLength !== state.content.byteSize) {
+      return { status: 'integrity_error', issue: 'content_corrupt' }
+    }
+    return {
+      status: 'ready',
+      bytes: Uint8Array.from(bytes),
+      extension: state.content.extension ?? 'bin',
+      mediaType: state.content.mediaType,
     }
   }
 
@@ -188,13 +227,79 @@ class InMemoryFileContentSource
     ) {
       return delivery
     }
-    this.set(envelope.command.resourceId, {
-      status: 'ready',
-      content: { ...metadata, assetId: null },
-      version: await initialFileContentVersion(source.bytes, metadata),
-    })
+    this.setReady(
+      envelope.command.resourceId,
+      { ...metadata, assetId: null },
+      await initialFileContentVersion(source.bytes, metadata),
+      source.bytes,
+    )
     return delivery
   }
+
+  readBytes(resourceId: ResourceId): Uint8Array {
+    const bytes = this.#bytes.get(resourceId)
+    if (!bytes) throw new TypeError('File bytes are unavailable')
+    return Uint8Array.from(bytes)
+  }
+
+  setReady(
+    resourceId: ResourceId,
+    content: FileResourceContent,
+    version: VersionStamp,
+    bytes: Uint8Array,
+  ): void {
+    if (bytes.byteLength !== content.byteSize) throw new TypeError('File byte size does not match')
+    this.#bytes.set(resourceId, Uint8Array.from(bytes))
+    this.set(resourceId, { status: 'ready', content, version })
+  }
+
+  override dispose(): void {
+    this.#bytes.clear()
+    super.dispose()
+  }
+}
+
+class InMemoryMapSessionSource
+  extends ResourceSessionStore<MapSessionState>
+  implements MapSessionSource
+{
+  export(resourceId: ResourceId): ContentExportResult {
+    const state = this.get(resourceId)
+    return state.status === 'ready'
+      ? {
+          status: 'ready',
+          bytes: encodeWizardMapDocument(state.session.content),
+          extension: 'wizardmap',
+          mediaType: 'application/vnd.wizard-archive.map+json',
+        }
+      : exportPendingState(state)
+  }
+}
+
+class InMemoryCanvasSessionSource
+  extends ResourceSessionStore<CanvasSessionState>
+  implements CanvasSessionSource
+{
+  export(resourceId: ResourceId): ContentExportResult {
+    const state = this.get(resourceId)
+    return state.status === 'ready'
+      ? {
+          status: 'ready',
+          bytes: encodeWizardCanvasDocument(state.session.document),
+          extension: 'wizardcanvas',
+          mediaType: 'application/vnd.wizard-archive.canvas',
+        }
+      : exportPendingState(state)
+  }
+}
+
+function exportPendingState(
+  state: Exclude<
+    NoteSessionState | FileContentState | MapSessionState | CanvasSessionState,
+    { status: 'ready' }
+  >,
+): Exclude<ContentExportResult, { status: 'ready' }> {
+  return state.status === 'initializing' ? { status: 'loading' } : state
 }
 
 function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
@@ -230,7 +335,7 @@ export function createInMemoryEditorRuntime({
   const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const maps = new ResourceSessionStore<MapSessionState>({ status: 'loading' })
+  const maps = new InMemoryMapSessionSource({ status: 'loading' })
   for (const entry of content.maps ?? []) {
     maps.set(entry.resourceId, {
       status: 'ready',
@@ -241,7 +346,7 @@ export function createInMemoryEditorRuntime({
       },
     })
   }
-  const canvases = new ResourceSessionStore<CanvasSessionState>({ status: 'loading' })
+  const canvases = new InMemoryCanvasSessionSource({ status: 'loading' })
   for (const entry of content.canvases ?? []) {
     canvases.set(entry.resourceId, {
       status: 'ready',
@@ -351,8 +456,8 @@ async function initializeCreatedContent(
   stores: Readonly<{
     notes: InMemoryNoteSessionSource
     files: InMemoryFileContentSource
-    maps: ResourceSessionStore<MapSessionState>
-    canvases: ResourceSessionStore<CanvasSessionState>
+    maps: InMemoryMapSessionSource
+    canvases: InMemoryCanvasSessionSource
   }>,
 ) {
   switch (command.kind) {
@@ -375,11 +480,12 @@ async function initializeCreatedContent(
         mediaType: 'application/octet-stream',
         viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
       }
-      stores.files.set(command.resourceId, {
-        status: 'ready',
+      stores.files.setReady(
+        command.resourceId,
         content,
-        version: await initialFileContentVersion(new Uint8Array(), content),
-      })
+        await initialFileContentVersion(new Uint8Array(), content),
+        new Uint8Array(),
+      )
       return
     }
     case 'map': {

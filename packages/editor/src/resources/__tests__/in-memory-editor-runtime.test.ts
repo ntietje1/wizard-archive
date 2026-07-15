@@ -286,6 +286,15 @@ describe('createInMemoryEditorRuntime', () => {
       },
       version: { revision: 1 },
     })
+    const exported = await core.runtime.content.files.export(resourceId)
+    expect(exported).toMatchObject({
+      status: 'ready',
+      extension: 'txt',
+      mediaType: 'application/octet-stream',
+    })
+    expect(exported.status === 'ready' ? Array.from(exported.bytes) : null).toEqual(
+      Array.from(bytes),
+    )
     expect(core.runtime.resources.index.getSnapshot().lookup(resourceId).state).toBe('known')
     core.dispose()
   })

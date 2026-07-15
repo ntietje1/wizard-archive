@@ -384,6 +384,13 @@ export const noteContentSnapshotValidator = v.union(
   contentIntegritySnapshotValidator,
 )
 
+export const fileDownloadSnapshotValidator = v.union(
+  v.object({ status: v.literal('loading') }),
+  v.object({ status: v.literal('ready'), url: v.nullable(v.string()) }),
+  contentUnavailableSnapshotValidator,
+  contentIntegritySnapshotValidator,
+)
+
 export const resourceContentSnapshotValidator = v.union(
   v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({

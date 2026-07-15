@@ -41,7 +41,15 @@ type ContentStores = Readonly<{
   notes: ContentStore<NoteSessionState> & {
     setReady?(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void
   }
-  files: ContentStore<FileContentState>
+  files: ContentStore<FileContentState> & {
+    readBytes(resourceId: ResourceId): Uint8Array
+    setReady(
+      resourceId: ResourceId,
+      content: Extract<FileContentState, { status: 'ready' }>['content'],
+      version: VersionStamp,
+      bytes: Uint8Array,
+    ): void
+  }
   maps: ContentStore<MapSessionState>
   canvases: ContentStore<CanvasSessionState>
 }>
@@ -52,6 +60,7 @@ type PreparedContent =
   | Readonly<{
       kind: 'file'
       destinationId: ResourceId
+      bytes: Uint8Array
       source: Extract<FileContentState, { status: 'ready' }>
     }>
   | Readonly<{
@@ -117,7 +126,7 @@ function prepareContentCopy(
       case 'file': {
         const source = stores.files.get(sourceId)
         assertReady(source)
-        entries.push({ kind, destinationId, source })
+        entries.push({ kind, destinationId, source, bytes: stores.files.readBytes(sourceId) })
         break
       }
       case 'map': {
@@ -209,11 +218,12 @@ async function finalizeContentCopy(
     case 'file':
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.files.set(entry.destinationId, {
-          status: 'ready',
-          content: { ...entry.source.content },
-          version: initialVersion(entry.source.version.digest),
-        })
+        stores.files.setReady(
+          entry.destinationId,
+          { ...entry.source.content },
+          initialVersion(entry.source.version.digest),
+          entry.bytes,
+        )
       }
     case 'map': {
       const content = {

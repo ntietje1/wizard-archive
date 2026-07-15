@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Clock3, FileText, Link2, List, X } from 'lucide-react'
 import type { EditorRuntime, ResourceHistoryEntry } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
-import { copyWorkspaceResourceLink } from './resource-operations'
+import { copyWorkspaceResourceLink, downloadWorkspaceResource } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
@@ -105,14 +105,62 @@ function ResourceDetails({
         <dt className="text-muted-foreground">Resource ID</dt>
         <dd className="break-all font-mono">{resource.id}</dd>
       </dl>
-      <button
-        type="button"
-        className="mt-4 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
-        onClick={() => void copyWorkspaceResourceLink(runtime, resource, onReport)}
-      >
-        Copy link
-      </button>
+      {resource.kind === 'file' && <FileDetails resource={resource} runtime={runtime} />}
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
+          onClick={() => void copyWorkspaceResourceLink(runtime, resource, onReport)}
+        >
+          Copy link
+        </button>
+        {resource.kind !== 'folder' && (
+          <button
+            type="button"
+            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
+            onClick={() => void downloadWorkspaceResource(runtime, resource, onReport)}
+          >
+            Download
+          </button>
+        )}
+      </div>
     </div>
+  )
+}
+
+function FileDetails({
+  resource,
+  runtime,
+}: {
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  const state = useSyncExternalStore(
+    (listener) => runtime.content.files.subscribe(resource.id, listener),
+    () => runtime.content.files.get(resource.id),
+  )
+  if (state.status !== 'ready') {
+    return <p className="mt-4 text-xs text-muted-foreground">File metadata is unavailable.</p>
+  }
+  const metadata = state.content
+  return (
+    <>
+      <h3 className="mt-5 text-xs font-medium">File metadata</h3>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
+        <dt className="text-muted-foreground">Size</dt>
+        <dd>{metadata.byteSize.toLocaleString('en-US')} bytes</dd>
+        <dt className="text-muted-foreground">Media type</dt>
+        <dd className="break-all">{metadata.mediaType}</dd>
+        <dt className="text-muted-foreground">Extension</dt>
+        <dd>{metadata.extension ?? 'None'}</dd>
+        <dt className="text-muted-foreground">Detected format</dt>
+        <dd>{metadata.detectedFormat ?? 'Unknown'}</dd>
+        <dt className="text-muted-foreground">Classification</dt>
+        <dd>{metadata.classification.replaceAll('_', ' ')}</dd>
+        <dt className="text-muted-foreground">Viewer</dt>
+        <dd>{metadata.viewerUnavailableReason ?? 'Available'}</dd>
+      </dl>
+    </>
   )
 }
 

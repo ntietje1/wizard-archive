@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { noteDocumentToMarkdown } from '@wizard-archive/editor/notes/document-markdown'
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
@@ -10,6 +11,7 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CreateNoteResourceCommand,
+  ContentExportResult,
   NoteSession,
   NoteSessionSaveResult,
   NoteSessionSource,
@@ -250,6 +252,23 @@ class LiveNoteSessionSource implements NoteSessionSource {
     return this.#store.subscribe(resourceId, listener)
   }
 
+  export(resourceId: ResourceId): ContentExportResult {
+    const state = this.get(resourceId)
+    if (state.status !== 'ready') {
+      return state.status === 'initializing' ? { status: 'loading' } : state
+    }
+    try {
+      return {
+        status: 'ready',
+        bytes: new TextEncoder().encode(noteDocumentToMarkdown(state.session.document)),
+        extension: 'md',
+        mediaType: 'text/markdown',
+      }
+    } catch {
+      return { status: 'integrity_error', issue: 'content_corrupt' }
+    }
+  }
+
   async create(
     envelope: CommandEnvelope<CreateNoteResourceCommand>,
     local: Y.Doc,
@@ -416,6 +435,7 @@ export function createLiveNoteContentSource(
     create: (envelope: CommandEnvelope<CreateNoteResourceCommand>, local: Y.Doc) =>
       source.create(envelope, local),
     dispose: () => source.dispose(),
+    export: (resourceId: ResourceId) => source.export(resourceId),
     get: (resourceId: ResourceId) => source.get(resourceId),
     optimisticApplied: (envelope: CommandEnvelope<CreateNoteResourceCommand>) =>
       source.optimisticApplied(envelope),

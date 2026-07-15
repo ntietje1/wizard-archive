@@ -1,4 +1,6 @@
 import * as Y from 'yjs'
+import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
+import { encodeWizardMapDocument } from '@wizard-archive/editor/resources/map-native-document'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
@@ -8,6 +10,7 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CanvasSessionSource,
   CanvasSessionState,
+  ContentExportResult,
   FileContentSource,
   FileContentState,
   MapSessionSource,
@@ -18,6 +21,12 @@ import { createResourceWatchStore } from './resource-watch-store'
 type ResourceContentSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type ResourceContentKind = 'file' | 'map' | 'canvas'
 type ResourceContentState = FileContentState | MapSessionState | CanvasSessionState
+type LiveFileContentStateSource = Pick<FileContentSource, 'dispose' | 'get' | 'subscribe'>
+type LiveContentSourceForKind<TKind extends ResourceContentKind> = TKind extends 'file'
+  ? LiveFileContentStateSource
+  : TKind extends 'map'
+    ? MapSessionSource
+    : CanvasSessionSource
 type ResourceContentStore = ReturnType<
   typeof createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>
 >
@@ -53,6 +62,30 @@ class LiveResourceContentSource {
     this.#store.dispose()
     for (const dispose of this.#disposers.values()) dispose()
     this.#disposers.clear()
+  }
+
+  export(resourceId: ResourceId): ContentExportResult {
+    const state = this.get(resourceId)
+    if (state.status !== 'ready') {
+      return state.status === 'initializing' ? { status: 'loading' } : state
+    }
+    if (this.kind === 'map' && 'session' in state && 'content' in state.session) {
+      return {
+        status: 'ready',
+        bytes: encodeWizardMapDocument(state.session.content),
+        extension: 'wizardmap',
+        mediaType: 'application/vnd.wizard-archive.map+json',
+      }
+    }
+    if (this.kind === 'canvas' && 'session' in state && 'document' in state.session) {
+      return {
+        status: 'ready',
+        bytes: encodeWizardCanvasDocument(state.session.document),
+        extension: 'wizardcanvas',
+        mediaType: 'application/vnd.wizard-archive.canvas',
+      }
+    }
+    return { status: 'unavailable', reason: 'capability_not_supported' }
   }
 
   #apply(resourceId: ResourceId, snapshot: ResourceContentSnapshot): void {
@@ -164,27 +197,16 @@ function authoredDestination(value: unknown) {
   return destination
 }
 
-export function createLiveResourceContentSource(
-  kind: 'file',
+export function createLiveResourceContentSource<TKind extends ResourceContentKind>(
+  kind: TKind,
   backend: LiveResourceContentBackend,
-): FileContentSource
-export function createLiveResourceContentSource(
-  kind: 'map',
-  backend: LiveResourceContentBackend,
-): MapSessionSource
-export function createLiveResourceContentSource(
-  kind: 'canvas',
-  backend: LiveResourceContentBackend,
-): CanvasSessionSource
-export function createLiveResourceContentSource(
-  kind: ResourceContentKind,
-  backend: LiveResourceContentBackend,
-) {
+): LiveContentSourceForKind<TKind> {
   const source = new LiveResourceContentSource(kind, backend)
   return {
     dispose: () => source.dispose(),
+    export: (resourceId: ResourceId) => source.export(resourceId),
     get: (resourceId: ResourceId) => source.get(resourceId),
     subscribe: (resourceId: ResourceId, listener: () => void) =>
       source.subscribe(resourceId, listener),
-  }
+  } as LiveContentSourceForKind<TKind>
 }

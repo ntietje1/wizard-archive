@@ -9,6 +9,8 @@ import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
+import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -323,6 +325,54 @@ describe('authorized resource projection', () => {
         kind: 'canvas',
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
+  })
+
+  it('resolves file downloads only through the authorized file owner', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const fileId = await createResource(campaign, campaignUuid, 'file', null, 'Evidence')
+    const bytes = new TextEncoder().encode('exact evidence bytes')
+    const upload = await storeCommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([bytes]),
+      'evidence.txt',
+    )
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', fileId))
+        .unique()
+      const metadata = {
+        classification: 'inert_file' as const,
+        byteSize: bytes.byteLength,
+        detectedFormat: null,
+        extension: 'txt',
+        mediaType: 'text/plain',
+        viewerUnavailableReason: 'unsupported_format' as const,
+      }
+      await ctx.db.replace(content!._id, {
+        campaignUuid,
+        resourceUuid: fileId,
+        state: 'ready',
+        assetUuid: upload.assetId,
+        ...metadata,
+        version: await initialFileContentVersion(bytes, metadata),
+      })
+    })
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadFileDownload, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+      }),
+    ).resolves.toEqual({ status: 'ready', url: expect.any(String) })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadFileDownload, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
   })
 
   it('searches active resource titles and note bodies', async () => {

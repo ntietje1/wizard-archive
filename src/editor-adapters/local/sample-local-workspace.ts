@@ -51,6 +51,10 @@ export const SAMPLE_NOTE_BODY = [
   '- Players know the public auction starts at dusk.',
 ].join('\n')
 
+const SAMPLE_FILE_BYTES = new TextEncoder().encode(
+  'Invoice BG-17\nBlue-glass shipment\nDock fee: 45 silver\nBalance due at third tide bell\n',
+)
+
 export function createSampleLocalWorkspaceFixture({
   noteBody = SAMPLE_NOTE_BODY,
   projection = 'dm',
@@ -124,9 +128,10 @@ export function createSampleLocalWorkspaceFixture({
       files: [
         {
           resourceId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+          bytes: SAMPLE_FILE_BYTES,
           content: {
             assetId: null,
-            byteSize: 145,
+            byteSize: SAMPLE_FILE_BYTES.byteLength,
             classification: FILE_CLASSIFICATION.inert,
             detectedFormat: null,
             extension: 'txt',
