@@ -29,9 +29,6 @@ importers:
       '@base-ui/react':
         specifier: ^1.6.0
         version: 1.6.0(@types/react@19.1.11)(date-fns@4.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      '@blocknote/core':
-        specifier: ^0.46.2
-        version: 0.46.2(@types/hast@3.0.4)
       '@convex-dev/better-auth':
         specifier: 0.12.3
         version: 0.12.3(@standard-schema/spec@1.1.0)(better-auth@1.6.19(@tanstack/react-start@1.166.3(@voidzero-dev/vite-plus-core@0.2.2(@types/node@24.3.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.43.1)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.3))(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(mongodb@7.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(solid-js@1.9.9)(vitest@4.1.9))(convex@1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2)
@@ -71,12 +68,6 @@ importers:
       better-auth:
         specifier: 1.6.19
         version: 1.6.19(@tanstack/react-start@1.166.3(@voidzero-dev/vite-plus-core@0.2.2(@types/node@24.3.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.43.1)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.3))(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(mongodb@7.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(solid-js@1.9.9)(vitest@4.1.9)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
       color:
         specifier: ^5.0.2
         version: 5.0.2
@@ -89,9 +80,6 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
-      input-otp:
-        specifier: ^1.4.2
-        version: 1.4.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -110,15 +98,9 @@ importers:
       react-dom:
         specifier: ^19.1.1
         version: 19.1.1(react@19.1.1)
-      react-resizable-panels:
-        specifier: ^3.0.5
-        version: 3.0.5(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      tailwind-merge:
-        specifier: ^3.3.1
-        version: 3.3.1
       yjs:
         specifier: ^13.6.29
         version: 13.6.29
