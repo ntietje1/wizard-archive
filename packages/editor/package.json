@@ -148,16 +148,7 @@
     }
   },
   "dependencies": {
-    "@base-ui/react": "^1.6.0",
     "@blocknote/core": "^0.46.2",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "color": "^5.0.2",
-    "lucide-react": "^0.541.0",
-    "motion": "^12.24.12",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.1",
-    "y-protocols": "^1.0.6",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
