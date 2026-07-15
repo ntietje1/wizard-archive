@@ -111,11 +111,15 @@ export function defineResourceCatalogConformance(
         )
       }
 
-      const firstPage = await catalog.listChildren(campaignId, folderId, 'active', 1, null)
-      const secondPage = await catalog.listChildren(
+      const firstPage = await catalog.listCollection(
         campaignId,
-        folderId,
-        'active',
+        { parentId: folderId, lifecycle: 'active' },
+        1,
+        null,
+      )
+      const secondPage = await catalog.listCollection(
+        campaignId,
+        { parentId: folderId, lifecycle: 'active' },
         1,
         firstPage.cursor,
       )
@@ -124,9 +128,9 @@ export function defineResourceCatalogConformance(
       expect(secondPage.cursor).toBeNull()
       expect(firstPage.items[0]?.title).toBe('Duplicate')
       expect(secondPage.items[0]?.title).toBe('Duplicate')
-      await expect(catalog.listChildren(campaignId, folderId, 'active', 201, null)).rejects.toThrow(
-        'page size',
-      )
+      await expect(
+        catalog.listCollection(campaignId, { parentId: folderId, lifecycle: 'active' }, 201, null),
+      ).rejects.toThrow('page size')
       await expect(catalog.getResources(campaignId, [firstId, secondId])).resolves.toEqual([
         expect.objectContaining({ id: firstId }),
         expect.objectContaining({ id: secondId }),
@@ -413,6 +417,49 @@ export function defineResourceCatalogConformance(
           ),
         ),
       ).resolves.toEqual({ status: 'rejected', reason: 'ownership_mismatch' })
+    })
+
+    it('projects a trashed child as a trash root and restores its active parent', async () => {
+      let operation = 640
+      const { catalog, operations } = await createCatalog({ authorize: () => true, now: () => 64 })
+      const folderId = domainId(DOMAIN_ID_KIND.resource, 64)
+      const childId = domainId(DOMAIN_ID_KIND.resource, 640)
+      for (const command of [
+        createCommand(folderId, null, 'folder'),
+        createCommand(childId, folderId),
+      ]) {
+        expectCompleted(
+          await operations.execute(
+            actorId,
+            envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), command),
+          ),
+        )
+      }
+      expectCompleted(
+        await operations.execute(
+          actorId,
+          envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
+            type: 'trash',
+            resourceIds: [childId],
+          }),
+        ),
+      )
+
+      await expect(
+        catalog.listCollection(campaignId, { parentId: null, lifecycle: 'trashed' }, 10, null),
+      ).resolves.toEqual({ items: [expect.objectContaining({ id: childId })], cursor: null })
+      expectCompleted(
+        await operations.execute(
+          actorId,
+          envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
+            type: 'restore',
+            resourceIds: [childId],
+          }),
+        ),
+      )
+      expect(await catalog.getResource(campaignId, childId)).toEqual(
+        expect.objectContaining({ parentId: folderId, lifecycle: { state: 'active' } }),
+      )
     })
 
     it('trashes an ancestor without detaching or rejecting an already trashed descendant', async () => {

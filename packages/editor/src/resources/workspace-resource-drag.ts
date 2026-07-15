@@ -5,6 +5,7 @@ import type { EditorRuntime } from './editor-runtime-contract'
 import type { AuthorizedResourceSummary } from './resource-index-contract'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
 import {
+  changeWorkspaceResourcesLifecycle,
   duplicateWorkspaceResources,
   moveWorkspaceResources,
 } from './workspace/resource-operations'
@@ -15,20 +16,24 @@ const WORKSPACE_RESOURCE_DRAG_SCHEMA = 'resource-drag-v1'
 
 function beginWorkspaceResourceDrag(
   event: DragEvent<HTMLElement>,
-  resourceId: ResourceId,
+  resource: AuthorizedResourceSummary,
   selection: WorkspaceSelection,
   onSelectionChange: (action: WorkspaceSelectionAction) => void,
 ) {
-  const resourceIds = selection.selectedIds.includes(resourceId)
+  const resourceIds = selection.selectedIds.includes(resource.id)
     ? selection.selectedIds
-    : [resourceId]
-  if (!selection.selectedIds.includes(resourceId)) {
-    onSelectionChange({ type: 'normalizeContext', resourceId })
+    : [resource.id]
+  if (!selection.selectedIds.includes(resource.id)) {
+    onSelectionChange({ type: 'normalizeContext', resourceId: resource.id })
   }
   event.dataTransfer.effectAllowed = 'copyMove'
   event.dataTransfer.setData(
     WORKSPACE_RESOURCE_DRAG_TYPE,
-    JSON.stringify({ schema: WORKSPACE_RESOURCE_DRAG_SCHEMA, resourceIds }),
+    JSON.stringify({
+      schema: WORKSPACE_RESOURCE_DRAG_SCHEMA,
+      resourceIds,
+      lifecycle: resource.lifecycle,
+    }),
   )
 }
 
@@ -47,10 +52,12 @@ export function workspaceResourceDragProps({
   runtime: EditorRuntime
   selection: WorkspaceSelection
 }) {
-  if (!canEdit || resource.lifecycle !== 'active') return { draggable: false as const }
+  if (!canEdit) return { draggable: false as const }
   const onDragStart = (event: DragEvent<HTMLElement>) =>
-    beginWorkspaceResourceDrag(event, resource.id, selection, onSelectionChange)
-  if (resource.kind !== 'folder') return { draggable: true as const, onDragStart }
+    beginWorkspaceResourceDrag(event, resource, selection, onSelectionChange)
+  if (resource.kind !== 'folder' || resource.lifecycle === 'trashed') {
+    return { draggable: true as const, onDragStart }
+  }
   return {
     draggable: true as const,
     onDragStart,
@@ -81,20 +88,46 @@ export async function finishWorkspaceResourceDrop(
   report: WorkspaceReport,
 ) {
   delete event.currentTarget.dataset.dropTarget
-  const resourceIds = parseWorkspaceResourceDrag(
-    event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE),
-  )
-  if (!resourceIds || (destinationParentId && resourceIds.includes(destinationParentId))) return
+  const drag = parseWorkspaceResourceDrag(event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
+  if (!drag || (destinationParentId && drag.resourceIds.includes(destinationParentId))) return
   event.preventDefault()
   event.stopPropagation()
-  if (copyDragRequested(event)) {
-    await duplicateWorkspaceResources(runtime, resourceIds, destinationParentId, report)
+  if (drag.lifecycle === 'trashed') {
+    const restored = await changeWorkspaceResourcesLifecycle(
+      runtime,
+      drag.resourceIds,
+      'restore',
+      report,
+    )
+    if (restored) {
+      await moveWorkspaceResources(runtime, drag.resourceIds, destinationParentId, report)
+    }
     return
   }
-  await moveWorkspaceResources(runtime, resourceIds, destinationParentId, report)
+  if (copyDragRequested(event)) {
+    await duplicateWorkspaceResources(runtime, drag.resourceIds, destinationParentId, report)
+    return
+  }
+  await moveWorkspaceResources(runtime, drag.resourceIds, destinationParentId, report)
 }
 
-function parseWorkspaceResourceDrag(value: string): ReadonlyArray<ResourceId> | null {
+export async function finishWorkspaceTrashDrop(
+  event: DragEvent<HTMLElement>,
+  runtime: EditorRuntime,
+  report: WorkspaceReport,
+) {
+  delete event.currentTarget.dataset.dropTarget
+  const drag = parseWorkspaceResourceDrag(event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
+  if (!drag || drag.lifecycle === 'trashed') return
+  event.preventDefault()
+  event.stopPropagation()
+  await changeWorkspaceResourcesLifecycle(runtime, drag.resourceIds, 'trash', report)
+}
+
+function parseWorkspaceResourceDrag(value: string): Readonly<{
+  resourceIds: ReadonlyArray<ResourceId>
+  lifecycle: AuthorizedResourceSummary['lifecycle']
+}> | null {
   let decoded: unknown
   try {
     decoded = JSON.parse(value)
@@ -104,6 +137,7 @@ function parseWorkspaceResourceDrag(value: string): ReadonlyArray<ResourceId> | 
   if (
     !isRecord(decoded) ||
     decoded.schema !== WORKSPACE_RESOURCE_DRAG_SCHEMA ||
+    (decoded.lifecycle !== 'active' && decoded.lifecycle !== 'trashed') ||
     !Array.isArray(decoded.resourceIds) ||
     decoded.resourceIds.length === 0
   ) {
@@ -116,7 +150,7 @@ function parseWorkspaceResourceDrag(value: string): ReadonlyArray<ResourceId> | 
     if (!resourceId) return null
     resourceIds.push(resourceId)
   }
-  return Array.from(new Set(resourceIds))
+  return { resourceIds: Array.from(new Set(resourceIds)), lifecycle: decoded.lifecycle }
 }
 
 function copyDragRequested(event: DragEvent<HTMLElement>) {

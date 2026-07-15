@@ -1,6 +1,7 @@
 import type { CampaignId, ImportJobId, ResourceId } from './domain-id'
 import type { ResourceRecord } from './resource-record'
 import type { ResourceTombstone } from './resource-metadata-version'
+import type { ResourceCollectionQuery } from './resource-index-contract'
 
 export const MAX_RESOURCE_CATALOG_PAGE_SIZE = 200
 
@@ -40,10 +41,9 @@ export interface ResourceCatalogReader {
     campaignId: CampaignId,
     resourceIds: ReadonlyArray<ResourceId>,
   ): Promise<ReadonlyArray<ResourceRecord>>
-  listChildren(
+  listCollection(
     campaignId: CampaignId,
-    parentId: ResourceId | null,
-    lifecycle: 'active' | 'trashed',
+    query: ResourceCollectionQuery,
     limit: number,
     cursor: string | null,
   ): Promise<ResourceCatalogPage<ResourceRecord>>

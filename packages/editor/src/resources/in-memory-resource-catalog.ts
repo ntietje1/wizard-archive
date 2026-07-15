@@ -27,6 +27,7 @@ import type { AuditStamp, ResourceRecord } from './resource-record'
 import { canonicalizeResourceTitle } from './resource-record'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceTombstone } from './resource-metadata-version'
+import type { ResourceCollectionQuery } from './resource-index-contract'
 import { InMemoryResourceOperationLedger } from './resource-operation-ledger'
 import type {
   CanonicalTargetMapEntry,
@@ -318,10 +319,9 @@ export class InMemoryResourceCatalog
     )
   }
 
-  listChildren(
+  listCollection(
     campaignId: CampaignId,
-    parentId: ResourceId | null,
-    lifecycle: 'active' | 'trashed',
+    query: ResourceCollectionQuery,
     limit: number,
     cursor: string | null,
   ): Promise<ResourceCatalogPage<ResourceRecord>> {
@@ -330,14 +330,24 @@ export class InMemoryResourceCatalog
     } catch (error) {
       return Promise.reject(error)
     }
+    const kinds = query.kinds === undefined ? null : new Set(query.kinds)
     const candidates = Array.from(this.#backend.state.resources.values())
-      .filter(
-        (resource) =>
-          resource.campaignId === campaignId &&
-          resource.parentId === parentId &&
-          resource.lifecycle.state === lifecycle &&
-          (cursor === null || resource.id > cursor),
-      )
+      .filter((resource) => {
+        if (
+          resource.campaignId !== campaignId ||
+          resource.lifecycle.state !== query.lifecycle ||
+          (cursor !== null && resource.id <= cursor) ||
+          (kinds !== null && !kinds.has(resource.kind))
+        ) {
+          return false
+        }
+        if (query.parentId !== null || query.lifecycle === 'active') {
+          return resource.parentId === query.parentId
+        }
+        if (resource.parentId === null) return true
+        const parent = this.#backend.state.resources.get(resource.parentId)
+        return parent?.campaignId !== campaignId || parent.lifecycle.state !== 'trashed'
+      })
       .sort(byResourceId)
     const items = candidates.slice(0, limit)
     return Promise.resolve({

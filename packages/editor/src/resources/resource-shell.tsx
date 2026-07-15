@@ -87,6 +87,10 @@ export function ResourceShell({
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
   const changeSelection = (action: WorkspaceSelectionAction) =>
     setSelection((current) => updateWorkspaceSelection(current, action))
+  const changeSidebarView = (view: 'bookmarks' | 'resources' | 'trash') => {
+    setSidebarView(view)
+    changeSelection({ type: 'clear' })
+  }
   const openContextMenu = (request: ResourceContextMenuRequest) => {
     const resourceIds = selection.selectedIds.includes(request.resource.id)
       ? selection.selectedIds
@@ -185,7 +189,7 @@ export function ResourceShell({
             snapshot={snapshot}
             sort={preferences.sort}
             workspaceName={workspaceName}
-            onViewChange={setSidebarView}
+            onViewChange={changeSidebarView}
             onSearch={() => setSearchOpen(true)}
             onClose={() => changePreference({ type: 'panel', panel: 'left', visible: false })}
             onReport={report}

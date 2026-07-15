@@ -55,11 +55,12 @@ export type AuthorizedResourceSummary = Readonly<{
 
 export function authorizedResourceSummaryFromRecord(
   resource: ResourceRecord,
+  displayParentId: ResourceId | null = resource.parentId,
 ): AuthorizedResourceSummary {
   return {
     id: resource.id,
     campaignId: resource.campaignId,
-    displayParentId: resource.parentId,
+    displayParentId,
     kind: resource.kind,
     title: resource.title,
     icon: resource.icon,

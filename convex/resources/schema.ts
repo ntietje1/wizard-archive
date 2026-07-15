@@ -348,6 +348,7 @@ export const resourceTables = {
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
     .index('by_campaign_and_parent', ['campaignUuid', 'parentResourceUuid'])
     .index('by_campaign_and_lifecycle', ['campaignUuid', 'lifecycle'])
+    .index('by_campaign_and_lifecycle_and_resource', ['campaignUuid', 'lifecycle', 'resourceUuid'])
     .index('by_campaign_and_parent_and_lifecycle_and_resource', [
       'campaignUuid',
       'parentResourceUuid',

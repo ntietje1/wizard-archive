@@ -52,12 +52,26 @@ async function visibleSpine(
   return ancestors.reverse()
 }
 
-function uniqueSummaries(
+async function uniqueSummaries(
+  catalog: ConvexResourceCatalog,
   resources: ReadonlyArray<ResourceRecord>,
-): ReadonlyArray<AuthorizedResourceSummary> {
+): Promise<ReadonlyArray<AuthorizedResourceSummary>> {
   const summaries = new Map<ResourceId, AuthorizedResourceSummary>()
-  for (const resource of resources) {
-    summaries.set(resource.id, authorizedResourceSummaryFromRecord(resource))
+  const projected = await Promise.all(
+    resources.map(async (resource) => {
+      const parent =
+        resource.lifecycle.state === 'trashed' && resource.parentId !== null
+          ? await catalog.getResource(resource.campaignId, resource.parentId)
+          : null
+      const displayParentId =
+        resource.lifecycle.state === 'trashed' && parent?.lifecycle.state !== 'trashed'
+          ? null
+          : resource.parentId
+      return authorizedResourceSummaryFromRecord(resource, displayParentId)
+    }),
+  )
+  for (const summary of projected) {
+    summaries.set(summary.id, summary)
   }
   return Array.from(summaries.values()).sort((left, right) => left.id.localeCompare(right.id))
 }
@@ -102,7 +116,7 @@ export async function loadAuthorizedResource(
   const spine = await visibleSpine(catalog, resource)
   return await createSnapshot({
     scope,
-    resources: uniqueSummaries([...spine, resource]),
+    resources: await uniqueSummaries(catalog, [...spine, resource]),
     missingResourceIds: [],
     collections: [],
   })
@@ -147,20 +161,17 @@ export async function loadAuthorizedCollection(
     parentSpine = [...(await visibleSpine(catalog, parent)), parent]
   }
 
-  const page = await catalog.listChildren(
+  const page = await catalog.listCollection(
     scope.campaignId,
-    query.parentId,
-    query.lifecycle,
+    query,
     MAX_RESOURCE_CATALOG_PAGE_SIZE,
     input.cursor,
   )
-  const kinds = query.kinds === undefined ? null : new Set(query.kinds)
-  const items =
-    kinds === null ? page.items : page.items.filter((resource) => kinds.has(resource.kind))
+  const items = page.items
   return {
     snapshot: await createSnapshot({
       scope,
-      resources: uniqueSummaries([...parentSpine, ...items]),
+      resources: await uniqueSummaries(catalog, [...parentSpine, ...items]),
       missingResourceIds: [],
       collections: [
         {

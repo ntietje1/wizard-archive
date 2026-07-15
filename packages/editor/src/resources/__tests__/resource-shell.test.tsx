@@ -393,6 +393,64 @@ describe('ResourceShell', () => {
     expect(screen.getByRole('button', { name: resource.title })).toBeInTheDocument()
     core.dispose()
   })
+
+  it('restores a trashed resource by dragging it out to the workspace root', async () => {
+    const { core, resource } = await shellRuntime(true, 'trashed')
+    const transferData = new Map<string, string>()
+    const dataTransfer = {
+      dropEffect: 'none',
+      effectAllowed: 'none',
+      getData: (type: string) => transferData.get(type) ?? '',
+      setData: (type: string, value: string) => transferData.set(type, value),
+    }
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Trash' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open full trash view' }))
+    const source = await screen.findByRole('button', { name: resource.title })
+    fireEvent.dragStart(source, { dataTransfer })
+    fireEvent.drop(screen.getByLabelText('trash resource drop zone'), { dataTransfer })
+
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { lifecycle: 'active', displayParentId: null },
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Trash' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to resources' }))
+    expect(await screen.findByRole('button', { name: resource.title })).toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('empties complete trash roots only after inline confirmation', async () => {
+    const { core, resource } = await shellRuntime(true, 'trashed')
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Trash' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Empty Trash' }))
+    expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('known')
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm empty trash' }))
+
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('missing'),
+    )
+    core.dispose()
+  })
 })
 
 async function createFolderFromSidebar(title: string) {

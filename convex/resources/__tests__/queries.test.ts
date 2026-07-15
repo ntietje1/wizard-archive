@@ -101,6 +101,34 @@ describe('authorized resource projection', () => {
     expect(first.snapshot.revision).toBe(replay.snapshot.revision)
   })
 
+  it('projects trashed children of active folders as canonical trash roots', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const folderId = await createResource(campaign, campaignUuid, 'folder', null, 'Folder')
+    const childId = await createResource(campaign, campaignUuid, 'note', folderId, 'Child')
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'trash', resourceIds: [childId] },
+    })
+
+    const page = await asDm(campaign).query(api.resources.queries.loadCollection, {
+      campaignId: campaignUuid,
+      query: { parentId: null, lifecycle: 'trashed' },
+    })
+
+    expect(page.snapshot.collections).toEqual([
+      {
+        query: { parentId: null, lifecycle: 'trashed' },
+        resourceIds: [childId],
+        complete: true,
+      },
+    ])
+    expect(page.snapshot.resources).toEqual([
+      expect.objectContaining({ id: childId, displayParentId: null, lifecycle: 'trashed' }),
+    ])
+  })
+
   it('does not reveal a resource owned by another campaign', async () => {
     const firstCampaign = await setupCampaignContext(t)
     const secondCampaign = await setupCampaignContext(t)

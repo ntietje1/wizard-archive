@@ -87,7 +87,15 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
 
   const refresh = () => {
     const snapshot = catalog.getSnapshot(scope.campaignId)
-    const resources = snapshot.resources.map(authorizedResourceSummaryFromRecord)
+    const recordsById = new Map(snapshot.resources.map((resource) => [resource.id, resource]))
+    const resources = snapshot.resources.map((resource) => {
+      const parent = resource.parentId === null ? undefined : recordsById.get(resource.parentId)
+      const displayParentId =
+        resource.lifecycle.state === 'trashed' && parent?.lifecycle.state !== 'trashed'
+          ? null
+          : resource.parentId
+      return authorizedResourceSummaryFromRecord(resource, displayParentId)
+    })
     const resourcesById = new Map(resources.map((resource) => [resource.id, resource]))
     const includedIds = new Set<ResourceId>()
     for (const resourceId of loadedResourceIds) {

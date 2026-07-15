@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import {
   Clipboard,
@@ -54,6 +54,7 @@ export function ResourceContextMenu({
   const menu = useRef<HTMLDivElement>(null)
   const resource = request.resource
   const active = resource.lifecycle === 'active'
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus()
@@ -91,7 +92,13 @@ export function ResourceContextMenu({
       {runtime.resources.bookmarks.status === 'available' && active && (
         <ResourceBookmarkMenuItem actions={actions} bookmarkedIds={bookmarkedIds} />
       )}
-      {canEdit && <ResourceLifecycleMenuItems actions={actions} />}
+      {canEdit && (
+        <ResourceLifecycleMenuItems
+          actions={actions}
+          confirmDelete={confirmDelete}
+          onConfirmDelete={() => setConfirmDelete(true)}
+        />
+      )}
     </div>
   )
 }
@@ -230,7 +237,15 @@ function ResourceLinkMenuItems({ actions }: { actions: ResourceMenuActions }) {
   )
 }
 
-function ResourceLifecycleMenuItems({ actions }: { actions: ResourceMenuActions }) {
+function ResourceLifecycleMenuItems({
+  actions,
+  confirmDelete,
+  onConfirmDelete,
+}: {
+  actions: ResourceMenuActions
+  confirmDelete: boolean
+  onConfirmDelete: () => void
+}) {
   const { resource, resourceIds, runtime, onReport } = actions
   if (resource.lifecycle === 'active') {
     return (
@@ -268,19 +283,22 @@ function ResourceLifecycleMenuItems({ actions }: { actions: ResourceMenuActions 
         danger
         icon={<Trash2 />}
         label={
-          resourceIds.length > 1 ? `Delete ${resourceIds.length} items forever` : 'Delete Forever'
+          confirmDelete
+            ? resourceIds.length > 1
+              ? `Confirm delete ${resourceIds.length} items forever`
+              : `Confirm delete ${resource.title} forever`
+            : resourceIds.length > 1
+              ? `Delete ${resourceIds.length} items forever`
+              : 'Delete Forever'
         }
         onActivate={() => {
-          if (globalThis.confirm('Permanently delete the selected resources?')) {
-            runMenuOperation(actions, () =>
-              changeWorkspaceResourcesLifecycle(
-                runtime,
-                resourceIds,
-                'permanentlyDelete',
-                onReport,
-              ),
-            )
+          if (!confirmDelete) {
+            onConfirmDelete()
+            return
           }
+          runMenuOperation(actions, () =>
+            changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'permanentlyDelete', onReport),
+          )
         }}
       />
     </>

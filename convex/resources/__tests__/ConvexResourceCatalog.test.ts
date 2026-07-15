@@ -36,8 +36,10 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).getResource(...args)),
     getResources: async (...args) =>
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).getResources(...args)),
-    listChildren: async (...args) =>
-      await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).listChildren(...args)),
+    listCollection: async (...args) =>
+      await test.run(
+        async (ctx) => await new ConvexResourceCatalog(ctx.db).listCollection(...args),
+      ),
     getTombstone: async (...args) =>
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).getTombstone(...args)),
     listAliases: async (...args) =>
@@ -129,11 +131,15 @@ describe('ConvexResourceCatalog', () => {
 
     const result = await t.run(async (ctx) => {
       const catalog = new ConvexResourceCatalog(ctx.db)
-      const firstPage = await catalog.listChildren(campaignUuid, null, 'active', 1, null)
-      const secondPage = await catalog.listChildren(
+      const firstPage = await catalog.listCollection(
         campaignUuid,
+        { parentId: null, lifecycle: 'active' },
+        1,
         null,
-        'active',
+      )
+      const secondPage = await catalog.listCollection(
+        campaignUuid,
+        { parentId: null, lifecycle: 'active' },
         1,
         firstPage.cursor,
       )

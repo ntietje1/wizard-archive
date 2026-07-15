@@ -1,16 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
-import {
-  ChevronDown,
-  ChevronRight,
-  File,
-  PanelLeftClose,
-  Plus,
-  RotateCcw,
-  Search,
-  Star,
-  Trash2,
-} from 'lucide-react'
+import { ChevronDown, ChevronRight, File, PanelLeftClose, Plus, Search, Star } from 'lucide-react'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -41,6 +31,7 @@ import {
   resourceKindIcon,
   resourcePresentationKey,
 } from './resource-presentation'
+import { ResourceTrashControl } from './resource-trash-control'
 
 const EMPTY_BOOKMARKS: ReadonlySet<ResourceId> = new Set()
 
@@ -168,6 +159,7 @@ export function ResourceSidebar({
         </select>
       </div>
       <div
+        aria-label={`${view} resource drop zone`}
         className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:bg-muted/40"
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
@@ -219,15 +211,15 @@ export function ResourceSidebar({
           <Star className="size-4" />
           Bookmarks
         </button>
-        <button
-          type="button"
-          aria-pressed={view === 'trash'}
-          className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
-          onClick={() => onViewChange(view === 'trash' ? 'resources' : 'trash')}
-        >
-          {view === 'trash' ? <RotateCcw className="size-4" /> : <Trash2 className="size-4" />}
-          {view === 'trash' ? 'Resources' : 'Trash'}
-        </button>
+        <ResourceTrashControl
+          canEdit={canEdit}
+          runtime={runtime}
+          snapshot={snapshot}
+          sort={sort}
+          view={view}
+          onReport={onReport}
+          onViewChange={onViewChange}
+        />
       </div>
       {slots?.footer && <div className="shrink-0 border-t border-border">{slots.footer}</div>}
     </nav>
