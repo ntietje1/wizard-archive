@@ -5,22 +5,21 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import type { WorkspaceResourceIndexSnapshot } from '../resource-index-contract'
 import { RESOURCE_KIND } from '../resource-record'
 import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
-import { moveWorkspaceResources } from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 import { useEnsureResourceCollection } from './resource-loading'
 import { useModalDialog } from './use-modal-dialog'
 
 const FOLDER_KINDS: ReadonlyArray<'folder'> = [RESOURCE_KIND.folder]
 
 export function ResourceMoveDialog({
+  actions,
   onClose,
-  onReport,
   resourceIds,
   runtime,
   snapshot,
 }: {
+  actions: WorkspaceActions
   onClose: () => void
-  onReport: WorkspaceReport
   resourceIds: ReadonlyArray<ResourceId>
   runtime: EditorRuntime
   snapshot: WorkspaceResourceIndexSnapshot
@@ -37,12 +36,7 @@ export function ResourceMoveDialog({
     })
   const move = async (destinationParentId: ResourceId | null) => {
     setPending(true)
-    const completed = await moveWorkspaceResources(
-      runtime,
-      resourceIds,
-      destinationParentId,
-      onReport,
-    )
+    const completed = await actions.move(resourceIds, destinationParentId)
     setPending(false)
     if (completed) onClose()
   }

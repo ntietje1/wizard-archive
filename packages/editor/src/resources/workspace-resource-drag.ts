@@ -1,15 +1,11 @@
-import type { DragEvent } from 'react'
+import type { DragEvent, MouseEvent } from 'react'
 import { DOMAIN_ID_KIND, parseDomainId } from './domain-id'
 import type { ResourceId } from './domain-id'
-import type { EditorRuntime } from './editor-runtime-contract'
 import type { AuthorizedResourceSummary } from './resource-index-contract'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
-import {
-  changeWorkspaceResourcesLifecycle,
-  duplicateWorkspaceResources,
-  moveWorkspaceResources,
-} from './workspace/resource-operations'
-import type { WorkspaceReport } from './workspace/resource-operations'
+import { resourceContextMenuRequest } from './workspace/resource-context-menu-request'
+import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
+import type { WorkspaceActions } from './workspace/resource-operations'
 
 const WORKSPACE_RESOURCE_DRAG_TYPE = 'application/x-wizard-archive-resource-ids'
 const WORKSPACE_RESOURCE_DRAG_SCHEMA = 'resource-drag-v1'
@@ -37,34 +33,40 @@ function beginWorkspaceResourceDrag(
   )
 }
 
-export function workspaceResourceDragProps({
+export function workspaceResourceInteractionProps({
+  actions,
   canEdit,
-  onReport,
+  onOpenContextMenu,
   onSelectionChange,
   resource,
-  runtime,
   selection,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
-  onReport: WorkspaceReport
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
   selection: WorkspaceSelection
 }) {
-  if (!canEdit) return { draggable: false as const }
+  const interaction = {
+    onContextMenu: (event: MouseEvent<HTMLElement>) =>
+      onOpenContextMenu(resourceContextMenuRequest(event, resource)),
+    onFocus: () => onSelectionChange({ type: 'focus' as const, resourceId: resource.id }),
+  }
+  if (!canEdit) return { ...interaction, draggable: false as const }
   const onDragStart = (event: DragEvent<HTMLElement>) =>
     beginWorkspaceResourceDrag(event, resource, selection, onSelectionChange)
   if (resource.kind !== 'folder' || resource.lifecycle === 'trashed') {
-    return { draggable: true as const, onDragStart }
+    return { ...interaction, draggable: true as const, onDragStart }
   }
   return {
+    ...interaction,
     draggable: true as const,
     onDragStart,
     onDragOver: allowWorkspaceResourceDrop,
     onDragLeave: leaveWorkspaceResourceDrop,
     onDrop: (event: DragEvent<HTMLElement>) =>
-      void finishWorkspaceResourceDrop(event, runtime, resource.id, onReport),
+      void finishWorkspaceResourceDrop(event, actions, resource.id),
   }
 }
 
@@ -83,9 +85,8 @@ export function leaveWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
 
 export async function finishWorkspaceResourceDrop(
   event: DragEvent<HTMLElement>,
-  runtime: EditorRuntime,
+  actions: WorkspaceActions,
   destinationParentId: ResourceId | null,
-  report: WorkspaceReport,
 ) {
   delete event.currentTarget.dataset.dropTarget
   const drag = parseWorkspaceResourceDrag(event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
@@ -93,35 +94,29 @@ export async function finishWorkspaceResourceDrop(
   event.preventDefault()
   event.stopPropagation()
   if (drag.lifecycle === 'trashed') {
-    const restored = await changeWorkspaceResourcesLifecycle(
-      runtime,
-      drag.resourceIds,
-      'restore',
-      report,
-    )
+    const restored = await actions.changeLifecycle(drag.resourceIds, 'restore')
     if (restored) {
-      await moveWorkspaceResources(runtime, drag.resourceIds, destinationParentId, report)
+      await actions.move(drag.resourceIds, destinationParentId)
     }
     return
   }
   if (copyDragRequested(event)) {
-    await duplicateWorkspaceResources(runtime, drag.resourceIds, destinationParentId, report)
+    await actions.duplicate(drag.resourceIds, destinationParentId)
     return
   }
-  await moveWorkspaceResources(runtime, drag.resourceIds, destinationParentId, report)
+  await actions.move(drag.resourceIds, destinationParentId)
 }
 
 export async function finishWorkspaceTrashDrop(
   event: DragEvent<HTMLElement>,
-  runtime: EditorRuntime,
-  report: WorkspaceReport,
+  actions: WorkspaceActions,
 ) {
   delete event.currentTarget.dataset.dropTarget
   const drag = parseWorkspaceResourceDrag(event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
   if (!drag || drag.lifecycle === 'trashed') return
   event.preventDefault()
   event.stopPropagation()
-  await changeWorkspaceResourcesLifecycle(runtime, drag.resourceIds, 'trash', report)
+  await actions.changeLifecycle(drag.resourceIds, 'trash')
 }
 
 function parseWorkspaceResourceDrag(value: string): Readonly<{

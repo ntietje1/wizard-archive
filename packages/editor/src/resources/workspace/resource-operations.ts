@@ -10,6 +10,7 @@ import type {
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceKind } from '../resource-record'
+import type { ResourceUndoHistory } from '../resource-undo-history'
 import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 
@@ -17,7 +18,48 @@ export type WorkspaceReport = (message: string, retry?: () => void) => void
 
 const MAX_EMPTY_TRASH_ROOTS_PER_COMMAND = 25
 
-export async function createWorkspaceResource(
+export function createWorkspaceActions(runtime: EditorRuntime, report: WorkspaceReport) {
+  return {
+    bookmark: (resourceIds: ReadonlyArray<ResourceId>, bookmarked: boolean) =>
+      setWorkspaceBookmarkState(runtime, resourceIds, bookmarked, report),
+    changeLifecycle: (
+      resourceIds: ReadonlyArray<ResourceId>,
+      type: 'permanentlyDelete' | 'restore' | 'trash',
+    ) => changeWorkspaceResourcesLifecycle(runtime, resourceIds, type, report),
+    copyId: (resource: AuthorizedResourceSummary) => copyWorkspaceResourceId(resource, report),
+    copyLink: (resource: AuthorizedResourceSummary) =>
+      copyWorkspaceResourceLink(runtime, resource, report),
+    create: (kind: Exclude<ResourceKind, 'file'>, parentId: ResourceId | null, title: string) =>
+      createWorkspaceResource(runtime, kind, parentId, title, report),
+    createFile: (parentId: ResourceId | null, file: File) =>
+      createWorkspaceFile(runtime, parentId, file, report),
+    download: (resource: AuthorizedResourceSummary) =>
+      downloadWorkspaceResource(runtime, resource, report),
+    duplicate: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
+      duplicateWorkspaceResources(runtime, resourceIds, destinationParentId, report),
+    emptyTrash: (resourceIds: ReadonlyArray<ResourceId>) =>
+      emptyWorkspaceTrash(runtime, resourceIds, report),
+    move: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
+      moveWorkspaceResources(runtime, resourceIds, destinationParentId, report),
+    open: (resourceId: ResourceId) => runtime.navigation.open(resourceId),
+    paste: (clipboard: WorkspaceClipboard, destinationParentId: ResourceId) =>
+      pasteWorkspaceClipboard(runtime, clipboard, destinationParentId, report),
+    update: (resourceId: ResourceId, values: { title: string; icon: string; color: string }) =>
+      updateWorkspaceResource(runtime, resourceId, values, report),
+    undo: (direction: 'redo' | 'undo') => {
+      const history = runtime.resources.undo
+      if (history.status !== 'available') {
+        report(`${direction === 'undo' ? 'Undo' : 'Redo'} is unavailable`)
+        return Promise.resolve()
+      }
+      return runResourceUndo(history.value, direction, report)
+    },
+  }
+}
+
+export type WorkspaceActions = Readonly<ReturnType<typeof createWorkspaceActions>>
+
+async function createWorkspaceResource(
   runtime: EditorRuntime,
   kind: Exclude<ResourceKind, 'file'>,
   parentId: ResourceId | null,
@@ -71,7 +113,7 @@ export async function createWorkspaceResource(
   )
 }
 
-export async function createWorkspaceFile(
+async function createWorkspaceFile(
   runtime: EditorRuntime,
   parentId: ResourceId | null,
   file: File,
@@ -106,7 +148,7 @@ export async function createWorkspaceFile(
   )
 }
 
-export async function downloadWorkspaceResource(
+async function downloadWorkspaceResource(
   runtime: EditorRuntime,
   resource: AuthorizedResourceSummary,
   report: WorkspaceReport,
@@ -191,7 +233,7 @@ async function completeWorkspaceCreation(
   report(deliveryMessage(delivery))
 }
 
-export async function updateWorkspaceResource(
+async function updateWorkspaceResource(
   runtime: EditorRuntime,
   resourceId: ResourceId,
   values: { title: string; icon: string; color: string },
@@ -215,7 +257,7 @@ export async function updateWorkspaceResource(
   )
 }
 
-export async function moveWorkspaceResources(
+async function moveWorkspaceResources(
   runtime: EditorRuntime,
   resourceIds: ReadonlyArray<ResourceId>,
   destinationParentId: ResourceId | null,
@@ -228,7 +270,7 @@ export async function moveWorkspaceResources(
   )
 }
 
-export async function changeWorkspaceResourcesLifecycle(
+async function changeWorkspaceResourcesLifecycle(
   runtime: EditorRuntime,
   resourceIds: ReadonlyArray<ResourceId>,
   type: 'permanentlyDelete' | 'restore' | 'trash',
@@ -237,7 +279,7 @@ export async function changeWorkspaceResourcesLifecycle(
   return await executeWorkspaceStructureCommand(runtime, { type, resourceIds }, report)
 }
 
-export async function emptyWorkspaceTrash(
+async function emptyWorkspaceTrash(
   runtime: EditorRuntime,
   resourceIds: ReadonlyArray<ResourceId>,
   report: WorkspaceReport,
@@ -287,7 +329,7 @@ function newOperationId() {
   return generateDomainId(DOMAIN_ID_KIND.operation)
 }
 
-export async function duplicateWorkspaceResources(
+async function duplicateWorkspaceResources(
   runtime: EditorRuntime,
   resourceIds: ReadonlyArray<ResourceId>,
   destinationParentId: ResourceId | null,
@@ -317,7 +359,7 @@ export async function duplicateWorkspaceResources(
   )
 }
 
-export async function pasteWorkspaceClipboard(
+async function pasteWorkspaceClipboard(
   runtime: EditorRuntime,
   clipboard: WorkspaceClipboard,
   destinationParentId: ResourceId,
@@ -338,7 +380,7 @@ export async function pasteWorkspaceClipboard(
   return completed && clipboard.operation === 'move' ? EMPTY_WORKSPACE_CLIPBOARD : clipboard
 }
 
-export async function copyWorkspaceResourceLink(
+async function copyWorkspaceResourceLink(
   runtime: EditorRuntime,
   resource: AuthorizedResourceSummary,
   report: WorkspaceReport,
@@ -355,7 +397,7 @@ export async function copyWorkspaceResourceLink(
   report('Link copied')
 }
 
-export async function copyWorkspaceResourceId(
+async function copyWorkspaceResourceId(
   resource: AuthorizedResourceSummary,
   report: WorkspaceReport,
 ) {
@@ -367,7 +409,7 @@ export async function copyWorkspaceResourceId(
   report('Resource ID copied')
 }
 
-export async function setWorkspaceBookmarkState(
+async function setWorkspaceBookmarkState(
   runtime: EditorRuntime,
   resourceIds: ReadonlyArray<ResourceId>,
   bookmarked: boolean,
@@ -401,6 +443,34 @@ export async function setWorkspaceBookmarkState(
     return true
   }
   return await attempt()
+}
+
+async function runResourceUndo(
+  history: ResourceUndoHistory,
+  direction: 'undo' | 'redo',
+  report: WorkspaceReport,
+): Promise<void> {
+  const run = () => (direction === 'undo' ? history.undo() : history.redo())
+  const delivery = await run()
+  if (delivery.status === 'received') {
+    if (delivery.result.status === 'completed') return
+    const label = direction === 'undo' ? 'Undo' : 'Redo'
+    report(
+      delivery.result.status === 'rejected' && delivery.result.reason === 'history_conflict'
+        ? `${label} is no longer safe because the resource changed`
+        : `${label} is unavailable`,
+    )
+    return
+  }
+  const retry = delivery.retryable
+    ? () => void runResourceUndo(history, direction, report)
+    : undefined
+  report(
+    delivery.status === 'indeterminate'
+      ? `${direction === 'undo' ? 'Undo' : 'Redo'} status is unknown`
+      : `${direction === 'undo' ? 'Undo' : 'Redo'} was not applied`,
+    retry,
+  )
 }
 
 async function executeWorkspaceStructureCommand(

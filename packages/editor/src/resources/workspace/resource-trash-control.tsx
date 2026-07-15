@@ -10,8 +10,7 @@ import {
   finishWorkspaceTrashDrop,
   leaveWorkspaceResourceDrop,
 } from '../workspace-resource-drag'
-import { changeWorkspaceResourcesLifecycle, emptyWorkspaceTrash } from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
 import { useEnsureResourceCollection } from './resource-loading'
 
@@ -21,16 +20,16 @@ type TrashConfirmation =
   | Readonly<{ type: 'resource'; resourceId: ResourceId }>
 
 export function ResourceTrashControl({
+  actions,
   canEdit,
-  onReport,
   onViewChange,
   runtime,
   snapshot,
   sort,
   view,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
-  onReport: WorkspaceReport
   onViewChange: (view: 'resources' | 'trash') => void
   runtime: EditorRuntime
   snapshot: WorkspaceResourceIndexSnapshot
@@ -62,15 +61,11 @@ export function ResourceTrashControl({
     type: 'permanentlyDelete' | 'restore',
   ) => {
     setConfirmation({ type: 'none' })
-    await changeWorkspaceResourcesLifecycle(runtime, resourceIds, type, onReport)
+    await actions.changeLifecycle(resourceIds, type)
   }
   const empty = async () => {
     setConfirmation({ type: 'none' })
-    await emptyWorkspaceTrash(
-      runtime,
-      resources.map((resource) => resource.id),
-      onReport,
-    )
+    await actions.emptyTrash(resources.map((resource) => resource.id))
   }
   const canEmpty = canEdit && collection.state === 'known' && collection.complete
 
@@ -84,9 +79,7 @@ export function ResourceTrashControl({
         onClick={() => setOpen((value) => !value)}
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
-        onDrop={
-          canEdit ? (event) => void finishWorkspaceTrashDrop(event, runtime, onReport) : undefined
-        }
+        onDrop={canEdit ? (event) => void finishWorkspaceTrashDrop(event, actions) : undefined}
       >
         <Trash2 className="size-4" />
         <span className="min-w-0 flex-1 text-left">Trash</span>
@@ -140,7 +133,7 @@ export function ResourceTrashControl({
                     type="button"
                     className="flex min-w-0 flex-1 items-center gap-2 text-left"
                     onClick={() => {
-                      runtime.navigation.open(resource.id)
+                      actions.open(resource.id)
                       setOpen(false)
                     }}
                   >

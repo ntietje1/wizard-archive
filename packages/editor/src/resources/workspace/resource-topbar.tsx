@@ -14,17 +14,11 @@ import {
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspacePreferences } from '../workspace-preferences'
-import {
-  changeWorkspaceResourcesLifecycle,
-  copyWorkspaceResourceLink,
-  duplicateWorkspaceResources,
-  moveWorkspaceResources,
-  updateWorkspaceResource,
-} from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
-import { runResourceUndo, useResourceUndoSnapshot } from './resource-undo'
+import type { WorkspaceActions } from './resource-operations'
+import { useResourceUndoSnapshot } from './resource-undo'
 
 export function ResourceTopbar({
+  actions,
   canEdit,
   leftSidebarAvailable,
   leftSidebarVisible,
@@ -33,10 +27,10 @@ export function ResourceTopbar({
   onOpenHistory,
   onOpenLeftSidebar,
   onOpenRightSidebar,
-  onReport,
   resource,
   runtime,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   leftSidebarAvailable: boolean
   leftSidebarVisible: boolean
@@ -45,7 +39,6 @@ export function ResourceTopbar({
   onOpenHistory: () => void
   onOpenLeftSidebar: () => void
   onOpenRightSidebar: () => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -68,7 +61,7 @@ export function ResourceTopbar({
             <button
               type="button"
               className="max-w-32 truncate rounded px-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-              onClick={() => runtime.navigation.open(ancestor.id)}
+              onClick={() => actions.open(ancestor.id)}
             >
               {ancestor.title}
             </button>
@@ -77,10 +70,9 @@ export function ResourceTopbar({
         ))}
         {editing ? (
           <ResourceTitleForm
+            actions={actions}
             resource={resource}
-            runtime={runtime}
             onCancel={() => setEditing(false)}
-            onReport={onReport}
           />
         ) : (
           <h1 className="min-w-0 truncate px-1 text-sm font-medium" title={resource.title}>
@@ -116,7 +108,7 @@ export function ResourceTopbar({
           ))}
         </div>
       )}
-      <ResourceUndoButtons runtime={runtime} onReport={onReport} />
+      <ResourceUndoButtons actions={actions} runtime={runtime} />
       {runtime.scope.projection === 'player' && (
         <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
           <Eye className="size-3.5" /> Player view
@@ -142,15 +134,14 @@ export function ResourceTopbar({
         </TopbarIcon>
         {menuOpen && (
           <ResourceMenu
+            actions={actions}
             canEdit={canEdit}
             resource={resource}
-            runtime={runtime}
             onClose={() => setMenuOpen(false)}
             onEdit={() => {
               setMenuOpen(false)
               setEditing(true)
             }}
-            onReport={onReport}
           />
         )}
       </div>
@@ -159,15 +150,14 @@ export function ResourceTopbar({
 }
 
 function ResourceUndoButtons({
-  onReport,
+  actions,
   runtime,
 }: {
-  onReport: WorkspaceReport
+  actions: WorkspaceActions
   runtime: EditorRuntime
 }) {
   const snapshot = useResourceUndoSnapshot(runtime.resources.undo)
   if (runtime.resources.undo.status !== 'available') return null
-  const history = runtime.resources.undo.value
   return (
     <div className="hidden items-center sm:flex" aria-label="Resource history">
       <TopbarIcon
@@ -175,7 +165,7 @@ function ResourceUndoButtons({
         label={
           snapshot.status === 'ready' && snapshot.undo ? `Undo ${snapshot.undo.label}` : 'Undo'
         }
-        onClick={() => void runResourceUndo(history, 'undo', onReport)}
+        onClick={() => void actions.undo('undo')}
       >
         <Undo2 className="size-4" />
       </TopbarIcon>
@@ -184,7 +174,7 @@ function ResourceUndoButtons({
         label={
           snapshot.status === 'ready' && snapshot.redo ? `Redo ${snapshot.redo.label}` : 'Redo'
         }
-        onClick={() => void runResourceUndo(history, 'redo', onReport)}
+        onClick={() => void actions.undo('redo')}
       >
         <Redo2 className="size-4" />
       </TopbarIcon>
@@ -193,19 +183,17 @@ function ResourceUndoButtons({
 }
 
 function ResourceMenu({
+  actions,
   canEdit,
   onClose,
   onEdit,
-  onReport,
   resource,
-  runtime,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   onClose: () => void
   onEdit: () => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const run = (operation: () => Promise<unknown>) => {
@@ -221,40 +209,23 @@ function ResourceMenu({
         <>
           <MenuButton onClick={onEdit}>Edit details</MenuButton>
           <MenuButton
-            onClick={() =>
-              run(() =>
-                duplicateWorkspaceResources(
-                  runtime,
-                  [resource.id],
-                  resource.displayParentId,
-                  onReport,
-                ),
-              )
-            }
+            onClick={() => run(() => actions.duplicate([resource.id], resource.displayParentId))}
           >
             Duplicate
           </MenuButton>
           {resource.displayParentId !== null && (
-            <MenuButton
-              onClick={() =>
-                run(() => moveWorkspaceResources(runtime, [resource.id], null, onReport))
-              }
-            >
+            <MenuButton onClick={() => run(() => actions.move([resource.id], null))}>
               Move to root
             </MenuButton>
           )}
         </>
       )}
-      <MenuButton onClick={() => run(() => copyWorkspaceResourceLink(runtime, resource, onReport))}>
-        Copy link
-      </MenuButton>
+      <MenuButton onClick={() => run(() => actions.copyLink(resource))}>Copy link</MenuButton>
       {canEdit && resource.lifecycle === 'active' && (
         <MenuButton
           ariaLabel={`Move ${resource.title} to trash`}
           destructive
-          onClick={() =>
-            run(() => changeWorkspaceResourcesLifecycle(runtime, [resource.id], 'trash', onReport))
-          }
+          onClick={() => run(() => actions.changeLifecycle([resource.id], 'trash'))}
         >
           Move to trash
         </MenuButton>
@@ -263,11 +234,7 @@ function ResourceMenu({
         <>
           <MenuButton
             ariaLabel={`Restore ${resource.title}`}
-            onClick={() =>
-              run(() =>
-                changeWorkspaceResourcesLifecycle(runtime, [resource.id], 'restore', onReport),
-              )
-            }
+            onClick={() => run(() => actions.changeLifecycle([resource.id], 'restore'))}
           >
             Restore
           </MenuButton>
@@ -275,16 +242,7 @@ function ResourceMenu({
             <MenuButton
               ariaLabel={`Confirm delete ${resource.title} forever`}
               destructive
-              onClick={() =>
-                run(() =>
-                  changeWorkspaceResourcesLifecycle(
-                    runtime,
-                    [resource.id],
-                    'permanentlyDelete',
-                    onReport,
-                  ),
-                )
-              }
+              onClick={() => run(() => actions.changeLifecycle([resource.id], 'permanentlyDelete'))}
             >
               Confirm delete forever
             </MenuButton>
@@ -304,15 +262,13 @@ function ResourceMenu({
 }
 
 function ResourceTitleForm({
+  actions,
   onCancel,
-  onReport,
   resource,
-  runtime,
 }: {
+  actions: WorkspaceActions
   onCancel: () => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
 }) {
   const [title, setTitle] = useState<string>(resource.title)
   const [icon, setIcon] = useState(resource.icon ?? '')
@@ -322,9 +278,9 @@ function ResourceTitleForm({
       className="flex min-w-0 flex-1 items-center gap-1"
       onSubmit={(event) => {
         event.preventDefault()
-        void updateWorkspaceResource(runtime, resource.id, { title, icon, color }, onReport).then(
-          (completed) => completed && onCancel(),
-        )
+        void actions
+          .update(resource.id, { title, icon, color })
+          .then((completed) => completed && onCancel())
       }}
     >
       <input

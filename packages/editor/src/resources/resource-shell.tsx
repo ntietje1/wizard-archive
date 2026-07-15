@@ -28,13 +28,8 @@ import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
 import { ResourceSearchDialog } from './workspace/resource-search-dialog'
 import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
-import type { WorkspaceReport } from './workspace/resource-operations'
-import {
-  changeWorkspaceResourcesLifecycle,
-  duplicateWorkspaceResources,
-  pasteWorkspaceClipboard,
-} from './workspace/resource-operations'
-import { runResourceUndo } from './workspace/resource-undo'
+import { createWorkspaceActions } from './workspace/resource-operations'
+import type { WorkspaceActions, WorkspaceReport } from './workspace/resource-operations'
 
 const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
@@ -85,6 +80,7 @@ export function ResourceShell({
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const report: WorkspaceReport = (message, retry) =>
     setNotice({ message, ...(retry ? { retry } : {}) })
+  const actions = createWorkspaceActions(runtime, report)
   const leftVisible = showResourcePanel && preferences.panels.left.visible
   const rightVisible = selected.state === 'known' && preferences.panels.right.visible
   const canEdit =
@@ -114,11 +110,12 @@ export function ResourceShell({
     const command = workspaceKeyboardCommand(event)
     if (!command) return
     if (command === 'undo' || command === 'redo') {
-      runUndoShortcut(command, event, runtime, report)
+      runUndoShortcut(command, event, actions, runtime.resources.undo.status === 'available')
       return
     }
     if (!canEdit) return
     runResourceShortcut({
+      actions,
       clipboard,
       command,
       focusedId: selection.focusedId ?? selectedResourceId,
@@ -128,12 +125,10 @@ export function ResourceShell({
           : selectedResourceId
             ? [selectedResourceId]
             : [],
-      runtime,
       snapshot,
       onClipboardChange: setClipboard,
       onCloseContextMenu: closeContextMenu,
       onPreventDefault: () => event.preventDefault(),
-      onReport: report,
     })
   }
 
@@ -171,6 +166,7 @@ export function ResourceShell({
           onCommit={(size) => changePreference({ type: 'panel', panel: 'left', size })}
         >
           <ResourceSidebar
+            actions={actions}
             canEdit={canEdit}
             bookmarks={bookmarks}
             view={sidebarView}
@@ -184,7 +180,6 @@ export function ResourceShell({
             onViewChange={changeSidebarView}
             onSearch={() => setSearchOpen(true)}
             onClose={() => changePreference({ type: 'panel', panel: 'left', visible: false })}
-            onReport={report}
             onOpenContextMenu={openContextMenu}
             onSelectionChange={changeSelection}
             onSortChange={(sort) => changePreference({ type: 'sort', sort })}
@@ -193,6 +188,7 @@ export function ResourceShell({
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <SelectedResource
+          actions={actions}
           canEdit={canEdit}
           knowledge={selected}
           leftSidebarAvailable={showResourcePanel}
@@ -215,7 +211,6 @@ export function ResourceShell({
           onOpenRightSidebar={() =>
             changePreference({ type: 'panel', panel: 'right', visible: true })
           }
-          onReport={report}
           onOpenContextMenu={openContextMenu}
           onSelectionChange={changeSelection}
         />
@@ -227,45 +222,45 @@ export function ResourceShell({
           onCommit={(size) => changePreference({ type: 'panel', panel: 'right', size })}
         >
           <ResourceRightSidebar
+            actions={actions}
             activePanel={rightPanel}
             resource={selected.value}
             runtime={runtime}
             onActivePanelChange={setRightPanel}
             onClose={() => changePreference({ type: 'panel', panel: 'right', visible: false })}
-            onReport={report}
           />
         </ResizableWorkspacePanel>
       )}
       {runtime.search.status === 'available' && (
         <ResourceSearchDialog
+          actions={actions}
           canEdit={canEdit}
           open={searchOpen}
           runtime={runtime}
           onOpenChange={setSearchOpen}
-          onReport={report}
         />
       )}
       {contextMenu.status === 'open' && (
         <ResourceContextMenu
+          actions={actions}
+          bookmarksAvailable={runtime.resources.bookmarks.status === 'available'}
           canEdit={canEdit}
           clipboard={clipboard}
           request={contextMenu.request}
           resourceIds={contextMenu.resourceIds}
-          runtime={runtime}
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
           onClipboardChange={setClipboard}
           onClose={closeContextMenu}
           onRequestMove={setMoveResourceIds}
-          onReport={report}
         />
       )}
       {moveResourceIds && (
         <ResourceMoveDialog
+          actions={actions}
           resourceIds={moveResourceIds}
           runtime={runtime}
           snapshot={snapshot}
           onClose={() => setMoveResourceIds(null)}
-          onReport={report}
         />
       )}
       {notice && (
@@ -296,36 +291,34 @@ export function ResourceShell({
 function runUndoShortcut(
   command: Extract<WorkspaceKeyboardCommand, 'redo' | 'undo'>,
   event: KeyboardEvent<HTMLElement>,
-  runtime: EditorRuntime,
-  report: WorkspaceReport,
+  actions: WorkspaceActions,
+  available: boolean,
 ): void {
-  if (runtime.resources.undo.status === 'available') {
+  if (available) {
     event.preventDefault()
-    void runResourceUndo(runtime.resources.undo.value, command, report)
+    void actions.undo(command)
   }
 }
 
 function runResourceShortcut({
+  actions,
   clipboard,
   command,
   focusedId,
   onClipboardChange,
   onCloseContextMenu,
   onPreventDefault,
-  onReport,
   resourceIds,
-  runtime,
   snapshot,
 }: Readonly<{
+  actions: WorkspaceActions
   clipboard: WorkspaceClipboard
   command: Exclude<WorkspaceKeyboardCommand, 'redo' | 'undo'>
   focusedId: ResourceId | null
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   onCloseContextMenu: () => void
   onPreventDefault: () => void
-  onReport: WorkspaceReport
   resourceIds: ReadonlyArray<ResourceId>
-  runtime: EditorRuntime
   snapshot: WorkspaceResourceIndexSnapshot
 }>): void {
   if (!focusedId || resourceIds.length === 0) return
@@ -343,23 +336,22 @@ function runResourceShortcut({
       setClipboard('move')
       return
     case 'duplicate':
-      void duplicateWorkspaceResources(runtime, resourceIds, target.value.displayParentId, onReport)
+      void actions.duplicate(resourceIds, target.value.displayParentId)
       return
     case 'paste':
       if (target.value.kind === 'folder' && target.value.lifecycle === 'active') {
-        void pasteWorkspaceClipboard(runtime, clipboard, target.value.id, onReport).then(
-          onClipboardChange,
-        )
+        void actions.paste(clipboard, target.value.id).then(onClipboardChange)
       }
       return
     case 'trash':
       if (target.value.lifecycle === 'active') {
-        void changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'trash', onReport)
+        void actions.changeLifecycle(resourceIds, 'trash')
       }
   }
 }
 
 function SelectedResource({
+  actions,
   canEdit,
   knowledge,
   leftSidebarAvailable,
@@ -371,7 +363,6 @@ function SelectedResource({
   onOpenContextMenu,
   onOpenLeftSidebar,
   onOpenRightSidebar,
-  onReport,
   onSelectionChange,
   resourceId,
   runtime,
@@ -379,6 +370,7 @@ function SelectedResource({
   snapshot,
   sort,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   knowledge: ResourceKnowledge<AuthorizedResourceSummary>
   leftSidebarAvailable: boolean
@@ -390,7 +382,6 @@ function SelectedResource({
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onOpenLeftSidebar: () => void
   onOpenRightSidebar: () => void
-  onReport: WorkspaceReport
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resourceId: ResourceId | null
   runtime: EditorRuntime
@@ -431,6 +422,7 @@ function SelectedResource({
   return (
     <>
       <ResourceTopbar
+        actions={actions}
         canEdit={canEdit}
         leftSidebarAvailable={leftSidebarAvailable}
         leftSidebarVisible={leftSidebarVisible}
@@ -441,7 +433,6 @@ function SelectedResource({
         onOpenHistory={onOpenHistory}
         onOpenLeftSidebar={onOpenLeftSidebar}
         onOpenRightSidebar={onOpenRightSidebar}
-        onReport={onReport}
       />
       {!canEdit && (
         <div className="shrink-0 border-b border-border bg-muted/50 px-3 py-1 text-center text-xs text-muted-foreground">
@@ -451,13 +442,13 @@ function SelectedResource({
         </div>
       )}
       <ResourceViewport
+        actions={actions}
         canEdit={canEdit}
         resource={resource}
         runtime={runtime}
         selection={selection}
         snapshot={snapshot}
         sort={sort}
-        onReport={onReport}
         onOpenContextMenu={onOpenContextMenu}
         onSelectionChange={onSelectionChange}
       />

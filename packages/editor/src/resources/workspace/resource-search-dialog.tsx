@@ -8,8 +8,8 @@ import type {
 } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary, ResourceKnowledge } from '../resource-index-contract'
 import type { ResourceKind } from '../resource-record'
-import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
+import { resourceKindLabel } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
 import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'
@@ -27,15 +27,15 @@ type SearchDisplayItem =
 const EMPTY_RESULTS: ReadonlyArray<WorkspaceSearchResult> = []
 
 export function ResourceSearchDialog({
+  actions,
   canEdit,
   onOpenChange,
-  onReport,
   open,
   runtime,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   onOpenChange: (open: boolean) => void
-  onReport: WorkspaceReport
   open: boolean
   runtime: EditorRuntime
 }) {
@@ -43,25 +43,25 @@ export function ResourceSearchDialog({
   if (!search || !open) return null
   return (
     <OpenResourceSearchDialog
+      actions={actions}
       canEdit={canEdit}
       runtime={runtime}
       search={search}
       onOpenChange={onOpenChange}
-      onReport={onReport}
     />
   )
 }
 
 function OpenResourceSearchDialog({
+  actions,
   canEdit,
   onOpenChange,
-  onReport,
   runtime,
   search,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   onOpenChange: (open: boolean) => void
-  onReport: WorkspaceReport
   runtime: EditorRuntime
   search: WorkspaceSearch
 }) {
@@ -124,11 +124,11 @@ function OpenResourceSearchDialog({
   const select = (item: SearchDisplayItem) => {
     if (item.type === 'create') {
       onOpenChange(false)
-      void createWorkspaceResource(runtime, item.kind, null, '', onReport)
+      void actions.create(item.kind, null, '')
       return
     }
     search.recordOpened(item.result.resourceId)
-    runtime.navigation.open(item.result.resourceId)
+    actions.open(item.result.resourceId)
     onOpenChange(false)
   }
   const handleKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {

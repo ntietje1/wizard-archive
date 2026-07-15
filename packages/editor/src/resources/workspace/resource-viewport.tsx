@@ -15,17 +15,12 @@ import {
   allowWorkspaceResourceDrop,
   finishWorkspaceResourceDrop,
   leaveWorkspaceResourceDrop,
-  workspaceResourceDragProps,
+  workspaceResourceInteractionProps,
 } from '../workspace-resource-drag'
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
-import {
-  createWorkspaceFile,
-  createWorkspaceResource,
-  resourceKindLabel,
-} from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
-import { resourceContextMenuRequest } from './resource-context-menu-request'
+import { resourceKindLabel } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import {
   duplicateResourceKeys,
@@ -35,8 +30,8 @@ import {
 import { NoteEditor } from '../../notes/note-editor'
 
 export function ResourceViewport({
+  actions,
   canEdit,
-  onReport,
   onOpenContextMenu,
   onSelectionChange,
   resource,
@@ -45,8 +40,8 @@ export function ResourceViewport({
   snapshot,
   sort,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
-  onReport: WorkspaceReport
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
@@ -67,9 +62,9 @@ export function ResourceViewport({
   if (resource.kind === 'folder') {
     return (
       <FolderViewport
+        actions={actions}
         canEdit={canEdit}
         folder={resource}
-        onReport={onReport}
         onOpenContextMenu={onOpenContextMenu}
         onSelectionChange={onSelectionChange}
         runtime={runtime}
@@ -127,9 +122,9 @@ function NoteViewport({
 }
 
 function FolderViewport({
+  actions,
   canEdit,
   folder,
-  onReport,
   onOpenContextMenu,
   onSelectionChange,
   runtime,
@@ -137,9 +132,9 @@ function FolderViewport({
   snapshot,
   sort,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   folder: AuthorizedResourceSummary
-  onReport: WorkspaceReport
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   runtime: EditorRuntime
@@ -155,7 +150,7 @@ function FolderViewport({
   const resources = sortAuthorizedResourceSummaries(collection.items, sort.by, sort.direction)
   if (resources.length === 0 && collection.complete) {
     return canEdit ? (
-      <CreateNewDashboard folder={folder} runtime={runtime} onReport={onReport} />
+      <CreateNewDashboard actions={actions} folder={folder} />
     ) : (
       <ViewportState icon={Folder} title="This folder is empty" />
     )
@@ -170,34 +165,30 @@ function FolderViewport({
       onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
       onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
       onDrop={
-        canEdit
-          ? (event) => void finishWorkspaceResourceDrop(event, runtime, folder.id, onReport)
-          : undefined
+        canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, folder.id) : undefined
       }
     >
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 p-6">
         {resources.map((resource) => (
           <ResourceCard
+            actions={actions}
             ambiguous={ambiguous.has(resourcePresentationKey(resource))}
             canEdit={canEdit}
             key={resource.id}
             resource={resource}
-            runtime={runtime}
             selected={selectedIds.has(resource.id)}
             selection={selection}
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
-            onReport={onReport}
           />
         ))}
         {canEdit && (
           <div className="relative flex h-[140px] items-center justify-center rounded-md border border-dashed border-border hover:bg-muted/50">
             <ResourceCreateMenu
+              actions={actions}
               label="Create item in this folder"
               parentId={folder.id}
-              runtime={runtime}
-              onReport={onReport}
             />
           </div>
         )}
@@ -216,13 +207,11 @@ function FolderViewport({
 }
 
 function CreateNewDashboard({
+  actions,
   folder,
-  onReport,
-  runtime,
 }: {
+  actions: WorkspaceActions
   folder: AuthorizedResourceSummary
-  onReport: WorkspaceReport
-  runtime: EditorRuntime
 }) {
   const [pending, setPending] = useState(false)
   const upload = useRef<HTMLInputElement>(null)
@@ -244,9 +233,7 @@ function CreateNewDashboard({
                 onClick={() => {
                   const title = `Untitled ${kind}`
                   setPending(true)
-                  void createWorkspaceResource(runtime, kind, folder.id, title, onReport).finally(
-                    () => setPending(false),
-                  )
+                  void actions.create(kind, folder.id, title).finally(() => setPending(false))
                 }}
               >
                 <Icon className="size-7 text-muted-foreground" />
@@ -274,9 +261,7 @@ function CreateNewDashboard({
               event.target.value = ''
               if (!file) return
               setPending(true)
-              void createWorkspaceFile(runtime, folder.id, file, onReport).finally(() =>
-                setPending(false),
-              )
+              void actions.createFile(folder.id, file).finally(() => setPending(false))
             }}
           />
         </div>
@@ -290,24 +275,22 @@ function CreateNewDashboard({
 }
 
 function ResourceCard({
+  actions,
   ambiguous,
   canEdit,
   onSelectionChange,
   onOpenContextMenu,
-  onReport,
   resource,
-  runtime,
   selected,
   selection,
   visibleIds,
 }: {
+  actions: WorkspaceActions
   ambiguous: boolean
   canEdit: boolean
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
   selected: boolean
   selection: WorkspaceSelection
   visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
@@ -319,12 +302,12 @@ function ResourceCard({
       type="button"
       aria-label={resource.title}
       data-selected={selected}
-      {...workspaceResourceDragProps({
+      {...workspaceResourceInteractionProps({
+        actions,
         canEdit,
-        onReport,
+        onOpenContextMenu,
         onSelectionChange,
         resource,
-        runtime,
         selection,
       })}
       className={
@@ -332,11 +315,7 @@ function ResourceCard({
           ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
           : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
       }
-      onClick={(event) => selectCard({ event, resource, visibleIds, runtime, onSelectionChange })}
-      onContextMenu={(event) => {
-        onOpenContextMenu(resourceContextMenuRequest(event, resource))
-      }}
-      onFocus={() => onSelectionChange({ type: 'focus', resourceId: resource.id })}
+      onClick={(event) => selectCard({ actions, event, resource, visibleIds, onSelectionChange })}
     >
       {folder && (
         <span className="absolute left-0 top-0 h-3 w-20 rounded-tr border-r border-border bg-muted" />
@@ -355,21 +334,21 @@ function ResourceCard({
 }
 
 function selectCard({
+  actions,
   event,
   onSelectionChange,
   resource,
-  runtime,
   visibleIds,
 }: {
+  actions: WorkspaceActions
   event: MouseEvent<HTMLButtonElement>
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
   visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
 }) {
   const intent = workspaceSelectionIntent(event)
   onSelectionChange({ type: 'select', resourceId: resource.id, visibleIds, intent })
-  if (intent === 'single') runtime.navigation.open(resource.id)
+  if (intent === 'single') actions.open(resource.id)
 }
 
 function FolderLoadingState({

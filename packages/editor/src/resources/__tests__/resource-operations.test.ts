@@ -6,7 +6,7 @@ import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import { initialResourceMetadataVersion } from '../resource-metadata-version'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceRecord } from '../resource-record'
-import { emptyWorkspaceTrash } from '../workspace/resource-operations'
+import { createWorkspaceActions } from '../workspace/resource-operations'
 
 describe('resource application workflows', () => {
   it('empties trash roots through bounded canonical command batches', async () => {
@@ -58,10 +58,8 @@ describe('resource application workflows', () => {
     } satisfies EditorRuntime
     const report = vi.fn()
 
-    await emptyWorkspaceTrash(
-      runtime,
+    await createWorkspaceActions(runtime, report).emptyTrash(
       resources.map((resource) => resource.id),
-      report,
     )
 
     expect(execute).toHaveBeenCalledTimes(3)

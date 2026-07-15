@@ -2,23 +2,22 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Clock3, FileText, Link2, List, X } from 'lucide-react'
 import type { EditorRuntime, ResourceHistoryEntry } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
-import { copyWorkspaceResourceLink, downloadWorkspaceResource } from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
 
 export function ResourceRightSidebar({
+  actions,
   activePanel,
   onActivePanelChange,
   onClose,
-  onReport,
   resource,
   runtime,
 }: {
+  actions: WorkspaceActions
   activePanel: PanelId
   onActivePanelChange: (panel: PanelId) => void
   onClose: () => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -65,7 +64,7 @@ export function ResourceRightSidebar({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {selected.id === 'details' ? (
-          <ResourceDetails resource={resource} runtime={runtime} onReport={onReport} />
+          <ResourceDetails actions={actions} resource={resource} runtime={runtime} />
         ) : (
           <ResourceHistoryPanel resource={resource} runtime={runtime} />
         )}
@@ -75,11 +74,11 @@ export function ResourceRightSidebar({
 }
 
 function ResourceDetails({
-  onReport,
+  actions,
   resource,
   runtime,
 }: {
-  onReport: WorkspaceReport
+  actions: WorkspaceActions
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -110,7 +109,7 @@ function ResourceDetails({
         <button
           type="button"
           className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
-          onClick={() => void copyWorkspaceResourceLink(runtime, resource, onReport)}
+          onClick={() => void actions.copyLink(resource)}
         >
           Copy link
         </button>
@@ -118,7 +117,7 @@ function ResourceDetails({
           <button
             type="button"
             className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
-            onClick={() => void downloadWorkspaceResource(runtime, resource, onReport)}
+            onClick={() => void actions.download(resource)}
           >
             Download
           </button>

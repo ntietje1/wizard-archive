@@ -28,15 +28,10 @@ import {
   allowWorkspaceResourceDrop,
   finishWorkspaceResourceDrop,
   leaveWorkspaceResourceDrop,
-  workspaceResourceDragProps,
+  workspaceResourceInteractionProps,
 } from '../workspace-resource-drag'
-import {
-  createWorkspaceFile,
-  createWorkspaceResource,
-  resourceKindLabel,
-} from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
-import { resourceContextMenuRequest } from './resource-context-menu-request'
+import { resourceKindLabel } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { useEnsureResourceCollection } from './resource-loading'
 import {
@@ -95,10 +90,10 @@ function visibleAncestorIds(
 }
 
 export function ResourceSidebar({
+  actions,
   bookmarks,
   canEdit,
   onClose,
-  onReport,
   onOpenContextMenu,
   onSearch,
   onSelectionChange,
@@ -113,10 +108,10 @@ export function ResourceSidebar({
   workspaceName,
   onViewChange,
 }: {
+  actions: WorkspaceActions
   bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
   canEdit: boolean
   onClose: () => void
-  onReport: WorkspaceReport
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSearch: () => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
@@ -195,12 +190,7 @@ export function ResourceSidebar({
       </div>
       <div className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1">
         {canEdit && (
-          <ResourceCreateMenu
-            label="Create resource"
-            parentId={null}
-            runtime={runtime}
-            onReport={onReport}
-          />
+          <ResourceCreateMenu actions={actions} label="Create resource" parentId={null} />
         )}
         <button
           type="button"
@@ -257,16 +247,14 @@ export function ResourceSidebar({
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
         onDrop={
-          canEdit
-            ? (event) => void finishWorkspaceResourceDrop(event, runtime, null, onReport)
-            : undefined
+          canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, null) : undefined
         }
       >
         {view === 'bookmarks' ? (
           <BookmarkedResourceCollection
+            actions={actions}
             bookmarks={bookmarks}
             canEdit={canEdit}
-            runtime={runtime}
             selectedResourceId={selectedResourceId}
             selection={selection}
             snapshot={snapshot}
@@ -274,10 +262,10 @@ export function ResourceSidebar({
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
-            onReport={onReport}
           />
         ) : (
           <ResourceCollection
+            actions={actions}
             canEdit={canEdit}
             expansion={expansion}
             query={query}
@@ -290,7 +278,6 @@ export function ResourceSidebar({
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
-            onReport={onReport}
           />
         )}
       </div>
@@ -306,12 +293,12 @@ export function ResourceSidebar({
           Bookmarks
         </button>
         <ResourceTrashControl
+          actions={actions}
           canEdit={canEdit}
           runtime={runtime}
           snapshot={snapshot}
           sort={sort}
           view={view}
-          onReport={onReport}
           onViewChange={onViewChange}
         />
       </div>
@@ -321,24 +308,22 @@ export function ResourceSidebar({
 }
 
 function BookmarkedResourceCollection({
+  actions,
   bookmarks,
   canEdit,
   onOpenContextMenu,
-  onReport,
   onSelectionChange,
-  runtime,
   selectedResourceId,
   selection,
   snapshot,
   sort,
   visibleIds,
 }: {
+  actions: WorkspaceActions
   bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
   canEdit: boolean
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onReport: WorkspaceReport
   onSelectionChange: (action: WorkspaceSelectionAction) => void
-  runtime: EditorRuntime
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
@@ -375,18 +360,17 @@ function BookmarkedResourceCollection({
         >
           <span className="size-6 shrink-0" />
           <ResourceTreeButton
+            actions={actions}
             ambiguous={ambiguous.has(resourcePresentationKey(resource))}
             canEdit={canEdit}
             expansion={{ status: 'unavailable' }}
             initialFocusId={initialFocusId}
             resource={resource}
-            runtime={runtime}
             selectedResourceId={selectedResourceId}
             selection={selection}
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
-            onReport={onReport}
           />
         </li>
       ))}
@@ -395,12 +379,12 @@ function BookmarkedResourceCollection({
 }
 
 function ResourceCollection({
+  actions,
   canEdit,
   expansion,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
-  onReport,
   query,
   runtime,
   selectedResourceId,
@@ -409,12 +393,12 @@ function ResourceCollection({
   sort,
   visibleIds,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   expansion: ResourceTreeExpansionController
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onReport: WorkspaceReport
   query: ResourceCollectionQuery
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -438,6 +422,7 @@ function ResourceCollection({
     <ul className="space-y-0.5">
       {items.map((resource) => (
         <ResourceTreeRow
+          actions={actions}
           ambiguous={ambiguous.has(resourcePresentationKey(resource))}
           canEdit={canEdit}
           expansion={expansion}
@@ -452,7 +437,6 @@ function ResourceCollection({
           visibleIds={visibleIds}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
-          onReport={onReport}
         />
       ))}
       {!collection.complete && (
@@ -469,13 +453,13 @@ function ResourceCollection({
 }
 
 function ResourceTreeRow({
+  actions,
   ambiguous,
   canEdit,
   expansion,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
-  onReport,
   resource,
   runtime,
   selectedResourceId,
@@ -484,13 +468,13 @@ function ResourceTreeRow({
   sort,
   visibleIds,
 }: {
+  actions: WorkspaceActions
   ambiguous: boolean
   canEdit: boolean
   expansion: ResourceTreeExpansionController
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -518,6 +502,7 @@ function ResourceTreeRow({
           <span className="size-6 shrink-0" />
         )}
         <ResourceTreeButton
+          actions={actions}
           ambiguous={ambiguous}
           canEdit={canEdit}
           expansion={{
@@ -528,9 +513,7 @@ function ResourceTreeRow({
           initialFocusId={initialFocusId}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
-          onReport={onReport}
           resource={resource}
-          runtime={runtime}
           selectedResourceId={selectedResourceId}
           selection={selection}
           visibleIds={visibleIds}
@@ -539,6 +522,7 @@ function ResourceTreeRow({
       {resource.kind === 'folder' && expanded && (
         <div className="ml-3 border-l border-border pl-1">
           <ResourceCollection
+            actions={actions}
             canEdit={canEdit}
             expansion={expansion}
             query={childQuery}
@@ -551,7 +535,6 @@ function ResourceTreeRow({
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
-            onReport={onReport}
           />
         </div>
       )}
@@ -584,28 +567,26 @@ function FolderExpansionButton({
 }
 
 function ResourceTreeButton({
+  actions,
   ambiguous,
   canEdit,
   expansion,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
-  onReport,
   resource,
-  runtime,
   selectedResourceId,
   selection,
   visibleIds,
 }: {
+  actions: WorkspaceActions
   ambiguous: boolean
   canEdit: boolean
   expansion: ResourceTreeExpansion
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
   visibleIds: () => ReadonlyArray<ResourceId>
@@ -621,30 +602,26 @@ function ResourceTreeButton({
       aria-current={selectedResourceId === resource.id ? 'page' : undefined}
       data-resource-id={resource.id}
       data-selected={selected}
-      {...workspaceResourceDragProps({
+      {...workspaceResourceInteractionProps({
+        actions,
         canEdit,
-        onReport,
+        onOpenContextMenu,
         onSelectionChange,
         resource,
-        runtime,
         selection,
       })}
       tabIndex={tabbable ? 0 : -1}
       className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
       onClick={(event) =>
-        selectTreeResource({ event, resource, runtime, visibleIds, onSelectionChange })
+        selectTreeResource({ actions, event, resource, visibleIds, onSelectionChange })
       }
-      onContextMenu={(event) => {
-        onOpenContextMenu(resourceContextMenuRequest(event, resource))
-      }}
-      onFocus={() => onSelectionChange({ type: 'focus', resourceId: resource.id })}
       onKeyDown={(event) =>
         handleTreeResourceKey({
           event,
           expansion,
+          actions,
           onSelectionChange,
           resource,
-          runtime,
           selection,
           visibleIds,
         })
@@ -662,30 +639,30 @@ function ResourceTreeButton({
 }
 
 type TreeResourceInteraction = Readonly<{
+  actions: WorkspaceActions
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
   visibleIds: () => ReadonlyArray<ResourceId>
 }>
 
 function selectTreeResource({
+  actions,
   event,
   onSelectionChange,
   resource,
-  runtime,
   visibleIds,
 }: TreeResourceInteraction & { event: MouseEvent<HTMLButtonElement> }) {
   const intent = workspaceSelectionIntent(event)
   onSelectionChange({ type: 'select', resourceId: resource.id, visibleIds: visibleIds(), intent })
-  if (intent === 'single') runtime.navigation.open(resource.id)
+  if (intent === 'single') actions.open(resource.id)
 }
 
 function handleTreeResourceKey({
+  actions,
   event,
   expansion,
   onSelectionChange,
   resource,
-  runtime,
   selection,
   visibleIds,
 }: TreeResourceInteraction & {
@@ -705,7 +682,7 @@ function handleTreeResourceKey({
       }
       return
     case 'Enter':
-      consumeKey(event, () => runtime.navigation.open(resource.id))
+      consumeKey(event, () => actions.open(resource.id))
       return
     case ' ':
       consumeKey(event, () =>
@@ -767,15 +744,13 @@ function focusResourceButton(navigation: HTMLElement | null, resourceId: Resourc
 }
 
 export function ResourceCreateMenu({
+  actions,
   label,
-  onReport,
   parentId,
-  runtime,
 }: {
+  actions: WorkspaceActions
   label: string
-  onReport: WorkspaceReport
   parentId: ResourceId | null
-  runtime: EditorRuntime
 }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
@@ -826,9 +801,7 @@ export function ResourceCreateMenu({
                 onClick={() => {
                   setOpen(false)
                   setPending(true)
-                  void createWorkspaceResource(runtime, kind, parentId, title, onReport).finally(
-                    () => setPending(false),
-                  )
+                  void actions.create(kind, parentId, title).finally(() => setPending(false))
                 }}
               >
                 <Icon className="size-4" />
@@ -856,9 +829,7 @@ export function ResourceCreateMenu({
               if (!file) return
               setOpen(false)
               setPending(true)
-              void createWorkspaceFile(runtime, parentId, file, onReport).finally(() =>
-                setPending(false),
-              )
+              void actions.createFile(parentId, file).finally(() => setPending(false))
             }}
           />
         </div>

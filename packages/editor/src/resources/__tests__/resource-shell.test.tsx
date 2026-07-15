@@ -13,6 +13,7 @@ import type { ResourceRecord } from '../resource-record'
 import { ResourceShell } from '../resource-shell'
 import { DEFAULT_WORKSPACE_PREFERENCES } from '../workspace-preferences'
 import { EMPTY_WORKSPACE_SELECTION } from '../workspace-selection'
+import { createWorkspaceActions } from '../workspace/resource-operations'
 import { ResourceViewport } from '../workspace/resource-viewport'
 
 describe('ResourceShell', () => {
@@ -608,6 +609,7 @@ describe('ResourceShell', () => {
 
     render(
       <ResourceViewport
+        actions={createWorkspaceActions(runtime, vi.fn())}
         canEdit={false}
         resource={summary}
         runtime={runtime}
@@ -615,7 +617,6 @@ describe('ResourceShell', () => {
         snapshot={snapshot}
         sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
         onOpenContextMenu={vi.fn()}
-        onReport={vi.fn()}
         onSelectionChange={vi.fn()}
       />,
     )

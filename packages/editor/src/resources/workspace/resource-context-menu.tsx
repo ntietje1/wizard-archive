@@ -18,45 +18,33 @@ import {
   Trash2,
 } from 'lucide-react'
 import type { ResourceId } from '../domain-id'
-import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
-import {
-  changeWorkspaceResourcesLifecycle,
-  createWorkspaceFile,
-  createWorkspaceResource,
-  copyWorkspaceResourceId,
-  copyWorkspaceResourceLink,
-  duplicateWorkspaceResources,
-  downloadWorkspaceResource,
-  pasteWorkspaceClipboard,
-  setWorkspaceBookmarkState,
-  resourceKindLabel,
-} from './resource-operations'
-import type { WorkspaceReport } from './resource-operations'
+import { resourceKindLabel } from './resource-operations'
+import type { WorkspaceActions } from './resource-operations'
 
 export function ResourceContextMenu({
   canEdit,
+  actions: workspace,
+  bookmarksAvailable,
   clipboard,
   onClipboardChange,
   onClose,
   onRequestMove,
-  onReport,
   request,
   resourceIds,
-  runtime,
   bookmarkedIds,
 }: {
+  actions: WorkspaceActions
+  bookmarksAvailable: boolean
   canEdit: boolean
   clipboard: WorkspaceClipboard
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   onClose: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
-  onReport: WorkspaceReport
   request: ResourceContextMenuRequest
   resourceIds: ReadonlyArray<ResourceId>
-  runtime: EditorRuntime
   bookmarkedIds: ReadonlySet<ResourceId>
 }) {
   const menu = useRef<HTMLDivElement>(null)
@@ -73,7 +61,7 @@ export function ResourceContextMenu({
     return () => document.removeEventListener('pointerdown', close)
   }, [onClose])
 
-  const actions = { onClose, onReport, onRequestMove, resource, resourceIds, runtime }
+  const actions = { onClose, onRequestMove, resource, resourceIds, workspace }
 
   return (
     <div
@@ -87,7 +75,7 @@ export function ResourceContextMenu({
       <MenuItem
         icon={<ExternalLink />}
         label="Open"
-        onActivate={() => runMenuOperation(actions, () => runtime.navigation.open(resource.id))}
+        onActivate={() => runMenuOperation(actions, () => workspace.open(resource.id))}
       />
       {canEdit && active && (
         <ActiveResourceMenuItems
@@ -97,7 +85,7 @@ export function ResourceContextMenu({
         />
       )}
       {resourceIds.length === 1 && <ResourceLinkMenuItems actions={actions} />}
-      {runtime.resources.bookmarks.status === 'available' && active && (
+      {bookmarksAvailable && active && (
         <ResourceBookmarkMenuItem actions={actions} bookmarkedIds={bookmarkedIds} />
       )}
       {canEdit && (
@@ -127,12 +115,7 @@ function ResourceBookmarkMenuItem({
         label={bookmarked ? 'Remove bookmark' : 'Bookmark'}
         onActivate={() =>
           runMenuOperation(actions, () =>
-            setWorkspaceBookmarkState(
-              actions.runtime,
-              actions.resourceIds,
-              !bookmarked,
-              actions.onReport,
-            ),
+            actions.workspace.bookmark(actions.resourceIds, !bookmarked),
           )
         }
       />
@@ -142,11 +125,10 @@ function ResourceBookmarkMenuItem({
 
 type ResourceMenuActions = Readonly<{
   onClose: () => void
-  onReport: WorkspaceReport
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   resource: AuthorizedResourceSummary
   resourceIds: ReadonlyArray<ResourceId>
-  runtime: EditorRuntime
+  workspace: WorkspaceActions
 }>
 
 function ActiveResourceMenuItems({
@@ -158,7 +140,7 @@ function ActiveResourceMenuItems({
   clipboard: WorkspaceClipboard
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
 }) {
-  const { resource, resourceIds, runtime, onReport } = actions
+  const { resource, resourceIds, workspace } = actions
   const upload = useRef<HTMLInputElement>(null)
   const destinationId = resource.kind === 'folder' ? resource.id : null
   const canPaste =
@@ -167,7 +149,7 @@ function ActiveResourceMenuItems({
     !clipboard.resourceIds.includes(destinationId)
   const paste = async () => {
     if (destinationId === null) return
-    onClipboardChange(await pasteWorkspaceClipboard(runtime, clipboard, destinationId, onReport))
+    onClipboardChange(await workspace.paste(clipboard, destinationId))
   }
   return (
     <>
@@ -180,9 +162,7 @@ function ActiveResourceMenuItems({
               icon={<Plus />}
               label={`New ${resourceKindLabel(kind)}`}
               onActivate={() =>
-                runMenuOperation(actions, () =>
-                  createWorkspaceResource(runtime, kind, destinationId, '', onReport),
-                )
+                runMenuOperation(actions, () => workspace.create(kind, destinationId, ''))
               }
             />
           ))}
@@ -199,10 +179,7 @@ function ActiveResourceMenuItems({
             onChange={(event) => {
               const file = event.target.files?.[0]
               event.target.value = ''
-              if (file)
-                runMenuOperation(actions, () =>
-                  createWorkspaceFile(runtime, destinationId, file, onReport),
-                )
+              if (file) runMenuOperation(actions, () => workspace.createFile(destinationId, file))
             }}
           />
           <MenuSeparator />
@@ -241,7 +218,7 @@ function ActiveResourceMenuItems({
         shortcut="Ctrl+D"
         onActivate={() =>
           runMenuOperation(actions, () =>
-            duplicateWorkspaceResources(runtime, resourceIds, resource.displayParentId, onReport),
+            workspace.duplicate(resourceIds, resource.displayParentId),
           )
         }
       />
@@ -255,31 +232,25 @@ function ActiveResourceMenuItems({
 }
 
 function ResourceLinkMenuItems({ actions }: { actions: ResourceMenuActions }) {
-  const { resource, runtime, onReport } = actions
+  const { resource, workspace } = actions
   return (
     <>
       <MenuSeparator />
       <MenuItem
         icon={<FileInput />}
         label="Copy link"
-        onActivate={() =>
-          runMenuOperation(actions, () => copyWorkspaceResourceLink(runtime, resource, onReport))
-        }
+        onActivate={() => runMenuOperation(actions, () => workspace.copyLink(resource))}
       />
       <MenuItem
         icon={<Hash />}
         label="Copy resource ID"
-        onActivate={() =>
-          runMenuOperation(actions, () => copyWorkspaceResourceId(resource, onReport))
-        }
+        onActivate={() => runMenuOperation(actions, () => workspace.copyId(resource))}
       />
       {resource.kind !== 'folder' && (
         <MenuItem
           icon={<Download />}
           label="Download"
-          onActivate={() =>
-            runMenuOperation(actions, () => downloadWorkspaceResource(runtime, resource, onReport))
-          }
+          onActivate={() => runMenuOperation(actions, () => workspace.download(resource))}
         />
       )}
     </>
@@ -295,7 +266,7 @@ function ResourceLifecycleMenuItems({
   confirmDelete: boolean
   onConfirmDelete: () => void
 }) {
-  const { resource, resourceIds, runtime, onReport } = actions
+  const { resource, resourceIds, workspace } = actions
   if (resource.lifecycle === 'active') {
     return (
       <>
@@ -308,9 +279,7 @@ function ResourceLifecycleMenuItems({
           }
           shortcut="Delete"
           onActivate={() =>
-            runMenuOperation(actions, () =>
-              changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'trash', onReport),
-            )
+            runMenuOperation(actions, () => workspace.changeLifecycle(resourceIds, 'trash'))
           }
         />
       </>
@@ -323,9 +292,7 @@ function ResourceLifecycleMenuItems({
         icon={<RotateCcw />}
         label={resourceIds.length > 1 ? `Restore ${resourceIds.length} items` : 'Restore'}
         onActivate={() =>
-          runMenuOperation(actions, () =>
-            changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'restore', onReport),
-          )
+          runMenuOperation(actions, () => workspace.changeLifecycle(resourceIds, 'restore'))
         }
       />
       <MenuItem
@@ -346,7 +313,7 @@ function ResourceLifecycleMenuItems({
             return
           }
           runMenuOperation(actions, () =>
-            changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'permanentlyDelete', onReport),
+            workspace.changeLifecycle(resourceIds, 'permanentlyDelete'),
           )
         }}
       />
