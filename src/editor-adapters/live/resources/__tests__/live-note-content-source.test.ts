@@ -428,6 +428,101 @@ describe('LiveNoteContentSource', () => {
     second.dispose()
   })
 
+  it('recovers an unacknowledged edit from the durable outbox after session replacement', async () => {
+    sessionStorage.clear()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const initialDocument = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Before reload' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const initial = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+    const version = await versionFor(initial)
+    const persist = provider.save.getMockImplementation()!
+    let releaseInterruptedSave: (() => void) | undefined
+    let saveAttempt = 0
+    provider.save.mockImplementation(async (args) => {
+      saveAttempt += 1
+      if (saveAttempt === 1) {
+        await new Promise<void>((resolve) => {
+          releaseInterruptedSave = resolve
+        })
+      }
+      return await persist(args)
+    })
+    const first = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    first.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const firstReady = first.get(resourceId)
+    if (firstReady.status !== 'ready') throw new Error('Expected ready note')
+    let interruptedSessionDestroyed = false
+    firstReady.session.document.on('destroy', () => {
+      interruptedSessionDestroyed = true
+    })
+    noteTextType(firstReady.session.document).insert(13, ' with unsaved recovery')
+    first.dispose()
+    await vi.waitFor(() => expect(provider.save).toHaveBeenCalledOnce())
+
+    const replacement = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    replacement.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const recovered = replacement.get(resourceId)
+    if (recovered.status !== 'ready') throw new Error('Expected recovered note')
+    expect(noteTextType(recovered.session.document).toString()).toBe(
+      'Before reload with unsaved recovery',
+    )
+    await expect(recovered.session.flush()).resolves.toMatchObject({ status: 'completed' })
+    expect(provider.save).toHaveBeenCalledTimes(2)
+    const persisted = await provider.save.mock.results[1]?.value
+    if (!persisted || persisted.status !== 'completed') throw new Error('Expected recovery save')
+
+    replacement.dispose()
+    const reloaded = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    reloaded.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: persisted.update,
+      version: persisted.version,
+    })
+    const reloadedState = reloaded.get(resourceId)
+    if (reloadedState.status !== 'ready') throw new Error('Expected reloaded note')
+    expect(noteTextType(reloadedState.session.document).toString()).toBe(
+      'Before reload with unsaved recovery',
+    )
+    await reloadedState.session.flush()
+    expect(provider.save).toHaveBeenCalledTimes(2)
+
+    releaseInterruptedSave?.()
+    await vi.waitFor(() => expect(interruptedSessionDestroyed).toBe(true))
+    expect(provider.save).toHaveBeenCalledTimes(2)
+    initialDocument.destroy()
+    reloaded.dispose()
+  })
+
   it('stops after a terminal rejection and publishes the truthful session state', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()

@@ -35,6 +35,8 @@ import {
 } from './live-resource-structure-gateway'
 import { createLiveNoteAwareness } from './live-note-awareness'
 import type { LiveNoteAwarenessBackend } from './live-note-awareness'
+import { createNoteUpdateOutbox } from './note-update-outbox'
+import type { NoteUpdateOutbox } from './note-update-outbox'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
@@ -90,7 +92,9 @@ function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
 class LiveNoteSession implements NoteSession {
   readonly readonly = false
   readonly #liveAwareness: ReturnType<typeof createLiveNoteAwareness>
+  readonly #outbox: NoteUpdateOutbox
   #version
+  #unacknowledgedUpdate: Uint8Array | null = null
   #drainPromise: Promise<NoteSessionSaveResult> | null = null
   #lifecycle: 'closing' | 'destroyed' | 'open' = 'open'
   #pendingUpdate: Uint8Array | null = null
@@ -109,6 +113,13 @@ class LiveNoteSession implements NoteSession {
     private readonly failed: (result: RejectedNoteSave) => void,
   ) {
     this.#version = version
+    this.#outbox = createNoteUpdateOutbox(campaignId, resourceId, memberId)
+    const recovered = this.#outbox.load()
+    if (recovered) {
+      Y.applyUpdate(document, recovered, REMOTE_NOTE_UPDATE)
+      this.#pendingUpdate = recovered
+      this.#unacknowledgedUpdate = recovered
+    }
     document.on('update', this.#onUpdate)
     this.#liveAwareness = createLiveNoteAwareness(
       document,
@@ -118,6 +129,7 @@ class LiveNoteSession implements NoteSession {
       backend,
       changed,
     )
+    if (recovered) this.#scheduleSave()
   }
 
   get version() {
@@ -179,6 +191,15 @@ class LiveNoteSession implements NoteSession {
       this.#pendingUpdate === null
         ? Uint8Array.from(update)
         : Y.mergeUpdates([this.#pendingUpdate, update])
+    this.#unacknowledgedUpdate =
+      this.#unacknowledgedUpdate === null
+        ? Uint8Array.from(update)
+        : Y.mergeUpdates([this.#unacknowledgedUpdate, update])
+    this.#outbox.replace(this.#unacknowledgedUpdate)
+    this.#scheduleSave()
+  }
+
+  #scheduleSave(): void {
     if (this.#drainPromise) return
     if (this.#timer) clearTimeout(this.#timer)
     this.#timer = setTimeout(() => {
@@ -201,6 +222,9 @@ class LiveNoteSession implements NoteSession {
       if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
         return this.#terminal!
       }
+      this.#unacknowledgedUpdate = this.#pendingUpdate
+      if (this.#unacknowledgedUpdate === null) this.#outbox.clear()
+      else this.#outbox.replace(this.#unacknowledgedUpdate)
     }
     return { status: 'completed', version: this.#version }
   }

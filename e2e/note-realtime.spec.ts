@@ -27,23 +27,32 @@ test.describe.serial('canonical note collaboration', () => {
     await expect(firstEditor).toBeVisible()
     const resourceId = resourceIdFromEditorUrl(page.url())
     await firstEditor.click()
-    await page.keyboard.insertText('Persisted before reload')
+    await page.keyboard.insertText('Recovered across immediate reload')
+    const pendingOutbox = await page.evaluate(() =>
+      Object.keys(sessionStorage).some((key) =>
+        key.startsWith('wizard-archive:note-update-outbox:v1:'),
+      ),
+    )
+    expect(pendingOutbox).toBe(true)
+
+    await page.reload({ waitUntil: 'commit' })
+    await expect(firstEditor).toContainText('Recovered across immediate reload')
     await flushEditor(page)
 
     const convex = await createE2EConvexClient()
     await expect
       .poll(() => loadNoteText(convex, campaignId, resourceId), { timeout: 15_000 })
-      .toContain('Persisted before reload')
+      .toContain('Recovered across immediate reload')
 
     await page.reload({ waitUntil: 'commit' })
-    await expect(firstEditor).toContainText('Persisted before reload')
+    await expect(firstEditor).toContainText('Recovered across immediate reload')
 
     const secondPage = await context.newPage()
     await secondPage.goto(page.url(), { waitUntil: 'commit' })
     const secondEditor = secondPage.getByRole('textbox', {
       name: 'Shared field notes note editor',
     })
-    await expect(secondEditor).toContainText('Persisted before reload')
+    await expect(secondEditor).toContainText('Recovered across immediate reload')
 
     const firstMarker = ` first-${'a'.repeat(1_000)}`
     const secondMarker = ` second-${'b'.repeat(1_000)}`
