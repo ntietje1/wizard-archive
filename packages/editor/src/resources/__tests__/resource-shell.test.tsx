@@ -107,11 +107,11 @@ describe('ResourceShell', () => {
       target: { value: 'Undoable name' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByRole('button', { name: `Undo Edit ${resource.title}` })).toBeEnabled()
+    expect(await screen.findByRole('button', { name: 'Undo Edit resource' })).toBeEnabled()
 
     fireEvent.keyDown(screen.getByLabelText('Editable resources'), { key: 'z', ctrlKey: true })
     expect(await screen.findByRole('heading', { name: resource.title })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: `Redo Edit ${resource.title}` }))
+    fireEvent.click(screen.getByRole('button', { name: 'Redo Edit resource' }))
     expect(await screen.findByRole('heading', { name: 'Undoable name' })).toBeInTheDocument()
     core.dispose()
   })

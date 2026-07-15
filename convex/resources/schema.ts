@@ -206,6 +206,12 @@ const resourceStructureResultValidator = v.union(
   }),
 )
 
+const resourceMetadataChangesValidator = v.object({
+  title: v.optional(v.string()),
+  icon: v.optional(v.nullable(v.string())),
+  color: v.optional(v.nullable(v.string())),
+})
+
 export const resourceStructureCommandValidator = v.union(
   v.object({
     type: v.literal('create'),
@@ -219,11 +225,7 @@ export const resourceStructureCommandValidator = v.union(
   v.object({
     type: v.literal('updateMetadata'),
     resourceId: resourceIdValidator,
-    changes: v.object({
-      title: v.optional(v.string()),
-      icon: v.optional(v.nullable(v.string())),
-      color: v.optional(v.nullable(v.string())),
-    }),
+    changes: resourceMetadataChangesValidator,
   }),
   v.object({
     type: v.literal('move'),
@@ -237,6 +239,30 @@ export const resourceStructureCommandValidator = v.union(
     type: v.literal('deepCopy'),
     sourceRootIds: v.array(resourceIdValidator),
     destinationParentId: v.nullable(resourceIdValidator),
+  }),
+)
+
+export const resourceCompensationPlanValidator = v.union(
+  v.object({
+    type: v.literal('updateMetadata'),
+    resourceId: resourceIdValidator,
+    changes: resourceMetadataChangesValidator,
+    requiredPostconditions: v.array(resourcePostconditionValidator),
+  }),
+  v.object({
+    type: v.literal('move'),
+    placements: v.array(
+      v.object({
+        resourceId: resourceIdValidator,
+        destinationParentId: v.nullable(resourceIdValidator),
+      }),
+    ),
+    requiredPostconditions: v.array(resourcePostconditionValidator),
+  }),
+  v.object({
+    type: literals('trash', 'restore'),
+    resourceIds: v.array(resourceIdValidator),
+    requiredPostconditions: v.array(resourcePostconditionValidator),
   }),
 )
 
@@ -268,7 +294,26 @@ export const resourceStructureCommandResultValidator = v.union(
       'content_integrity_failure',
       'version_exhausted',
       'operation_id_reused',
-      'stale_history',
+    ),
+  }),
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
+  }),
+)
+
+export const resourceCompensationResultValidator = v.union(
+  v.object({ status: v.literal('completed'), receipt: resourceCommandReceiptValidator }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_uuid',
+      'ownership_mismatch',
+      'unauthorized',
+      'history_missing',
+      'history_conflict',
+      'history_irreversible',
+      'operation_id_reused',
     ),
   }),
   v.object({
@@ -443,6 +488,7 @@ export const resourceTables = {
     protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
     fingerprint: v.string(),
     receipt: resourceCommandReceiptValidator,
+    compensation: v.nullable(resourceCompensationPlanValidator),
   })
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),

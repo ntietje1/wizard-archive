@@ -12,6 +12,7 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
+  ResourceCompensationResult,
   ResourceCommandReceipt,
   ResourcePostcondition,
   ResourceStructureCommand,
@@ -20,20 +21,22 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import {
   RESOURCE_COMMAND_PROTOCOL_VERSION,
+  fingerprintResourceCompensationRequest,
   fingerprintResourceStructureCommand,
-  fingerprintResourceCompensation,
-  normalizeResourcePostconditions,
   normalizeResourceStructureCommand,
   resourceStructureInputRejection,
 } from '@wizard-archive/editor/resources/command-protocol'
 import {
   ResourceGraphRejection,
+  planResourceCompensation,
   requireActiveResourceFolder,
   selectResourceClosure,
   selectResourceRoots,
+  transitionResourceCompensation,
   transitionResourceGraph,
 } from '@wizard-archive/editor/resources/graph-transition'
 import type {
+  ResourceCompensationPlan,
   ResourceGraph,
   ResourceGraphTransition,
 } from '@wizard-archive/editor/resources/graph-transition'
@@ -61,9 +64,15 @@ type ExecuteStructureCommandArgs = {
   command: ResourceStructureCommand
 }
 
-type ExecuteStructureCompensationArgs = ExecuteStructureCommandArgs & {
-  expectedPostconditions: ReadonlyArray<ResourcePostcondition>
+type CompensateResourceOperationArgs = {
+  operationId: string
+  originalOperationId: string
 }
+
+type AppliedCommand = Readonly<{
+  result: ResourceStructureCommandResult
+  compensation: ResourceCompensationPlan | null
+}>
 
 type LoadedGraph = ResourceGraph & {
   rows: ReadonlyMap<ResourceId, Doc<'resources'>>
@@ -85,14 +94,17 @@ async function loadResourceSpine(
 ): Promise<void> {
   const visited = new Set<ResourceId>()
   let currentId: ResourceId | null = resourceId
-  while (currentId !== null && !resources.has(currentId)) {
+  while (currentId !== null) {
     if (visited.has(currentId)) throw new ResourceGraphRejection('hierarchy_cycle')
     visited.add(currentId)
-    const row = await findCanonicalResource(ctx.db, currentId)
-    if (!row) return
-    const resource = resourceRecordFromRow(row)
-    rows.set(resource.id, row)
-    resources.set(resource.id, resource)
+    let resource = resources.get(currentId)
+    if (!resource) {
+      const row = await findCanonicalResource(ctx.db, currentId)
+      if (!row) return
+      resource = resourceRecordFromRow(row)
+      rows.set(resource.id, row)
+      resources.set(resource.id, resource)
+    }
     ensureGraphBound(rows)
     currentId = resource.parentId
   }
@@ -226,6 +238,46 @@ async function loadGraph(
     }
   }
   return { resources, tombstones, rows }
+}
+
+async function loadCompensationGraph(
+  ctx: CampaignMutationCtx,
+  campaignId: CampaignId,
+  plan: ResourceCompensationPlan,
+): Promise<LoadedGraph> {
+  const rows = new Map<ResourceId, Doc<'resources'>>()
+  const resources = new Map<ResourceId, ResourceRecord>()
+  await Promise.all(
+    plan.requiredPostconditions.map((condition) =>
+      loadResource(ctx, condition.resourceId, rows, resources),
+    ),
+  )
+  switch (plan.type) {
+    case 'updateMetadata':
+      await loadResource(ctx, plan.resourceId, rows, resources)
+      break
+    case 'move':
+      await Promise.all([
+        ...plan.placements.map((placement) =>
+          loadResourceSpine(ctx, placement.resourceId, rows, resources),
+        ),
+        ...plan.placements.flatMap((placement) =>
+          placement.destinationParentId === null
+            ? []
+            : [loadResourceSpine(ctx, placement.destinationParentId, rows, resources)],
+        ),
+      ])
+      break
+    case 'trash':
+    case 'restore':
+      await Promise.all(
+        plan.resourceIds.map((resourceId) => loadResourceSpine(ctx, resourceId, rows, resources)),
+      )
+      await loadDescendants(ctx, campaignId, plan.resourceIds, rows, resources)
+      break
+  }
+  ensureGraphBound(rows)
+  return { resources, rows, tombstones: new Map() }
 }
 
 async function createContent(
@@ -431,12 +483,75 @@ function resultFromRow(
   }
 }
 
+function postconditionsFromRows(
+  conditions: Doc<'resourceOperations'>['receipt']['postconditions'],
+): ReadonlyArray<ResourcePostcondition> {
+  const result = conditions.map((condition) =>
+    condition.state === 'missing'
+      ? {
+          state: condition.state,
+          resourceId: assertDomainId(DOMAIN_ID_KIND.resource, condition.resourceId),
+        }
+      : {
+          state: condition.state,
+          resourceId: assertDomainId(DOMAIN_ID_KIND.resource, condition.resourceId),
+          metadataVersion: assertVersionStamp(condition.metadataVersion),
+        },
+  )
+  if (new Set(result.map((condition) => condition.resourceId)).size !== result.length) {
+    throw new TypeError('Duplicate resource postcondition')
+  }
+  return result
+}
+
 function receiptFromRow(receipt: Doc<'resourceOperations'>['receipt']): ResourceCommandReceipt {
   return {
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, receipt.campaignId),
     operationId: assertDomainId(DOMAIN_ID_KIND.operation, receipt.operationId),
     result: resultFromRow(receipt.result),
-    postconditions: normalizeResourcePostconditions(receipt.postconditions),
+    postconditions: postconditionsFromRows(receipt.postconditions),
+  }
+}
+
+function compensationFromRow(
+  plan: NonNullable<Doc<'resourceOperations'>['compensation']>,
+): ResourceCompensationPlan {
+  const requiredPostconditions = postconditionsFromRows(plan.requiredPostconditions)
+  switch (plan.type) {
+    case 'updateMetadata':
+      return {
+        type: plan.type,
+        resourceId: assertDomainId(DOMAIN_ID_KIND.resource, plan.resourceId),
+        changes: {
+          ...(plan.changes.title === undefined
+            ? {}
+            : { title: canonicalizeResourceTitle(plan.changes.title) }),
+          ...(plan.changes.icon === undefined ? {} : { icon: plan.changes.icon }),
+          ...(plan.changes.color === undefined ? {} : { color: plan.changes.color }),
+        },
+        requiredPostconditions,
+      }
+    case 'move':
+      return {
+        type: plan.type,
+        placements: plan.placements.map((placement) => ({
+          resourceId: assertDomainId(DOMAIN_ID_KIND.resource, placement.resourceId),
+          destinationParentId:
+            placement.destinationParentId === null
+              ? null
+              : assertDomainId(DOMAIN_ID_KIND.resource, placement.destinationParentId),
+        })),
+        requiredPostconditions,
+      }
+    case 'trash':
+    case 'restore':
+      return {
+        type: plan.type,
+        resourceIds: plan.resourceIds.map((resourceId) =>
+          assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+        ),
+        requiredPostconditions,
+      }
   }
 }
 
@@ -465,6 +580,55 @@ function receiptForRow(receipt: ResourceCommandReceipt): Doc<'resourceOperations
   }
 }
 
+function compensationForRow(
+  plan: ResourceCompensationPlan | null,
+): Doc<'resourceOperations'>['compensation'] {
+  if (plan === null) return null
+  const requiredPostconditions = plan.requiredPostconditions.map((condition) =>
+    condition.state === 'missing'
+      ? { state: condition.state, resourceId: condition.resourceId }
+      : {
+          state: condition.state,
+          resourceId: condition.resourceId,
+          metadataVersion: storedVersion(condition.metadataVersion),
+        },
+  )
+  switch (plan.type) {
+    case 'updateMetadata':
+      return {
+        type: plan.type,
+        resourceId: plan.resourceId,
+        changes: { ...plan.changes },
+        requiredPostconditions,
+      }
+    case 'move':
+      return {
+        type: plan.type,
+        placements: plan.placements.map((placement) => ({ ...placement })),
+        requiredPostconditions,
+      }
+    case 'trash':
+    case 'restore':
+      return {
+        type: plan.type,
+        resourceIds: [...plan.resourceIds],
+        requiredPostconditions,
+      }
+  }
+}
+
+function replayStoredOperation(
+  stored: Doc<'resourceOperations'> | null,
+  actorId: CampaignMemberId,
+  fingerprint: string,
+) {
+  if (!stored) return null
+  if (stored.actorMemberUuid !== actorId || stored.fingerprint !== fingerprint) {
+    return { status: 'rejected', reason: 'operation_id_reused' } as const
+  }
+  return { status: 'completed', receipt: receiptFromRow(stored.receipt) } as const
+}
+
 function structuredResult(
   result: ResourceCommandReceipt['result'],
 ): Doc<'resourceOperations'>['receipt']['result'] {
@@ -488,51 +652,36 @@ async function applyCommand(
   actorId: CampaignMemberId,
   operationId: OperationId,
   command: ResourceStructureCommand,
-  expectedPostconditions?: ReadonlyArray<ResourcePostcondition>,
-): Promise<ResourceStructureCommandResult> {
+): Promise<AppliedCommand> {
   const graph = await loadGraph(ctx, campaignId, command)
-  if (expectedPostconditions) {
-    const resources = await Promise.all(
-      expectedPostconditions.map(async (condition) => {
-        const row = await findCanonicalResource(ctx.db, condition.resourceId)
-        return row ? resourceRecordFromRow(row) : undefined
-      }),
-    )
-    const matches =
-      resources.length === expectedPostconditions.length &&
-      expectedPostconditions.every((condition, index) => {
-        const resource = resources[index]
-        if (condition.state === 'missing') return resource === undefined
-        return (
-          resource?.metadataVersion.revision === condition.metadataVersion.revision &&
-          resource.metadataVersion.digest === condition.metadataVersion.digest
-        )
-      })
-    if (!matches) return { status: 'rejected', reason: 'stale_history' }
-  }
   if (command.type === 'deepCopy') {
-    return await deepCopyResources(ctx, graph, campaignId, actorId, operationId, command)
+    const result = await deepCopyResources(ctx, graph, campaignId, actorId, operationId, command)
+    return {
+      result,
+      compensation:
+        result.status === 'completed'
+          ? planResourceCompensation(graph, campaignId, command, result.receipt)
+          : null,
+    }
   }
   const transition = await transitionResourceGraph(graph, campaignId, operationId, command, {
     at: Date.now(),
     by: actorId,
   })
+  const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
   await persistTransition(ctx, graph, transition, operationId)
-  return { status: 'completed', receipt: transition.receipt }
+  return { result: { status: 'completed', receipt: transition.receipt }, compensation }
 }
 
 async function execute(
   ctx: CampaignMutationCtx,
   args: ExecuteStructureCommandArgs,
-  expected?: ReadonlyArray<ResourcePostcondition>,
 ): Promise<ResourceStructureCommandResult> {
   let operationId: OperationId
   let command: ResourceStructureCommand
-  let expectedPostconditions: ReadonlyArray<ResourcePostcondition> | undefined
   try {
     operationId = assertDomainId(DOMAIN_ID_KIND.operation, args.operationId)
     command = normalizeResourceStructureCommand(args.command)
-    expectedPostconditions = expected && normalizeResourcePostconditions(expected)
   } catch (error) {
     return { status: 'rejected', reason: resourceStructureInputRejection(error) }
   }
@@ -542,9 +691,7 @@ async function execute(
 
   const { campaignId, actorId } = ctx.resourceScope
   const [fingerprint, stored] = await Promise.all([
-    expectedPostconditions
-      ? fingerprintResourceCompensation(command, expectedPostconditions)
-      : fingerprintResourceStructureCommand(command),
+    fingerprintResourceStructureCommand(command),
     ctx.db
       .query('resourceOperations')
       .withIndex('by_campaign_and_operation', (query) =>
@@ -552,33 +699,23 @@ async function execute(
       )
       .unique(),
   ])
-  if (stored) {
-    if (stored.actorMemberUuid !== actorId || stored.fingerprint !== fingerprint) {
-      return { status: 'rejected', reason: 'operation_id_reused' }
-    }
-    return { status: 'completed', receipt: receiptFromRow(stored.receipt) }
-  }
+  const replay = replayStoredOperation(stored, actorId, fingerprint)
+  if (replay) return replay
 
   try {
-    const result = await applyCommand(
-      ctx,
-      campaignId,
-      actorId,
-      operationId,
-      command,
-      expectedPostconditions,
-    )
-    if (result.status === 'completed') {
+    const applied = await applyCommand(ctx, campaignId, actorId, operationId, command)
+    if (applied.result.status === 'completed') {
       await ctx.db.insert('resourceOperations', {
         campaignUuid: campaignId,
         actorMemberUuid: actorId,
         operationUuid: operationId,
         protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
         fingerprint,
-        receipt: receiptForRow(result.receipt),
+        receipt: receiptForRow(applied.result.receipt),
+        compensation: compensationForRow(applied.compensation),
       })
     }
-    return result
+    return applied.result
   } catch (error) {
     if (error instanceof ResourceGraphRejection) {
       return { status: 'rejected', reason: error.reason }
@@ -597,9 +734,72 @@ export async function executeStructureCommand(
   return await execute(ctx, args)
 }
 
-export async function executeStructureCompensation(
+export async function compensateResourceOperation(
   ctx: CampaignMutationCtx,
-  args: ExecuteStructureCompensationArgs,
-): Promise<ResourceStructureCommandResult> {
-  return await execute(ctx, args, args.expectedPostconditions)
+  args: CompensateResourceOperationArgs,
+): Promise<ResourceCompensationResult> {
+  let operationId: OperationId
+  let originalOperationId: OperationId
+  try {
+    operationId = assertDomainId(DOMAIN_ID_KIND.operation, args.operationId)
+    originalOperationId = assertDomainId(DOMAIN_ID_KIND.operation, args.originalOperationId)
+  } catch {
+    return { status: 'rejected', reason: 'invalid_uuid' }
+  }
+  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    return { status: 'rejected', reason: 'unauthorized' }
+  }
+
+  const { campaignId, actorId } = ctx.resourceScope
+  const [fingerprint, stored, original] = await Promise.all([
+    fingerprintResourceCompensationRequest(originalOperationId),
+    ctx.db
+      .query('resourceOperations')
+      .withIndex('by_campaign_and_operation', (query) =>
+        query.eq('campaignUuid', campaignId).eq('operationUuid', operationId),
+      )
+      .unique(),
+    ctx.db
+      .query('resourceOperations')
+      .withIndex('by_campaign_and_operation', (query) =>
+        query.eq('campaignUuid', campaignId).eq('operationUuid', originalOperationId),
+      )
+      .unique(),
+  ])
+  const replay = replayStoredOperation(stored, actorId, fingerprint)
+  if (replay) return replay
+  if (!original) return { status: 'rejected', reason: 'history_missing' }
+  if (original.actorMemberUuid !== actorId) return { status: 'rejected', reason: 'unauthorized' }
+  if (original.compensation === null) {
+    return { status: 'rejected', reason: 'history_irreversible' }
+  }
+
+  try {
+    const plan = compensationFromRow(original.compensation)
+    const graph = await loadCompensationGraph(ctx, campaignId, plan)
+    const applied = await transitionResourceCompensation(graph, campaignId, operationId, plan, {
+      at: Date.now(),
+      by: actorId,
+    })
+    if (!applied) return { status: 'rejected', reason: 'history_conflict' }
+    await persistTransition(ctx, graph, applied.transition, operationId)
+    await ctx.db.insert('resourceOperations', {
+      campaignUuid: campaignId,
+      actorMemberUuid: actorId,
+      operationUuid: operationId,
+      protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
+      fingerprint,
+      receipt: receiptForRow(applied.transition.receipt),
+      compensation: compensationForRow(applied.compensation),
+    })
+    return { status: 'completed', receipt: applied.transition.receipt }
+  } catch (error) {
+    if (
+      error instanceof ResourceGraphRejection ||
+      (error instanceof RangeError && error.message === 'version_exhausted')
+    ) {
+      return { status: 'rejected', reason: 'history_conflict' }
+    }
+    throw error
+  }
 }

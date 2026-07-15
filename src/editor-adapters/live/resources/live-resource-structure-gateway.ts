@@ -5,26 +5,31 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CommandDelivery,
+  ResourceCompensationResult,
   ResourceCommandReceipt,
   ResourceStructureCommandGateway,
-  ResourceStructureCompensationGateway,
+  ResourceCompensationGateway,
   ResourceStructureCommandResult,
   ResourceStructureResult,
 } from '@wizard-archive/editor/resources/command-contract'
 import {
   normalizeResourceStructureCommand,
-  normalizeResourcePostconditions,
   resourceStructureInputRejection,
 } from '@wizard-archive/editor/resources/command-protocol'
 
 type ExecuteArgs = FunctionArgs<typeof api.resources.mutations.executeStructureCommand>
 type ExecuteResult = FunctionReturnType<typeof api.resources.mutations.executeStructureCommand>
 type ExecuteCompensationArgs = FunctionArgs<
-  typeof api.resources.mutations.executeStructureCompensation
+  typeof api.resources.mutations.compensateResourceOperation
+>
+type ExecuteCompensationResult = FunctionReturnType<
+  typeof api.resources.mutations.compensateResourceOperation
 >
 
 type LiveResourceStructureMutation = (args: ExecuteArgs) => Promise<ExecuteResult>
-type LiveResourceCompensationMutation = (args: ExecuteCompensationArgs) => Promise<ExecuteResult>
+type LiveResourceCompensationMutation = (
+  args: ExecuteCompensationArgs,
+) => Promise<ExecuteCompensationResult>
 
 export function toLiveStructureMutationCommand(
   command: ReturnType<typeof normalizeResourceStructureCommand>,
@@ -108,10 +113,24 @@ function scopeUnavailable(): CommandDelivery<ResourceStructureCommandResult> {
   }
 }
 
+function compensationScopeUnavailable(): CommandDelivery<ResourceCompensationResult> {
+  return {
+    status: 'received',
+    result: { status: 'unavailable', reason: 'scope_unavailable' },
+  }
+}
+
 function invalidInput(error: unknown): CommandDelivery<ResourceStructureCommandResult> {
   return {
     status: 'received',
     result: { status: 'rejected', reason: resourceStructureInputRejection(error) },
+  }
+}
+
+function invalidCompensationInput(): CommandDelivery<ResourceCompensationResult> {
+  return {
+    status: 'received',
+    result: { status: 'rejected', reason: 'invalid_uuid' },
   }
 }
 
@@ -127,6 +146,29 @@ async function deliver(
       (result.receipt.campaignId !== campaignId || result.receipt.operationId !== operationId)
     ) {
       throw new TypeError('Resource command receipt does not match its envelope')
+    }
+    return { status: 'received', result }
+  } catch {
+    return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
+  }
+}
+
+async function deliverCompensation(
+  campaignId: CampaignId,
+  operationId: ExecuteCompensationArgs['operationId'],
+  mutate: () => Promise<ExecuteCompensationResult>,
+): Promise<CommandDelivery<ResourceCompensationResult>> {
+  try {
+    const value = await mutate()
+    const result: ResourceCompensationResult =
+      value.status === 'completed'
+        ? { status: value.status, receipt: readReceipt(value.receipt) }
+        : value
+    if (
+      result.status === 'completed' &&
+      (result.receipt.campaignId !== campaignId || result.receipt.operationId !== operationId)
+    ) {
+      throw new TypeError('Resource compensation receipt does not match its envelope')
     }
     return { status: 'received', result }
   } catch {
@@ -169,31 +211,26 @@ export function createLiveResourceStructureGateway(
 export function createLiveResourceCompensationGateway(
   campaignId: CampaignId,
   executeMutation: LiveResourceCompensationMutation,
-): ResourceStructureCompensationGateway {
+): ResourceCompensationGateway {
   return {
-    executeCompensation: async (envelope) => {
+    compensate: async (envelope) => {
       if (envelope.campaignId !== campaignId) {
-        return scopeUnavailable()
+        return compensationScopeUnavailable()
       }
       let args: ExecuteCompensationArgs
       try {
         args = {
-          ...executeArgs(campaignId, envelope),
-          expectedPostconditions: normalizeResourcePostconditions(
-            envelope.expectedPostconditions,
-          ).map((condition) =>
-            condition.state === 'missing'
-              ? condition
-              : {
-                  ...condition,
-                  metadataVersion: { ...condition.metadataVersion },
-                },
+          campaignId,
+          operationId: assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId),
+          originalOperationId: assertDomainId(
+            DOMAIN_ID_KIND.operation,
+            envelope.originalOperationId,
           ),
         }
-      } catch (error) {
-        return invalidInput(error)
+      } catch {
+        return invalidCompensationInput()
       }
-      return await deliver(campaignId, args.operationId, () => executeMutation(args))
+      return await deliverCompensation(campaignId, args.operationId, () => executeMutation(args))
     },
   }
 }

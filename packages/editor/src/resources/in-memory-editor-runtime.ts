@@ -282,7 +282,7 @@ export function createInMemoryEditorRuntime({
     },
   }
   const undo = createResourceUndoHistory(
-    resources.index,
+    scope.campaignId,
     contentAwareStructure,
     resources.compensation,
   )

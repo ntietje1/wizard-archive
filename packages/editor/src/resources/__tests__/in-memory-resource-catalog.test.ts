@@ -283,16 +283,11 @@ describe('in-memory resource compensation', () => {
     const compensation = {
       campaignId,
       operationId: operationDomainId(52),
-      command: {
-        type: 'updateMetadata' as const,
-        resourceId: id,
-        changes: { title: canonicalizeResourceTitle('Resource 50') },
-      },
-      expectedPostconditions: renamed.receipt.postconditions,
+      originalOperationId: renamed.receipt.operationId,
     }
 
-    const first = await operations.executeCompensation(actorId, compensation)
-    const replay = await operations.executeCompensation(actorId, compensation)
+    const first = await operations.compensate(actorId, compensation)
+    const replay = await operations.compensate(actorId, compensation)
 
     expect(replay).toEqual(first)
     expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Resource 50')
@@ -324,20 +319,113 @@ describe('in-memory resource compensation', () => {
     })
 
     await expect(
-      operations.executeCompensation(actorId, {
+      operations.compensate(actorId, {
         campaignId,
         operationId: operationDomainId(63),
-        command: {
-          type: 'updateMetadata',
-          resourceId: id,
-          changes: { title: canonicalizeResourceTitle('Resource 60') },
-        },
-        expectedPostconditions: renamed.receipt.postconditions,
+        originalOperationId: renamed.receipt.operationId,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'stale_history' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'history_conflict' })
     expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Later edit')
   })
+
+  it('atomically restores mixed-parent moves and redoes the server-issued compensation', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({ authorize: () => true })
+    const parentA = resourceDomainId(70)
+    const parentB = resourceDomainId(71)
+    const destination = resourceDomainId(72)
+    const childA = resourceDomainId(73)
+    const childB = resourceDomainId(74)
+    await createResource(operations, parentA, operationDomainId(70), null, 'folder')
+    await createResource(operations, parentB, operationDomainId(71), null, 'folder')
+    await createResource(operations, destination, operationDomainId(72), null, 'folder')
+    await createResource(operations, childA, operationDomainId(73), parentA, 'note')
+    await createResource(operations, childB, operationDomainId(74), parentB, 'note')
+    const moved = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(75),
+      command: { type: 'move', resourceIds: [childA, childB], destinationParentId: destination },
+    })
+    if (moved.status !== 'completed') throw new Error('Expected move completion')
+
+    const undone = await operations.compensate(actorId, {
+      campaignId,
+      operationId: operationDomainId(76),
+      originalOperationId: moved.receipt.operationId,
+    })
+    if (undone.status !== 'completed') throw new Error('Expected undo completion')
+    expect(parentIds(catalog, childA, childB)).toEqual([parentA, parentB])
+
+    const redone = await operations.compensate(actorId, {
+      campaignId,
+      operationId: operationDomainId(77),
+      originalOperationId: undone.receipt.operationId,
+    })
+    expect(redone.status).toBe('completed')
+    expect(parentIds(catalog, childA, childB)).toEqual([destination, destination])
+  })
+
+  it('defines restore redo semantics and rejects irreversible operation history', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({ authorize: () => true })
+    const id = resourceDomainId(80)
+    await createResource(operations, id, operationDomainId(80), null, 'note')
+    await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(81),
+      command: { type: 'trash', resourceIds: [id] },
+    })
+    const restored = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(82),
+      command: { type: 'restore', resourceIds: [id] },
+    })
+    if (restored.status !== 'completed') throw new Error('Expected restore completion')
+    const undone = await operations.compensate(actorId, {
+      campaignId,
+      operationId: operationDomainId(83),
+      originalOperationId: restored.receipt.operationId,
+    })
+    if (undone.status !== 'completed') throw new Error('Expected restore undo completion')
+    expect(catalog.getSnapshot(campaignId).resources[0]?.lifecycle.state).toBe('trashed')
+    const redone = await operations.compensate(actorId, {
+      campaignId,
+      operationId: operationDomainId(84),
+      originalOperationId: undone.receipt.operationId,
+    })
+    expect(redone.status).toBe('completed')
+    expect(catalog.getSnapshot(campaignId).resources[0]?.lifecycle.state).toBe('active')
+
+    await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(85),
+      command: { type: 'trash', resourceIds: [id] },
+    })
+    const deleted = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(86),
+      command: { type: 'permanentlyDelete', resourceIds: [id] },
+    })
+    if (deleted.status !== 'completed') throw new Error('Expected deletion completion')
+    await expect(
+      operations.compensate(actorId, {
+        campaignId,
+        operationId: operationDomainId(87),
+        originalOperationId: deleted.receipt.operationId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'history_irreversible' })
+  })
 })
+
+function parentIds(
+  catalog: InMemoryResourceCatalog,
+  ...resourceIds: ReadonlyArray<ReturnType<typeof resourceDomainId>>
+) {
+  const byId = new Map(
+    catalog.getSnapshot(campaignId).resources.map((resource) => [resource.id, resource]),
+  )
+  return resourceIds.map((id) => byId.get(id)?.parentId)
+}
 
 function resourceDomainId(sequence: number) {
   return assertDomainId(

@@ -60,6 +60,12 @@ export const editorParityContract = {
   },
   deletedPathOwners: [
     {
+      cluster: 'superseded_shared_embed_targets',
+      pattern: /^shared\/embeds(?:\/|$)/,
+      owners: ['WIZ-266'],
+      disposition: 'superseded_artifact',
+    },
+    {
       cluster: 'obsolete_package_facade',
       pattern: /^packages\/editor\/src\/index\.ts$/,
       owners: ['WIZ-259'],

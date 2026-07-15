@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
   createLiveResourceCompensationGateway,
   createLiveResourceStructureGateway,
@@ -104,39 +103,27 @@ describe('createLiveResourceStructureGateway', () => {
 })
 
 describe('createLiveResourceCompensationGateway', () => {
-  it('sends exact expected postconditions and preserves stale rejection', async () => {
-    const expectedPostconditions = [
-      {
-        state: 'present' as const,
-        resourceId,
-        metadataVersion: assertVersionStamp({
-          scheme: 'authoritative-revision-v1' as const,
-          revision: 1,
-          digest: '0'.repeat(64),
-        }),
-      },
-    ]
+  it('sends only operation identity and preserves history conflict rejection', async () => {
+    const originalOperationId = testDomainId('operation', 'original-operation')
     const execute = vi.fn(() =>
-      Promise.resolve({ status: 'rejected' as const, reason: 'stale_history' as const }),
+      Promise.resolve({ status: 'rejected' as const, reason: 'history_conflict' as const }),
     )
     const gateway = createLiveResourceCompensationGateway(campaignId, execute)
 
     await expect(
-      gateway.executeCompensation({
+      gateway.compensate({
         campaignId,
         operationId,
-        command: { type: 'trash', resourceIds: [resourceId] },
-        expectedPostconditions,
+        originalOperationId,
       }),
     ).resolves.toEqual({
       status: 'received',
-      result: { status: 'rejected', reason: 'stale_history' },
+      result: { status: 'rejected', reason: 'history_conflict' },
     })
     expect(execute).toHaveBeenCalledWith({
       campaignId,
       operationId,
-      command: { type: 'trash', resourceIds: [resourceId] },
-      expectedPostconditions,
+      originalOperationId,
     })
   })
 })

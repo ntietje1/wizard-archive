@@ -4,6 +4,7 @@ import type {
   ResourcePostcondition,
   ResourceStructureCommand,
   ResourceStructureRejection,
+  UpdateResourceMetadataCommand,
 } from './resource-command-contract'
 import type { AuditStamp, ResourceRecord } from './resource-record'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE, resourceMetadataValue } from './resource-record'
@@ -25,6 +26,26 @@ export type ResourceGraphTransition = Readonly<{
   tombstones: ReadonlyArray<ResourceTombstone>
   receipt: ResourceCommandReceipt
 }>
+
+export type ResourceCompensationPlan =
+  | Readonly<{
+      type: 'updateMetadata'
+      resourceId: ResourceId
+      changes: UpdateResourceMetadataCommand['changes']
+      requiredPostconditions: ReadonlyArray<ResourcePostcondition>
+    }>
+  | Readonly<{
+      type: 'move'
+      placements: ReadonlyArray<
+        Readonly<{ resourceId: ResourceId; destinationParentId: ResourceId | null }>
+      >
+      requiredPostconditions: ReadonlyArray<ResourcePostcondition>
+    }>
+  | Readonly<{
+      type: 'trash' | 'restore'
+      resourceIds: ReadonlyArray<ResourceId>
+      requiredPostconditions: ReadonlyArray<ResourcePostcondition>
+    }>
 
 export class ResourceGraphRejection extends Error {
   constructor(readonly reason: ResourceStructureRejection) {
@@ -187,6 +208,218 @@ function selectActiveRoots(
 
 function emptyTransition(receiptValue: ResourceCommandReceipt): ResourceGraphTransition {
   return { upserted: [], deletedResourceIds: [], tombstones: [], receipt: receiptValue }
+}
+
+function requiredPostconditions(
+  postconditions: ReadonlyArray<ResourcePostcondition>,
+  dependencies: ReadonlyArray<ResourceRecord>,
+): ReadonlyArray<ResourcePostcondition> {
+  const result = new Map<ResourceId, ResourcePostcondition>()
+  for (const dependency of dependencies) {
+    result.set(dependency.id, {
+      state: 'present',
+      resourceId: dependency.id,
+      metadataVersion: dependency.metadataVersion,
+    })
+  }
+  for (const postcondition of postconditions) result.set(postcondition.resourceId, postcondition)
+  return Array.from(result.values()).sort((left, right) =>
+    left.resourceId.localeCompare(right.resourceId),
+  )
+}
+
+function parentDependencies(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  resources: ReadonlyArray<ResourceRecord>,
+): ReadonlyArray<ResourceRecord> {
+  const result = new Map<ResourceId, ResourceRecord>()
+  for (const resource of resources) {
+    if (resource.parentId === null) continue
+    const parent = requireOwnedResource(graph, campaignId, resource.parentId)
+    result.set(parent.id, parent)
+  }
+  return Array.from(result.values())
+}
+
+export function planResourceCompensation(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  command: ResourceStructureCommand,
+  completed: ResourceCommandReceipt,
+): ResourceCompensationPlan | null {
+  switch (command.type) {
+    case 'create':
+      return {
+        type: 'trash',
+        resourceIds: [command.resourceId],
+        requiredPostconditions: completed.postconditions,
+      }
+    case 'updateMetadata': {
+      const resource = requireOwnedResource(graph, campaignId, command.resourceId)
+      return {
+        type: 'updateMetadata',
+        resourceId: resource.id,
+        changes: {
+          ...(command.changes.title === undefined ? {} : { title: resource.title }),
+          ...(command.changes.icon === undefined ? {} : { icon: resource.icon }),
+          ...(command.changes.color === undefined ? {} : { color: resource.color }),
+        },
+        requiredPostconditions: completed.postconditions,
+      }
+    }
+    case 'move': {
+      const roots = selectResourceRoots(graph, campaignId, command.resourceIds)
+      return {
+        type: 'move',
+        placements: roots.map((resource) => ({
+          resourceId: resource.id,
+          destinationParentId: resource.parentId,
+        })),
+        requiredPostconditions: requiredPostconditions(
+          completed.postconditions,
+          parentDependencies(graph, campaignId, roots),
+        ),
+      }
+    }
+    case 'trash': {
+      const roots = selectResourceRoots(graph, campaignId, command.resourceIds)
+      return {
+        type: 'restore',
+        resourceIds: roots.map((resource) => resource.id),
+        requiredPostconditions: requiredPostconditions(
+          completed.postconditions,
+          parentDependencies(graph, campaignId, roots),
+        ),
+      }
+    }
+    case 'restore':
+      return {
+        type: 'trash',
+        resourceIds: selectResourceRoots(graph, campaignId, command.resourceIds).map(
+          (resource) => resource.id,
+        ),
+        requiredPostconditions: completed.postconditions,
+      }
+    case 'deepCopy':
+      if (completed.result.type !== 'deepCopied') return reject('content_integrity_failure')
+      return {
+        type: 'trash',
+        resourceIds: completed.result.roots.map((root) => root.destinationRootId),
+        requiredPostconditions: completed.postconditions,
+      }
+    case 'permanentlyDelete':
+      return null
+  }
+}
+
+function postconditionsMatch(
+  graph: ResourceGraph,
+  conditions: ReadonlyArray<ResourcePostcondition>,
+): boolean {
+  return conditions.every((condition) => {
+    const resource = graph.resources.get(condition.resourceId)
+    if (condition.state === 'missing') return resource === undefined
+    return (
+      resource?.metadataVersion.revision === condition.metadataVersion.revision &&
+      resource.metadataVersion.digest === condition.metadataVersion.digest
+    )
+  })
+}
+
+function applyTransitionToGraph(
+  graph: ResourceGraph,
+  transition: ResourceGraphTransition,
+): ResourceGraph {
+  const resources = new Map(graph.resources)
+  const tombstones = new Map(graph.tombstones)
+  for (const resource of transition.upserted) resources.set(resource.id, resource)
+  for (const resourceId of transition.deletedResourceIds) resources.delete(resourceId)
+  for (const tombstone of transition.tombstones) tombstones.set(tombstone.resourceId, tombstone)
+  return { resources, tombstones }
+}
+
+export type ResourceCompensationTransition = Readonly<{
+  transition: ResourceGraphTransition
+  compensation: ResourceCompensationPlan
+}>
+
+export async function transitionResourceCompensation(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  operationId: OperationId,
+  plan: ResourceCompensationPlan,
+  audit: AuditStamp,
+): Promise<ResourceCompensationTransition | null> {
+  if (!postconditionsMatch(graph, plan.requiredPostconditions)) return null
+  if (plan.type !== 'move') {
+    const command: Exclude<
+      ResourceStructureCommand,
+      { type: 'create' | 'deepCopy' | 'move' | 'permanentlyDelete' }
+    > =
+      plan.type === 'updateMetadata'
+        ? { type: plan.type, resourceId: plan.resourceId, changes: plan.changes }
+        : { type: plan.type, resourceIds: plan.resourceIds }
+    const transition = await transitionResourceGraph(graph, campaignId, operationId, command, audit)
+    const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
+    if (!compensation) return reject('content_integrity_failure')
+    return { transition, compensation }
+  }
+
+  if (plan.placements.length === 0) return reject('invalid_command')
+  const placementIds = new Set(plan.placements.map((placement) => placement.resourceId))
+  if (placementIds.size !== plan.placements.length) return reject('invalid_command')
+  const originalResources = plan.placements.map((placement) =>
+    requireOwnedResource(graph, campaignId, placement.resourceId),
+  )
+  const groups = new Map<ResourceId | null, Array<ResourceId>>()
+  for (const placement of plan.placements) {
+    const ids = groups.get(placement.destinationParentId) ?? []
+    ids.push(placement.resourceId)
+    groups.set(placement.destinationParentId, ids)
+  }
+
+  let working = graph
+  const upserted = new Map<ResourceId, ResourceRecord>()
+  for (const [destinationParentId, resourceIds] of groups) {
+    const transition = await transitionResourceGraph(
+      working,
+      campaignId,
+      operationId,
+      { type: 'move', resourceIds, destinationParentId },
+      audit,
+    )
+    for (const resource of transition.upserted) upserted.set(resource.id, resource)
+    working = applyTransitionToGraph(working, transition)
+  }
+  const moved = plan.placements.map((placement) =>
+    requireOwnedResource(working, campaignId, placement.resourceId),
+  )
+  const transition: ResourceGraphTransition = {
+    upserted: Array.from(upserted.values()),
+    deletedResourceIds: [],
+    tombstones: [],
+    receipt: receipt(
+      campaignId,
+      operationId,
+      { type: 'moved', resourceIds: moved.map((resource) => resource.id) },
+      present(moved),
+    ),
+  }
+  return {
+    transition,
+    compensation: {
+      type: 'move',
+      placements: originalResources.map((resource) => ({
+        resourceId: resource.id,
+        destinationParentId: resource.parentId,
+      })),
+      requiredPostconditions: requiredPostconditions(
+        transition.receipt.postconditions,
+        parentDependencies(graph, campaignId, originalResources),
+      ),
+    },
+  }
 }
 
 async function createResource(

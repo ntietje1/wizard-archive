@@ -38,6 +38,7 @@ describe('actor-bound resource operation ledger', () => {
       protocolVersion: 'resource-command-v1',
       fingerprint,
       receipt,
+      compensation: null,
     })
 
     expect(ledger.lookup(campaignId, actorId, operationId, fingerprint)).toEqual({
@@ -62,6 +63,7 @@ describe('actor-bound resource operation ledger', () => {
       protocolVersion: 'resource-command-v1',
       fingerprint,
       receipt,
+      compensation: null,
     } as const
 
     ledger.record(operation)

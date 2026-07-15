@@ -63,7 +63,7 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
         actorId: CampaignMemberId,
         envelope: CommandEnvelope<ResourceStructureCommand>,
       ) => {
-        const authorized = await authorize(actorId, envelope)
+        const authorized = await authorize(actorId, envelope.campaignId)
         return await test.run(
           async (ctx) =>
             await executeStructureCommand(

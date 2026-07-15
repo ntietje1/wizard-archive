@@ -63,7 +63,7 @@ function createScopedLiveResourceRuntime(
     (args) => convex.mutation(api.resources.mutations.executeStructureCommand, args),
   )
   const compensation = createLiveResourceCompensationGateway(currentScope.campaignId, (args) =>
-    convex.mutation(api.resources.mutations.executeStructureCompensation, args),
+    convex.mutation(api.resources.mutations.compensateResourceOperation, args),
   )
   let notes: ReturnType<typeof createLiveNoteContentSource> | null = null
   const optimistic = createOptimisticResourceStructureRuntime(
@@ -81,7 +81,11 @@ function createScopedLiveResourceRuntime(
       },
     },
   )
-  const undo = createResourceUndoHistory(optimistic.index, optimistic.structure, compensation)
+  const undo = createResourceUndoHistory(
+    currentScope.campaignId,
+    optimistic.structure,
+    compensation,
+  )
   notes = createLiveNoteContentSource(currentScope.campaignId, undo.structure, {
     bind: (args) => convex.mutation(api.resources.mutations.bindNoteContent, args),
     save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),

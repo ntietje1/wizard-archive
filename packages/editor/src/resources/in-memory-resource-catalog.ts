@@ -1,5 +1,5 @@
 import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from './domain-id'
-import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
+import type { CampaignId, CampaignMemberId, OperationId, ResourceId } from './domain-id'
 import type {
   ResourceCatalogPage,
   ResourceCatalogReader,
@@ -13,6 +13,7 @@ import type {
   AuthoritativeResourceOperationExecutor,
   AuthoritativeResourceCompensationExecutor,
   CommandEnvelope,
+  ResourceCompensationResult,
   ResourceCommandReceipt,
   ResourceCompensationEnvelope,
   ResourcePostcondition,
@@ -21,9 +22,8 @@ import type {
 } from './resource-command-contract'
 import {
   RESOURCE_COMMAND_PROTOCOL_VERSION,
+  fingerprintResourceCompensationRequest,
   fingerprintResourceStructureCommand,
-  fingerprintResourceCompensation,
-  normalizeResourcePostconditions,
   normalizeResourceStructureCommand,
   resourceStructureInputRejection,
 } from './resource-command-protocol'
@@ -38,17 +38,20 @@ import type {
   ContentCopyPlanner,
   ResourceCopyMapEntry,
 } from './content-copy-contract'
+import type { ResourceCompensationPlan } from './resource-graph-transition'
 import {
   ResourceGraphRejection,
+  planResourceCompensation,
   requireActiveResourceFolder,
   selectResourceClosure,
   selectResourceRoots,
+  transitionResourceCompensation,
   transitionResourceGraph,
 } from './resource-graph-transition'
 
 export type ResourceOperationAuthorizer = (
   actorId: CampaignMemberId,
-  envelope: CommandEnvelope<ResourceStructureCommand>,
+  campaignId: CampaignId,
 ) => boolean | Promise<boolean>
 
 export type InMemoryResourceCatalogOptions = Readonly<{
@@ -390,7 +393,10 @@ class InMemoryResourceOperationExecutor<
   TContentCopyPlan = never,
 > implements InMemoryResourceOperations {
   readonly #backend: InMemoryResourceCatalogBackend
-  readonly #ledger = new InMemoryResourceOperationLedger<ResourceCommandReceipt>()
+  readonly #ledger = new InMemoryResourceOperationLedger<
+    ResourceCommandReceipt,
+    ResourceCompensationPlan | null
+  >()
   readonly #authorize: ResourceOperationAuthorizer
   readonly #contentCopy: ContentCopyPlanner<TContentCopyPlan, () => void> | undefined
   readonly #now: () => number
@@ -438,13 +444,11 @@ class InMemoryResourceOperationExecutor<
     return this.#enqueue(() => this.#executeInput(actorId, envelope))
   }
 
-  executeCompensation(
+  compensate(
     actorId: CampaignMemberId,
     envelope: ResourceCompensationEnvelope,
-  ): Promise<ResourceStructureCommandResult> {
-    return this.#enqueue(() =>
-      this.#executeInput(actorId, envelope, envelope.expectedPostconditions),
-    )
+  ): Promise<ResourceCompensationResult> {
+    return this.#enqueue(() => this.#compensate(actorId, envelope))
   }
 
   #enqueue<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
@@ -459,36 +463,30 @@ class InMemoryResourceOperationExecutor<
   async #executeInput(
     actorId: CampaignMemberId,
     envelope: CommandEnvelope<ResourceStructureCommand>,
-    expected?: ReadonlyArray<ResourcePostcondition>,
   ): Promise<ResourceStructureCommandResult> {
     let normalizedEnvelope: CommandEnvelope<ResourceStructureCommand>
-    let expectedPostconditions: ReadonlyArray<ResourcePostcondition> | undefined
     try {
       normalizedEnvelope = {
         campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, envelope.campaignId),
         operationId: assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId),
         command: normalizeResourceStructureCommand(envelope.command),
       }
-      expectedPostconditions = expected && normalizeResourcePostconditions(expected)
       assertDomainId(DOMAIN_ID_KIND.campaignMember, actorId)
     } catch (error) {
       return { status: 'rejected', reason: resourceStructureInputRejection(error) }
     }
 
-    return await this.#execute(actorId, normalizedEnvelope, expectedPostconditions)
+    return await this.#execute(actorId, normalizedEnvelope)
   }
 
   async #execute(
     actorId: CampaignMemberId,
     normalizedEnvelope: CommandEnvelope<ResourceStructureCommand>,
-    expectedPostconditions?: ReadonlyArray<ResourcePostcondition>,
   ): Promise<ResourceStructureCommandResult> {
-    if (!(await this.#authorize(actorId, normalizedEnvelope))) {
+    if (!(await this.#authorize(actorId, normalizedEnvelope.campaignId))) {
       return { status: 'rejected', reason: 'unauthorized' }
     }
-    const fingerprint = expectedPostconditions
-      ? await fingerprintResourceCompensation(normalizedEnvelope.command, expectedPostconditions)
-      : await fingerprintResourceStructureCommand(normalizedEnvelope.command)
+    const fingerprint = await fingerprintResourceStructureCommand(normalizedEnvelope.command)
     const lookup = this.#ledger.lookup(
       normalizedEnvelope.campaignId,
       actorId,
@@ -497,10 +495,6 @@ class InMemoryResourceOperationExecutor<
     )
     if (lookup.status === 'replay') return { status: 'completed', receipt: lookup.receipt }
     if (lookup.status === 'rejected') return { status: 'rejected', reason: lookup.reason }
-
-    if (expectedPostconditions && !this.#matches(expectedPostconditions)) {
-      return { status: 'rejected', reason: 'stale_history' }
-    }
 
     const draft = cloneCatalogState(this.#backend.state)
     let result: ResourceStructureCommandResult
@@ -527,6 +521,15 @@ class InMemoryResourceOperationExecutor<
     }
     if (result.status !== 'completed') return result
 
+    const compensation = planResourceCompensation(
+      {
+        resources: this.#backend.state.resources,
+        tombstones: this.#backend.state.tombstones,
+      },
+      normalizedEnvelope.campaignId,
+      normalizedEnvelope.command,
+      result.receipt,
+    )
     preparedDeepCopy?.commitContent()
     this.#ledger.record({
       campaignId: normalizedEnvelope.campaignId,
@@ -535,21 +538,75 @@ class InMemoryResourceOperationExecutor<
       protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
       fingerprint,
       receipt: result.receipt,
+      compensation,
     })
     this.#backend.state = draft
     this.#publish(normalizedEnvelope.campaignId)
     return result
   }
 
-  #matches(expectedPostconditions: ReadonlyArray<ResourcePostcondition>): boolean {
-    return expectedPostconditions.every((condition) => {
-      const resource = this.#backend.state.resources.get(condition.resourceId)
-      if (condition.state === 'missing') return resource === undefined
-      return (
-        resource?.metadataVersion.revision === condition.metadataVersion.revision &&
-        resource.metadataVersion.digest === condition.metadataVersion.digest
+  async #compensate(
+    actorId: CampaignMemberId,
+    envelope: ResourceCompensationEnvelope,
+  ): Promise<ResourceCompensationResult> {
+    let campaignId: CampaignId
+    let operationId: OperationId
+    let originalOperationId: OperationId
+    try {
+      campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, envelope.campaignId)
+      operationId = assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId)
+      originalOperationId = assertDomainId(DOMAIN_ID_KIND.operation, envelope.originalOperationId)
+      assertDomainId(DOMAIN_ID_KIND.campaignMember, actorId)
+    } catch {
+      return { status: 'rejected', reason: 'invalid_uuid' }
+    }
+    if (!(await this.#authorize(actorId, campaignId))) {
+      return { status: 'rejected', reason: 'unauthorized' }
+    }
+    const fingerprint = await fingerprintResourceCompensationRequest(originalOperationId)
+    const lookup = this.#ledger.lookup(campaignId, actorId, operationId, fingerprint)
+    if (lookup.status === 'replay') return { status: 'completed', receipt: lookup.receipt }
+    if (lookup.status === 'rejected') return { status: 'rejected', reason: lookup.reason }
+
+    const original = this.#ledger.get(campaignId, originalOperationId)
+    if (!original) return { status: 'rejected', reason: 'history_missing' }
+    if (original.actorId !== actorId) return { status: 'rejected', reason: 'unauthorized' }
+    if (original.compensation === null) {
+      return { status: 'rejected', reason: 'history_irreversible' }
+    }
+
+    const draft = cloneCatalogState(this.#backend.state)
+    try {
+      const applied = await transitionResourceCompensation(
+        { resources: draft.resources, tombstones: draft.tombstones },
+        campaignId,
+        operationId,
+        original.compensation,
+        { at: this.#now(), by: actorId },
       )
-    })
+      if (!applied) return { status: 'rejected', reason: 'history_conflict' }
+      for (const resource of applied.transition.upserted) draft.resources.set(resource.id, resource)
+      this.#ledger.record({
+        campaignId,
+        actorId,
+        operationId,
+        protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
+        fingerprint,
+        receipt: applied.transition.receipt,
+        compensation: applied.compensation,
+      })
+      this.#backend.state = draft
+      this.#publish(campaignId)
+      return { status: 'completed', receipt: applied.transition.receipt }
+    } catch (error) {
+      if (
+        error instanceof ResourceGraphRejection ||
+        (error instanceof RangeError && error.message === 'version_exhausted')
+      ) {
+        return { status: 'rejected', reason: 'history_conflict' }
+      }
+      throw error
+    }
   }
 
   #publish(campaignId: CampaignId): void {

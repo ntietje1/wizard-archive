@@ -8,8 +8,6 @@ import type {
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
   CommandDelivery,
-  CommandEnvelope,
-  ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
 import type {
@@ -51,7 +49,7 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
-  beginCreate: (envelope: CommandEnvelope<ResourceStructureCommand>) => ResourceHistoryRecording,
+  beginCreate: () => ResourceHistoryRecording,
 ): FileContentSource {
   const content = createLiveResourceContentSource('file', backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
@@ -68,7 +66,7 @@ export function createLiveFileContentSource(
       }
       const metadata = classifyFileResourceSource(source)
       if (metadata.classification === 'rejected') return invalidCreateDelivery()
-      const recording = beginCreate(envelope)
+      const recording = beginCreate()
       let current = existing
       try {
         if (!current) {

@@ -24,7 +24,7 @@ import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/reso
 
 type ResourceOperationAuthorizer = (
   actorId: CampaignMemberId,
-  envelope: CommandEnvelope<ResourceStructureCommand>,
+  campaignId: CampaignId,
 ) => boolean | Promise<boolean>
 
 type CatalogUnderTest = AuthoritativeResourceOperationExecutor & {

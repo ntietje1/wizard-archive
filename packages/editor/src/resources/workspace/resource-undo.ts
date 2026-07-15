@@ -28,7 +28,7 @@ export async function runResourceUndo(
     if (delivery.result.status === 'completed') return
     const label = direction === 'undo' ? 'Undo' : 'Redo'
     report(
-      delivery.result.status === 'rejected' && delivery.result.reason === 'stale_history'
+      delivery.result.status === 'rejected' && delivery.result.reason === 'history_conflict'
         ? `${label} is no longer safe because the resource changed`
         : `${label} is unavailable`,
     )

@@ -1,14 +1,12 @@
 import { v } from 'convex/values'
 import type { Infer } from 'convex/values'
 import type {
+  ResourceCompensationResult,
   ResourceCommandReceipt,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
-import {
-  normalizeResourcePostconditions,
-  resourceStructureInputRejection,
-} from '@wizard-archive/editor/resources/command-protocol'
+import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { FILE_CLASSIFICATION } from '@wizard-archive/editor/resources/file-content-contract'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
@@ -16,14 +14,14 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import { campaignMutation, dmMutation } from '../functions'
 import {
   executeStructureCommand as executeStructureCommandFn,
-  executeStructureCompensation as executeStructureCompensationFn,
+  compensateResourceOperation as compensateResourceOperationFn,
 } from './functions/executeStructureCommand'
 import {
   bindNoteContentResultValidator,
   fileOwnedMetadataValidators,
+  resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
-  resourcePostconditionValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   saveNoteContentResultValidator,
@@ -36,6 +34,7 @@ import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/
 import { commitUpload } from '../storage/functions/commitUpload'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
+type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
 type StoredResourceCommandReceipt = Extract<
   StoredResourceStructureCommandResult,
   { status: 'completed' }
@@ -66,6 +65,16 @@ function storedReceipt(receipt: ResourceCommandReceipt): StoredResourceCommandRe
 function storedResult(
   result: ResourceStructureCommandResult,
 ): StoredResourceStructureCommandResult {
+  if (result.status === 'completed') {
+    return { status: 'completed', receipt: storedReceipt(result.receipt) }
+  }
+  if (result.status === 'rejected') return { status: 'rejected', reason: result.reason }
+  return { status: 'unavailable', reason: result.reason }
+}
+
+function storedCompensationResult(
+  result: ResourceCompensationResult,
+): StoredResourceCompensationResult {
   if (result.status === 'completed') {
     return { status: 'completed', receipt: storedReceipt(result.receipt) }
   }
@@ -139,29 +148,14 @@ export const executeStructureCommand = campaignMutation({
   },
 })
 
-export const executeStructureCompensation = campaignMutation({
+export const compensateResourceOperation = campaignMutation({
   args: {
     operationId: operationIdValidator,
-    command: resourceStructureCommandValidator,
-    expectedPostconditions: v.array(resourcePostconditionValidator),
+    originalOperationId: operationIdValidator,
   },
-  returns: resourceStructureCommandResultValidator,
-  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
-    let command: ResourceStructureCommand
-    let expectedPostconditions
-    try {
-      command = resourceStructureCommand(args.command)
-      expectedPostconditions = normalizeResourcePostconditions(args.expectedPostconditions)
-    } catch (error) {
-      return { status: 'rejected', reason: resourceStructureInputRejection(error) }
-    }
-    return storedResult(
-      await executeStructureCompensationFn(ctx, {
-        operationId: args.operationId,
-        command,
-        expectedPostconditions,
-      }),
-    )
+  returns: resourceCompensationResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceCompensationResult> => {
+    return storedCompensationResult(await compensateResourceOperationFn(ctx, args))
   },
 })
 

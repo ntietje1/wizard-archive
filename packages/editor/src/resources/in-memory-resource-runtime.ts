@@ -4,7 +4,7 @@ import type {
   CommandDelivery,
   ResourceStructureCommandResult,
   ResourceStructureCommandGateway,
-  ResourceStructureCompensationGateway,
+  ResourceCompensationGateway,
 } from './resource-command-contract'
 import type { ResourceId } from './domain-id'
 import { InMemoryResourceCatalog } from './in-memory-resource-catalog'
@@ -162,9 +162,9 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
       return { status: 'received', result }
     },
   }
-  const compensation: ResourceStructureCompensationGateway = {
-    executeCompensation: async (envelope) => {
-      const result = await operations.executeCompensation(scope.actorId, envelope)
+  const compensation: ResourceCompensationGateway = {
+    compensate: async (envelope) => {
+      const result = await operations.compensate(scope.actorId, envelope)
       if (result.status === 'completed') {
         for (const postcondition of result.receipt.postconditions) {
           loadedResourceIds.add(postcondition.resourceId)

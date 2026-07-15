@@ -85,7 +85,7 @@ describe('createInMemoryEditorRuntime', () => {
 
     expect(history.getSnapshot()).toMatchObject({
       status: 'ready',
-      undo: { label: 'Edit Original' },
+      undo: { label: 'Edit resource' },
       redo: null,
     })
     await history.undo()

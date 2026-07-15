@@ -144,7 +144,6 @@ export type ResourceStructureRejection =
   | 'content_integrity_failure'
   | 'version_exhausted'
   | 'operation_id_reused'
-  | 'stale_history'
 
 export type ResourcePostcondition =
   | {
@@ -154,10 +153,11 @@ export type ResourcePostcondition =
     }
   | { readonly state: 'missing'; readonly resourceId: ResourceId }
 
-export type ResourceCompensationEnvelope = CommandEnvelope<ResourceStructureCommand> &
-  Readonly<{
-    expectedPostconditions: ReadonlyArray<ResourcePostcondition>
-  }>
+export type ResourceCompensationEnvelope = Readonly<{
+  campaignId: CampaignId
+  operationId: OperationId
+  originalOperationId: OperationId
+}>
 
 export type DeepCopyRoot = Readonly<{
   sourceRootId: ResourceId
@@ -201,6 +201,20 @@ export type CommandDelivery<TDomainResult> =
 export type ResourceStructureCommandResult = CommandResult<
   ResourceCommandReceipt,
   ResourceStructureRejection
+>
+
+export type ResourceCompensationRejection =
+  | 'invalid_uuid'
+  | 'ownership_mismatch'
+  | 'unauthorized'
+  | 'history_missing'
+  | 'history_conflict'
+  | 'history_irreversible'
+  | 'operation_id_reused'
+
+export type ResourceCompensationResult = CommandResult<
+  ResourceCommandReceipt,
+  ResourceCompensationRejection
 >
 
 export type ResourceAccessReceipt = Readonly<{
@@ -269,10 +283,10 @@ export interface ResourceStructureCommandGateway {
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
 }
 
-export interface ResourceStructureCompensationGateway {
-  executeCompensation(
-    envelope: ResourceCompensationEnvelope,
-  ): Promise<CommandDelivery<ResourceStructureCommandResult>>
+export interface ResourceCompensationGateway {
+  compensate(
+    request: ResourceCompensationEnvelope,
+  ): Promise<CommandDelivery<ResourceCompensationResult>>
 }
 
 export interface ResourceAccessCommandGateway {
@@ -301,17 +315,18 @@ export interface AuthoritativeResourceOperationExecutor {
 }
 
 export interface AuthoritativeResourceCompensationExecutor {
-  executeCompensation(
+  compensate(
     actorId: CampaignMemberId,
     envelope: ResourceCompensationEnvelope,
-  ): Promise<ResourceStructureCommandResult>
+  ): Promise<ResourceCompensationResult>
 }
 
-export type StoredResourceOperation<TReceipt = unknown> = Readonly<{
+export type StoredResourceOperation<TReceipt = unknown, TCompensation = unknown> = Readonly<{
   campaignId: CampaignId
   actorId: CampaignMemberId
   operationId: OperationId
   protocolVersion: 'resource-command-v1'
   fingerprint: VersionStamp['digest']
   receipt: TReceipt
+  compensation: TCompensation
 }>

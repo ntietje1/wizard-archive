@@ -52,23 +52,39 @@ describe('resource structure commands', () => {
       },
     })
     if (renamed.status !== 'completed') throw new Error('Expected rename completion')
+    await t.run(async (ctx) => {
+      const operation = await ctx.db
+        .query('resourceOperations')
+        .withIndex('by_campaign_and_operation', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('operationUuid', renamed.receipt.operationId),
+        )
+        .unique()
+      expect(operation?.compensation).toMatchObject({
+        type: 'updateMetadata',
+        resourceId,
+        changes: { title: 'Original' },
+        requiredPostconditions: renamed.receipt.postconditions,
+      })
+    })
     const compensation = {
       campaignId: campaignUuid,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-      command: {
-        type: 'updateMetadata' as const,
-        resourceId,
-        changes: { title: 'Original' },
-      },
-      expectedPostconditions: renamed.receipt.postconditions,
+      originalOperationId: renamed.receipt.operationId,
     }
 
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.compensateResourceOperation, {
+        ...compensation,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+
     const first = await asDm(campaign).mutation(
-      api.resources.mutations.executeStructureCompensation,
+      api.resources.mutations.compensateResourceOperation,
       compensation,
     )
     const replay = await asDm(campaign).mutation(
-      api.resources.mutations.executeStructureCompensation,
+      api.resources.mutations.compensateResourceOperation,
       compensation,
     )
     expect(replay).toEqual(first)
@@ -87,12 +103,13 @@ describe('resource structure commands', () => {
     )
     if (secondRename.status !== 'completed') throw new Error('Expected second rename completion')
     await expect(
-      asDm(campaign).mutation(api.resources.mutations.executeStructureCompensation, {
-        ...compensation,
+      asDm(campaign).mutation(api.resources.mutations.compensateResourceOperation, {
+        campaignId: campaignUuid,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        expectedPostconditions: first.status === 'completed' ? first.receipt.postconditions : [],
+        originalOperationId:
+          first.status === 'completed' ? first.receipt.operationId : compensation.operationId,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'stale_history' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'history_conflict' })
     await t.run(async (ctx) => {
       const resource = await ctx.db
         .query('resources')
@@ -100,6 +117,58 @@ describe('resource structure commands', () => {
         .unique()
       expect(resource?.title).toBe('Later edit')
     })
+  })
+
+  it('atomically compensates a move from different original parents', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const parentA = await createResource(campaign, campaignUuid, 'folder', null, 'Parent A')
+    const parentB = await createResource(campaign, campaignUuid, 'folder', null, 'Parent B')
+    const destination = await createResource(campaign, campaignUuid, 'folder', null, 'Destination')
+    const childA = await createResource(campaign, campaignUuid, 'note', parentA, 'Child A')
+    const childB = await createResource(campaign, campaignUuid, 'note', parentB, 'Child B')
+    const moved = await execute(campaign, campaignUuid, {
+      type: 'move',
+      resourceIds: [childA, childB],
+      destinationParentId: destination,
+    })
+    if (moved.status !== 'completed') throw new Error('Expected move completion')
+
+    const undone = await asDm(campaign).mutation(
+      api.resources.mutations.compensateResourceOperation,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: moved.receipt.operationId,
+      },
+    )
+    if (undone.status !== 'completed') throw new Error(`Expected undo completion: ${undone.reason}`)
+    expect(await storedParentIds(childA, childB)).toEqual([parentA, parentB])
+
+    const redone = await asDm(campaign).mutation(
+      api.resources.mutations.compensateResourceOperation,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: undone.receipt.operationId,
+      },
+    )
+    if (redone.status !== 'completed') throw new Error('Expected redo completion')
+    expect(await storedParentIds(childA, childB)).toEqual([destination, destination])
+
+    await execute(campaign, campaignUuid, {
+      type: 'updateMetadata',
+      resourceId: parentA,
+      changes: { title: 'Changed parent' },
+    })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.compensateResourceOperation, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: redone.receipt.operationId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'history_conflict' })
+    expect(await storedParentIds(childA, childB)).toEqual([destination, destination])
   })
 
   it('atomically creates a file resource from one owned upload', async () => {
@@ -1364,6 +1433,20 @@ describe('resource structure commands', () => {
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       command,
     })
+  }
+
+  async function storedParentIds(...resourceIds: ReadonlyArray<ResourceId>) {
+    return await t.run(async (ctx) =>
+      Promise.all(
+        resourceIds.map(async (resourceId) => {
+          const resource = await ctx.db
+            .query('resources')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique()
+          return resource?.parentResourceUuid ?? null
+        }),
+      ),
+    )
   }
 })
 
