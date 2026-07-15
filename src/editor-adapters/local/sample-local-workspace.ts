@@ -96,7 +96,10 @@ export function createSampleLocalWorkspaceFixture({
             pins: [
               {
                 id: SAMPLE_MAP_PIN_IDS.market,
-                targetResourceId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
+                destination: {
+                  kind: 'internal',
+                  target: { kind: 'resource', resourceId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote },
+                },
                 layerId: 'docks',
                 x: 20,
                 y: 25,
@@ -104,7 +107,10 @@ export function createSampleLocalWorkspaceFixture({
               },
               {
                 id: SAMPLE_MAP_PIN_IDS.invoice,
-                targetResourceId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+                destination: {
+                  kind: 'internal',
+                  target: { kind: 'resource', resourceId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile },
+                },
                 layerId: 'docks',
                 x: 53,
                 y: 23,
@@ -184,7 +190,12 @@ function sampleCanvasDocument() {
         id: mapId,
         type: 'embed',
         position: { x: 480, y: 56 },
-        data: { target: { kind: 'resource', resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap } },
+        data: {
+          destination: {
+            kind: 'internal',
+            target: { kind: 'resource', resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap },
+          },
+        },
       },
     ],
     edges: [{ id: 'brief-to-map', source: briefId, target: mapId, type: 'bezier' }],

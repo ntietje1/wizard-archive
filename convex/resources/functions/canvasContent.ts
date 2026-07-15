@@ -1,14 +1,11 @@
-import {
-  DOMAIN_ID_KIND,
-  assertDomainId,
-  generateDomainId,
-} from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId,
   CanvasNodeId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
+import { remapAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import {
   createCanvasDocumentDoc,
   parseCanvasDocumentContent,
@@ -21,7 +18,7 @@ import * as Y from 'yjs'
 import type { CampaignMutationCtx } from '../../functions'
 import { initialBinaryContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
-import { encodeYjsDocument, remapResourceId, resourceReferencesAreValid } from './contentCopyTypes'
+import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
 
@@ -120,8 +117,8 @@ async function canvasReferencesAreValid(
   const resourceIds: Array<ResourceId> = []
   try {
     for (const node of nodes) {
-      if (node.type === 'embed' && node.data.target?.kind === 'resource') {
-        resourceIds.push(assertDomainId(DOMAIN_ID_KIND.resource, node.data.target.resourceId))
+      if (node.type === 'embed' && node.data.destination?.kind === 'internal') {
+        resourceIds.push(node.data.destination.target.resourceId)
       }
     }
   } catch {
@@ -135,15 +132,16 @@ function remapCanvasNode(
   nodeMap: ReadonlyMap<CanvasNodeId, CanvasNodeId>,
   targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
 ): CanvasDocumentNode {
-  const data =
-    node.type === 'embed' && node.data.target?.kind === 'resource'
-      ? {
-          ...node.data,
-          target: {
-            ...node.data.target,
-            resourceId: remapResourceId(targetMap, node.data.target.resourceId),
-          },
-        }
-      : node.data
+  const data = remapCanvasNodeData(node, targetMap)
   return { ...node, id: nodeMap.get(node.id)!, data } as CanvasDocumentNode
+}
+
+function remapCanvasNodeData(
+  node: CanvasDocumentNode,
+  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
+) {
+  if (node.type !== 'embed' || node.data.destination === undefined) return node.data
+  const result = remapAuthoredDestination(node.data.destination, targetMap, 'same_campaign_copy')
+  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
+  return { ...node.data, destination: result.destination }
 }

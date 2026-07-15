@@ -4,9 +4,11 @@ import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import {
   backlinksForResource,
   projectReferenceGraph,
+  parseSerializedAuthoredDestination,
   remapAuthoredDestination,
   resolveAuthoredDestination,
   resolveSourceAuthoredDestination,
+  serializeAuthoredDestination,
 } from '../authored-destination'
 import { VERSION_SCHEME, assertSha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
@@ -24,6 +26,28 @@ const copiedTargetId = asResourceId('01890f44-f6c8-7a5b-8c9d-0123456789ab')
 const version = { scheme: VERSION_SCHEME, revision: 3, digest: assertSha256Digest('a'.repeat(64)) }
 
 describe('authored destinations', () => {
+  it('serializes one canonical representation and rejects non-canonical stored values', () => {
+    const destination = internalResource(targetId)
+    const serialized = serializeAuthoredDestination(destination)
+
+    expect(serialized).toBe(
+      `{"kind":"internal","target":{"kind":"resource","resourceId":"${targetId}"}}`,
+    )
+    expect(parseSerializedAuthoredDestination(serialized)).toEqual(destination)
+    expect(
+      parseSerializedAuthoredDestination(
+        `{"target":{"resourceId":"${targetId}","kind":"resource"},"kind":"internal"}`,
+      ),
+    ).toBeNull()
+    expect(parseSerializedAuthoredDestination(` ${serialized}`)).toBeNull()
+    expect(
+      parseSerializedAuthoredDestination(
+        JSON.stringify({ kind: 'externalUrl', url: 'http://example.com' }),
+      ),
+    ).toBeNull()
+    expect(parseSerializedAuthoredDestination('{')).toBeNull()
+  })
+
   it('resolves available display data without persisting it', async () => {
     const destination = internalResource(targetId)
 
@@ -179,6 +203,22 @@ describe('authored destinations', () => {
     expect(remapAuthoredDestination(destination, [], 'new_campaign_clone')).toEqual({
       status: 'unmapped',
       target: destination.target,
+    })
+    const external = {
+      kind: 'externalUrl',
+      url: parseSafeHttpsUrl('https://example.com/reference')!,
+    } satisfies AuthoredDestination
+    const unresolved = {
+      kind: 'unresolved',
+      rawTarget: '../missing.md',
+    } satisfies AuthoredDestination
+    expect(remapAuthoredDestination(external, targetMap, 'new_campaign_clone')).toEqual({
+      status: 'completed',
+      destination: external,
+    })
+    expect(remapAuthoredDestination(unresolved, targetMap, 'new_campaign_clone')).toEqual({
+      status: 'completed',
+      destination: unresolved,
     })
   })
 

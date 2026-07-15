@@ -25,6 +25,31 @@ export const versionStampValidator = v.object({
 })
 
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
+const canonicalTargetValidator = v.union(
+  v.object({ kind: v.literal('resource'), resourceId: resourceIdValidator }),
+  v.object({
+    kind: v.literal('noteBlock'),
+    resourceId: resourceIdValidator,
+    blockId: v.string(),
+    presentation: literals('block', 'heading'),
+  }),
+  v.object({
+    kind: v.literal('mapPin'),
+    resourceId: resourceIdValidator,
+    pinId: mapPinIdValidator,
+  }),
+  v.object({
+    kind: v.literal('canvasNode'),
+    resourceId: resourceIdValidator,
+    nodeId: v.string(),
+  }),
+)
+
+export const authoredDestinationValidator = v.union(
+  v.object({ kind: v.literal('internal'), target: canonicalTargetValidator }),
+  v.object({ kind: v.literal('externalUrl'), url: v.string() }),
+  v.object({ kind: v.literal('unresolved'), rawTarget: v.string() }),
+)
 export const fileClassificationValidator = literals(...Object.values(FILE_CLASSIFICATION))
 export const fileViewerUnavailableReasonValidator = literals(
   ...Object.values(FILE_VIEWER_UNAVAILABLE_REASON),
@@ -337,7 +362,7 @@ export const resourceContentSnapshotValidator = v.union(
       pins: v.array(
         v.object({
           id: mapPinIdValidator,
-          targetResourceId: resourceIdValidator,
+          destination: authoredDestinationValidator,
           layerId: v.nullable(v.string()),
           x: v.number(),
           y: v.number(),
@@ -506,7 +531,7 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     mapResourceUuid: resourceIdValidator,
     mapPinUuid: mapPinIdValidator,
-    targetResourceUuid: resourceIdValidator,
+    destination: authoredDestinationValidator,
     layerId: v.nullable(v.string()),
     x: v.number(),
     y: v.number(),

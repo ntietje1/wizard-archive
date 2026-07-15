@@ -1,10 +1,7 @@
 import type { z } from 'zod'
 import { z as zod } from 'zod'
-import {
-  embedTargetKindSchema,
-  externalEmbedUrlSchema,
-} from '../../../../../shared/embeds/embedTargets'
 import { noteValuePropsSchema } from '../values/schema'
+import { parseSerializedAuthoredDestination } from '../../resources/authored-destination'
 import { isUuidV7 } from '../../resources/domain-id'
 import type { NoteBlockId } from '../../resources/domain-id'
 
@@ -130,6 +127,7 @@ const codeBlockPropsSchema = zod.strictObject({
 const dividerPropsSchema = zod.strictObject({})
 
 const embedSharedPropsSchema = {
+  destination: zod.string().refine((value) => parseSerializedAuthoredDestination(value) !== null),
   backgroundColor: zod.string().optional(),
   textAlignment: textAlignmentSchema,
   previewWidth: zod.number().positive().optional(),
@@ -137,29 +135,7 @@ const embedSharedPropsSchema = {
   previewAspectRatio: zod.number().positive().optional(),
 }
 
-const emptyEmbedPropsSchema = zod.strictObject({
-  targetKind: zod.literal(embedTargetKindSchema.enum.empty).optional(),
-  ...embedSharedPropsSchema,
-})
-
-const resourceEmbedPropsSchema = zod.strictObject({
-  targetKind: zod.literal(embedTargetKindSchema.enum.resource),
-  resourceId: zod.string().min(1),
-  ...embedSharedPropsSchema,
-})
-
-const externalUrlEmbedPropsSchema = zod.strictObject({
-  targetKind: zod.literal(embedTargetKindSchema.enum.externalUrl),
-  url: externalEmbedUrlSchema,
-  name: zod.string().trim().min(1).optional(),
-  ...embedSharedPropsSchema,
-})
-
-const embedPropsSchema = zod.union([
-  emptyEmbedPropsSchema,
-  resourceEmbedPropsSchema,
-  externalUrlEmbedPropsSchema,
-])
+const embedPropsSchema = zod.strictObject(embedSharedPropsSchema)
 
 const tablePropsSchema = zod.strictObject({
   textColor: zod.string().optional(),

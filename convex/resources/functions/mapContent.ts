@@ -9,10 +9,14 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
+import {
+  parseAuthoredDestination,
+  remapAuthoredDestination,
+  serializeAuthoredDestination,
+} from '@wizard-archive/editor/resources/authored-destination'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import { initialJsonContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
-import { remapResourceId } from './contentCopyTypes'
 import { findCanonicalResource } from './findCanonicalResource'
 import { prepareAssetCopies } from './assetContent'
 
@@ -69,10 +73,12 @@ export async function prepareMapContentCopy(
   const sourcePins = []
   try {
     for (const pin of pins) {
+      const destination = parseAuthoredDestination(pin.destination)
       if (
+        !destination ||
         pin.campaignUuid !== campaignId ||
         pin.mapResourceUuid !== sourceResourceId ||
-        pin.targetResourceUuid === sourceResourceId ||
+        (destination.kind === 'internal' && destination.target.resourceId === sourceResourceId) ||
         (pin.layerId !== null && !layerIds.has(pin.layerId))
       ) {
         return { status: 'integrity_error' }
@@ -80,7 +86,7 @@ export async function prepareMapContentCopy(
       sourcePins.push({
         ...pin,
         mapPinUuid: assertDomainId(DOMAIN_ID_KIND.mapPin, pin.mapPinUuid),
-        targetResourceUuid: assertDomainId(DOMAIN_ID_KIND.resource, pin.targetResourceUuid),
+        destination,
       })
     }
   } catch {
@@ -88,12 +94,16 @@ export async function prepareMapContentCopy(
   }
   if (
     new Set(sourcePins.map((pin) => pin.mapPinUuid)).size !== sourcePins.length ||
-    new Set(sourcePins.map((pin) => pin.targetResourceUuid)).size !== sourcePins.length
+    new Set(sourcePins.map((pin) => serializeAuthoredDestination(pin.destination))).size !==
+      sourcePins.length
   ) {
     return { status: 'integrity_error' }
   }
+  const internalResourceIds = sourcePins.flatMap((pin) =>
+    pin.destination.kind === 'internal' ? [pin.destination.target.resourceId] : [],
+  )
   const targets = await Promise.all(
-    [...new Set(sourcePins.map((pin) => pin.targetResourceUuid))].map((resourceId) =>
+    [...new Set(internalResourceIds)].map((resourceId) =>
       findCanonicalResource(ctx.db, resourceId),
     ),
   )
@@ -126,7 +136,7 @@ export async function prepareMapContentCopy(
           campaignUuid: campaignId,
           mapResourceUuid: destinationResourceId,
           mapPinUuid: destinationId,
-          targetResourceUuid: remapResourceId(targetMap, pin.targetResourceUuid),
+          destination: remapMapDestination(pin.destination, targetMap),
           layerId: pin.layerId,
           x: pin.x,
           y: pin.y,
@@ -138,9 +148,9 @@ export async function prepareMapContentCopy(
             ...layer,
             imageAssetUuid: assets.remap(layer.imageAssetUuid),
           })),
-          pins: copiedPins.map(({ mapPinUuid, targetResourceUuid, layerId, x, y, visible }) => ({
+          pins: copiedPins.map(({ mapPinUuid, destination, layerId, x, y, visible }) => ({
             mapPinUuid,
-            targetResourceUuid,
+            destination,
             layerId,
             x,
             y,
@@ -163,4 +173,13 @@ export async function prepareMapContentCopy(
       },
     },
   }
+}
+
+function remapMapDestination(
+  destination: NonNullable<ReturnType<typeof parseAuthoredDestination>>,
+  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
+) {
+  const result = remapAuthoredDestination(destination, targetMap, 'same_campaign_copy')
+  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
+  return result.destination
 }

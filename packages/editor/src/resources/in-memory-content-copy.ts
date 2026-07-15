@@ -1,9 +1,21 @@
 import * as Y from 'yjs'
+import {
+  parseSerializedAuthoredDestination,
+  remapAuthoredDestination,
+  serializeAuthoredDestination,
+} from './authored-destination'
 import { createCanvasDocumentDoc, parseCanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../canvas/document-contract'
+import type { NoteBlock } from '../notes/document/model'
+import {
+  NOTE_YJS_FRAGMENT,
+  noteBlocksToYDoc,
+  noteYDocToBlocks,
+} from '../notes/document/headless-yjs'
 import type {
   CanvasSessionState,
   FileContentState,
+  MapResourceContent,
   MapSessionState,
   NoteSessionState,
 } from './content-session-contract'
@@ -36,7 +48,7 @@ type ContentStores = Readonly<{
 
 type PreparedContent =
   | Readonly<{ kind: 'folder'; destinationId: ResourceId }>
-  | Readonly<{ kind: 'note'; destinationId: ResourceId; source: Y.Doc }>
+  | Readonly<{ kind: 'note'; destinationId: ResourceId; blocks: ReadonlyArray<NoteBlock> }>
   | Readonly<{
       kind: 'file'
       destinationId: ResourceId
@@ -96,7 +108,10 @@ function prepareContentCopy(
       case 'note': {
         const source = stores.notes.get(sourceId)
         assertReady(source)
-        entries.push({ kind, destinationId, source: source.session.document })
+        const blocks = noteYDocToBlocks(source.session.document, NOTE_YJS_FRAGMENT).map((block) =>
+          allocateNoteBlock(block, sourceId, destinationId, referenceableTargets),
+        )
+        entries.push({ kind, destinationId, blocks })
         break
       }
       case 'file': {
@@ -174,7 +189,10 @@ async function finalizeContentCopy(
     case 'folder':
       return () => kinds.set(entry.destinationId, entry.kind)
     case 'note': {
-      const content = cloneDocument(entry.source)
+      const content = noteBlocksToYDoc(
+        entry.blocks.map((block) => remapNoteBlockDestinations(block, targetMap)),
+        NOTE_YJS_FRAGMENT,
+      )
       const version = await initialNoteContentVersion(Y.encodeStateAsUpdate(content))
       return () => {
         kinds.set(entry.destinationId, entry.kind)
@@ -204,7 +222,7 @@ async function finalizeContentCopy(
         pins: entry.source.session.content.pins.map((pin) => ({
           ...pin,
           id: entry.pinIds.get(pin.id)!,
-          targetResourceId: remapResourceId(pin.targetResourceId, targetMap),
+          destination: remapMapDestination(pin.destination, targetMap),
         })),
       }
       const version = initialVersion(
@@ -239,20 +257,72 @@ async function finalizeContentCopy(
   }
 }
 
-function cloneDocument(source: Y.Doc): Y.Doc {
-  const destination = new Y.Doc()
-  Y.applyUpdate(destination, Y.encodeStateAsUpdate(source))
-  return destination
+function remapMapDestination(
+  destination: MapResourceContent['pins'][number]['destination'],
+  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
+) {
+  const result = remapAuthoredDestination(destination, targetMap, 'same_campaign_copy')
+  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
+  return result.destination
 }
 
-function remapResourceId(
-  sourceId: ResourceId,
+function allocateNoteBlock(
+  source: NoteBlock,
+  sourceResourceId: ResourceId,
+  destinationResourceId: ResourceId,
+  targetMap: Array<CanonicalTargetMapEntry>,
+): NoteBlock {
+  const id = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+  const presentations =
+    source.type === 'heading' ? (['block', 'heading'] as const) : (['block'] as const)
+  for (const presentation of presentations) {
+    targetMap.push({
+      source: { kind: 'noteBlock', resourceId: sourceResourceId, blockId: source.id, presentation },
+      destination: {
+        kind: 'noteBlock',
+        resourceId: destinationResourceId,
+        blockId: id,
+        presentation,
+      },
+    })
+  }
+  return {
+    ...source,
+    id,
+    ...(source.children
+      ? {
+          children: source.children.map((child) =>
+            allocateNoteBlock(child, sourceResourceId, destinationResourceId, targetMap),
+          ),
+        }
+      : {}),
+  } as NoteBlock
+}
+
+function remapNoteBlockDestinations(
+  block: NoteBlock,
   targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
-): ResourceId {
-  const mapped = targetMap.find(
-    (entry) => entry.source.kind === 'resource' && entry.source.resourceId === sourceId,
-  )
-  return mapped?.destination.kind === 'resource' ? mapped.destination.resourceId : sourceId
+): NoteBlock {
+  const props =
+    block.type === 'embed' ? remapSerializedDestination(block.props, targetMap) : block.props
+  return {
+    ...block,
+    props,
+    ...(block.children
+      ? { children: block.children.map((child) => remapNoteBlockDestinations(child, targetMap)) }
+      : {}),
+  } as NoteBlock
+}
+
+function remapSerializedDestination(
+  props: Extract<NoteBlock, { type: 'embed' }>['props'],
+  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
+) {
+  const destination = parseSerializedAuthoredDestination(props.destination)
+  if (!destination) throw new TypeError('Invalid authored destination')
+  const result = remapAuthoredDestination(destination, targetMap, 'same_campaign_copy')
+  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
+  return { ...props, destination: serializeAuthoredDestination(result.destination) }
 }
 
 function remapCanvasNode(
@@ -261,16 +331,15 @@ function remapCanvasNode(
   targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
 ): CanvasDocumentNode {
   const id = nodeIds.get(node.id)!
-  if (node.type !== 'embed' || node.data.target?.kind !== 'resource') return { ...node, id }
+  if (node.type !== 'embed' || node.data.destination === undefined) return { ...node, id }
+  const result = remapAuthoredDestination(node.data.destination, targetMap, 'same_campaign_copy')
+  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
   return {
     ...node,
     id,
     data: {
       ...node.data,
-      target: {
-        ...node.data.target,
-        resourceId: remapResourceId(node.data.target.resourceId, targetMap),
-      },
+      destination: result.destination,
     },
   }
 }

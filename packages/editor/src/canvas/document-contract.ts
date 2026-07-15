@@ -7,7 +7,7 @@ import { parseCanvasStrokeNodeData } from './stroke-node-data'
 import { canvasSurfaceStyleKeys, parseCanvasSurfaceStyles } from './surface-style'
 import { parseCanvasTextDocument } from './text/model'
 import type { CanvasTextDocument } from './text/model'
-import type { EmbedTarget } from '../../../../shared/embeds/embedTargets'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { DOMAIN_ID_KIND, parseDomainId } from '../resources/domain-id'
 import type { CanvasNodeId } from '../resources/domain-id'
 
@@ -25,7 +25,7 @@ export interface CanvasStrokeNodeData {
 }
 
 export interface CanvasEmbedNodeData {
-  target?: EmbedTarget
+  destination?: AuthoredDestination
   lockedAspectRatio?: number
   textColor?: string | null
   backgroundColor?: string | null

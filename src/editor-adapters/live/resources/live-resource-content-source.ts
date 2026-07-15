@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
@@ -125,7 +126,7 @@ class LiveResourceContentSource {
               pins: snapshot.content.pins.map((pin) => ({
                 ...pin,
                 id: assertDomainId(DOMAIN_ID_KIND.mapPin, pin.id),
-                targetResourceId: assertDomainId(DOMAIN_ID_KIND.resource, pin.targetResourceId),
+                destination: authoredDestination(pin.destination),
               })),
             },
             version,
@@ -155,6 +156,12 @@ class LiveResourceContentSource {
     if (dispose) this.#disposers.set(resourceId, dispose)
     this.#store.set(resourceId, state)
   }
+}
+
+function authoredDestination(value: unknown) {
+  const destination = parseAuthoredDestination(value)
+  if (!destination) throw new TypeError('Invalid authored destination')
+  return destination
 }
 
 export function createLiveResourceContentSource(

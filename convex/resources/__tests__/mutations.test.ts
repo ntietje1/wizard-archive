@@ -24,6 +24,10 @@ import {
   storeUncommittedTestUploadSession,
 } from '../../_test/storage.helper'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import {
+  parseSerializedAuthoredDestination,
+  serializeAuthoredDestination,
+} from '@wizard-archive/editor/resources/authored-destination'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -667,7 +671,12 @@ describe('resource structure commands', () => {
         {
           id: sourceBlockId,
           type: 'embed',
-          props: { targetKind: 'resource', resourceId: mapId },
+          props: {
+            destination: serializeAuthoredDestination({
+              kind: 'internal',
+              target: { kind: 'resource', resourceId: mapId },
+            }),
+          },
         },
       ]),
     })
@@ -679,7 +688,12 @@ describe('resource structure commands', () => {
           id: sourceNodeId,
           type: 'embed',
           position: { x: 10, y: 20 },
-          data: { target: { kind: 'resource', resourceId: fileId } },
+          data: {
+            destination: {
+              kind: 'internal',
+              target: { kind: 'resource', resourceId: fileId },
+            },
+          },
         },
       ],
       edges: [],
@@ -720,14 +734,25 @@ describe('resource structure commands', () => {
         version: await initialJsonContentVersion({
           imageAssetUuid: null,
           layers: [],
-          pins: [{ mapPinUuid: sourcePinId, targetResourceUuid: noteId }],
+          pins: [
+            {
+              mapPinUuid: sourcePinId,
+              destination: {
+                kind: 'internal',
+                target: { kind: 'resource', resourceId: noteId },
+              },
+            },
+          ],
         }),
       })
       await ctx.db.insert('resourceMapPins', {
         campaignUuid,
         mapResourceUuid: mapId,
         mapPinUuid: sourcePinId,
-        targetResourceUuid: noteId,
+        destination: {
+          kind: 'internal',
+          target: { kind: 'resource', resourceId: noteId },
+        },
         layerId: null,
         x: 1,
         y: 2,
@@ -784,11 +809,13 @@ describe('resource structure commands', () => {
         NOTE_YJS_FRAGMENT,
       )
       expect(copiedBlock).toEqual(
-        expect.objectContaining({
-          id: expect.not.stringMatching(sourceBlockId),
-          props: expect.objectContaining({ resourceId: copiedMap.resourceUuid }),
-        }),
+        expect.objectContaining({ id: expect.not.stringMatching(sourceBlockId) }),
       )
+      if (copiedBlock?.type !== 'embed') throw new Error('Expected copied embed')
+      expect(parseSerializedAuthoredDestination(copiedBlock.props.destination)).toEqual({
+        kind: 'internal',
+        target: { kind: 'resource', resourceId: copiedMap.resourceUuid },
+      })
 
       const [copiedPin] = await ctx.db
         .query('resourceMapPins')
@@ -799,7 +826,10 @@ describe('resource structure commands', () => {
       expect(copiedPin).toEqual(
         expect.objectContaining({
           mapPinUuid: expect.not.stringMatching(sourcePinId),
-          targetResourceUuid: copiedNote.resourceUuid,
+          destination: {
+            kind: 'internal',
+            target: { kind: 'resource', resourceId: copiedNote.resourceUuid },
+          },
         }),
       )
 
@@ -816,7 +846,12 @@ describe('resource structure commands', () => {
       expect(copiedCanvasDocument.nodes[0]).toEqual(
         expect.objectContaining({
           id: expect.not.stringMatching(sourceNodeId),
-          data: { target: { kind: 'resource', resourceId: copiedFile.resourceUuid } },
+          data: {
+            destination: {
+              kind: 'internal',
+              target: { kind: 'resource', resourceId: copiedFile.resourceUuid },
+            },
+          },
         }),
       )
 

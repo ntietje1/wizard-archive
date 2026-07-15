@@ -9,6 +9,11 @@ import type { ResourceRecord } from '../resource-record'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
 import {
+  parseSerializedAuthoredDestination,
+  serializeAuthoredDestination,
+} from '../authored-destination'
+import { parseSafeHttpsUrl } from '../authored-destination-contract'
+import {
   noteBlocksToYDoc,
   noteYDocToBlocks,
   NOTE_YJS_FRAGMENT,
@@ -319,7 +324,37 @@ describe('createInMemoryEditorRuntime', () => {
     const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
     const pinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
     const version = initialVersion(await sha256Digest(new Uint8Array([2])))
-    const note = noteDocument('Copied note')
+    const noteBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const note = noteBlocksToYDoc(
+      [
+        {
+          id: noteBlockId,
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Copied note' }],
+        },
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'embed',
+          props: {
+            destination: serializeAuthoredDestination({
+              kind: 'internal',
+              target: { kind: 'resource', resourceId: mapId },
+            }),
+          },
+        },
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'embed',
+          props: {
+            destination: serializeAuthoredDestination({
+              kind: 'externalUrl',
+              url: parseSafeHttpsUrl('https://example.com/reference')!,
+            }),
+          },
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
     const resources: Array<ResourceRecord> = [
       resource(noteId, 'note', 'Note'),
       resource(mapId, 'map', 'Map'),
@@ -344,7 +379,10 @@ describe('createInMemoryEditorRuntime', () => {
               pins: [
                 {
                   id: pinId,
-                  targetResourceId: noteId,
+                  destination: {
+                    kind: 'internal',
+                    target: { kind: 'resource', resourceId: noteId },
+                  },
                   layerId: null,
                   x: 1,
                   y: 2,
@@ -392,9 +430,31 @@ describe('createInMemoryEditorRuntime', () => {
     if (copiedNote.status !== 'ready') throw new Error('Expected copied note content')
     expect(copiedNote.session.document).not.toBe(note)
     expect(noteText(copiedNote.session.document)).toContain('Copied note')
+    const copiedNoteBlocks = noteYDocToBlocks(copiedNote.session.document, NOTE_YJS_FRAGMENT)
+    expect(copiedNoteBlocks[0]!.id).not.toBe(noteBlockId)
+    const copiedEmbeds = copiedNoteBlocks.filter((block) => block.type === 'embed')
+    expect(parseSerializedAuthoredDestination(copiedEmbeds[0]!.props.destination)).toEqual({
+      kind: 'internal',
+      target: { kind: 'resource', resourceId: copiedMapId },
+    })
+    expect(parseSerializedAuthoredDestination(copiedEmbeds[1]!.props.destination)).toEqual({
+      kind: 'externalUrl',
+      url: 'https://example.com/reference',
+    })
     expect(copiedMap).toMatchObject({
       status: 'ready',
-      session: { content: { pins: [{ targetResourceId: copiedNoteId }] } },
+      session: {
+        content: {
+          pins: [
+            {
+              destination: {
+                kind: 'internal',
+                target: { kind: 'resource', resourceId: copiedNoteId },
+              },
+            },
+          ],
+        },
+      },
     })
     if (copiedMap.status !== 'ready') throw new Error('Expected copied map content')
     expect(copiedMap.session.content.pins[0]!.id).not.toBe(pinId)

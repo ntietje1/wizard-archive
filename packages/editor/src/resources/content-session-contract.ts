@@ -1,4 +1,5 @@
 import type * as Y from 'yjs'
+import type { AuthoredDestination } from './authored-destination-contract'
 import type { VersionStamp } from './component-version'
 import type { AssetId, CampaignMemberId, MapPinId, OperationId, ResourceId } from './domain-id'
 import type {
@@ -72,7 +73,7 @@ export type MapResourceContent = Readonly<{
   pins: ReadonlyArray<
     Readonly<{
       id: MapPinId
-      targetResourceId: ResourceId
+      destination: AuthoredDestination
       layerId: string | null
       x: number
       y: number

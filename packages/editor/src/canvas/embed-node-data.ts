@@ -1,9 +1,9 @@
-import { parseEmbedTarget } from '../../../../shared/embeds/embedTargets'
+import { parseAuthoredDestination } from '../resources/authored-destination'
 import type { CanvasEmbedNodeData } from './document-contract'
 import { hasOnlyKeys, isFiniteNumber, isRecord } from './parser-primitives'
 import { canvasSurfaceStyleKeys, parseCanvasSurfaceStyles } from './surface-style'
 
-const embedDataKeys = new Set(['target', 'lockedAspectRatio', ...canvasSurfaceStyleKeys])
+const embedDataKeys = new Set(['destination', 'lockedAspectRatio', ...canvasSurfaceStyleKeys])
 
 function parseCanvasLockedAspectRatio(value: unknown): number | undefined {
   return isFiniteNumber(value) && value > 0 ? value : undefined
@@ -13,10 +13,10 @@ export function parseCanvasEmbedNodeData(value: unknown): CanvasEmbedNodeData | 
   if (!isRecord(value) || !hasOnlyKeys(value, embedDataKeys)) return null
 
   const data: CanvasEmbedNodeData = {}
-  if ('target' in value) {
-    const target = parseEmbedTarget(value.target)
-    if (!target) return null
-    data.target = target
+  if ('destination' in value) {
+    const destination = parseAuthoredDestination(value.destination)
+    if (!destination) return null
+    data.destination = destination
   }
   if ('lockedAspectRatio' in value) {
     const lockedAspectRatio = parseCanvasLockedAspectRatio(value.lockedAspectRatio)

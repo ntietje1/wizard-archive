@@ -10,6 +10,11 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
+import {
+  parseSerializedAuthoredDestination,
+  remapAuthoredDestination,
+  serializeAuthoredDestination,
+} from '@wizard-archive/editor/resources/authored-destination'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import {
   NOTE_YJS_FRAGMENT,
@@ -20,7 +25,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { GenericDatabaseReader } from 'convex/server'
 import type { DataModel } from '../../_generated/dataModel'
 import type { ContentCopyPreparation } from './contentCopyTypes'
-import { encodeYjsDocument, remapResourceId, resourceReferencesAreValid } from './contentCopyTypes'
+import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 import { initialBinaryContentVersion } from './contentVersion'
 import { findCanonicalResource } from './findCanonicalResource'
 
@@ -202,12 +207,10 @@ function noteResourceIds(blocks: ReadonlyArray<NoteBlock>): Array<ResourceId> | 
     if (blockIds.has(block.id)) return null
     blockIds.add(block.id)
     pending.push(...(block.children ?? []))
-    if (block.type !== 'embed' || block.props.targetKind !== 'resource') continue
-    try {
-      result.push(assertDomainId(DOMAIN_ID_KIND.resource, block.props.resourceId))
-    } catch {
-      return null
-    }
+    if (block.type !== 'embed') continue
+    const destination = parseSerializedAuthoredDestination(block.props.destination)
+    if (!destination) return null
+    if (destination.kind === 'internal') result.push(destination.target.resourceId)
   }
   return result
 }
@@ -226,16 +229,7 @@ function remapNoteBlockResources(
   block: NoteBlock,
   targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
 ): NoteBlock {
-  const props =
-    block.type === 'embed' && block.props.targetKind === 'resource'
-      ? {
-          ...block.props,
-          resourceId: remapResourceId(
-            targetMap,
-            assertDomainId(DOMAIN_ID_KIND.resource, block.props.resourceId),
-          ),
-        }
-      : block.props
+  const props = block.type === 'embed' ? remapNoteEmbed(block, targetMap) : block.props
   return {
     ...block,
     props,
@@ -243,4 +237,18 @@ function remapNoteBlockResources(
       ? { children: block.children.map((child) => remapNoteBlockResources(child, targetMap)) }
       : {}),
   } as NoteBlock
+}
+
+function remapNoteEmbed(
+  block: Extract<NoteBlock, { type: 'embed' }>,
+  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
+) {
+  const destination = parseSerializedAuthoredDestination(block.props.destination)
+  if (!destination) throw new TypeError('Invalid authored destination')
+  const result = remapAuthoredDestination(destination, targetMap, 'same_campaign_copy')
+  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
+  return {
+    ...block.props,
+    destination: serializeAuthoredDestination(result.destination),
+  }
 }

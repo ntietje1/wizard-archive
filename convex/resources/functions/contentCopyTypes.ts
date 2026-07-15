@@ -15,16 +15,6 @@ export type ContentCopyPreparation =
   | { status: 'unavailable' }
   | { status: 'integrity_error' }
 
-export function remapResourceId(
-  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
-  sourceId: ResourceId,
-): ResourceId {
-  const mapping = targetMap.find(
-    (entry) => entry.source.kind === 'resource' && entry.source.resourceId === sourceId,
-  )
-  return mapping?.destination.kind === 'resource' ? mapping.destination.resourceId : sourceId
-}
-
 export function encodeYjsDocument(doc: Y.Doc): ArrayBuffer {
   try {
     return Uint8Array.from(Y.encodeStateAsUpdate(doc)).buffer

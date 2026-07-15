@@ -49,6 +49,54 @@ export type ReferenceGraphEdge = Readonly<{
   target: CanonicalTarget
 }>
 
+export const EMPTY_AUTHORED_DESTINATION_SERIALIZED = serializeAuthoredDestination({
+  kind: 'unresolved',
+  rawTarget: '',
+})
+
+export function serializeAuthoredDestination(destination: AuthoredDestination): string {
+  switch (destination.kind) {
+    case 'externalUrl':
+      return JSON.stringify({ kind: destination.kind, url: destination.url })
+    case 'unresolved':
+      return JSON.stringify({ kind: destination.kind, rawTarget: destination.rawTarget })
+    case 'internal':
+      return JSON.stringify({
+        kind: destination.kind,
+        target: serializedTarget(destination.target),
+      })
+  }
+}
+
+export function parseSerializedAuthoredDestination(value: string): AuthoredDestination | null {
+  try {
+    const destination = parseAuthoredDestination(JSON.parse(value))
+    return destination !== null && serializeAuthoredDestination(destination) === value
+      ? destination
+      : null
+  } catch {
+    return null
+  }
+}
+
+function serializedTarget(target: CanonicalTarget): CanonicalTarget {
+  switch (target.kind) {
+    case 'resource':
+      return { kind: target.kind, resourceId: target.resourceId }
+    case 'noteBlock':
+      return {
+        kind: target.kind,
+        resourceId: target.resourceId,
+        blockId: target.blockId,
+        presentation: target.presentation,
+      }
+    case 'mapPin':
+      return { kind: target.kind, resourceId: target.resourceId, pinId: target.pinId }
+    case 'canvasNode':
+      return { kind: target.kind, resourceId: target.resourceId, nodeId: target.nodeId }
+  }
+}
+
 export async function resolveAuthoredDestination<TDisplay>(
   destination: unknown,
   {
@@ -184,22 +232,20 @@ export function parseAuthoredDestination(value: unknown): AuthoredDestination | 
   if (!isRecord(value) || typeof value.kind !== 'string') return null
   switch (value.kind) {
     case 'externalUrl': {
-      const valid =
-        hasOnlyKeys(value, ['kind', 'url']) &&
-        typeof value.url === 'string' &&
-        parseSafeHttpsUrl(value.url) !== null
-      return valid ? (value as AuthoredDestination) : null
+      if (!hasOnlyKeys(value, ['kind', 'url']) || typeof value.url !== 'string') return null
+      const url = parseSafeHttpsUrl(value.url)
+      return url === null ? null : { kind: 'externalUrl', url }
     }
     case 'unresolved': {
-      const valid =
-        hasOnlyKeys(value, ['kind', 'rawTarget']) &&
+      return hasOnlyKeys(value, ['kind', 'rawTarget']) &&
         typeof value.rawTarget === 'string' &&
         !hasUnpairedUtf16(value.rawTarget)
-      return valid ? (value as AuthoredDestination) : null
+        ? { kind: 'unresolved', rawTarget: value.rawTarget }
+        : null
     }
     case 'internal':
       return hasOnlyKeys(value, ['kind', 'target']) && isCanonicalTarget(value.target)
-        ? (value as AuthoredDestination)
+        ? { kind: 'internal', target: value.target }
         : null
     default:
       return null

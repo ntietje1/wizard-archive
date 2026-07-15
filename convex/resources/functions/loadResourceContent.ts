@@ -83,7 +83,7 @@ async function loadMapContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
       })),
       pins: pins.map((pin) => ({
         id: pin.mapPinUuid,
-        targetResourceId: pin.targetResourceUuid,
+        destination: pin.destination,
         layerId: pin.layerId,
         x: pin.x,
         y: pin.y,

@@ -5,6 +5,7 @@ import {
   defaultInlineContentSpecs,
 } from '@blocknote/core'
 import { noteValueInlineConfig } from '../values/block-config'
+import { EMPTY_AUTHORED_DESTINATION_SERIALIZED } from '../../resources/authored-destination'
 import type {
   BlockSpecs,
   CustomInlineContentImplementation,
@@ -35,13 +36,7 @@ const {
 const embedBlockConfig = {
   type: 'embed',
   propSchema: {
-    targetKind: {
-      default: 'empty',
-      values: ['empty', 'resource', 'externalUrl'] as const,
-    },
-    resourceId: { default: undefined, type: 'string' },
-    url: { default: undefined, type: 'string' },
-    name: { default: undefined, type: 'string' },
+    destination: { default: EMPTY_AUTHORED_DESTINATION_SERIALIZED },
     backgroundColor: { default: 'default', type: 'string' },
     textAlignment: {
       default: 'left',
