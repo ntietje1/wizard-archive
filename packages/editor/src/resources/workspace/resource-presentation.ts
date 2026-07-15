@@ -27,5 +27,9 @@ export function duplicateResourceKeys(resources: ReadonlyArray<AuthorizedResourc
     const key = resourcePresentationKey(resource)
     counts.set(key, (counts.get(key) ?? 0) + 1)
   }
-  return new Set([...counts].filter(([, count]) => count > 1).map(([key]) => key))
+  const duplicates = new Set<string>()
+  for (const [key, count] of counts) {
+    if (count > 1) duplicates.add(key)
+  }
+  return duplicates
 }

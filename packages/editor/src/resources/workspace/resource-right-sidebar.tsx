@@ -99,9 +99,9 @@ function ResourceDetails({
         <dt className="text-muted-foreground">Lifecycle</dt>
         <dd className="capitalize">{resource.lifecycle}</dd>
         <dt className="text-muted-foreground">Created</dt>
-        <dd>{new Date(resource.createdAt).toLocaleString()}</dd>
+        <dd>{formatResourceTimestamp(resource.createdAt)}</dd>
         <dt className="text-muted-foreground">Updated</dt>
-        <dd>{new Date(resource.updatedAt).toLocaleString()}</dd>
+        <dd>{formatResourceTimestamp(resource.updatedAt)}</dd>
         <dt className="text-muted-foreground">Resource ID</dt>
         <dd className="break-all font-mono">{resource.id}</dd>
       </dl>
@@ -158,7 +158,7 @@ function ResourceHistoryPanel({
           <li key={entry.id} className="border-l border-border pl-3 text-xs">
             <p>Resource updated</p>
             <p className="mt-0.5 text-muted-foreground">
-              {new Date(entry.createdAt).toLocaleString()}
+              {formatResourceTimestamp(entry.createdAt)}
             </p>
           </li>
         ))}
@@ -168,3 +168,13 @@ function ResourceHistoryPanel({
 }
 
 export type ResourceRightSidebarPanel = PanelId
+
+const resourceTimestampFormat = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'UTC',
+})
+
+function formatResourceTimestamp(timestamp: number) {
+  return `${resourceTimestampFormat.format(timestamp)} UTC`
+}

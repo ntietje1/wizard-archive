@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import type { ReactNode } from 'react'
+import { useRef, useState } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -10,6 +10,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react'
+import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -20,6 +21,8 @@ import type {
 import { RESOURCE_KIND } from '../resource-record'
 import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import type { WorkspaceSort } from '../workspace-preferences'
+import { updateWorkspaceSelection, workspaceSelectionIntent } from '../workspace-selection'
+import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { useEnsureResourceCollection } from './resource-loading'
@@ -35,9 +38,11 @@ export function ResourceSidebar({
   onLifecycleChange,
   onClose,
   onReport,
+  onSelectionChange,
   onSortChange,
   runtime,
   selectedResourceId,
+  selection,
   slots,
   snapshot,
   sort,
@@ -48,17 +53,32 @@ export function ResourceSidebar({
   onLifecycleChange: (value: 'active' | 'trashed') => void
   onClose: () => void
   onReport: WorkspaceReport
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   onSortChange: (sort: WorkspaceSort) => void
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
+  selection: WorkspaceSelection
   slots?: Readonly<{ footer?: ReactNode; headerEnd?: ReactNode; headerStart?: ReactNode }>
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
   workspaceName: string | null
 }) {
+  const navigationElement = useRef<HTMLElement>(null)
+  const visibleIds = () => visibleResourceIds(navigationElement.current)
   const query = { parentId: null, lifecycle } as const
+  const roots = snapshot.list(query)
+  const initialFocusId =
+    selectedResourceId ??
+    (roots.state === 'known'
+      ? sortAuthorizedResourceSummaries(roots.items, sort.by, sort.direction)[0]?.id
+      : null) ??
+    null
   return (
-    <nav aria-label="Sidebar" className="flex h-full min-h-0 flex-col bg-background">
+    <nav
+      ref={navigationElement}
+      aria-label="Sidebar"
+      className="flex h-full min-h-0 flex-col bg-background"
+    >
       <div className="flex h-9 shrink-0 items-center gap-1 px-1">
         <div className="flex items-center">{slots?.headerStart}</div>
         <strong className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
@@ -127,9 +147,13 @@ export function ResourceSidebar({
         <ResourceCollection
           query={query}
           runtime={runtime}
+          initialFocusId={initialFocusId}
           selectedResourceId={selectedResourceId}
+          selection={selection}
           snapshot={snapshot}
           sort={sort}
+          visibleIds={visibleIds}
+          onSelectionChange={onSelectionChange}
         />
       </div>
       <button
@@ -147,17 +171,25 @@ export function ResourceSidebar({
 }
 
 function ResourceCollection({
+  initialFocusId,
+  onSelectionChange,
   query,
   runtime,
   selectedResourceId,
+  selection,
   snapshot,
   sort,
+  visibleIds,
 }: {
+  initialFocusId: ResourceId | null
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   query: ResourceCollectionQuery
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
+  selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
+  visibleIds: () => ReadonlyArray<ResourceId>
 }) {
   const load = useEnsureResourceCollection(runtime, query)
   const collection = snapshot.list(query)
@@ -178,9 +210,13 @@ function ResourceCollection({
           key={resource.id}
           resource={resource}
           runtime={runtime}
+          initialFocusId={initialFocusId}
           selectedResourceId={selectedResourceId}
+          selection={selection}
           snapshot={snapshot}
           sort={sort}
+          visibleIds={visibleIds}
+          onSelectionChange={onSelectionChange}
         />
       ))}
       {!collection.complete && (
@@ -192,74 +228,267 @@ function ResourceCollection({
 
 function ResourceTreeRow({
   ambiguous,
+  initialFocusId,
+  onSelectionChange,
   resource,
   runtime,
   selectedResourceId,
+  selection,
   snapshot,
   sort,
+  visibleIds,
 }: {
   ambiguous: boolean
+  initialFocusId: ResourceId | null
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
+  selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
+  visibleIds: () => ReadonlyArray<ResourceId>
 }) {
   const [expanded, setExpanded] = useState(true)
   const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const
   const children = resource.kind === 'folder' ? snapshot.list(childQuery) : null
   const hasChildren = children?.state !== 'known' || children.items.length > 0
-  const Icon = resourceKindIcon(resource.kind)
 
   return (
     <li>
       <div className="group flex min-w-0 items-center rounded-md hover:bg-muted/70">
         {resource.kind === 'folder' ? (
-          <button
-            type="button"
-            aria-label={`${expanded ? 'Collapse' : 'Expand'} ${resource.title}`}
-            className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-            onClick={() => setExpanded((value) => !value)}
-          >
-            {hasChildren ? (
-              expanded ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
-              )
-            ) : null}
-          </button>
+          <FolderExpansionButton
+            expanded={expanded}
+            hasChildren={hasChildren}
+            title={resource.title}
+            onToggle={() => setExpanded((value) => !value)}
+          />
         ) : (
           <span className="size-6 shrink-0" />
         )}
-        <button
-          type="button"
-          aria-current={selectedResourceId === resource.id ? 'page' : undefined}
-          className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
-          onClick={() => runtime.navigation.open(resource.id)}
-        >
-          <Icon className="size-4 shrink-0 text-muted-foreground" />
-          <span className="min-w-0 flex-1 truncate">{resource.title}</span>
-          {ambiguous && (
-            <span className="shrink-0 text-[10px] text-muted-foreground">
-              {resource.kind} · {resource.id.slice(-6)}
-            </span>
-          )}
-        </button>
+        <ResourceTreeButton
+          ambiguous={ambiguous}
+          expanded={expanded}
+          initialFocusId={initialFocusId}
+          onExpandedChange={setExpanded}
+          onSelectionChange={onSelectionChange}
+          resource={resource}
+          runtime={runtime}
+          selectedResourceId={selectedResourceId}
+          selection={selection}
+          visibleIds={visibleIds}
+        />
       </div>
       {resource.kind === 'folder' && expanded && (
         <div className="ml-3 border-l border-border pl-1">
           <ResourceCollection
             query={childQuery}
             runtime={runtime}
+            initialFocusId={initialFocusId}
             selectedResourceId={selectedResourceId}
+            selection={selection}
             snapshot={snapshot}
             sort={sort}
+            visibleIds={visibleIds}
+            onSelectionChange={onSelectionChange}
           />
         </div>
       )}
     </li>
   )
+}
+
+function FolderExpansionButton({
+  expanded,
+  hasChildren,
+  onToggle,
+  title,
+}: {
+  expanded: boolean
+  hasChildren: boolean
+  onToggle: () => void
+  title: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+      className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      onClick={onToggle}
+    >
+      {hasChildren &&
+        (expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />)}
+    </button>
+  )
+}
+
+function ResourceTreeButton({
+  ambiguous,
+  expanded,
+  initialFocusId,
+  onExpandedChange,
+  onSelectionChange,
+  resource,
+  runtime,
+  selectedResourceId,
+  selection,
+  visibleIds,
+}: {
+  ambiguous: boolean
+  expanded: boolean
+  initialFocusId: ResourceId | null
+  onExpandedChange: (expanded: boolean) => void
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+  selectedResourceId: ResourceId | null
+  selection: WorkspaceSelection
+  visibleIds: () => ReadonlyArray<ResourceId>
+}) {
+  const Icon = resourceKindIcon(resource.kind)
+  const selected = selection.selectedIds.includes(resource.id)
+  const tabbable =
+    selection.focusedId === resource.id ||
+    (selection.focusedId === null && initialFocusId === resource.id)
+  return (
+    <button
+      type="button"
+      aria-current={selectedResourceId === resource.id ? 'page' : undefined}
+      data-resource-id={resource.id}
+      data-selected={selected}
+      tabIndex={tabbable ? 0 : -1}
+      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+      onClick={(event) =>
+        selectTreeResource({ event, resource, runtime, visibleIds, onSelectionChange })
+      }
+      onContextMenu={() => onSelectionChange({ type: 'normalizeContext', resourceId: resource.id })}
+      onFocus={() => onSelectionChange({ type: 'focus', resourceId: resource.id })}
+      onKeyDown={(event) =>
+        handleTreeResourceKey({
+          event,
+          expanded,
+          onExpandedChange,
+          onSelectionChange,
+          resource,
+          runtime,
+          selection,
+          visibleIds,
+        })
+      }
+    >
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1 truncate">{resource.title}</span>
+      {ambiguous && (
+        <span className="shrink-0 text-[10px] text-muted-foreground">
+          {resource.kind} · {resource.id.slice(-6)}
+        </span>
+      )}
+    </button>
+  )
+}
+
+type TreeResourceInteraction = Readonly<{
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+  visibleIds: () => ReadonlyArray<ResourceId>
+}>
+
+function selectTreeResource({
+  event,
+  onSelectionChange,
+  resource,
+  runtime,
+  visibleIds,
+}: TreeResourceInteraction & { event: MouseEvent<HTMLButtonElement> }) {
+  const intent = workspaceSelectionIntent(event)
+  onSelectionChange({ type: 'select', resourceId: resource.id, visibleIds: visibleIds(), intent })
+  if (intent === 'single') runtime.navigation.open(resource.id)
+}
+
+function handleTreeResourceKey({
+  event,
+  expanded,
+  onExpandedChange,
+  onSelectionChange,
+  resource,
+  runtime,
+  selection,
+  visibleIds,
+}: TreeResourceInteraction & {
+  event: KeyboardEvent<HTMLButtonElement>
+  expanded: boolean
+  onExpandedChange: (expanded: boolean) => void
+  selection: WorkspaceSelection
+}) {
+  switch (event.key) {
+    case 'ArrowLeft':
+      if (resource.kind === 'folder' && expanded) consumeKey(event, () => onExpandedChange(false))
+      return
+    case 'ArrowRight':
+      if (resource.kind === 'folder' && !expanded) consumeKey(event, () => onExpandedChange(true))
+      return
+    case 'Enter':
+      consumeKey(event, () => runtime.navigation.open(resource.id))
+      return
+    case ' ':
+      consumeKey(event, () =>
+        onSelectionChange({
+          type: 'select',
+          resourceId: resource.id,
+          visibleIds: visibleIds(),
+          intent: 'toggle',
+        }),
+      )
+      return
+    case 'Escape':
+      consumeKey(event, () => onSelectionChange({ type: 'clear' }))
+      return
+    case 'ArrowUp':
+    case 'ArrowDown':
+      moveTreeResourceFocus(event, selection, visibleIds(), onSelectionChange)
+  }
+}
+
+function moveTreeResourceFocus(
+  event: KeyboardEvent<HTMLButtonElement>,
+  selection: WorkspaceSelection,
+  visibleIds: ReadonlyArray<ResourceId>,
+  onSelectionChange: (action: WorkspaceSelectionAction) => void,
+) {
+  event.preventDefault()
+  const action: WorkspaceSelectionAction = {
+    type: 'moveFocus',
+    direction: event.key === 'ArrowUp' ? 'previous' : 'next',
+    visibleIds,
+    extend: event.shiftKey,
+  }
+  const next = updateWorkspaceSelection(selection, action)
+  onSelectionChange(action)
+  focusResourceButton(event.currentTarget.closest('nav'), next.focusedId)
+}
+
+function consumeKey(event: KeyboardEvent<HTMLButtonElement>, action: () => void) {
+  event.preventDefault()
+  action()
+}
+
+function visibleResourceIds(navigation: HTMLElement | null) {
+  if (!navigation) return []
+  return [...navigation.querySelectorAll<HTMLButtonElement>('[data-resource-id]')].map((button) =>
+    assertDomainId(DOMAIN_ID_KIND.resource, button.dataset.resourceId ?? ''),
+  )
+}
+
+function focusResourceButton(navigation: HTMLElement | null, resourceId: ResourceId | null) {
+  if (!navigation || !resourceId) return
+  for (const button of navigation.querySelectorAll<HTMLButtonElement>('[data-resource-id]')) {
+    if (button.dataset.resourceId === resourceId) {
+      button.focus()
+      return
+    }
+  }
 }
 
 export function ResourceCreateMenu({

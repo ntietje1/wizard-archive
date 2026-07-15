@@ -11,6 +11,8 @@ import type {
 } from './resource-index-contract'
 import { DEFAULT_WORKSPACE_PREFERENCES } from './workspace-preferences'
 import type { WorkspacePanelPreference, WorkspacePreferenceChange } from './workspace-preferences'
+import { EMPTY_WORKSPACE_SELECTION, updateWorkspaceSelection } from './workspace-selection'
+import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
 import { useEnsureResource } from './workspace/resource-loading'
 import { ResourceSidebar } from './workspace/resource-sidebar'
 import { ResourceTopbar } from './workspace/resource-topbar'
@@ -48,6 +50,7 @@ export function ResourceShell({
     ? snapshot.lookup(selectedResourceId)
     : { state: 'unknown' }
   const [lifecycle, setLifecycle] = useState<'active' | 'trashed'>('active')
+  const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [notice, setNotice] = useState<{ message: string; retry?: () => void } | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const report: WorkspaceReport = (message, retry) =>
@@ -56,6 +59,8 @@ export function ResourceShell({
   const rightVisible = selected.state === 'known' && preferences.panels.right.visible
   const canEdit =
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
+  const changeSelection = (action: WorkspaceSelectionAction) =>
+    setSelection((current) => updateWorkspaceSelection(current, action))
 
   const changePreference = (change: WorkspacePreferenceChange) => {
     void runtime.preferences.change(change).then((result) => {
@@ -88,6 +93,7 @@ export function ResourceShell({
             lifecycle={lifecycle}
             runtime={runtime}
             selectedResourceId={selectedResourceId}
+            selection={selection}
             slots={resourcePanelSlots}
             snapshot={snapshot}
             sort={preferences.sort}
@@ -95,6 +101,7 @@ export function ResourceShell({
             onLifecycleChange={setLifecycle}
             onClose={() => changePreference({ type: 'panel', panel: 'left', visible: false })}
             onReport={report}
+            onSelectionChange={changeSelection}
             onSortChange={(sort) => changePreference({ type: 'sort', sort })}
           />
         </ResizableWorkspacePanel>
@@ -109,6 +116,7 @@ export function ResourceShell({
           mode={preferences.mode}
           resourceId={selectedResourceId}
           runtime={runtime}
+          selection={selection}
           snapshot={snapshot}
           sort={preferences.sort}
           onModeChange={(mode) => changePreference({ type: 'mode', mode })}
@@ -123,6 +131,7 @@ export function ResourceShell({
             changePreference({ type: 'panel', panel: 'right', visible: true })
           }
           onReport={report}
+          onSelectionChange={changeSelection}
         />
       </div>
       {rightVisible && (
@@ -178,8 +187,10 @@ function SelectedResource({
   onOpenLeftSidebar,
   onOpenRightSidebar,
   onReport,
+  onSelectionChange,
   resourceId,
   runtime,
+  selection,
   snapshot,
   sort,
 }: {
@@ -194,8 +205,10 @@ function SelectedResource({
   onOpenLeftSidebar: () => void
   onOpenRightSidebar: () => void
   onReport: WorkspaceReport
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   resourceId: ResourceId | null
   runtime: EditorRuntime
+  selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: typeof DEFAULT_WORKSPACE_PREFERENCES.sort
 }) {
@@ -255,9 +268,11 @@ function SelectedResource({
         canEdit={canEdit}
         resource={resource}
         runtime={runtime}
+        selection={selection}
         snapshot={snapshot}
         sort={sort}
         onReport={onReport}
+        onSelectionChange={onSelectionChange}
       />
     </>
   )

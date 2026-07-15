@@ -232,7 +232,48 @@ describe('ResourceShell', () => {
     })
     core.dispose()
   })
+
+  it('supports modifier ranges and keyboard movement across visible resources', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    await createFolderFromSidebar('Second folder')
+    await createFolderFromSidebar('Third folder')
+    const first = screen.getByRole('button', { name: resource.title })
+    const second = screen.getByRole('button', { name: 'Second folder' })
+    const third = screen.getByRole('button', { name: 'Third folder' })
+
+    fireEvent.click(first)
+    fireEvent.click(second, { ctrlKey: true })
+    fireEvent.click(third, { shiftKey: true })
+    expect(first).toHaveAttribute('data-selected', 'true')
+    expect(second).toHaveAttribute('data-selected', 'true')
+    expect(third).toHaveAttribute('data-selected', 'true')
+
+    fireEvent.keyDown(third, { key: 'ArrowUp' })
+    expect(second).toHaveFocus()
+    expect(first).toHaveAttribute('data-selected', 'false')
+    expect(second).toHaveAttribute('data-selected', 'true')
+    expect(third).toHaveAttribute('data-selected', 'false')
+    core.dispose()
+  })
 })
+
+async function createFolderFromSidebar(title: string) {
+  fireEvent.click(screen.getByRole('button', { name: 'Create resource' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
+    target: { value: title },
+  })
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+  await screen.findByRole('button', { name: title })
+}
 
 async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 'active') {
   const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)

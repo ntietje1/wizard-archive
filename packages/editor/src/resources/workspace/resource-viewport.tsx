@@ -1,5 +1,5 @@
 import { Folder } from 'lucide-react'
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
   AuthorizedResourceSummary,
@@ -8,6 +8,8 @@ import type {
 } from '../resource-index-contract'
 import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import type { WorkspaceSort } from '../workspace-preferences'
+import { workspaceSelectionIntent } from '../workspace-selection'
+import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
@@ -21,15 +23,19 @@ import {
 export function ResourceViewport({
   canEdit,
   onReport,
+  onSelectionChange,
   resource,
   runtime,
+  selection,
   snapshot,
   sort,
 }: {
   canEdit: boolean
   onReport: WorkspaceReport
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
 }) {
@@ -48,7 +54,9 @@ export function ResourceViewport({
         canEdit={canEdit}
         folder={resource}
         onReport={onReport}
+        onSelectionChange={onSelectionChange}
         runtime={runtime}
+        selection={selection}
         snapshot={snapshot}
         sort={sort}
       />
@@ -71,14 +79,18 @@ function FolderViewport({
   canEdit,
   folder,
   onReport,
+  onSelectionChange,
   runtime,
+  selection,
   snapshot,
   sort,
 }: {
   canEdit: boolean
   folder: AuthorizedResourceSummary
   onReport: WorkspaceReport
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   runtime: EditorRuntime
+  selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
 }) {
@@ -97,6 +109,8 @@ function FolderViewport({
   }
 
   const ambiguous = duplicateResourceKeys(resources)
+  const selectedIds = new Set(selection.selectedIds)
+  const visibleIds = resources.map((resource) => resource.id)
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 p-6">
@@ -106,6 +120,9 @@ function FolderViewport({
             key={resource.id}
             resource={resource}
             runtime={runtime}
+            selected={selectedIds.has(resource.id)}
+            visibleIds={visibleIds}
+            onSelectionChange={onSelectionChange}
           />
         ))}
         {canEdit && (
@@ -170,12 +187,18 @@ function CreateNewDashboard({
 
 function ResourceCard({
   ambiguous,
+  onSelectionChange,
   resource,
   runtime,
+  selected,
+  visibleIds,
 }: {
   ambiguous: boolean
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  selected: boolean
+  visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
 }) {
   const Icon = resourceKindIcon(resource.kind)
   const folder = resource.kind === 'folder'
@@ -183,12 +206,15 @@ function ResourceCard({
     <button
       type="button"
       aria-label={resource.title}
+      data-selected={selected}
       className={
         folder
-          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring'
-          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring'
+          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
+          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
       }
-      onClick={() => runtime.navigation.open(resource.id)}
+      onClick={(event) => selectCard({ event, resource, visibleIds, runtime, onSelectionChange })}
+      onContextMenu={() => onSelectionChange({ type: 'normalizeContext', resourceId: resource.id })}
+      onFocus={() => onSelectionChange({ type: 'focus', resourceId: resource.id })}
     >
       {folder && (
         <span className="absolute left-0 top-0 h-3 w-20 rounded-tr border-r border-border bg-muted" />
@@ -204,6 +230,24 @@ function ResourceCard({
       </span>
     </button>
   )
+}
+
+function selectCard({
+  event,
+  onSelectionChange,
+  resource,
+  runtime,
+  visibleIds,
+}: {
+  event: MouseEvent<HTMLButtonElement>
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+  visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
+}) {
+  const intent = workspaceSelectionIntent(event)
+  onSelectionChange({ type: 'select', resourceId: resource.id, visibleIds, intent })
+  if (intent === 'single') runtime.navigation.open(resource.id)
 }
 
 function FolderLoadingState({

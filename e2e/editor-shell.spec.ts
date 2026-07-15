@@ -8,6 +8,16 @@ test.describe('editor shell', () => {
     await expect(workspace).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible()
 
+    const invoice = page.getByRole('button', { name: 'Blue-glass Invoice' })
+    const canvas = page.getByRole('button', { name: 'Harbor Heist Board' })
+    const map = page.getByRole('button', { name: 'Moonwell Docks' })
+    await invoice.click()
+    await canvas.click({ modifiers: ['Control'] })
+    await map.click({ modifiers: ['Shift'] })
+    await expect(invoice).toHaveAttribute('data-selected', 'true')
+    await expect(canvas).toHaveAttribute('data-selected', 'true')
+    await expect(map).toHaveAttribute('data-selected', 'true')
+
     await page.getByRole('button', { name: 'The Lantern Market' }).click()
     await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
     await expect(page.getByLabel('Note content')).toBeVisible()

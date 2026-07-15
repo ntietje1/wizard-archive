@@ -71,24 +71,29 @@ export function selectResourceRoots(
   const roots: Array<ResourceRecord> = []
   for (const resourceId of resourceIds) {
     const resource = requireOwnedResource(graph, campaignId, resourceId)
-    const visited = new Set<ResourceId>([resource.id])
-    let parentId = resource.parentId
-    let nested = false
-    while (parentId !== null) {
-      if (selected.has(parentId)) {
-        nested = true
-        break
-      }
-      if (visited.has(parentId)) return reject('hierarchy_cycle')
-      visited.add(parentId)
-      const parent = graph.resources.get(parentId)
-      if (!parent) return reject('invalid_parent')
-      if (parent.campaignId !== campaignId) return reject('ownership_mismatch')
-      parentId = parent.parentId
-    }
-    if (!nested) roots.push(resource)
+    if (!hasSelectedAncestor(graph, campaignId, resource, selected)) roots.push(resource)
   }
   return roots.sort((left, right) => left.id.localeCompare(right.id))
+}
+
+function hasSelectedAncestor(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  resource: ResourceRecord,
+  selected: ReadonlySet<ResourceId>,
+) {
+  const visited = new Set<ResourceId>([resource.id])
+  let parentId = resource.parentId
+  while (parentId !== null) {
+    if (selected.has(parentId)) return true
+    if (visited.has(parentId)) return reject('hierarchy_cycle')
+    visited.add(parentId)
+    const parent = graph.resources.get(parentId)
+    if (!parent) return reject('invalid_parent')
+    if (parent.campaignId !== campaignId) return reject('ownership_mismatch')
+    parentId = parent.parentId
+  }
+  return false
 }
 
 export function selectResourceClosure(
