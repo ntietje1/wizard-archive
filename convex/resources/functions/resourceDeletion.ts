@@ -109,6 +109,8 @@ export async function planResourceDeletion(
   const plan = createPlan()
   for (const resource of resources) {
     plan.aliases.push(
+      // Each resource is accumulated and checked before the next read to keep the row cap strict.
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop
       ...(await ctx.db
         .query('resourceSourcePathAliases')
         .withIndex('by_campaign_and_resource', (query) =>

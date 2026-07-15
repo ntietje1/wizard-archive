@@ -324,16 +324,18 @@ async function planSameCampaignUpdate(
   }
   for (const imported of manifest.tombstones) evaluateImportedTombstone(imported, context)
 
-  const unknownDecisionByComponent = new Map(
+  const supportedActionsByComponent = new Map(
     state.unknownDecisions.map((decision) => [
       `${decision.resourceId}:${decision.component}`,
-      decision,
+      new Set(decision.supportedActions),
     ]),
   )
   if (
     policies.some((policy) => {
-      const decision = unknownDecisionByComponent.get(`${policy.resourceId}:${policy.component}`)
-      return !decision || !decision.supportedActions.includes(policy.action)
+      const supportedActions = supportedActionsByComponent.get(
+        `${policy.resourceId}:${policy.component}`,
+      )
+      return !supportedActions || !supportedActions.has(policy.action)
     })
   ) {
     return rejected('invalid_policy')

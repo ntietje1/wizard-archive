@@ -813,16 +813,16 @@ export class InMemoryResourceOperationExecutor<
         ancestor = ancestor.parentId === null ? undefined : state.resources.get(ancestor.parentId)
       }
     }
-    const updated: Array<ResourceRecord> = []
-    for (const resource of roots) {
-      if (resource.lifecycle.state !== 'active') throw new CatalogRejection('invalid_lifecycle')
-      const moved = await replaceMetadata(
-        resource,
-        { parentId: command.destinationParentId },
-        audit,
-      )
+    if (roots.some((resource) => resource.lifecycle.state !== 'active')) {
+      throw new CatalogRejection('invalid_lifecycle')
+    }
+    const updated = await Promise.all(
+      roots.map((resource) =>
+        replaceMetadata(resource, { parentId: command.destinationParentId }, audit),
+      ),
+    )
+    for (const moved of updated) {
       state.resources.set(moved.id, moved)
-      updated.push(moved)
     }
     return completed(
       campaignId,
@@ -839,15 +839,13 @@ export class InMemoryResourceOperationExecutor<
   ): Promise<ResourceStructureCommandResult> {
     const { command, campaignId, operationId } = envelope
     const { closure } = lifecycleClosure(state, campaignId, command.resourceIds, 'active')
-    const updated: Array<ResourceRecord> = []
-    for (const resource of closure) {
-      const trashed = await replaceMetadata(
-        resource,
-        { lifecycle: { state: 'trashed', ...audit } },
-        audit,
-      )
+    const updated = await Promise.all(
+      closure.map((resource) =>
+        replaceMetadata(resource, { lifecycle: { state: 'trashed', ...audit } }, audit),
+      ),
+    )
+    for (const trashed of updated) {
       state.resources.set(trashed.id, trashed)
-      updated.push(trashed)
     }
     return completed(
       campaignId,
@@ -865,21 +863,19 @@ export class InMemoryResourceOperationExecutor<
     const { command, campaignId, operationId } = envelope
     const { roots, closure } = lifecycleClosure(state, campaignId, command.resourceIds, 'trashed')
     const rootIds = new Set(roots.map((resource) => resource.id))
-    const updated: Array<ResourceRecord> = []
-    for (const resource of closure) {
-      const parent = resource.parentId === null ? null : state.resources.get(resource.parentId)
-      const parentId =
-        rootIds.has(resource.id) &&
-        (!parent || parent.campaignId !== campaignId || parent.lifecycle.state !== 'active')
-          ? null
-          : resource.parentId
-      const restored = await replaceMetadata(
-        resource,
-        { parentId, lifecycle: { state: 'active' } },
-        audit,
-      )
+    const updated = await Promise.all(
+      closure.map((resource) => {
+        const parent = resource.parentId === null ? null : state.resources.get(resource.parentId)
+        const parentId =
+          rootIds.has(resource.id) &&
+          (!parent || parent.campaignId !== campaignId || parent.lifecycle.state !== 'active')
+            ? null
+            : resource.parentId
+        return replaceMetadata(resource, { parentId, lifecycle: { state: 'active' } }, audit)
+      }),
+    )
+    for (const restored of updated) {
       state.resources.set(restored.id, restored)
-      updated.push(restored)
     }
     return completed(
       campaignId,
@@ -910,18 +906,16 @@ export class InMemoryResourceOperationExecutor<
       throw new CatalogRejection('invalid_lifecycle')
     }
     const deletedResourceIds = closure.map((resource) => resource.id)
-    const tombstones: Array<ResourceTombstone> = []
-    for (const resource of closure) {
-      const tombstone = await createResourceTombstone(
-        resource.id,
-        campaignId,
-        resource.metadataVersion,
-        audit.at,
-      )
+    const tombstones = await Promise.all(
+      closure.map((resource) =>
+        createResourceTombstone(resource.id, campaignId, resource.metadataVersion, audit.at),
+      ),
+    )
+    for (const [index, resource] of closure.entries()) {
+      const tombstone = tombstones[index]!
       state.resources.delete(resource.id)
       state.tombstones.set(resource.id, tombstone)
       state.aliases.delete(resource.id)
-      tombstones.push(tombstone)
     }
     const deletedIds = new Set(deletedResourceIds)
     const roles = state.roles.get(campaignId)

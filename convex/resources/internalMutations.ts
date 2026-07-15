@@ -136,14 +136,16 @@ export const completeAssetCopy = internalMutation({
       })
     }
     await ctx.db.delete(args.intentId)
-    const sourceRetirementCandidate = await ctx.db
-      .query('resourceAssetRetirementCandidates')
-      .withIndex('by_assetUuid', (query) => query.eq('assetUuid', intent.sourceAssetUuid))
-      .unique()
-    const remaining = await ctx.db
-      .query('resourceAssetCopyIntents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', intent.resourceUuid))
-      .first()
+    const [sourceRetirementCandidate, remaining] = await Promise.all([
+      ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', intent.sourceAssetUuid))
+        .unique(),
+      ctx.db
+        .query('resourceAssetCopyIntents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', intent.resourceUuid))
+        .first(),
+    ])
     if (!remaining) await setContentAssetState(ctx, intent.resourceUuid, 'ready')
     return {
       status: 'completed' as const,

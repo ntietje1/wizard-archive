@@ -72,6 +72,14 @@ function collectIssues<T>(
   return issues
 }
 
+async function collectAsyncIssues<T>(
+  rows: ReadonlyArray<T>,
+  issueFor: (row: T) => Promise<IntegrityIssue | null>,
+): Promise<Array<IntegrityIssue>> {
+  const issues = await Promise.all(rows.map(issueFor))
+  return issues.filter((issue): issue is IntegrityIssue => issue !== null)
+}
+
 async function resourceHasContent(ctx: QueryCtx, resource: Doc<'resources'>): Promise<boolean> {
   if (resource.kind === 'folder') return true
   let content:
@@ -130,19 +138,17 @@ async function contentIssues(
   >,
   kind: 'note' | 'file' | 'map' | 'canvas',
 ): Promise<Array<IntegrityIssue>> {
-  const issues: Array<IntegrityIssue> = []
-  for (const content of rows) {
-    if (!(await contentHasResource(ctx, content, kind))) {
-      issues.push({
-        type: 'content_without_resource',
-        recordId: content._id,
-        resourceUuid: content.resourceUuid,
-        assetUuid: null,
-        repair: 'report_only',
-      })
-    }
-  }
-  return issues
+  return await collectAsyncIssues(rows, async (content) =>
+    (await contentHasResource(ctx, content, kind))
+      ? null
+      : {
+          type: 'content_without_resource',
+          recordId: content._id,
+          resourceUuid: content.resourceUuid,
+          assetUuid: null,
+          repair: 'report_only',
+        },
+  )
 }
 
 async function assetHasOwner(
@@ -197,18 +203,17 @@ type DiagnosticPagination = { cursor: string | null; numItems: number }
 
 async function diagnoseResourceWithoutContent(ctx: QueryCtx, pagination: DiagnosticPagination) {
   const page = await ctx.db.query('resources').order('asc').paginate(pagination)
-  const issues: Array<IntegrityIssue> = []
-  for (const resource of page.page) {
-    if (!(await resourceHasContent(ctx, resource))) {
-      issues.push({
-        type: 'resource_without_content',
-        recordId: resource._id,
-        resourceUuid: resource.resourceUuid,
-        assetUuid: null,
-        repair: 'report_only',
-      })
-    }
-  }
+  const issues = await collectAsyncIssues(page.page, async (resource) =>
+    (await resourceHasContent(ctx, resource))
+      ? null
+      : {
+          type: 'resource_without_content',
+          recordId: resource._id,
+          resourceUuid: resource.resourceUuid,
+          assetUuid: null,
+          repair: 'report_only',
+        },
+  )
   return result(page, issues)
 }
 
@@ -239,38 +244,34 @@ async function diagnoseContentWithoutResource(
 
 async function diagnoseDanglingOwner(ctx: QueryCtx, pagination: DiagnosticPagination) {
   const page = await ctx.db.query('resourceAssetOwners').order('asc').paginate(pagination)
-  const issues: Array<IntegrityIssue> = []
-  for (const owner of page.page) {
-    if (!(await ownerIsCurrent(ctx, owner))) {
-      issues.push({
-        type: 'dangling_domain_asset',
-        recordId: owner._id,
-        resourceUuid: owner.resourceUuid,
-        assetUuid: owner.assetUuid,
-        repair: 'report_only',
-      })
-    }
-  }
+  const issues = await collectAsyncIssues(page.page, async (owner) =>
+    (await ownerIsCurrent(ctx, owner))
+      ? null
+      : {
+          type: 'dangling_domain_asset',
+          recordId: owner._id,
+          resourceUuid: owner.resourceUuid,
+          assetUuid: owner.assetUuid,
+          repair: 'report_only',
+        },
+  )
   return result(page, issues)
 }
 
 async function diagnoseDanglingFileAsset(ctx: QueryCtx, pagination: DiagnosticPagination) {
   const page = await ctx.db.query('resourceFileContents').order('asc').paginate(pagination)
-  const issues: Array<IntegrityIssue> = []
-  for (const content of page.page) {
-    if (
-      content.assetUuid !== null &&
-      !(await assetHasOwner(ctx, content.resourceUuid, content.assetUuid))
-    ) {
-      issues.push({
-        type: 'dangling_domain_asset',
-        recordId: content._id,
-        resourceUuid: content.resourceUuid,
-        assetUuid: content.assetUuid,
-        repair: 'report_only',
-      })
-    }
-  }
+  const issues = await collectAsyncIssues(page.page, async (content) =>
+    content.assetUuid === null ||
+    (await assetHasOwner(ctx, content.resourceUuid, content.assetUuid))
+      ? null
+      : {
+          type: 'dangling_domain_asset',
+          recordId: content._id,
+          resourceUuid: content.resourceUuid,
+          assetUuid: content.assetUuid,
+          repair: 'report_only',
+        },
+  )
   return result(page, issues)
 }
 

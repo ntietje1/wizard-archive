@@ -173,11 +173,13 @@ async function applyMetadataUpdates(
   ctx: CampaignMutationCtx,
   updates: ReadonlyArray<PlannedMetadataUpdate>,
 ): Promise<void> {
-  for (const update of updates) {
-    if (update.replacement) {
-      await ctx.db.replace('resources', update.resource._id, update.replacement)
-    }
-  }
+  await Promise.all(
+    updates.flatMap((update) =>
+      update.replacement
+        ? [ctx.db.replace('resources', update.resource._id, update.replacement)]
+        : [],
+    ),
+  )
 }
 
 async function createResource(
@@ -283,15 +285,14 @@ async function operationRoots(
     throw new CatalogRejection('closure_too_large')
   }
   const selected = new Set(resourceIds)
-  const resources = new Map<ResourceId, Doc<'resources'>>()
-  const selectedResources: Array<Doc<'resources'>> = []
-  for (const resourceId of resourceIds) {
-    const resource = await requireResource(ctx, campaignId, resourceId)
-    resources.set(resourceId, resource)
-    selectedResources.push(resource)
-  }
+  const selectedResources = await Promise.all(
+    resourceIds.map((resourceId) => requireResource(ctx, campaignId, resourceId)),
+  )
+  const resources = new Map(selectedResources.map((resource) => [resource.resourceUuid, resource]))
   const roots: Array<Doc<'resources'>> = []
   for (const resource of selectedResources) {
+    // Ancestor walks share and bound one mutation-local cache, so their order is intentional.
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop
     if (!(await hasSelectedAncestor(ctx, campaignId, resource, selected, resources))) {
       roots.push(resource)
     }
@@ -373,8 +374,10 @@ async function moveResources(
   operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'move' }>,
 ): Promise<ResourceStructureCommandResult> {
-  const roots = await operationRoots(ctx, campaignId, command.resourceIds)
-  const destination = await validateParent(ctx, campaignId, command.destinationParentId)
+  const [roots, destination] = await Promise.all([
+    operationRoots(ctx, campaignId, command.resourceIds),
+    validateParent(ctx, campaignId, command.destinationParentId),
+  ])
   const movedIds = new Set(roots.map((resource) => resource.resourceUuid))
   let ancestor = destination
   const visited = new Set<string>()
@@ -498,17 +501,17 @@ async function permanentlyDeleteResources(
     }),
   )
   await applyResourceDeletion(ctx, deletion)
-  for (let index = 0; index < closure.length; index += 1) {
-    const resource = closure[index]!
-    const tombstone = tombstones[index]!
-    await ctx.db.delete(resource._id)
-    await ctx.db.insert('resourceTombstones', {
-      resourceUuid: tombstone.resourceId,
-      campaignUuid: tombstone.campaignId,
-      deletionVersion: tombstone.deletionVersion,
-      deletedAt: tombstone.deletedAt,
-    })
-  }
+  await Promise.all([
+    ...closure.map((resource) => ctx.db.delete(resource._id)),
+    ...tombstones.map((tombstone) =>
+      ctx.db.insert('resourceTombstones', {
+        resourceUuid: tombstone.resourceId,
+        campaignUuid: tombstone.campaignId,
+        deletionVersion: tombstone.deletionVersion,
+        deletedAt: tombstone.deletedAt,
+      }),
+    ),
+  ])
   const resourceIds = closure.map((resource) => resource.resourceUuid)
   return completed(
     campaignId,
@@ -586,26 +589,28 @@ async function deepCopyResources(
     throw new CatalogRejection('content_integrity_failure')
   }
 
-  for (const copy of copies) {
-    await ctx.db.insert('resources', {
-      resourceUuid: copy.resourceId,
-      campaignUuid: campaignId,
-      parentResourceUuid: copy.parentId,
-      kind: copy.source.kind,
-      title: copy.title,
-      icon: copy.source.icon,
-      color: copy.source.color,
-      lifecycle: 'active',
-      trashedAt: null,
-      trashedByMemberUuid: null,
-      metadataVersion: copy.metadataVersion,
-      createdAt: now,
-      createdByMemberUuid: actorId,
-      updatedAt: now,
-      updatedByMemberUuid: actorId,
-    })
-  }
-  for (const commit of content.commits) await commit()
+  await Promise.all(
+    copies.map((copy) =>
+      ctx.db.insert('resources', {
+        resourceUuid: copy.resourceId,
+        campaignUuid: campaignId,
+        parentResourceUuid: copy.parentId,
+        kind: copy.source.kind,
+        title: copy.title,
+        icon: copy.source.icon,
+        color: copy.source.color,
+        lifecycle: 'active',
+        trashedAt: null,
+        trashedByMemberUuid: null,
+        metadataVersion: copy.metadataVersion,
+        createdAt: now,
+        createdByMemberUuid: actorId,
+        updatedAt: now,
+        updatedByMemberUuid: actorId,
+      }),
+    ),
+  )
+  await Promise.all(content.commits.map((commit) => commit()))
 
   return completed(
     campaignId,
@@ -662,13 +667,15 @@ export async function executeStructureCommand(
     return { status: 'rejected', reason: 'unauthorized' }
   }
   const { campaignId, actorId } = ctx.resourceScope
-  const fingerprint = await fingerprintResourceStructureCommand(command)
-  const stored = await ctx.db
-    .query('resourceOperations')
-    .withIndex('by_campaign_and_operation', (query) =>
-      query.eq('campaignUuid', campaignId).eq('operationUuid', operationId),
-    )
-    .unique()
+  const [fingerprint, stored] = await Promise.all([
+    fingerprintResourceStructureCommand(command),
+    ctx.db
+      .query('resourceOperations')
+      .withIndex('by_campaign_and_operation', (query) =>
+        query.eq('campaignUuid', campaignId).eq('operationUuid', operationId),
+      )
+      .unique(),
+  ])
   if (stored) {
     if (stored.actorMemberUuid !== actorId || stored.fingerprint !== fingerprint) {
       return { status: 'rejected', reason: 'operation_id_reused' }

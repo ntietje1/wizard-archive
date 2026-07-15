@@ -34,14 +34,16 @@ export async function createMapContent(
 }
 
 export async function loadMapContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {
-  const content = await ctx.db
-    .query('resourceMapContents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
-  const pins = await ctx.db
-    .query('resourceMapPins')
-    .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', resourceId))
-    .take(501)
+  const [content, pins] = await Promise.all([
+    ctx.db
+      .query('resourceMapContents')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+      .unique(),
+    ctx.db
+      .query('resourceMapPins')
+      .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', resourceId))
+      .take(501),
+  ])
   return { content, pins }
 }
 

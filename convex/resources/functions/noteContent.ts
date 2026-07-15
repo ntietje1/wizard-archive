@@ -59,11 +59,13 @@ export async function createNoteContent(
 }
 
 export async function loadNoteContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {
-  const content = await findNoteContent(ctx.db, resourceId)
-  const intents = await ctx.db
-    .query('resourceNoteInitializationIntents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .take(2)
+  const [content, intents] = await Promise.all([
+    findNoteContent(ctx.db, resourceId),
+    ctx.db
+      .query('resourceNoteInitializationIntents')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+      .take(2),
+  ])
   return { content, intents }
 }
 
