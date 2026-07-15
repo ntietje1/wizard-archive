@@ -43,40 +43,29 @@ type ResourceRow = Doc<'resources'>
 async function scanResourcePage({
   accept,
   after,
-  collected = [],
   kinds,
   limit,
   load,
 }: {
   accept: (row: ResourceRow) => boolean | Promise<boolean>
   after: ResourceId | null
-  collected?: ReadonlyArray<ResourceRecord>
   kinds: ReadonlySet<ResourceKind> | null
   limit: number
   load: (after: ResourceId | null) => Promise<ReadonlyArray<ResourceRow>>
 }): Promise<ResourceCatalogPage<ResourceRecord>> {
-  const page = await load(after)
-  const accepted = await Promise.all(
-    page.map(async (row) => {
-      if (kinds !== null && !kinds.has(row.kind)) return null
-      return (await accept(row)) ? resourceRecordFromRow(row) : null
-    }),
-  )
-  const items = [
-    ...collected,
-    ...accepted.filter((resource): resource is ResourceRecord => resource !== null),
-  ]
-  if (items.length > limit) return { items: items.slice(0, limit), cursor: items[limit - 1]!.id }
-  if (page.length <= limit) return { items, cursor: null }
-  const remainder = await scanResourcePage({
-    accept,
-    after: assertDomainId(DOMAIN_ID_KIND.resource, page[page.length - 1]!.resourceUuid),
-    collected: items,
-    kinds,
-    limit,
-    load,
-  })
-  return { items: [...items, ...remainder.items], cursor: remainder.cursor }
+  const items: Array<ResourceRecord> = []
+  let scanAfter = after
+  while (true) {
+    const page = await load(scanAfter)
+    for (const row of page) {
+      if (kinds !== null && !kinds.has(row.kind)) continue
+      if (!(await accept(row))) continue
+      if (items.length === limit) return { items, cursor: items[items.length - 1]!.id }
+      items.push(resourceRecordFromRow(row))
+    }
+    if (page.length <= limit) return { items, cursor: null }
+    scanAfter = assertDomainId(DOMAIN_ID_KIND.resource, page[page.length - 1]!.resourceUuid)
+  }
 }
 
 export class ConvexResourceCatalog implements ResourceCatalogReader {
