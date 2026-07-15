@@ -14,14 +14,6 @@ export function LiveWorkspaceRuntimeProvider({
 }: {
   children: (runtime: WizardEditorRuntime) => ReactNode
 }) {
-  return <LiveWorkspaceRuntimeContent>{children}</LiveWorkspaceRuntimeContent>
-}
-
-function LiveWorkspaceRuntimeContent({
-  children,
-}: {
-  children: (runtime: WizardEditorRuntime) => ReactNode
-}) {
   const { campaign, campaignId } = useCampaign()
   const membership = campaign.data?.myMembership
 
