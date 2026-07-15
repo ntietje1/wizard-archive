@@ -10,6 +10,8 @@ import {
   Hash,
   RotateCcw,
   Scissors,
+  Star,
+  StarOff,
   Trash2,
 } from 'lucide-react'
 import type { ResourceId } from '../domain-id'
@@ -24,6 +26,7 @@ import {
   duplicateWorkspaceResources,
   moveWorkspaceResources,
   pasteWorkspaceClipboard,
+  setWorkspaceBookmarkState,
 } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 
@@ -36,6 +39,7 @@ export function ResourceContextMenu({
   request,
   resourceIds,
   runtime,
+  bookmarkedIds,
 }: {
   canEdit: boolean
   clipboard: WorkspaceClipboard
@@ -45,6 +49,7 @@ export function ResourceContextMenu({
   request: ResourceContextMenuRequest
   resourceIds: ReadonlyArray<ResourceId>
   runtime: EditorRuntime
+  bookmarkedIds: ReadonlySet<ResourceId>
 }) {
   const menu = useRef<HTMLDivElement>(null)
   const resource = request.resource
@@ -83,8 +88,40 @@ export function ResourceContextMenu({
         />
       )}
       {resourceIds.length === 1 && <ResourceLinkMenuItems actions={actions} />}
+      {runtime.resources.bookmarks.status === 'available' && active && (
+        <ResourceBookmarkMenuItem actions={actions} bookmarkedIds={bookmarkedIds} />
+      )}
       {canEdit && <ResourceLifecycleMenuItems actions={actions} />}
     </div>
+  )
+}
+
+function ResourceBookmarkMenuItem({
+  actions,
+  bookmarkedIds,
+}: {
+  actions: ResourceMenuActions
+  bookmarkedIds: ReadonlySet<ResourceId>
+}) {
+  const bookmarked = actions.resourceIds.every((resourceId) => bookmarkedIds.has(resourceId))
+  return (
+    <>
+      <MenuSeparator />
+      <MenuItem
+        icon={bookmarked ? <StarOff /> : <Star />}
+        label={bookmarked ? 'Remove bookmark' : 'Bookmark'}
+        onActivate={() =>
+          runMenuOperation(actions, () =>
+            setWorkspaceBookmarkState(
+              actions.runtime,
+              actions.resourceIds,
+              !bookmarked,
+              actions.onReport,
+            ),
+          )
+        }
+      />
+    </>
   )
 }
 

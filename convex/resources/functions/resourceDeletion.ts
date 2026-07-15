@@ -13,6 +13,7 @@ import { internal } from '../../_generated/api'
 type ResourceDeletionCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
 
 type ResourceDeletionPlan = {
+  bookmarks: Array<Doc<'resourceBookmarks'>>
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
@@ -28,6 +29,7 @@ type ResourceDeletionPlan = {
 
 function createPlan(): ResourceDeletionPlan {
   return {
+    bookmarks: [],
     aliases: [],
     assetsFolders: [],
     noteContents: [],
@@ -48,6 +50,7 @@ function rowCount(plan: ResourceDeletionPlan): number {
 
 function rowGroups(plan: ResourceDeletionPlan) {
   return [
+    plan.bookmarks,
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
@@ -109,8 +112,17 @@ export async function planResourceDeletion(
 ): Promise<ResourceDeletionPlan | null> {
   const plan = createPlan()
   for (const resource of resources) {
+    // Each resource is accumulated and checked before the next read to keep the row cap strict.
+    plan.bookmarks.push(
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop
+      ...(await ctx.db
+        .query('resourceBookmarks')
+        .withIndex('by_resource', (query) =>
+          query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
+        )
+        .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+    )
     plan.aliases.push(
-      // Each resource is accumulated and checked before the next read to keep the row cap strict.
       // react-doctor-disable-next-line react-doctor/async-await-in-loop
       ...(await ctx.db
         .query('resourceSourcePathAliases')
@@ -196,6 +208,8 @@ export async function deleteCampaignResources(
 ): Promise<void> {
   const [
     resources,
+    bookmarks,
+    bookmarkOperations,
     tombstones,
     aliases,
     assetsFolders,
@@ -212,6 +226,14 @@ export async function deleteCampaignResources(
     ctx.db
       .query('resources')
       .withIndex('by_campaign_and_parent', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceBookmarks')
+      .withIndex('by_member', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceBookmarkOperations')
+      .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
     ctx.db
       .query('resourceTombstones')
@@ -265,6 +287,8 @@ export async function deleteCampaignResources(
 
   await Promise.all([
     ...resources.map((row) => ctx.db.delete(row._id)),
+    ...bookmarks.map((row) => ctx.db.delete(row._id)),
+    ...bookmarkOperations.map((row) => ctx.db.delete(row._id)),
     ...tombstones.map((row) => ctx.db.delete(row._id)),
     ...aliases.map((row) => ctx.db.delete(row._id)),
     ...assetsFolders.map((row) => ctx.db.delete(row._id)),

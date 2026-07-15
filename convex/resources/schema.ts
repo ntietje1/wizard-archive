@@ -66,6 +66,46 @@ export const authorizedResourceSummaryValidator = v.object({
   updatedAt: v.number(),
 })
 
+export const workspaceSearchResultValidator = v.object({
+  resourceId: resourceIdValidator,
+  match: v.union(
+    v.object({ type: v.literal('title') }),
+    v.object({ type: v.literal('body'), text: v.string() }),
+  ),
+})
+
+export const resourceBookmarkCommandValidator = v.object({
+  type: v.literal('setBookmarkState'),
+  resourceIds: v.array(resourceIdValidator),
+  bookmarked: v.boolean(),
+})
+
+export const resourceBookmarkCommandResultValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    receipt: v.object({
+      campaignId: campaignIdValidator,
+      operationId: operationIdValidator,
+      resourceIds: v.array(resourceIdValidator),
+      bookmarked: v.boolean(),
+    }),
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_command',
+      'ownership_mismatch',
+      'unauthorized',
+      'resource_missing',
+      'operation_id_reused',
+    ),
+  }),
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
+  }),
+)
+
 export const authorizedResourceSnapshotValidator = v.object({
   scope: resourceProjectionScopeValidator,
   revision: v.string(),
@@ -307,6 +347,7 @@ export const resourceTables = {
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
     .index('by_campaign_and_parent', ['campaignUuid', 'parentResourceUuid'])
+    .index('by_campaign_and_lifecycle', ['campaignUuid', 'lifecycle'])
     .index('by_campaign_and_parent_and_lifecycle_and_resource', [
       'campaignUuid',
       'parentResourceUuid',
@@ -354,6 +395,26 @@ export const resourceTables = {
     protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
     fingerprint: v.string(),
     receipt: resourceCommandReceiptValidator,
+  })
+    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
+    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
+
+  resourceBookmarks: defineTable({
+    campaignUuid: campaignIdValidator,
+    memberUuid: campaignMemberIdValidator,
+    resourceUuid: resourceIdValidator,
+    bookmarkedAt: v.number(),
+  })
+    .index('by_member', ['campaignUuid', 'memberUuid'])
+    .index('by_member_and_resource', ['campaignUuid', 'memberUuid', 'resourceUuid'])
+    .index('by_resource', ['campaignUuid', 'resourceUuid']),
+
+  resourceBookmarkOperations: defineTable({
+    campaignUuid: campaignIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    operationUuid: operationIdValidator,
+    resourceUuids: v.array(resourceIdValidator),
+    bookmarked: v.boolean(),
   })
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),

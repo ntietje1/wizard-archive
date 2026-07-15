@@ -1,6 +1,6 @@
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
-import { campaignQuery } from '../functions'
+import { campaignQuery, dmQuery } from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
@@ -10,11 +10,13 @@ import {
   noteContentSnapshotValidator,
   resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
+  workspaceSearchResultValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
 import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
 import { resourceIdValidator } from './validators'
+import { searchResources as searchResourcesFn } from './functions/searchResources'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
@@ -109,4 +111,30 @@ export const loadContent = campaignQuery({
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     return await loadResourceContentFn(ctx, resourceId, args.kind)
   },
+})
+
+export const loadBookmarks = dmQuery({
+  args: {},
+  returns: v.array(resourceIdValidator),
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query('resourceBookmarks')
+      .withIndex('by_member', (index) =>
+        index
+          .eq('campaignUuid', ctx.resourceScope.campaignId)
+          .eq('memberUuid', ctx.resourceScope.actorId),
+      )
+      .collect()
+    return rows.map((row) => row.resourceUuid)
+  },
+})
+
+export const searchResources = dmQuery({
+  args: { query: v.string() },
+  returns: v.array(workspaceSearchResultValidator),
+  handler: async (ctx, args) =>
+    (await searchResourcesFn(ctx, args.query)).map((result) => ({
+      resourceId: result.resourceId,
+      match: result.match.type === 'title' ? { type: 'title' as const } : { ...result.match },
+    })),
 })

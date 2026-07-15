@@ -341,6 +341,58 @@ describe('ResourceShell', () => {
     )
     core.dispose()
   })
+
+  it('searches from Ctrl+K and opens a title result', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.keyDown(screen.getByRole('region', { name: 'Editable resources' }), {
+      key: 'k',
+      ctrlKey: true,
+    })
+    const input = await screen.findByRole('combobox', { name: 'Search' })
+    fireEvent.change(input, { target: { value: 'Campaign folder' } })
+    const result = await screen.findByRole('option', { name: /Campaign folder/ })
+    fireEvent.click(result)
+
+    expect(navigation.current()).toBe(resource.id)
+    expect(screen.queryByRole('dialog', { name: 'Search' })).not.toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('bookmarks through the gateway and shows a bookmarks-only sidebar', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.contextMenu(await screen.findByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bookmark' }))
+    expect(await screen.findByText('Bookmarked')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Bookmarks' }))
+
+    expect(screen.getByRole('button', { name: 'Bookmarks' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: resource.title })).toBeInTheDocument()
+    core.dispose()
+  })
 })
 
 async function createFolderFromSidebar(title: string) {

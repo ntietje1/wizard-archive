@@ -1,5 +1,10 @@
 import { logger } from '~/shared/utils/logger'
-import { readPersistedJson, writePersistedJson } from '@wizard-archive/ui/storage/persisted-storage'
+import {
+  parsePersistedJson,
+  readPersistedJson,
+  subscribeToPersistedStorage,
+  writePersistedJson,
+} from '@wizard-archive/ui/storage/persisted-storage'
 import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
@@ -22,6 +27,22 @@ export function addLiveRecentResource(campaignId: CampaignId, resourceId: Resour
   } catch (error) {
     logger.debug('Failed to write recent resources for key', key, error)
   }
+}
+
+export function getLiveRecentResources(campaignId: CampaignId): ReadonlyArray<ResourceId> {
+  return readPersistedJson(storageKey(campaignId), [], parseRecentResourceEntries).map(
+    (entry) => entry.resourceId,
+  )
+}
+
+export function subscribeToLiveRecentResources(
+  campaignId: CampaignId,
+  listener: () => void,
+): () => void {
+  return subscribeToPersistedStorage(storageKey(campaignId), (value) => {
+    if (value !== null) parsePersistedJson(value, [], parseRecentResourceEntries)
+    listener()
+  })
 }
 
 function addRecentResourceEntry({

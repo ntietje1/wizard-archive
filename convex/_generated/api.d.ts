@@ -56,6 +56,7 @@ import type * as resources_functions_bindNoteContent from "../resources/function
 import type * as resources_functions_canvasContent from "../resources/functions/canvasContent.js";
 import type * as resources_functions_contentCopyTypes from "../resources/functions/contentCopyTypes.js";
 import type * as resources_functions_contentVersion from "../resources/functions/contentVersion.js";
+import type * as resources_functions_executeBookmarkCommand from "../resources/functions/executeBookmarkCommand.js";
 import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
@@ -68,6 +69,7 @@ import type * as resources_functions_resourceCatalogMetadata from "../resources/
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
 import type * as resources_functions_resourceRecordRow from "../resources/functions/resourceRecordRow.js";
+import type * as resources_functions_searchResources from "../resources/functions/searchResources.js";
 import type * as resources_integrity from "../resources/integrity.js";
 import type * as resources_internalActions from "../resources/internalActions.js";
 import type * as resources_internalMutations from "../resources/internalMutations.js";
@@ -166,6 +168,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/canvasContent": typeof resources_functions_canvasContent;
   "resources/functions/contentCopyTypes": typeof resources_functions_contentCopyTypes;
   "resources/functions/contentVersion": typeof resources_functions_contentVersion;
+  "resources/functions/executeBookmarkCommand": typeof resources_functions_executeBookmarkCommand;
   "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
   "resources/functions/fileContent": typeof resources_functions_fileContent;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
@@ -178,6 +181,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
   "resources/functions/resourceRecordRow": typeof resources_functions_resourceRecordRow;
+  "resources/functions/searchResources": typeof resources_functions_searchResources;
   "resources/integrity": typeof resources_integrity;
   "resources/internalActions": typeof resources_internalActions;
   "resources/internalMutations": typeof resources_internalMutations;

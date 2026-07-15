@@ -156,6 +156,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   const optimistic = createOptimisticResourceStructureRuntime(baseIndex, authoritative, now)
 
   return {
+    catalogSnapshot: () => catalog.getSnapshot(scope.campaignId),
     dispose: () => {
       unsubscribe()
       optimistic.dispose()

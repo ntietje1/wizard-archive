@@ -13,6 +13,7 @@ import { createLiveNoteContentSource } from './live-note-content-source'
 import { createLiveResourceContentSource } from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
+import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -95,6 +96,18 @@ function createScopedLiveResourceRuntime(
   const maps = createLiveResourceContentSource('map', contentBackend('map'))
   const canvases = createLiveResourceContentSource('canvas', contentBackend('canvas'))
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
+  const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, {
+    execute: (args) => convex.mutation(api.resources.mutations.executeBookmarkCommand, args),
+    watch: (apply) => {
+      const watch = convex.watchQuery(api.resources.queries.loadBookmarks, {
+        campaignId: currentScope.campaignId,
+      })
+      return subscribeToWatch(watch, apply)
+    },
+  })
+  const search = createLiveWorkspaceSearch(currentScope.campaignId, (args) =>
+    convex.query(api.resources.queries.searchResources, args),
+  )
 
   const unsupported = {
     status: 'unavailable',
@@ -113,18 +126,25 @@ function createScopedLiveResourceRuntime(
         loader: base.loader,
         structure,
         access: unsupported,
-        bookmarks: unsupported,
+        bookmarks:
+          currentScope.projection === 'dm'
+            ? ({ status: 'available', value: bookmarks.gateway } as const)
+            : unsupported,
         previews: unsupported,
       },
       content,
       navigation,
       preferences: preferences.source,
-      search: unsupported,
+      search:
+        currentScope.projection === 'dm'
+          ? ({ status: 'available', value: search } as const)
+          : unsupported,
       history: unsupported,
     },
     dispose: () => {
       for (const source of Object.values(content)) source.dispose()
       preferences.dispose()
+      bookmarks.dispose()
       optimistic.dispose()
     },
   }

@@ -33,8 +33,8 @@ export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
 }
 
 export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway {
-  get(resourceId: ResourceId): ResourceKnowledge<boolean>
-  subscribe(resourceId: ResourceId, listener: () => void): () => void
+  get(): ResourceKnowledge<ReadonlySet<ResourceId>>
+  subscribe(listener: () => void): () => void
 }
 
 export interface ResourcePreviewSource {
@@ -48,8 +48,16 @@ export interface ResourceNavigation {
   subscribe(listener: () => void): () => void
 }
 
+export type WorkspaceSearchResult = Readonly<{
+  resourceId: ResourceId
+  match: Readonly<{ type: 'title' }> | Readonly<{ type: 'body'; text: string }>
+}>
+
 export interface WorkspaceSearch {
-  search(query: string): Promise<ReadonlyArray<ResourceId>>
+  search(query: string): Promise<ReadonlyArray<WorkspaceSearchResult>>
+  recent(): ReadonlyArray<ResourceId>
+  subscribeRecent(listener: () => void): () => void
+  recordOpened(resourceId: ResourceId): void
 }
 
 export type ResourceHistoryEntry = Readonly<{

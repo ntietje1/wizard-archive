@@ -23,6 +23,8 @@ import { ResourceSidebar } from './workspace/resource-sidebar'
 import { ResourceTopbar } from './workspace/resource-topbar'
 import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
 import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
+import { ResourceSearchDialog } from './workspace/resource-search-dialog'
+import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
 import type { WorkspaceReport } from './workspace/resource-operations'
 import {
@@ -30,6 +32,9 @@ import {
   duplicateWorkspaceResources,
   pasteWorkspaceClipboard,
 } from './workspace/resource-operations'
+
+const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
+const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
 
 export function ResourceShell({
   ariaLabel,
@@ -50,6 +55,7 @@ export function ResourceShell({
 }) {
   const snapshot = useResourceSnapshot(runtime)
   const selectedResourceId = useResourceSelection(runtime)
+  const bookmarks = useResourceBookmarks(runtime)
   const preferencesState = useWorkspacePreferences(runtime)
   const preferences =
     preferencesState.status === 'ready'
@@ -59,7 +65,8 @@ export function ResourceShell({
   const selected: ResourceKnowledge<AuthorizedResourceSummary> = selectedResourceId
     ? snapshot.lookup(selectedResourceId)
     : { state: 'unknown' }
-  const [lifecycle, setLifecycle] = useState<'active' | 'trashed'>('active')
+  const [sidebarView, setSidebarView] = useState<'bookmarks' | 'resources' | 'trash'>('resources')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
   const [contextMenu, setContextMenu] = useState<
@@ -89,6 +96,13 @@ export function ResourceShell({
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
   const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
+      if (runtime.search.status === 'available') {
+        event.preventDefault()
+        setSearchOpen(true)
+      }
+      return
+    }
     const command = workspaceKeyboardCommand(event)
     if (!command || !canEdit) return
     const resourceIds =
@@ -142,6 +156,12 @@ export function ResourceShell({
     }
   }, [preferences.panels.right.visible, runtime.preferences, selectedResourceId])
 
+  useEffect(() => {
+    if (selectedResourceId && runtime.search.status === 'available') {
+      runtime.search.value.recordOpened(selectedResourceId)
+    }
+  }, [runtime.search, selectedResourceId])
+
   return (
     <section
       aria-label={ariaLabel}
@@ -156,7 +176,8 @@ export function ResourceShell({
         >
           <ResourceSidebar
             canEdit={canEdit}
-            lifecycle={lifecycle}
+            bookmarks={bookmarks}
+            view={sidebarView}
             runtime={runtime}
             selectedResourceId={selectedResourceId}
             selection={selection}
@@ -164,7 +185,8 @@ export function ResourceShell({
             snapshot={snapshot}
             sort={preferences.sort}
             workspaceName={workspaceName}
-            onLifecycleChange={setLifecycle}
+            onViewChange={setSidebarView}
+            onSearch={() => setSearchOpen(true)}
             onClose={() => changePreference({ type: 'panel', panel: 'left', visible: false })}
             onReport={report}
             onOpenContextMenu={openContextMenu}
@@ -218,6 +240,15 @@ export function ResourceShell({
           />
         </ResizableWorkspacePanel>
       )}
+      {runtime.search.status === 'available' && (
+        <ResourceSearchDialog
+          canEdit={canEdit}
+          open={searchOpen}
+          runtime={runtime}
+          onOpenChange={setSearchOpen}
+          onReport={report}
+        />
+      )}
       {contextMenu.status === 'open' && (
         <ResourceContextMenu
           canEdit={canEdit}
@@ -225,6 +256,7 @@ export function ResourceShell({
           request={contextMenu.request}
           resourceIds={contextMenu.resourceIds}
           runtime={runtime}
+          bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
           onClipboardChange={setClipboard}
           onClose={closeContextMenu}
           onReport={report}
@@ -524,14 +556,6 @@ function boundedPanelSize(size: number) {
   return Math.min(600, Math.max(200, Math.round(size)))
 }
 
-function useResourceSnapshot(runtime: EditorRuntime) {
-  return useSyncExternalStore(
-    (listener) => runtime.resources.index.subscribe(listener),
-    () => runtime.resources.index.getSnapshot(),
-    () => runtime.resources.index.getSnapshot(),
-  )
-}
-
 function useResourceSelection(runtime: EditorRuntime) {
   return useSyncExternalStore(
     (listener) => runtime.navigation.subscribe(listener),
@@ -545,5 +569,15 @@ function useWorkspacePreferences(runtime: EditorRuntime) {
     (listener) => runtime.preferences.subscribe(listener),
     () => runtime.preferences.get(),
     () => runtime.preferences.get(),
+  )
+}
+
+function useResourceBookmarks(runtime: EditorRuntime) {
+  const bookmarks = runtime.resources.bookmarks
+  return useSyncExternalStore(
+    (listener) =>
+      bookmarks.status === 'available' ? bookmarks.value.subscribe(listener) : () => {},
+    () => (bookmarks.status === 'available' ? bookmarks.value.get() : UNKNOWN_BOOKMARKS),
+    () => (bookmarks.status === 'available' ? bookmarks.value.get() : UNKNOWN_BOOKMARKS),
   )
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import {
   ChevronDown,
@@ -8,6 +8,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Star,
   Trash2,
 } from 'lucide-react'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
@@ -16,6 +17,7 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
   AuthorizedResourceSummary,
   ResourceCollectionQuery,
+  ResourceKnowledge,
   WorkspaceResourceIndexSnapshot,
 } from '../resource-index-contract'
 import { RESOURCE_KIND } from '../resource-record'
@@ -40,13 +42,19 @@ import {
   resourcePresentationKey,
 } from './resource-presentation'
 
+const EMPTY_BOOKMARKS: ReadonlySet<ResourceId> = new Set()
+
+type ResourceTreeExpansion =
+  | Readonly<{ status: 'unavailable' }>
+  | Readonly<{ status: 'available'; expanded: boolean; onChange: (expanded: boolean) => void }>
+
 export function ResourceSidebar({
+  bookmarks,
   canEdit,
-  lifecycle,
-  onLifecycleChange,
   onClose,
   onReport,
   onOpenContextMenu,
+  onSearch,
   onSelectionChange,
   onSortChange,
   runtime,
@@ -55,14 +63,16 @@ export function ResourceSidebar({
   slots,
   snapshot,
   sort,
+  view,
   workspaceName,
+  onViewChange,
 }: {
+  bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
   canEdit: boolean
-  lifecycle: 'active' | 'trashed'
-  onLifecycleChange: (value: 'active' | 'trashed') => void
   onClose: () => void
   onReport: WorkspaceReport
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onSearch: () => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onSortChange: (sort: WorkspaceSort) => void
   runtime: EditorRuntime
@@ -71,10 +81,13 @@ export function ResourceSidebar({
   slots?: Readonly<{ footer?: ReactNode; headerEnd?: ReactNode; headerStart?: ReactNode }>
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
+  view: 'bookmarks' | 'resources' | 'trash'
   workspaceName: string | null
+  onViewChange: (view: 'bookmarks' | 'resources' | 'trash') => void
 }) {
   const navigationElement = useRef<HTMLElement>(null)
   const visibleIds = () => visibleResourceIds(navigationElement.current)
+  const lifecycle = view === 'trash' ? 'trashed' : 'active'
   const query = { parentId: null, lifecycle } as const
   const roots = snapshot.list(query)
   const initialFocusId =
@@ -125,6 +138,7 @@ export function ResourceSidebar({
               ? 'Search resources'
               : 'Search is unavailable in this workspace'
           }
+          onClick={onSearch}
         >
           <Search className="size-4" />
         </button>
@@ -163,32 +177,139 @@ export function ResourceSidebar({
             : undefined
         }
       >
-        <ResourceCollection
-          canEdit={canEdit}
-          query={query}
-          runtime={runtime}
-          initialFocusId={initialFocusId}
-          selectedResourceId={selectedResourceId}
-          selection={selection}
-          snapshot={snapshot}
-          sort={sort}
-          visibleIds={visibleIds}
-          onSelectionChange={onSelectionChange}
-          onOpenContextMenu={onOpenContextMenu}
-          onReport={onReport}
-        />
+        {view === 'bookmarks' ? (
+          <BookmarkedResourceCollection
+            bookmarks={bookmarks}
+            canEdit={canEdit}
+            runtime={runtime}
+            selectedResourceId={selectedResourceId}
+            selection={selection}
+            snapshot={snapshot}
+            sort={sort}
+            visibleIds={visibleIds}
+            onSelectionChange={onSelectionChange}
+            onOpenContextMenu={onOpenContextMenu}
+            onReport={onReport}
+          />
+        ) : (
+          <ResourceCollection
+            canEdit={canEdit}
+            query={query}
+            runtime={runtime}
+            initialFocusId={initialFocusId}
+            selectedResourceId={selectedResourceId}
+            selection={selection}
+            snapshot={snapshot}
+            sort={sort}
+            visibleIds={visibleIds}
+            onSelectionChange={onSelectionChange}
+            onOpenContextMenu={onOpenContextMenu}
+            onReport={onReport}
+          />
+        )}
       </div>
-      <button
-        type="button"
-        aria-pressed={lifecycle === 'trashed'}
-        className="m-1 flex h-8 shrink-0 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
-        onClick={() => onLifecycleChange(lifecycle === 'active' ? 'trashed' : 'active')}
-      >
-        {lifecycle === 'active' ? <Trash2 className="size-4" /> : <RotateCcw className="size-4" />}
-        {lifecycle === 'active' ? 'Trash' : 'Back to resources'}
-      </button>
+      <div className="m-1 grid shrink-0 grid-cols-2 gap-1">
+        <button
+          type="button"
+          aria-pressed={view === 'bookmarks'}
+          className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
+          disabled={runtime.resources.bookmarks.status !== 'available'}
+          onClick={() => onViewChange(view === 'bookmarks' ? 'resources' : 'bookmarks')}
+        >
+          <Star className="size-4" />
+          Bookmarks
+        </button>
+        <button
+          type="button"
+          aria-pressed={view === 'trash'}
+          className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
+          onClick={() => onViewChange(view === 'trash' ? 'resources' : 'trash')}
+        >
+          {view === 'trash' ? <RotateCcw className="size-4" /> : <Trash2 className="size-4" />}
+          {view === 'trash' ? 'Resources' : 'Trash'}
+        </button>
+      </div>
       {slots?.footer && <div className="shrink-0 border-t border-border">{slots.footer}</div>}
     </nav>
+  )
+}
+
+function BookmarkedResourceCollection({
+  bookmarks,
+  canEdit,
+  onOpenContextMenu,
+  onReport,
+  onSelectionChange,
+  runtime,
+  selectedResourceId,
+  selection,
+  snapshot,
+  sort,
+  visibleIds,
+}: {
+  bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
+  canEdit: boolean
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onReport: WorkspaceReport
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
+  runtime: EditorRuntime
+  selectedResourceId: ResourceId | null
+  selection: WorkspaceSelection
+  snapshot: WorkspaceResourceIndexSnapshot
+  sort: WorkspaceSort
+  visibleIds: () => ReadonlyArray<ResourceId>
+}) {
+  const bookmarkedIds = bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARKS
+  useEffect(() => {
+    void Promise.all(
+      [...bookmarkedIds].map((resourceId) => runtime.resources.loader.ensureResource(resourceId)),
+    )
+  }, [bookmarkedIds, runtime.resources.loader])
+  if (bookmarks.state === 'unknown')
+    return (
+      <SidebarState load={{ result: null, retry: () => {} }} pendingLabel="Loading bookmarks…" />
+    )
+  const ids = [...bookmarkedIds]
+  const resources = sortAuthorizedResourceSummaries(
+    ids.flatMap((resourceId) => {
+      const knowledge = snapshot.lookup(resourceId)
+      return knowledge.state === 'known' && knowledge.value.lifecycle === 'active'
+        ? [knowledge.value]
+        : []
+    }),
+    sort.by,
+    sort.direction,
+  )
+  if (resources.length === 0) {
+    return <p className="px-2 py-3 text-xs text-muted-foreground">No bookmarked resources</p>
+  }
+  const initialFocusId = selectedResourceId ?? resources[0]?.id ?? null
+  const ambiguous = duplicateResourceKeys(resources)
+  return (
+    <ul className="space-y-0.5">
+      {resources.map((resource) => (
+        <li
+          key={resource.id}
+          className="group flex min-w-0 items-center rounded-md hover:bg-muted/70"
+        >
+          <span className="size-6 shrink-0" />
+          <ResourceTreeButton
+            ambiguous={ambiguous.has(resourcePresentationKey(resource))}
+            canEdit={canEdit}
+            expansion={{ status: 'unavailable' }}
+            initialFocusId={initialFocusId}
+            resource={resource}
+            runtime={runtime}
+            selectedResourceId={selectedResourceId}
+            selection={selection}
+            visibleIds={visibleIds}
+            onSelectionChange={onSelectionChange}
+            onOpenContextMenu={onOpenContextMenu}
+            onReport={onReport}
+          />
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -307,9 +428,8 @@ function ResourceTreeRow({
         <ResourceTreeButton
           ambiguous={ambiguous}
           canEdit={canEdit}
-          expanded={expanded}
+          expansion={{ status: 'available', expanded, onChange: setExpanded }}
           initialFocusId={initialFocusId}
-          onExpandedChange={setExpanded}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
           onReport={onReport}
@@ -369,9 +489,8 @@ function FolderExpansionButton({
 function ResourceTreeButton({
   ambiguous,
   canEdit,
-  expanded,
+  expansion,
   initialFocusId,
-  onExpandedChange,
   onSelectionChange,
   onOpenContextMenu,
   onReport,
@@ -383,9 +502,8 @@ function ResourceTreeButton({
 }: {
   ambiguous: boolean
   canEdit: boolean
-  expanded: boolean
+  expansion: ResourceTreeExpansion
   initialFocusId: ResourceId | null
-  onExpandedChange: (expanded: boolean) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onReport: WorkspaceReport
@@ -426,8 +544,7 @@ function ResourceTreeButton({
       onKeyDown={(event) =>
         handleTreeResourceKey({
           event,
-          expanded,
-          onExpandedChange,
+          expansion,
           onSelectionChange,
           resource,
           runtime,
@@ -468,8 +585,7 @@ function selectTreeResource({
 
 function handleTreeResourceKey({
   event,
-  expanded,
-  onExpandedChange,
+  expansion,
   onSelectionChange,
   resource,
   runtime,
@@ -477,16 +593,19 @@ function handleTreeResourceKey({
   visibleIds,
 }: TreeResourceInteraction & {
   event: KeyboardEvent<HTMLButtonElement>
-  expanded: boolean
-  onExpandedChange: (expanded: boolean) => void
+  expansion: ResourceTreeExpansion
   selection: WorkspaceSelection
 }) {
   switch (event.key) {
     case 'ArrowLeft':
-      if (resource.kind === 'folder' && expanded) consumeKey(event, () => onExpandedChange(false))
+      if (resource.kind === 'folder' && expansion.status === 'available' && expansion.expanded) {
+        consumeKey(event, () => expansion.onChange(false))
+      }
       return
     case 'ArrowRight':
-      if (resource.kind === 'folder' && !expanded) consumeKey(event, () => onExpandedChange(true))
+      if (resource.kind === 'folder' && expansion.status === 'available' && !expansion.expanded) {
+        consumeKey(event, () => expansion.onChange(true))
+      }
       return
     case 'Enter':
       consumeKey(event, () => runtime.navigation.open(resource.id))

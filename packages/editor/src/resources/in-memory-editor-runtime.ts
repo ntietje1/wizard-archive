@@ -33,6 +33,10 @@ import {
   WorkspacePreferencesController,
 } from './workspace-preferences'
 import type { WorkspacePreferencesSnapshot } from './workspace-preferences'
+import {
+  createInMemoryBookmarks,
+  createInMemoryWorkspaceSearch,
+} from './in-memory-workspace-discovery'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -240,6 +244,11 @@ export function createInMemoryEditorRuntime({
     },
   })
   preferences.hydrate(preferencesSnapshot)
+  const catalogResources = () => resources.catalogSnapshot().resources
+  const bookmarks = createInMemoryBookmarks(scope.campaignId, (resourceId) =>
+    catalogResources().some((resource) => resource.id === resourceId),
+  )
+  const search = createInMemoryWorkspaceSearch(catalogResources, notes)
 
   return {
     runtime: {
@@ -249,13 +258,13 @@ export function createInMemoryEditorRuntime({
         loader: resources.loader,
         structure,
         access: unsupported,
-        bookmarks: unsupported,
+        bookmarks: { status: 'available', value: bookmarks },
         previews: unsupported,
       },
       content: contentSources,
       navigation,
       preferences,
-      search: unsupported,
+      search: { status: 'available', value: search },
       history: unsupported,
     },
     dispose: () => {

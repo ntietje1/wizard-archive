@@ -8,15 +8,18 @@ import type {
 import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import { campaignMutation } from '../functions'
+import { campaignMutation, dmMutation } from '../functions'
 import { executeStructureCommand as executeStructureCommandFn } from './functions/executeStructureCommand'
 import {
   bindNoteContentResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
+  resourceBookmarkCommandResultValidator,
+  resourceBookmarkCommandValidator,
 } from './schema'
 import { bindNoteContent as bindNoteContentFn } from './functions/bindNoteContent'
 import { operationIdValidator, resourceIdValidator } from './validators'
+import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCommandReceipt = Extract<
@@ -119,6 +122,30 @@ export const executeStructureCommand = campaignMutation({
       command,
     })
     return storedResult(result)
+  },
+})
+
+export const executeBookmarkCommand = dmMutation({
+  args: {
+    operationId: operationIdValidator,
+    command: resourceBookmarkCommandValidator,
+  },
+  returns: resourceBookmarkCommandResultValidator,
+  handler: async (ctx, args) => {
+    const result = await executeBookmarkCommandFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      args.command.resourceIds.map((resourceId) =>
+        assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+      ),
+      args.command.bookmarked,
+    )
+    return result.status === 'completed'
+      ? {
+          status: 'completed' as const,
+          receipt: { ...result.receipt, resourceIds: [...result.receipt.resourceIds] },
+        }
+      : result
   },
 })
 

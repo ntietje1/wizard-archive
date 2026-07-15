@@ -26,6 +26,10 @@
       "types": "./dist/notes/document/headless-yjs.d.mts",
       "default": "./dist/notes/document/headless-yjs.mjs"
     },
+    "./notes/document-text": {
+      "types": "./dist/notes/document/plain-text.d.mts",
+      "default": "./dist/notes/document/plain-text.mjs"
+    },
     "./resources/domain-id": {
       "types": "./dist/resources/domain-id.d.mts",
       "default": "./dist/resources/domain-id.mjs"
@@ -170,6 +174,7 @@
       "./canvas/document-contract",
       "./notes/document-contract",
       "./notes/document-yjs",
+      "./notes/document-text",
       "./resources/domain-id",
       "./resources/workspace-preferences",
       "./resources/component-version",

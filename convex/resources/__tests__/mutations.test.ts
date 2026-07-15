@@ -1046,6 +1046,37 @@ describe('resource structure commands', () => {
     ).resolves.toEqual({ status: 'rejected', reason: 'invalid_title' })
   })
 
+  it('stores actor-scoped bookmarks through an idempotent command', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'folder', null, 'Reference')
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const args = {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'setBookmarkState' as const,
+        resourceIds: [resourceId],
+        bookmarked: true,
+      },
+    }
+
+    const first = await asDm(campaign).mutation(
+      api.resources.mutations.executeBookmarkCommand,
+      args,
+    )
+    const replay = await asDm(campaign).mutation(
+      api.resources.mutations.executeBookmarkCommand,
+      args,
+    )
+
+    expect(first).toEqual(replay)
+    expect(first).toMatchObject({ status: 'completed', receipt: { resourceIds: [resourceId] } })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadBookmarks, { campaignId: campaignUuid }),
+    ).resolves.toEqual([resourceId])
+  })
+
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {
     return await t.run(async (ctx) => {
       return (await ctx.db.get('campaigns', campaignId))!.campaignUuid

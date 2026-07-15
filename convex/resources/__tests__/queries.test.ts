@@ -297,6 +297,53 @@ describe('authorized resource projection', () => {
     ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
   })
 
+  it('searches active resource titles and note bodies', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'create',
+        resourceId: noteId,
+        kind: 'note',
+        parentId: null,
+        title: 'Adventure Log',
+        icon: null,
+        color: null,
+      },
+    })
+    await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
+      campaignId: campaignUuid,
+      operationId,
+      resourceId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'The hidden citadel awaits.' }],
+        },
+      ]),
+    })
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query: 'adventure',
+      }),
+    ).resolves.toEqual([{ resourceId: noteId, match: { type: 'title' } }])
+    await expect(
+      asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query: 'citadel',
+      }),
+    ).resolves.toEqual([
+      { resourceId: noteId, match: { type: 'body', text: 'The hidden citadel awaits.' } },
+    ])
+  })
+
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {
     return await t.run(async (ctx) => (await ctx.db.get('campaigns', campaignId))!.campaignUuid)
   }
