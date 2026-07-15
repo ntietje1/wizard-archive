@@ -529,6 +529,9 @@ function compensationFromRow(
         resourceIds: plan.resourceIds.map((resourceId) =>
           assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
         ),
+        expectedClosureResourceIds: plan.expectedClosureResourceIds.map((resourceId) =>
+          assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+        ),
         requiredPostconditions,
       }
   }
@@ -591,6 +594,7 @@ function compensationForRow(
       return {
         type: plan.type,
         resourceIds: [...plan.resourceIds],
+        expectedClosureResourceIds: [...plan.expectedClosureResourceIds],
         requiredPostconditions,
       }
   }

@@ -265,6 +265,7 @@ export const resourceCompensationPlanValidator = v.union(
   v.object({
     type: literals('trash', 'restore'),
     resourceIds: v.array(resourceIdValidator),
+    expectedClosureResourceIds: v.array(resourceIdValidator),
     requiredPostconditions: v.array(resourcePostconditionValidator),
   }),
 )

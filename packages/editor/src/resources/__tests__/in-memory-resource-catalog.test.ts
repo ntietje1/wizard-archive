@@ -415,6 +415,128 @@ describe('in-memory resource compensation', () => {
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'history_irreversible' })
   })
+
+  it('rejects create, restore, and deep-copy undo after a later descendant appears', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({
+      authorize: () => true,
+      contentCopy: {
+        prepare: (context) => Promise.resolve(context),
+        referenceableTargets: () => [],
+        finalize: () => Promise.resolve(() => undefined),
+      },
+    })
+    const compensate = (
+      originalOperationId: ReturnType<typeof operationDomainId>,
+      sequence: number,
+    ) =>
+      operations.compensate(actorId, {
+        campaignId,
+        operationId: operationDomainId(sequence),
+        originalOperationId,
+      })
+
+    const createdRoot = resourceDomainId(90)
+    const created = await createResource(
+      operations,
+      createdRoot,
+      operationDomainId(90),
+      null,
+      'folder',
+    )
+    if (created.status !== 'completed') throw new Error('Expected create completion')
+    const createdChild = resourceDomainId(91)
+    await createResource(operations, createdChild, operationDomainId(91), createdRoot, 'note')
+    await expect(compensate(created.receipt.operationId, 92)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'history_conflict',
+    })
+
+    const restoredRoot = resourceDomainId(93)
+    const restoredChild = resourceDomainId(94)
+    await createResource(operations, restoredRoot, operationDomainId(93), null, 'folder')
+    await createResource(operations, restoredChild, operationDomainId(94), restoredRoot, 'note')
+    await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(95),
+      command: { type: 'trash', resourceIds: [restoredRoot] },
+    })
+    const restored = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(96),
+      command: { type: 'restore', resourceIds: [restoredRoot] },
+    })
+    if (restored.status !== 'completed') throw new Error('Expected restore completion')
+    const laterRestoredChild = resourceDomainId(97)
+    await createResource(
+      operations,
+      laterRestoredChild,
+      operationDomainId(97),
+      restoredRoot,
+      'note',
+    )
+    await expect(compensate(restored.receipt.operationId, 98)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'history_conflict',
+    })
+
+    const sourceRoot = resourceDomainId(100)
+    const sourceChild = resourceDomainId(101)
+    await createResource(operations, sourceRoot, operationDomainId(100), null, 'folder')
+    await createResource(operations, sourceChild, operationDomainId(101), sourceRoot, 'folder')
+    const copied = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(102),
+      command: { type: 'deepCopy', sourceRootIds: [sourceRoot], destinationParentId: null },
+    })
+    if (copied.status !== 'completed' || copied.receipt.result.type !== 'deepCopied') {
+      throw new Error('Expected deep-copy completion')
+    }
+    const copiedRoot = copied.receipt.result.roots[0]!.destinationRootId
+    const laterCopiedChild = resourceDomainId(103)
+    await createResource(operations, laterCopiedChild, operationDomainId(103), copiedRoot, 'note')
+    await expect(compensate(copied.receipt.operationId, 104)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'history_conflict',
+    })
+
+    expect(parentIds(catalog, createdChild, laterRestoredChild, laterCopiedChild)).toEqual([
+      createdRoot,
+      restoredRoot,
+      copiedRoot,
+    ])
+  })
+
+  it('keeps closure membership exact when compensating a redo', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({ authorize: () => true })
+    const root = resourceDomainId(110)
+    const created = await createResource(operations, root, operationDomainId(110), null, 'folder')
+    if (created.status !== 'completed') throw new Error('Expected create completion')
+    const undone = await operations.compensate(actorId, {
+      campaignId,
+      operationId: operationDomainId(111),
+      originalOperationId: created.receipt.operationId,
+    })
+    if (undone.status !== 'completed') throw new Error('Expected undo completion')
+    const redone = await operations.compensate(actorId, {
+      campaignId,
+      operationId: operationDomainId(112),
+      originalOperationId: undone.receipt.operationId,
+    })
+    if (redone.status !== 'completed') throw new Error('Expected redo completion')
+    const laterChild = resourceDomainId(113)
+    await createResource(operations, laterChild, operationDomainId(113), root, 'note')
+
+    await expect(
+      operations.compensate(actorId, {
+        campaignId,
+        operationId: operationDomainId(114),
+        originalOperationId: redone.receipt.operationId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'history_conflict' })
+    expect(parentIds(catalog, laterChild)).toEqual([root])
+  })
 })
 
 function parentIds(

@@ -44,6 +44,7 @@ export type ResourceCompensationPlan =
   | Readonly<{
       type: 'trash' | 'restore'
       resourceIds: ReadonlyArray<ResourceId>
+      expectedClosureResourceIds: ReadonlyArray<ResourceId>
       requiredPostconditions: ReadonlyArray<ResourcePostcondition>
     }>
 
@@ -242,6 +243,17 @@ function parentDependencies(
   return Array.from(result.values())
 }
 
+function receiptResourceIds(completed: ResourceCommandReceipt): ReadonlyArray<ResourceId> {
+  const ids = completed.postconditions.map((condition) => {
+    if (condition.state !== 'present') return reject('content_integrity_failure')
+    return condition.resourceId
+  })
+  if (ids.length === 0 || new Set(ids).size !== ids.length) {
+    return reject('content_integrity_failure')
+  }
+  return ids.sort((left, right) => left.localeCompare(right))
+}
+
 export function planResourceCompensation(
   graph: ResourceGraph,
   campaignId: CampaignId,
@@ -253,6 +265,7 @@ export function planResourceCompensation(
       return {
         type: 'trash',
         resourceIds: [command.resourceId],
+        expectedClosureResourceIds: receiptResourceIds(completed),
         requiredPostconditions: completed.postconditions,
       }
     case 'updateMetadata': {
@@ -287,6 +300,7 @@ export function planResourceCompensation(
       return {
         type: 'restore',
         resourceIds: roots.map((resource) => resource.id),
+        expectedClosureResourceIds: receiptResourceIds(completed),
         requiredPostconditions: requiredPostconditions(
           completed.postconditions,
           parentDependencies(graph, campaignId, roots),
@@ -299,6 +313,7 @@ export function planResourceCompensation(
         resourceIds: selectResourceRoots(graph, campaignId, command.resourceIds).map(
           (resource) => resource.id,
         ),
+        expectedClosureResourceIds: receiptResourceIds(completed),
         requiredPostconditions: completed.postconditions,
       }
     case 'deepCopy':
@@ -306,6 +321,7 @@ export function planResourceCompensation(
       return {
         type: 'trash',
         resourceIds: completed.result.roots.map((root) => root.destinationRootId),
+        expectedClosureResourceIds: receiptResourceIds(completed),
         requiredPostconditions: completed.postconditions,
       }
     case 'permanentlyDelete':
@@ -325,6 +341,30 @@ function postconditionsMatch(
       resource.metadataVersion.digest === condition.metadataVersion.digest
     )
   })
+}
+
+function closureMatches(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  plan: Extract<ResourceCompensationPlan, { type: 'trash' | 'restore' }>,
+): boolean {
+  const roots = selectResourceRoots(graph, campaignId, plan.resourceIds)
+  const actual = selectResourceClosure(graph, campaignId, roots).map((resource) => resource.id)
+  return (
+    actual.length === plan.expectedClosureResourceIds.length &&
+    actual.every((resourceId, index) => resourceId === plan.expectedClosureResourceIds[index])
+  )
+}
+
+function compensationMatches(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  plan: ResourceCompensationPlan,
+): boolean {
+  if (!postconditionsMatch(graph, plan.requiredPostconditions)) return false
+  return plan.type !== 'trash' && plan.type !== 'restore'
+    ? true
+    : closureMatches(graph, campaignId, plan)
 }
 
 function applyTransitionToGraph(
@@ -351,7 +391,7 @@ export async function transitionResourceCompensation(
   plan: ResourceCompensationPlan,
   audit: AuditStamp,
 ): Promise<ResourceCompensationTransition | null> {
-  if (!postconditionsMatch(graph, plan.requiredPostconditions)) return null
+  if (!compensationMatches(graph, campaignId, plan)) return null
   if (plan.type !== 'move') {
     const command: Exclude<
       ResourceStructureCommand,

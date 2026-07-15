@@ -172,6 +172,69 @@ describe('resource structure commands', () => {
     expect(await storedParentIds(childA, childB)).toEqual([destination, destination])
   })
 
+  it('persists exact closure membership through undo and redo', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const rootId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const created = await execute(campaign, campaignUuid, {
+      type: 'create',
+      resourceId: rootId,
+      parentId: null,
+      kind: 'folder',
+      title: 'Redo root',
+      icon: null,
+      color: null,
+    })
+    if (created.status !== 'completed') throw new Error('Expected create completion')
+    const undone = await asDm(campaign).mutation(
+      api.resources.mutations.compensateResourceOperation,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: created.receipt.operationId,
+      },
+    )
+    if (undone.status !== 'completed') throw new Error('Expected undo completion')
+    const redone = await asDm(campaign).mutation(
+      api.resources.mutations.compensateResourceOperation,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: undone.receipt.operationId,
+      },
+    )
+    if (redone.status !== 'completed') throw new Error('Expected redo completion')
+    await t.run(async (ctx) => {
+      const operation = await ctx.db
+        .query('resourceOperations')
+        .withIndex('by_campaign_and_operation', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('operationUuid', redone.receipt.operationId),
+        )
+        .unique()
+      expect(operation?.compensation).toMatchObject({
+        type: 'trash',
+        resourceIds: [rootId],
+        expectedClosureResourceIds: [rootId],
+      })
+    })
+    const laterChild = await createResource(
+      campaign,
+      campaignUuid,
+      'note',
+      rootId,
+      'Later redo child',
+    )
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.compensateResourceOperation, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: redone.receipt.operationId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'history_conflict' })
+    expect(await storedParentIds(laterChild)).toEqual([rootId])
+  })
+
   it('atomically creates a file resource from one owned upload', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
