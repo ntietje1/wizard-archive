@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
-import { ChevronDown, ChevronRight, File, PanelLeftClose, Plus, Search, Star } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  File,
+  ListCollapse,
+  PanelLeftClose,
+  Plus,
+  Search,
+  Star,
+} from 'lucide-react'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -43,6 +52,48 @@ type ResourceTreeExpansion =
   | Readonly<{ status: 'unavailable' }>
   | Readonly<{ status: 'available'; expanded: boolean; onChange: (expanded: boolean) => void }>
 
+type ResourceTreeExpansionState = Readonly<{
+  defaultExpanded: boolean
+  exceptions: ReadonlySet<ResourceId>
+}>
+
+const DEFAULT_TREE_EXPANSION: ResourceTreeExpansionState = {
+  defaultExpanded: true,
+  exceptions: new Set(),
+}
+
+type ResourceTreeExpansionController = Readonly<{
+  isExpanded: (resourceId: ResourceId) => boolean
+  setExpanded: (resourceId: ResourceId, expanded: boolean) => void
+}>
+
+function isTreeResourceExpanded(
+  state: ResourceTreeExpansionState,
+  resourceId: ResourceId,
+): boolean {
+  return state.exceptions.has(resourceId) ? !state.defaultExpanded : state.defaultExpanded
+}
+
+function setTreeResourceExpanded(
+  state: ResourceTreeExpansionState,
+  resourceId: ResourceId,
+  expanded: boolean,
+): ResourceTreeExpansionState {
+  if (isTreeResourceExpanded(state, resourceId) === expanded) return state
+  const exceptions = new Set(state.exceptions)
+  if (exceptions.has(resourceId)) exceptions.delete(resourceId)
+  else exceptions.add(resourceId)
+  return { ...state, exceptions }
+}
+
+function visibleAncestorIds(
+  snapshot: WorkspaceResourceIndexSnapshot,
+  resourceId: ResourceId,
+): ReadonlyArray<ResourceId> {
+  const ancestors = snapshot.ancestors(resourceId)
+  return ancestors.state === 'known' ? ancestors.value.map((resource) => resource.id) : []
+}
+
 export function ResourceSidebar({
   bookmarks,
   canEdit,
@@ -81,6 +132,7 @@ export function ResourceSidebar({
   onViewChange: (view: 'bookmarks' | 'resources' | 'trash') => void
 }) {
   const navigationElement = useRef<HTMLElement>(null)
+  const [treeExpansion, setTreeExpansion] = useState(DEFAULT_TREE_EXPANSION)
   const visibleIds = () => visibleResourceIds(navigationElement.current)
   const lifecycle = view === 'trash' ? 'trashed' : 'active'
   const query = { parentId: null, lifecycle } as const
@@ -91,6 +143,27 @@ export function ResourceSidebar({
       ? sortAuthorizedResourceSummaries(roots.items, sort.by, sort.direction)[0]?.id
       : null) ??
     null
+  useEffect(
+    () =>
+      runtime.navigation.subscribe(() => {
+        if (view === 'bookmarks') return
+        const resourceId = runtime.navigation.current()
+        if (resourceId === null) return
+        const ancestorIds = visibleAncestorIds(snapshot, resourceId)
+        setTreeExpansion((current) =>
+          ancestorIds.reduce(
+            (next, ancestorId) => setTreeResourceExpanded(next, ancestorId, true),
+            current,
+          ),
+        )
+      }),
+    [runtime.navigation, snapshot, view],
+  )
+  const expansion = {
+    isExpanded: (resourceId: ResourceId) => isTreeResourceExpanded(treeExpansion, resourceId),
+    setExpanded: (resourceId: ResourceId, expanded: boolean) =>
+      setTreeExpansion((current) => setTreeResourceExpanded(current, resourceId, expanded)),
+  }
   return (
     <nav
       ref={navigationElement}
@@ -138,6 +211,16 @@ export function ResourceSidebar({
           <Search className="size-4" />
         </button>
         <div className="flex-1" />
+        {view !== 'bookmarks' && (
+          <button
+            type="button"
+            aria-label="Collapse all folders"
+            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => setTreeExpansion({ defaultExpanded: false, exceptions: new Set() })}
+          >
+            <ListCollapse className="size-4" />
+          </button>
+        )}
         <label className="sr-only" htmlFor="workspace-resource-sort">
           Sort resources
         </label>
@@ -190,6 +273,7 @@ export function ResourceSidebar({
         ) : (
           <ResourceCollection
             canEdit={canEdit}
+            expansion={expansion}
             query={query}
             runtime={runtime}
             initialFocusId={initialFocusId}
@@ -311,6 +395,7 @@ function BookmarkedResourceCollection({
 
 function ResourceCollection({
   canEdit,
+  expansion,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
@@ -324,6 +409,7 @@ function ResourceCollection({
   visibleIds,
 }: {
   canEdit: boolean
+  expansion: ResourceTreeExpansionController
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
@@ -353,6 +439,7 @@ function ResourceCollection({
         <ResourceTreeRow
           ambiguous={ambiguous.has(resourcePresentationKey(resource))}
           canEdit={canEdit}
+          expansion={expansion}
           key={resource.id}
           resource={resource}
           runtime={runtime}
@@ -377,6 +464,7 @@ function ResourceCollection({
 function ResourceTreeRow({
   ambiguous,
   canEdit,
+  expansion,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
@@ -391,6 +479,7 @@ function ResourceTreeRow({
 }: {
   ambiguous: boolean
   canEdit: boolean
+  expansion: ResourceTreeExpansionController
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
@@ -403,7 +492,7 @@ function ResourceTreeRow({
   sort: WorkspaceSort
   visibleIds: () => ReadonlyArray<ResourceId>
 }) {
-  const [expanded, setExpanded] = useState(true)
+  const expanded = expansion.isExpanded(resource.id)
   const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const
   const children = resource.kind === 'folder' ? snapshot.list(childQuery) : null
   const hasChildren = children?.state !== 'known' || children.items.length > 0
@@ -416,7 +505,7 @@ function ResourceTreeRow({
             expanded={expanded}
             hasChildren={hasChildren}
             title={resource.title}
-            onToggle={() => setExpanded((value) => !value)}
+            onToggle={() => expansion.setExpanded(resource.id, !expanded)}
           />
         ) : (
           <span className="size-6 shrink-0" />
@@ -424,7 +513,11 @@ function ResourceTreeRow({
         <ResourceTreeButton
           ambiguous={ambiguous}
           canEdit={canEdit}
-          expansion={{ status: 'available', expanded, onChange: setExpanded }}
+          expansion={{
+            status: 'available',
+            expanded,
+            onChange: (value) => expansion.setExpanded(resource.id, value),
+          }}
           initialFocusId={initialFocusId}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
@@ -440,6 +533,7 @@ function ResourceTreeRow({
         <div className="ml-3 border-l border-border pl-1">
           <ResourceCollection
             canEdit={canEdit}
+            expansion={expansion}
             query={childQuery}
             runtime={runtime}
             initialFocusId={initialFocusId}

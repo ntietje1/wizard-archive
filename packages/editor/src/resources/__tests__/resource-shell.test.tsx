@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
@@ -140,6 +140,13 @@ describe('ResourceShell', () => {
       state: 'known',
       value: { kind: 'map', displayParentId: resource.id, title: 'Untitled map' },
     })
+
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.click(sidebar.getByRole('button', { name: resource.title }))
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse all folders' }))
+    expect(sidebar.queryByRole('button', { name: 'Untitled map' })).not.toBeInTheDocument()
+    act(() => navigation.open(createdId))
+    await waitFor(() => expect(sidebar.getByRole('button', { name: 'Untitled map' })).toBeVisible())
     core.dispose()
   })
 
