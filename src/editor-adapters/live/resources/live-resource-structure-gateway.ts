@@ -19,7 +19,7 @@ type ExecuteResult = FunctionReturnType<typeof api.resources.mutations.executeSt
 
 type LiveResourceStructureMutation = (args: ExecuteArgs) => Promise<ExecuteResult>
 
-function toMutationCommand(
+export function toLiveStructureMutationCommand(
   command: ReturnType<typeof normalizeResourceStructureCommand>,
 ): ExecuteArgs['command'] {
   switch (command.type) {
@@ -88,7 +88,7 @@ function readReceipt(value: ResourceCommandReceiptShape): ResourceCommandReceipt
   }
 }
 
-function readResult(value: ExecuteResult): ResourceStructureCommandResult {
+export function readLiveStructureResult(value: ExecuteResult): ResourceStructureCommandResult {
   if (value.status === 'completed')
     return { status: value.status, receipt: readReceipt(value.receipt) }
   return value
@@ -112,7 +112,9 @@ export function createLiveResourceStructureGateway(
         args = {
           campaignId,
           operationId: assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId),
-          command: toMutationCommand(normalizeResourceStructureCommand(envelope.command)),
+          command: toLiveStructureMutationCommand(
+            normalizeResourceStructureCommand(envelope.command),
+          ),
         }
       } catch (error) {
         return {
@@ -122,7 +124,7 @@ export function createLiveResourceStructureGateway(
       }
 
       try {
-        const result = readResult(await executeMutation(args))
+        const result = readLiveStructureResult(await executeMutation(args))
         if (
           result.status === 'completed' &&
           (result.receipt.campaignId !== campaignId ||

@@ -173,6 +173,28 @@ export function classifyResourceSource({
   }
 }
 
+export function classifyFileResourceSource(input: {
+  bytes: Uint8Array
+  fileName: string
+  inspection?: ResourceSourceInspection
+}): FileOwnedMetadata | RejectedResourceSource {
+  const classified = classifyResourceSource(input)
+  if (classified.classification === 'rejected') return classified
+  const extension = canonicalFileExtension(input.fileName)
+  if (
+    classified.classification !== 'note' &&
+    (extension === null || !NOTE_EXTENSIONS.has(extension))
+  ) {
+    return classified
+  }
+  return inertFile(
+    classified.byteSize,
+    extension,
+    null,
+    FILE_VIEWER_UNAVAILABLE_REASON.unsupportedFormat,
+  )
+}
+
 export function canonicalFileExtension(fileName: string): string | null {
   const normalized = fileName.normalize('NFC').toLowerCase()
   const baseName = normalized.replaceAll('\\', '/').split('/').at(-1) ?? ''

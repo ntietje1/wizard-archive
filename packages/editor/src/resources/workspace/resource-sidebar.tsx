@@ -21,7 +21,11 @@ import {
   leaveWorkspaceResourceDrop,
   workspaceResourceDragProps,
 } from '../workspace-resource-drag'
-import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
+import {
+  createWorkspaceFile,
+  createWorkspaceResource,
+  resourceKindLabel,
+} from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
@@ -674,6 +678,8 @@ export function ResourceCreateMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
+  const [pending, setPending] = useState(false)
+  const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="relative">
       <button
@@ -681,6 +687,8 @@ export function ResourceCreateMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={label}
+        aria-busy={pending}
+        disabled={pending}
         className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
         onClick={() => setOpen((value) => !value)}
       >
@@ -716,7 +724,10 @@ export function ResourceCreateMenu({
                 className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
                 onClick={() => {
                   setOpen(false)
-                  void createWorkspaceResource(runtime, kind, parentId, title, onReport)
+                  setPending(true)
+                  void createWorkspaceResource(runtime, kind, parentId, title, onReport).finally(
+                    () => setPending(false),
+                  )
                 }}
               >
                 <Icon className="size-4" />
@@ -727,12 +738,28 @@ export function ResourceCreateMenu({
           <button
             role="menuitem"
             type="button"
-            className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm text-muted-foreground"
-            disabled
+            className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
+            onClick={() => upload.current?.click()}
           >
             <File className="size-4" />
             Upload file
           </button>
+          <input
+            ref={upload}
+            type="file"
+            className="hidden"
+            aria-label={`${label}: choose file`}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (!file) return
+              setOpen(false)
+              setPending(true)
+              void createWorkspaceFile(runtime, parentId, file, onReport).finally(() =>
+                setPending(false),
+              )
+            }}
+          />
         </div>
       )}
     </div>

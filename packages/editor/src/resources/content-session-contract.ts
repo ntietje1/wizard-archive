@@ -101,6 +101,15 @@ export type CreateNoteResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
   readonly kind: 'note'
 }
 
+export type CreateFileResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
+  readonly kind: 'file'
+}
+
+export type FileResourceSource = Readonly<{
+  bytes: Uint8Array
+  fileName: string
+}>
+
 export interface NoteSessionSource {
   get(resourceId: ResourceId): NoteSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
@@ -114,6 +123,10 @@ export interface NoteSessionSource {
 export interface FileContentSource {
   get(resourceId: ResourceId): FileContentState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+  create(
+    envelope: CommandEnvelope<CreateFileResourceCommand>,
+    source: FileResourceSource,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   dispose(): void
 }
 

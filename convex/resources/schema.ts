@@ -30,7 +30,7 @@ export const fileViewerUnavailableReasonValidator = literals(
   ...Object.values(FILE_VIEWER_UNAVAILABLE_REASON),
 )
 
-const fileOwnedMetadataValidators = {
+export const fileOwnedMetadataValidators = {
   classification: fileClassificationValidator,
   byteSize: v.number(),
   detectedFormat: v.nullable(v.string()),

@@ -19,7 +19,10 @@ import {
 } from '@wizard-archive/editor/canvas/document-contract'
 import * as Y from 'yjs'
 import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
-import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
+import {
+  storeCommittedTestUploadSession,
+  storeUncommittedTestUploadSession,
+} from '../../_test/storage.helper'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 
 type StoredResourceStructureCommand = FunctionArgs<
@@ -30,6 +33,68 @@ describe('resource structure commands', () => {
   const t = createTestContext()
 
   afterEach(() => vi.useRealTimers())
+
+  it('atomically creates a file resource from one owned upload', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const bytes = new TextEncoder().encode('uploaded bytes')
+    const metadata = {
+      classification: 'inert_file' as const,
+      byteSize: bytes.byteLength,
+      detectedFormat: null,
+      extension: 'txt',
+      mediaType: 'application/octet-stream',
+      viewerUnavailableReason: 'unsupported_format' as const,
+    }
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([bytes]),
+      'evidence.txt',
+    )
+
+    const result = await asDm(campaign).mutation(api.resources.mutations.createFileResource, {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'file',
+        parentId: null,
+        title: 'evidence.txt',
+        icon: null,
+        color: null,
+      },
+      uploadSessionId: upload.sessionId,
+      metadata,
+      version: await initialFileContentVersion(bytes, metadata),
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      receipt: { result: { type: 'created', resourceId } },
+    })
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      expect(content).toMatchObject({
+        state: 'ready',
+        assetUuid: upload.assetId,
+        ...metadata,
+        version: expect.objectContaining({ revision: 1 }),
+      })
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).resolves.toMatchObject({ assetUuid: upload.assetId })
+    })
+  })
 
   it('creates a canonical resource and stores an actor-bound replay receipt', async () => {
     const campaign = await setupCampaignContext(t)

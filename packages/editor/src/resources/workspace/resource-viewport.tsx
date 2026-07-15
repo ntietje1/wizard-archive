@@ -1,4 +1,5 @@
-import { Folder } from 'lucide-react'
+import { FileUp, Folder } from 'lucide-react'
+import { useRef, useState } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -18,7 +19,11 @@ import {
 } from '../workspace-resource-drag'
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
-import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
+import {
+  createWorkspaceFile,
+  createWorkspaceResource,
+  resourceKindLabel,
+} from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
@@ -178,6 +183,8 @@ function CreateNewDashboard({
   onReport: WorkspaceReport
   runtime: EditorRuntime
 }) {
+  const [pending, setPending] = useState(false)
+  const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
       <div className="w-full max-w-2xl">
@@ -190,10 +197,15 @@ function CreateNewDashboard({
               <button
                 key={kind}
                 type="button"
+                aria-busy={pending}
+                disabled={pending}
                 className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted"
                 onClick={() => {
                   const title = `Untitled ${kind}`
-                  void createWorkspaceResource(runtime, kind, folder.id, title, onReport)
+                  setPending(true)
+                  void createWorkspaceResource(runtime, kind, folder.id, title, onReport).finally(
+                    () => setPending(false),
+                  )
                 }}
               >
                 <Icon className="size-7 text-muted-foreground" />
@@ -201,6 +213,31 @@ function CreateNewDashboard({
               </button>
             )
           })}
+          <button
+            type="button"
+            aria-busy={pending}
+            disabled={pending}
+            className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
+            onClick={() => upload.current?.click()}
+          >
+            <FileUp className="size-7 text-muted-foreground" />
+            Upload File
+          </button>
+          <input
+            ref={upload}
+            type="file"
+            className="hidden"
+            aria-label={`Upload file to ${folder.title}`}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (!file) return
+              setPending(true)
+              void createWorkspaceFile(runtime, folder.id, file, onReport).finally(() =>
+                setPending(false),
+              )
+            }}
+          />
         </div>
         <div className="mt-8 border-t border-border pt-5 text-center">
           <p className="text-sm font-medium">Create from Template</p>

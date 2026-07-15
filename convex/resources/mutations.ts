@@ -7,19 +7,24 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { FILE_CLASSIFICATION } from '@wizard-archive/editor/resources/file-content-contract'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignMutation, dmMutation } from '../functions'
 import { executeStructureCommand as executeStructureCommandFn } from './functions/executeStructureCommand'
 import {
   bindNoteContentResultValidator,
+  fileOwnedMetadataValidators,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
+  versionStampValidator,
 } from './schema'
 import { bindNoteContent as bindNoteContentFn } from './functions/bindNoteContent'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
+import { commitUpload } from '../storage/functions/commitUpload'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCommandReceipt = Extract<
@@ -162,4 +167,66 @@ export const bindNoteContent = campaignMutation({
       operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
       update: args.update,
     }),
+})
+
+export const createFileResource = campaignMutation({
+  args: {
+    operationId: operationIdValidator,
+    command: resourceStructureCommandValidator,
+    uploadSessionId: v.id('fileStorage'),
+    metadata: v.object(fileOwnedMetadataValidators),
+    version: versionStampValidator,
+  },
+  returns: resourceStructureCommandResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
+    let command: ResourceStructureCommand
+    try {
+      command = resourceStructureCommand(args.command)
+    } catch (error) {
+      return { status: 'rejected', reason: resourceStructureInputRejection(error) }
+    }
+    if (command.type !== 'create' || command.kind !== 'file') {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
+    const result = await executeStructureCommandFn(ctx, {
+      operationId: args.operationId,
+      command,
+    })
+    if (result.status !== 'completed') return storedResult(result)
+
+    const content = await ctx.db
+      .query('resourceFileContents')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
+      .unique()
+    if (!content || content.campaignUuid !== ctx.resourceScope.campaignId) {
+      throw new TypeError('Created file content is missing')
+    }
+    if (content.assetUuid !== null) return storedResult(result)
+
+    const upload = await commitUpload(ctx, { sessionId: args.uploadSessionId })
+    const version = assertVersionStamp(args.version)
+    if (
+      upload.assetId === null ||
+      upload.metadata.size !== args.metadata.byteSize ||
+      version.revision !== 1 ||
+      (args.metadata.classification === FILE_CLASSIFICATION.inert) !==
+        (args.metadata.viewerUnavailableReason !== null)
+    ) {
+      throw new TypeError('Uploaded file metadata is inconsistent')
+    }
+    await Promise.all([
+      ctx.db.patch('resourceFileContents', content._id, {
+        state: 'ready',
+        assetUuid: upload.assetId,
+        ...args.metadata,
+        version,
+      }),
+      ctx.db.insert('resourceAssetOwners', {
+        campaignUuid: ctx.resourceScope.campaignId,
+        resourceUuid: command.resourceId,
+        assetUuid: upload.assetId,
+      }),
+    ])
+    return storedResult(result)
+  },
 })

@@ -17,7 +17,7 @@ export type WorkspaceReport = (message: string, retry?: () => void) => void
 
 export async function createWorkspaceResource(
   runtime: EditorRuntime,
-  kind: ResourceKind,
+  kind: Exclude<ResourceKind, 'file'>,
   parentId: ResourceId | null,
   title: string,
   report: WorkspaceReport,
@@ -58,20 +58,71 @@ export async function createWorkspaceResource(
             operationId,
             command,
           })
-  const attempt = async (): Promise<void> => {
-    const delivery = await deliver()
-    if (delivery.status === 'indeterminate') {
-      report(deliveryMessage(delivery), () => void attempt())
-      return
-    }
-    if (delivery.status === 'received' && delivery.result.status === 'completed') {
-      runtime.navigation.open(resourceId)
-      report(`${resourceKindLabel(kind)} created`)
-      return
-    }
-    report(deliveryMessage(delivery))
+  await completeWorkspaceCreation(
+    runtime,
+    resourceId,
+    deliver,
+    `${resourceKindLabel(kind)} created`,
+    report,
+  )
+}
+
+export async function createWorkspaceFile(
+  runtime: EditorRuntime,
+  parentId: ResourceId | null,
+  file: File,
+  report: WorkspaceReport,
+) {
+  if (runtime.resources.structure.status !== 'available') {
+    report('This workspace is read only')
+    return
   }
-  await attempt()
+  const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+  const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+  const source = { bytes: new Uint8Array(await file.arrayBuffer()), fileName: file.name }
+  const envelope = {
+    campaignId: runtime.scope.campaignId,
+    operationId,
+    command: {
+      type: 'create' as const,
+      resourceId,
+      kind: 'file' as const,
+      parentId,
+      title: canonicalizeResourceTitle(file.name),
+      icon: null,
+      color: null,
+    },
+  }
+  await completeWorkspaceCreation(
+    runtime,
+    resourceId,
+    () => runtime.content.files.create(envelope, source),
+    'File uploaded',
+    report,
+  )
+}
+
+async function completeWorkspaceCreation(
+  runtime: EditorRuntime,
+  resourceId: ResourceId,
+  deliver: () => Promise<CommandDelivery<ResourceStructureCommandResult>>,
+  successMessage: string,
+  report: WorkspaceReport,
+): Promise<void> {
+  const delivery = await deliver()
+  if (delivery.status === 'indeterminate') {
+    report(
+      deliveryMessage(delivery),
+      () => void completeWorkspaceCreation(runtime, resourceId, deliver, successMessage, report),
+    )
+    return
+  }
+  if (delivery.status === 'received' && delivery.result.status === 'completed') {
+    runtime.navigation.open(resourceId)
+    report(successMessage)
+    return
+  }
+  report(deliveryMessage(delivery))
 }
 
 export async function updateWorkspaceResource(

@@ -86,6 +86,63 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('uploads a file from the sidebar through the file content owner', async () => {
+    const { core } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
+    expect(screen.getByRole('menuitem', { name: 'Upload file' })).toBeEnabled()
+    const file = new File(['uploaded text'], 'evidence.txt', { type: 'text/plain' })
+    fireEvent.change(screen.getByLabelText('Create resource: choose file'), {
+      target: { files: [file] },
+    })
+
+    expect(await screen.findByText('File uploaded')).toBeInTheDocument()
+    const uploaded = core.runtime.resources.index
+      .getSnapshot()
+      .list({ parentId: null, lifecycle: 'active' })
+    expect(uploaded).toMatchObject({
+      state: 'known',
+      items: expect.arrayContaining([
+        expect.objectContaining({ kind: 'file', title: 'evidence.txt' }),
+      ]),
+    })
+    core.dispose()
+  })
+
+  it('creates resources inside folders from the folder context menu', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.contextMenu(await screen.findByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    expect(screen.getByRole('menuitem', { name: 'Upload File' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New Map' }))
+
+    expect(await screen.findByText('Map created')).toBeInTheDocument()
+    const createdId = navigation.current()
+    if (!createdId) throw new Error('expected created map to open')
+    expect(core.runtime.resources.index.getSnapshot().lookup(createdId)).toMatchObject({
+      state: 'known',
+      value: { kind: 'map', displayParentId: resource.id, title: 'Untitled map' },
+    })
+    core.dispose()
+  })
+
   it('keeps exact duplicate titles unchanged when creating resources', async () => {
     const { core, resource } = await shellRuntime(true)
 
@@ -460,6 +517,7 @@ async function createFolderFromSidebar(title: string) {
   })
   fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
   await screen.findByRole('button', { name: title })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create resource' })).toBeEnabled())
 }
 
 async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 'active') {

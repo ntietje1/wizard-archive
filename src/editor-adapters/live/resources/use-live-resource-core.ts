@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import type { Id } from 'convex/_generated/dataModel'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import type {
   ResourceNavigation,
@@ -12,6 +13,7 @@ import { createLiveResourceStructureGateway } from './live-resource-structure-ga
 import { createLiveNoteContentSource } from './live-note-content-source'
 import { createLiveResourceContentSource } from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
+import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
 
@@ -92,7 +94,38 @@ function createScopedLiveResourceRuntime(
       return subscribeToWatch(watch, apply)
     },
   })
-  const files = createLiveResourceContentSource('file', contentBackend('file'))
+  const files = createLiveFileContentSource(currentScope.campaignId, {
+    ...contentBackend('file'),
+    create: (args) => convex.mutation(api.resources.mutations.createFileResource, args),
+    discard: async (sessionId) => {
+      await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
+    },
+    refresh: async (resourceId, parentId) => {
+      await Promise.all([
+        base.loader.ensureResource(resourceId),
+        base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
+      ])
+    },
+    upload: async (source) => {
+      const { sessionId, uploadUrl } = await convex.mutation(
+        api.storage.mutations.createUploadSession,
+        {},
+      )
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: new Blob([Uint8Array.from(source.bytes).buffer]),
+      })
+      if (!response.ok) throw new Error('File upload failed')
+      const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+      await convex.mutation(api.storage.mutations.bindUpload, {
+        sessionId,
+        storageId,
+        originalFileName: source.fileName,
+      })
+      return sessionId
+    },
+  })
   const maps = createLiveResourceContentSource('map', contentBackend('map'))
   const canvases = createLiveResourceContentSource('canvas', contentBackend('canvas'))
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)

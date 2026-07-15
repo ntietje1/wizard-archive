@@ -6,8 +6,10 @@ import {
   Copy,
   ExternalLink,
   FileInput,
+  FileUp,
   FolderInput,
   Hash,
+  Plus,
   RotateCcw,
   Scissors,
   Star,
@@ -21,12 +23,15 @@ import type { WorkspaceClipboard } from '../workspace-clipboard'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import {
   changeWorkspaceResourcesLifecycle,
+  createWorkspaceFile,
+  createWorkspaceResource,
   copyWorkspaceResourceId,
   copyWorkspaceResourceLink,
   duplicateWorkspaceResources,
   moveWorkspaceResources,
   pasteWorkspaceClipboard,
   setWorkspaceBookmarkState,
+  resourceKindLabel,
 } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 
@@ -150,6 +155,7 @@ function ActiveResourceMenuItems({
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
 }) {
   const { resource, resourceIds, runtime, onReport } = actions
+  const upload = useRef<HTMLInputElement>(null)
   const destinationId = resource.kind === 'folder' ? resource.id : null
   const canPaste =
     destinationId !== null &&
@@ -162,6 +168,42 @@ function ActiveResourceMenuItems({
   return (
     <>
       <MenuSeparator />
+      {destinationId !== null && (
+        <>
+          {(['note', 'folder', 'map', 'canvas'] as const).map((kind) => (
+            <MenuItem
+              key={kind}
+              icon={<Plus />}
+              label={`New ${resourceKindLabel(kind)}`}
+              onActivate={() =>
+                runMenuOperation(actions, () =>
+                  createWorkspaceResource(runtime, kind, destinationId, '', onReport),
+                )
+              }
+            />
+          ))}
+          <MenuItem
+            icon={<FileUp />}
+            label="Upload File"
+            onActivate={() => upload.current?.click()}
+          />
+          <input
+            ref={upload}
+            type="file"
+            className="hidden"
+            aria-label={`Upload file to ${resource.title}`}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file)
+                runMenuOperation(actions, () =>
+                  createWorkspaceFile(runtime, destinationId, file, onReport),
+                )
+            }}
+          />
+          <MenuSeparator />
+        </>
+      )}
       <MenuItem
         icon={<Clipboard />}
         label={resourceIds.length > 1 ? `Copy ${resourceIds.length} items` : 'Copy'}

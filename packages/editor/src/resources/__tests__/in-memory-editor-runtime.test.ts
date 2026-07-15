@@ -159,6 +159,53 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
+  it('creates uploaded files through the file content owner and canonical structure command', async () => {
+    const snapshot = emptySnapshot()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const core = createInMemoryEditorRuntime({
+      scope: {
+        campaignId: snapshot.campaignId,
+        actorId: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+        projection: 'dm',
+        schema: RESOURCE_INDEX_SCHEMA,
+      },
+      snapshot,
+      navigation: navigation(),
+    })
+    const bytes = new TextEncoder().encode('plain text')
+    const delivery = await core.runtime.content.files.create(
+      {
+        campaignId: snapshot.campaignId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'file',
+          parentId: null,
+          title: canonicalizeResourceTitle('notes.txt'),
+          icon: null,
+          color: null,
+        },
+      },
+      { bytes, fileName: 'notes.txt' },
+    )
+
+    expect(delivery).toMatchObject({ status: 'received', result: { status: 'completed' } })
+    expect(core.runtime.content.files.get(resourceId)).toMatchObject({
+      status: 'ready',
+      content: {
+        assetId: null,
+        byteSize: bytes.byteLength,
+        extension: 'txt',
+        classification: 'inert_file',
+        viewerUnavailableReason: 'unsupported_format',
+      },
+      version: { revision: 1 },
+    })
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId).state).toBe('known')
+    core.dispose()
+  })
+
   it('exposes ready content without mixing it into the metadata index', async () => {
     const snapshot = emptySnapshot()
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)

@@ -4,8 +4,11 @@ import { initialVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
 import type {
   CanvasSessionState,
+  CreateFileResourceCommand,
   CreateNoteResourceCommand,
+  FileContentSource,
   FileContentState,
+  FileResourceSource,
   FileResourceContent,
   MapResourceContent,
   MapSessionState,
@@ -26,6 +29,7 @@ import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
+import { classifyFileResourceSource } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
 import {
   applyWorkspacePreferenceChange,
@@ -139,6 +143,50 @@ class InMemoryNoteSessionSource
   }
 }
 
+class InMemoryFileContentSource
+  extends ResourceSessionStore<FileContentState>
+  implements FileContentSource
+{
+  constructor(
+    ready: ReadonlyArray<ReadyContent<FileResourceContent>>,
+    private readonly campaignId: CampaignId,
+    private readonly executeStructure: ResourceStructureCommandGateway['execute'],
+  ) {
+    super({ status: 'loading' })
+    for (const entry of ready) {
+      this.set(entry.resourceId, {
+        status: 'ready',
+        content: entry.content,
+        version: entry.version,
+      })
+    }
+  }
+
+  async create(
+    envelope: CommandEnvelope<CreateFileResourceCommand>,
+    source: FileResourceSource,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+    if (envelope.campaignId !== this.campaignId) return invalidCreateDelivery()
+    const metadata = classifyFileResourceSource(source)
+    if (metadata.classification === 'rejected') return invalidCreateDelivery()
+    const delivery = await this.executeStructure(envelope)
+    if (
+      delivery.status !== 'received' ||
+      delivery.result.status !== 'completed' ||
+      delivery.result.receipt.result.type !== 'created' ||
+      delivery.result.receipt.result.resourceId !== envelope.command.resourceId
+    ) {
+      return delivery
+    }
+    this.set(envelope.command.resourceId, {
+      status: 'ready',
+      content: { ...metadata, assetId: null },
+      version: await initialFileContentVersion(source.bytes, metadata),
+    })
+    return delivery
+  }
+}
+
 function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
   return {
     status: 'received',
@@ -166,10 +214,9 @@ export function createInMemoryEditorRuntime({
   const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const files = new ResourceSessionStore<FileContentState>({ status: 'loading' })
-  for (const entry of content.files ?? []) {
-    files.set(entry.resourceId, { status: 'ready', content: entry.content, version: entry.version })
-  }
+  const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
+    executeStructure(envelope),
+  )
   const maps = new ResourceSessionStore<MapSessionState>({ status: 'loading' })
   for (const entry of content.maps ?? []) {
     maps.set(entry.resourceId, {
@@ -282,7 +329,7 @@ async function initializeCreatedContent(
   operationId: OperationId,
   stores: Readonly<{
     notes: InMemoryNoteSessionSource
-    files: ResourceSessionStore<FileContentState>
+    files: InMemoryFileContentSource
     maps: ResourceSessionStore<MapSessionState>
     canvases: ResourceSessionStore<CanvasSessionState>
   }>,
