@@ -1,32 +1,17 @@
 import { Fragment, Slice } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { useEffect } from 'react'
+import { createExtension } from '@blocknote/core'
 import { generateUuidV7 } from '../../resources/domain-id'
-import type {
-  BlockNoteEditor,
-  BlockSchema,
-  InlineContentSchema,
-  StyleSchema,
-} from '@blocknote/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { EditorView } from '@tiptap/pm/view'
 
 const VALUE_NODE_TYPE = 'value'
 const valueTransferPluginKey = new PluginKey('canonicalNoteValueTransfer')
 
-export function useNoteValueTransfer<
-  BSchema extends BlockSchema,
-  ISchema extends InlineContentSchema,
-  SSchema extends StyleSchema,
->(editor: BlockNoteEditor<BSchema, ISchema, SSchema>, enabled: boolean) {
-  useEffect(() => {
-    if (!enabled) return
-    editor._tiptapEditor.registerPlugin(createNoteValueTransferPlugin())
-    return () => {
-      editor._tiptapEditor.unregisterPlugin(valueTransferPluginKey)
-    }
-  }, [editor, enabled])
-}
+export const noteValueTransferExtension = createExtension(() => ({
+  key: 'canonicalNoteValueTransfer',
+  prosemirrorPlugins: [createNoteValueTransferPlugin()],
+}))()
 
 function rewriteCopiedNoteValueFormula(
   expressionSource: string,

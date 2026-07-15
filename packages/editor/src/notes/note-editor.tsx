@@ -14,7 +14,7 @@ import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
 import { noteInlineContentSpecs, noteStyleSpecs } from './dom-specs'
 import { reactNoteValueInlineSpec } from './values/react-spec'
 import { NoteValueRuntimeProvider } from './values/runtime-context'
-import { useNoteValueTransfer } from './values/value-transfer'
+import { noteValueTransferExtension } from './values/value-transfer'
 import { configureBlockNoteUuidV7 } from '../rich-text/blocknote/uuidv7'
 import { generateUuidV7 } from '../resources/domain-id'
 import './note-editor.css'
@@ -89,10 +89,10 @@ function NoteDocumentEditor({
         headers: true,
         splitCells: true,
       },
+      extensions: [noteValueTransferExtension],
     },
     [document],
   )
-  useNoteValueTransfer(editor, editable)
   const insertValue = () => {
     editor.focus()
     editor.insertInlineContent(

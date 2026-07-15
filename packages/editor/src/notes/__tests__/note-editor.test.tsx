@@ -124,6 +124,45 @@ describe('NoteEditor', () => {
     })
   })
 
+  it('tracks canonical document edits in native editor history', async () => {
+    const document = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    render(
+      <NoteEditor
+        document={document}
+        editable
+        label="History note"
+        onFlush={() => Promise.resolve()}
+      />,
+    )
+    const textbox = await screen.findByRole('textbox', { name: 'History note' })
+    fireEvent.click(screen.getByRole('button', { name: 'Value' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Value: 0' })).toBeInTheDocument(),
+    )
+    fireEvent.keyDown(textbox, {
+      key: 'z',
+      ctrlKey: true,
+    })
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Value: 0' })).not.toBeInTheDocument(),
+    )
+    fireEvent.keyDown(textbox, {
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: true,
+    })
+    expect(await screen.findByRole('button', { name: 'Value: 0' })).toBeInTheDocument()
+  })
+
   it('stops external file drops without intercepting rich internal transfers', () => {
     const document = noteBlocksToYDoc(
       [

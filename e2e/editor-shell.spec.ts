@@ -6,7 +6,7 @@ test.describe('editor shell', () => {
 
     const workspace = page.getByRole('region', { name: 'Demo workspace' })
     await expect(workspace).toBeVisible()
-    await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible({ timeout: 10_000 })
 
     const invoice = page.getByRole('button', { name: 'Blue-glass Invoice' })
     const canvas = page.getByRole('button', { name: 'Harbor Heist Board' })

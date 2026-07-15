@@ -100,6 +100,7 @@ export function ResourceShell({
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
   const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.defaultPrevented) return
     if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
       if (runtime.search.status === 'available') {
         event.preventDefault()

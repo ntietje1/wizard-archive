@@ -1,0 +1,35 @@
+diff --git a/src/plugins/undo-plugin.js b/src/plugins/undo-plugin.js
+index 06c61b8..3ddedc9 100644
+--- a/src/plugins/undo-plugin.js
++++ b/src/plugins/undo-plugin.js
+@@ -104,22 +104,25 @@ export const yUndoPlugin = ({ protectedNodes = defaultProtectedNodes, trackedOr
+   view: view => {
+     const ystate = ySyncPluginKey.getState(view.state)
+     const undoManager = yUndoPluginKey.getState(view.state).undoManager
+-    undoManager.on('stack-item-added', ({ stackItem }) => {
++    const addSelectionToStackItem = ({ stackItem }) => {
+       const binding = ystate.binding
+       if (binding) {
+         stackItem.meta.set(binding, yUndoPluginKey.getState(view.state).prevSel)
+       }
+-    })
+-    undoManager.on('stack-item-popped', ({ stackItem }) => {
++    }
++    const restoreSelectionFromStackItem = ({ stackItem }) => {
+       const binding = ystate.binding
+       if (binding) {
+         binding.beforeTransactionSelection = stackItem.meta.get(binding) || binding.beforeTransactionSelection
+       }
+-    })
++    }
++    undoManager.on('stack-item-added', addSelectionToStackItem)
++    undoManager.on('stack-item-popped', restoreSelectionFromStackItem)
+     return {
+       destroy: () => {
+-        undoManager.destroy()
++        undoManager.off('stack-item-added', addSelectionToStackItem)
++        undoManager.off('stack-item-popped', restoreSelectionFromStackItem)
+       }
+     }
+   }
+ })

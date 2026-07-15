@@ -1,7 +1,6 @@
-import { renderHook } from '@testing-library/react'
 import { Fragment, Schema, Slice } from '@tiptap/pm/model'
-import { describe, expect, it, vi } from 'vite-plus/test'
-import { useNoteValueTransfer } from '../values/value-transfer'
+import { describe, expect, it } from 'vite-plus/test'
+import { noteValueTransferExtension } from '../values/value-transfer'
 import type { BlockNoteEditor } from '@blocknote/core'
 import type { Plugin } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
@@ -48,7 +47,7 @@ describe('note value transfer', () => {
       0,
     )
 
-    const { plugin } = registerTransferPlugin()
+    const plugin = transferPlugin()
     const copied = plugin.props.transformPasted!.call(plugin, slice, editorView(), false)
     const values: Array<Record<string, unknown>> = []
     copied.content.descendants((node) => {
@@ -65,7 +64,7 @@ describe('note value transfer', () => {
     expect(values[1]!.valueId).not.toBe(dependentId)
   })
 
-  it('preserves internal moves and unregisters with the editor', () => {
+  it('preserves internal moves', () => {
     const slice = new Slice(
       Fragment.from(
         schema.node('paragraph', null, [
@@ -79,28 +78,17 @@ describe('note value transfer', () => {
       0,
       0,
     )
-    const { plugin, unregisterPlugin, unmount } = registerTransferPlugin()
+    const plugin = transferPlugin()
 
     expect(plugin.props.transformPasted!.call(plugin, slice, editorView(true), false)).toBe(slice)
-    unmount()
-    expect(unregisterPlugin).toHaveBeenCalledWith(plugin.spec.key)
   })
 })
 
-function registerTransferPlugin() {
-  let plugin: Plugin | undefined
-  const unregisterPlugin = vi.fn()
-  const editor = {
-    _tiptapEditor: {
-      registerPlugin: vi.fn((registeredPlugin: Plugin) => {
-        plugin = registeredPlugin
-      }),
-      unregisterPlugin,
-    },
-  } as unknown as BlockNoteEditor
-  const { unmount } = renderHook(() => useNoteValueTransfer(editor, true))
+function transferPlugin() {
+  const extension = noteValueTransferExtension({ editor: {} as BlockNoteEditor })
+  const plugin = extension.prosemirrorPlugins?.[0] as Plugin | undefined
   if (!plugin) throw new Error('Expected the value transfer plugin to register')
-  return { plugin, unregisterPlugin, unmount }
+  return plugin
 }
 
 function editorView(internalMove = false) {

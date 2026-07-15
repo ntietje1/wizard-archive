@@ -6,6 +6,9 @@ onlyBuiltDependencies:
   - esbuild
   - '@tailwindcss/oxide'
   - sharp
+# Keep document-owned undo history alive across transient ProseMirror view remounts.
+patchedDependencies:
+  y-prosemirror@1.3.7: patches/y-prosemirror@1.3.7.patch
 overrides:
   vite: 'catalog:'
   vitest: 'catalog:'
