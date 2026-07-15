@@ -56,7 +56,7 @@ const sourceRules = [
     className: 'everyday_runtime_leakage',
     files: /resources\/editor-runtime-contract\.ts$/,
     pattern:
-      /ResourceCatalog|WorkspaceFileSystem|FileSystemPaths|Undo|Transfer|Projector|VersionRegistry|Provider|CopyPreparation/,
+      /ResourceCatalog|WorkspaceFileSystem|FileSystemPaths|UniversalUndo|UndoGateway|UndoService|Transfer|Projector|VersionRegistry|Provider|CopyPreparation/,
   },
   {
     className: 'client_owned_copy_mechanics',
