@@ -8,6 +8,7 @@ import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import { moveWorkspaceResources } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { useEnsureResourceCollection } from './resource-loading'
+import { useModalDialog } from './use-modal-dialog'
 
 const FOLDER_KINDS: ReadonlyArray<'folder'> = [RESOURCE_KIND.folder]
 
@@ -26,6 +27,7 @@ export function ResourceMoveDialog({
 }) {
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<ResourceId>>(new Set())
   const [pending, setPending] = useState(false)
+  const dialogRef = useModalDialog()
   const setExpanded = (resourceId: ResourceId, expanded: boolean) =>
     setExpandedIds((current) => {
       const next = new Set(current)
@@ -46,59 +48,55 @@ export function ResourceMoveDialog({
   }
 
   return (
-    <div
-      className="absolute inset-0 z-[80] flex items-center justify-center bg-black/30 p-4"
-      onMouseDown={(event) => {
-        if (!pending && event.target === event.currentTarget) onClose()
+    <dialog
+      ref={dialogRef}
+      aria-label="Move resources"
+      className="m-auto max-h-[min(34rem,90vh)] w-[calc(100%-2rem)] max-w-md flex-col rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl backdrop:bg-black/30 open:flex"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!pending) onClose()
       }}
       onKeyDown={(event) => {
         if (!pending && event.key === 'Escape') onClose()
       }}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Move resources"
-        className="flex max-h-[min(34rem,90vh)] w-full max-w-md flex-col rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
-      >
-        <div className="flex h-11 shrink-0 items-center border-b border-border px-3">
-          <h2 className="min-w-0 flex-1 text-sm font-semibold">
-            Move {resourceIds.length === 1 ? 'resource' : `${resourceIds.length} resources`}
-          </h2>
-          <button
-            autoFocus
-            type="button"
-            aria-label="Cancel move"
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            disabled={pending}
-            onClick={onClose}
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          <button
-            type="button"
-            className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-muted disabled:opacity-50"
-            disabled={pending || !isEligibleMoveDestination(snapshot, resourceIds, null)}
-            onClick={() => void move(null)}
-          >
-            <Folder className="size-4 text-muted-foreground" />
-            Workspace root
-          </button>
-          <MoveFolderCollection
-            expandedIds={expandedIds}
-            parentId={null}
-            pending={pending}
-            resourceIds={resourceIds}
-            runtime={runtime}
-            snapshot={snapshot}
-            onMove={move}
-            onSetExpanded={setExpanded}
-          />
-        </div>
+      <div className="flex h-11 shrink-0 items-center border-b border-border px-3">
+        <h2 className="min-w-0 flex-1 text-sm font-semibold">
+          Move {resourceIds.length === 1 ? 'resource' : `${resourceIds.length} resources`}
+        </h2>
+        <button
+          autoFocus
+          type="button"
+          aria-label="Cancel move"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          disabled={pending}
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </button>
       </div>
-    </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <button
+          type="button"
+          className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-muted disabled:opacity-50"
+          disabled={pending || !isEligibleMoveDestination(snapshot, resourceIds, null)}
+          onClick={() => void move(null)}
+        >
+          <Folder className="size-4 text-muted-foreground" />
+          Workspace root
+        </button>
+        <MoveFolderCollection
+          expandedIds={expandedIds}
+          parentId={null}
+          pending={pending}
+          resourceIds={resourceIds}
+          runtime={runtime}
+          snapshot={snapshot}
+          onMove={move}
+          onSetExpanded={setExpanded}
+        />
+      </div>
+    </dialog>
   )
 }
 
@@ -195,12 +193,13 @@ function isEligibleMoveDestination(
   resourceIds: ReadonlyArray<ResourceId>,
   destinationParentId: ResourceId | null,
 ): boolean {
+  const resourceIdSet = new Set(resourceIds)
   if (destinationParentId !== null) {
-    if (resourceIds.includes(destinationParentId)) return false
+    if (resourceIdSet.has(destinationParentId)) return false
     const ancestors = snapshot.ancestors(destinationParentId)
     if (
       ancestors.state !== 'known' ||
-      ancestors.value.some((ancestor) => resourceIds.includes(ancestor.id))
+      ancestors.value.some((ancestor) => resourceIdSet.has(ancestor.id))
     ) {
       return false
     }

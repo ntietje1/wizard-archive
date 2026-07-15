@@ -1,12 +1,17 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { PanelRight, Search, X } from 'lucide-react'
-import type { EditorRuntime, WorkspaceSearchResult } from '../editor-runtime-contract'
+import type {
+  EditorRuntime,
+  WorkspaceSearch,
+  WorkspaceSearchResult,
+} from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary, ResourceKnowledge } from '../resource-index-contract'
 import type { ResourceKind } from '../resource-record'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
+import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'
 
 type SearchState =
@@ -35,6 +40,31 @@ export function ResourceSearchDialog({
   runtime: EditorRuntime
 }) {
   const search = runtime.search.status === 'available' ? runtime.search.value : null
+  if (!search || !open) return null
+  return (
+    <OpenResourceSearchDialog
+      canEdit={canEdit}
+      runtime={runtime}
+      search={search}
+      onOpenChange={onOpenChange}
+      onReport={onReport}
+    />
+  )
+}
+
+function OpenResourceSearchDialog({
+  canEdit,
+  onOpenChange,
+  onReport,
+  runtime,
+  search,
+}: {
+  canEdit: boolean
+  onOpenChange: (open: boolean) => void
+  onReport: WorkspaceReport
+  runtime: EditorRuntime
+  search: WorkspaceSearch
+}) {
   const snapshot = useResourceSnapshot(runtime)
   const recent = useSyncExternalStore(
     (listener) => search?.subscribeRecent(listener) ?? (() => {}),
@@ -45,24 +75,17 @@ export function ResourceSearchDialog({
   const [state, setState] = useState<SearchState>({ status: 'idle', results: EMPTY_RESULTS })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
+  const dialogRef = useModalDialog()
 
   useEffect(() => {
-    if (!open || !search) return
-    setQuery('')
-    setState({ status: 'idle', results: EMPTY_RESULTS })
-    setSelectedIndex(0)
     void Promise.all(
       search.recent().map((resourceId) => runtime.resources.loader.ensureResource(resourceId)),
     )
-  }, [open, runtime.resources.loader, search])
+  }, [runtime.resources.loader, search])
 
   useEffect(() => {
-    if (!open || !search) return
     const normalized = query.trim()
-    if (!normalized) {
-      setState({ status: 'idle', results: EMPTY_RESULTS })
-      return
-    }
+    if (!normalized) return
     let active = true
     const timer = window.setTimeout(() => {
       setState((current) => ({ status: 'searching', results: current.results }))
@@ -82,9 +105,8 @@ export function ResourceSearchDialog({
       active = false
       window.clearTimeout(timer)
     }
-  }, [open, query, runtime.resources.loader, search])
+  }, [query, runtime.resources.loader, search])
 
-  if (!search || !open) return null
   const recentResults = recent.flatMap((resourceId) =>
     snapshot.lookup(resourceId).state === 'known'
       ? [{ resourceId, match: { type: 'title' as const } }]
@@ -112,12 +134,7 @@ export function ResourceSearchDialog({
     runtime.navigation.open(item.result.resourceId)
     onOpenChange(false)
   }
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      onOpenChange(false)
-      return
-    }
+  const handleKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       if (displayItems.length === 0) return
@@ -132,113 +149,113 @@ export function ResourceSearchDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4"
-      onPointerDown={() => onOpenChange(false)}
+    <dialog
+      ref={dialogRef}
+      aria-describedby="resource-search-description"
+      aria-labelledby="resource-search-title"
+      className={`${showPreview ? 'max-w-4xl' : 'max-w-xl'} m-auto h-[min(80vh,600px)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl backdrop:bg-black/40 open:flex`}
+      onCancel={(event) => {
+        event.preventDefault()
+        onOpenChange(false)
+      }}
+      onKeyDown={handleKeyDown}
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onOpenChange(false)
+      }}
     >
-      <div
-        role="dialog"
-        aria-describedby="resource-search-description"
-        aria-labelledby="resource-search-title"
-        aria-modal="true"
-        className={`${showPreview ? 'max-w-4xl' : 'max-w-xl'} flex h-[min(80vh,600px)] w-full flex-col gap-0 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl`}
-        onKeyDown={handleKeyDown}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <h2 id="resource-search-title" className="sr-only">
-          Search
-        </h2>
-        <p id="resource-search-description" className="sr-only">
-          Search your vault
-        </p>
-        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            aria-activedescendant={
-              displayItems.length > 0 ? `resource-search-${selectedIndex}` : undefined
-            }
-            aria-autocomplete="list"
-            aria-controls="resource-search-results"
-            aria-expanded={displayItems.length > 0}
-            aria-label="Search"
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Search…"
-            role="combobox"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value)
-              setSelectedIndex(0)
-            }}
-          />
-          <button
-            type="button"
-            aria-label="Toggle preview"
-            aria-pressed={showPreview}
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => setShowPreview((value) => !value)}
+      <h2 id="resource-search-title" className="sr-only">
+        Search
+      </h2>
+      <p id="resource-search-description" className="sr-only">
+        Search your vault
+      </p>
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <Search className="size-4 shrink-0 text-muted-foreground" />
+        <input
+          autoFocus
+          aria-activedescendant={
+            displayItems.length > 0 ? `resource-search-${selectedIndex}` : undefined
+          }
+          aria-autocomplete="list"
+          aria-controls="resource-search-results"
+          aria-expanded={displayItems.length > 0}
+          aria-label="Search"
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          placeholder="Search…"
+          role="combobox"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setSelectedIndex(0)
+          }}
+        />
+        <button
+          type="button"
+          aria-label="Toggle preview"
+          aria-pressed={showPreview}
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => setShowPreview((value) => !value)}
+        >
+          <PanelRight className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Close"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => onOpenChange(false)}
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1">
+        <div
+          className={`${showPreview ? 'w-1/2 border-r border-border' : 'w-full'} flex min-h-0 flex-col`}
+        >
+          <output
+            aria-live="polite"
+            className="px-3 py-1.5 text-xs font-medium text-muted-foreground"
           >
-            <PanelRight className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Close"
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="size-3.5" />
-          </button>
-        </div>
-        <div className="flex min-h-0 flex-1">
-          <div
-            className={`${showPreview ? 'w-1/2 border-r border-border' : 'w-full'} flex min-h-0 flex-col`}
-          >
-            <output
-              aria-live="polite"
-              className="px-3 py-1.5 text-xs font-medium text-muted-foreground"
+            {searchStatus(query, state, displayItems.length, recentResults.length)}
+          </output>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div
+              id="resource-search-results"
+              role="listbox"
+              aria-label="Search results"
+              className="p-1"
             >
-              {searchStatus(query, state, displayItems.length, recentResults.length)}
-            </output>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <div
-                id="resource-search-results"
-                role="listbox"
-                aria-label="Search results"
-                className="p-1"
-              >
-                {displayItems.map((item, index) => (
-                  <SearchItem
-                    key={item.type === 'create' ? `create-${item.kind}` : item.result.resourceId}
-                    id={`resource-search-${index}`}
-                    item={item}
-                    query={query}
-                    resource={
-                      item.type === 'resource'
-                        ? knownResource(snapshot.lookup(item.result.resourceId))
-                        : null
-                    }
-                    selected={index === selectedIndex}
-                    onActivate={() => select(item)}
-                    onHover={() => setSelectedIndex(index)}
-                  />
-                ))}
-                {displayItems.length === 0 && (
-                  <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                    {query.trim() ? 'No results found' : 'Type to search your vault'}
-                  </p>
-                )}
-              </div>
+              {displayItems.map((item, index) => (
+                <SearchItem
+                  key={item.type === 'create' ? `create-${item.kind}` : item.result.resourceId}
+                  id={`resource-search-${index}`}
+                  item={item}
+                  query={query}
+                  resource={
+                    item.type === 'resource'
+                      ? knownResource(snapshot.lookup(item.result.resourceId))
+                      : null
+                  }
+                  selected={index === selectedIndex}
+                  onActivate={() => select(item)}
+                  onHover={() => setSelectedIndex(index)}
+                />
+              ))}
+              {displayItems.length === 0 && (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  {query.trim() ? 'No results found' : 'Type to search your vault'}
+                </p>
+              )}
             </div>
           </div>
-          {showPreview && <SearchPreview resource={selectedResource} />}
         </div>
-        <div className="flex gap-3 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
-          <span>↑↓ Navigate</span>
-          <span>↵ Open / Run</span>
-          <span>Esc Close</span>
-        </div>
+        {showPreview && <SearchPreview resource={selectedResource} />}
       </div>
-    </div>
+      <div className="flex gap-3 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+        <span>↑↓ Navigate</span>
+        <span>↵ Open / Run</span>
+        <span>Esc Close</span>
+      </div>
+    </dialog>
   )
 }
 
