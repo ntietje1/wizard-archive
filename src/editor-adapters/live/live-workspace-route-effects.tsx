@@ -10,14 +10,14 @@ export function LiveWorkspaceRouteEffects({
   resourceLoader: ResourceIndexLoader
 }) {
   const requestedResourceId = useLiveWorkspaceSelectedResourceId()
-  const { campaignId: workspaceRecordId } = useCampaign()
+  const { campaignId } = useCampaign()
 
   useEffect(() => {
-    if (requestedResourceId && workspaceRecordId) {
-      addLiveRecentResource(workspaceRecordId, requestedResourceId)
+    if (requestedResourceId) {
+      addLiveRecentResource(campaignId, requestedResourceId)
       void resourceLoader.ensureResource(requestedResourceId)
     }
-  }, [requestedResourceId, resourceLoader, workspaceRecordId])
+  }, [campaignId, requestedResourceId, resourceLoader])
 
   return null
 }

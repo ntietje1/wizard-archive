@@ -21,8 +21,8 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 }))
 
 vi.mock('~/editor-adapters/live/live-recent-resources', () => ({
-  addLiveRecentResource: (workspaceRecordId: unknown, resourceId: unknown) =>
-    addRecentResourceMock(workspaceRecordId, resourceId),
+  addLiveRecentResource: (campaignId: unknown, resourceId: unknown) =>
+    addRecentResourceMock(campaignId, resourceId),
 }))
 
 describe('LiveWorkspaceRouteEffects', () => {
@@ -50,15 +50,6 @@ describe('LiveWorkspaceRouteEffects', () => {
 
   it('does not record a recent resource without a route resource', () => {
     useMatchMock.mockReturnValue({ search: {} })
-
-    render(<LiveWorkspaceRouteEffects resourceLoader={resourceLoader} />)
-
-    expect(addRecentResourceMock).not.toHaveBeenCalled()
-    expect(ensureResourceMock).not.toHaveBeenCalled()
-  })
-
-  it('does not record a recent resource without a workspace context', () => {
-    useCampaignMock.mockReturnValue({ campaignId: undefined })
 
     render(<LiveWorkspaceRouteEffects resourceLoader={resourceLoader} />)
 

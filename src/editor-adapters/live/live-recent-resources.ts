@@ -1,7 +1,7 @@
 import { logger } from '~/shared/utils/logger'
 import { readPersistedJson, writePersistedJson } from '@wizard-archive/ui/storage/persisted-storage'
 import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const MAX_RECENT_RESOURCES = 100
 
@@ -10,13 +10,12 @@ interface RecentResourceEntry {
   timestamp: number
 }
 
-function storageKey(workspaceRecordId: string) {
-  return `recent-resources-v1-${workspaceRecordId}`
+function storageKey(campaignId: CampaignId) {
+  return `recent-resources-v1-${campaignId}`
 }
 
-export function addLiveRecentResource(workspaceRecordId: string, resourceId: ResourceId) {
-  if (!workspaceRecordId) return
-  const key = storageKey(workspaceRecordId)
+export function addLiveRecentResource(campaignId: CampaignId, resourceId: ResourceId) {
+  const key = storageKey(campaignId)
   try {
     const entries = readPersistedJson(key, [], parseRecentResourceEntries)
     writePersistedJson(key, addRecentResourceEntry({ entries, resourceId }))

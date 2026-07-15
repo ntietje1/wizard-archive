@@ -3,34 +3,33 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../shared/test/domain-id'
 import { useLastResource } from '../use-last-resource'
 
-const workspaceState = vi.hoisted(() => ({
-  workspaceRecordId: 'campaign_1' as string | undefined,
-}))
+const campaignState = vi.hoisted(() => ({ campaignId: '' }))
 const persistedState = vi.hoisted(() => ({
   key: null as string | null,
-  value: null as string | null,
+  value: null as unknown,
   setValue: vi.fn(),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({ campaignId: workspaceState.workspaceRecordId }),
+  useCampaign: () => campaignState,
 }))
 
 vi.mock('@wizard-archive/ui/hooks/use-persisted-state', () => ({
-  default: (key: string | null) => {
+  default: (key: string | null, _fallback: unknown, parse: (value: unknown) => unknown) => {
     persistedState.key = key
-    return [persistedState.value, persistedState.setValue]
+    return [parse(persistedState.value), persistedState.setValue]
   },
 }))
 
 describe('useLastResource', () => {
+  const campaignId = testDomainId('campaign', 'last-resource')
   const resourceId = testDomainId('resource', 'last-note')
   beforeEach(() => {
-    workspaceState.workspaceRecordId = 'campaign_1'
+    campaignState.campaignId = campaignId
     persistedState.key = null
     persistedState.value = null
     persistedState.setValue.mockClear()
-    persistedState.setValue.mockImplementation((next: string | null) => {
+    persistedState.setValue.mockImplementation((next: unknown) => {
       persistedState.value = next
     })
   })
@@ -38,7 +37,7 @@ describe('useLastResource', () => {
   it('uses the current workspace scoped persistence key', () => {
     renderHook(() => useLastResource())
 
-    expect(persistedState.key).toBe('last-editor-resource-v1-campaign_1')
+    expect(persistedState.key).toBe(`last-editor-resource-v1-${campaignId}`)
   })
 
   it('projects the stored resource UUID into workspace search', () => {
@@ -50,21 +49,13 @@ describe('useLastResource', () => {
     expect(result.current.lastSelectedResourceSearch).toEqual({ resource: resourceId })
   })
 
-  it('drops pre-cutover stored slugs', () => {
+  it('rejects malformed stored resource ids', () => {
     persistedState.value = '../private-note'
 
     const { result } = renderHook(() => useLastResource())
 
     expect(result.current.lastSelectedResource).toBeNull()
     expect(result.current.lastSelectedResourceSearch).toBeUndefined()
-  })
-
-  it('does not read a workspace scoped key without a workspace context', () => {
-    workspaceState.workspaceRecordId = undefined
-
-    renderHook(() => useLastResource())
-
-    expect(persistedState.key).toBeNull()
   })
 
   it('stores the selected resource UUID', () => {
