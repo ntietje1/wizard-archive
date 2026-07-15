@@ -1,13 +1,21 @@
 import { BlockNoteSchema } from '@blocknote/core'
-import { useCreateBlockNote } from '@blocknote/react'
+import {
+  SuggestionMenuController,
+  getDefaultReactSlashMenuItems,
+  useCreateBlockNote,
+} from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import '@blocknote/shadcn/style.css'
+import { Sigma } from 'lucide-react'
 import { useEffect } from 'react'
 import type * as Y from 'yjs'
 import { createNoteBlockSpecs } from './document/schema-factory'
 import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
 import { noteInlineContentSpecs, noteStyleSpecs } from './dom-specs'
+import { reactNoteValueInlineSpec } from './values/react-spec'
+import { NoteValueRuntimeProvider } from './values/runtime-context'
 import { configureBlockNoteUuidV7 } from '../rich-text/blocknote/uuidv7'
+import { generateUuidV7 } from '../resources/domain-id'
 import './note-editor.css'
 
 configureBlockNoteUuidV7()
@@ -20,10 +28,14 @@ const noteBlockSpecs = createNoteBlockSpecs({
     return { dom: element }
   },
 })
+const { value: _value, ...noteInlineContentSpecsWithoutValue } = noteInlineContentSpecs
 
 const noteEditorSchema = BlockNoteSchema.create({
   blockSpecs: noteBlockSpecs,
-  inlineContentSpecs: noteInlineContentSpecs,
+  inlineContentSpecs: {
+    ...noteInlineContentSpecsWithoutValue,
+    value: reactNoteValueInlineSpec,
+  },
   styleSpecs: noteStyleSpecs,
 })
 
@@ -79,6 +91,18 @@ function NoteDocumentEditor({
     },
     [document],
   )
+  const insertValue = () => {
+    editor.focus()
+    editor.insertInlineContent(
+      [
+        {
+          type: 'value',
+          props: { valueId: generateUuidV7(), label: 'Value', expressionSource: '0' },
+        },
+      ],
+      { updateSelection: true },
+    )
+  }
 
   useEffect(
     () => () => {
@@ -99,15 +123,53 @@ function NoteDocumentEditor({
         event.stopPropagation()
       }}
     >
-      <BlockNoteView
-        className="min-h-full"
-        editable={editable}
-        editor={editor}
-        formattingToolbar
-        linkToolbar={false}
-        sideMenu={editable}
-        slashMenu={editable}
-      />
+      {editable && (
+        <div className="note-editor-toolbar">
+          <button type="button" onClick={insertValue}>
+            <Sigma aria-hidden="true" />
+            Value
+          </button>
+        </div>
+      )}
+      <NoteValueRuntimeProvider editor={editor} editable={editable}>
+        <BlockNoteView
+          className="min-h-full"
+          editable={editable}
+          editor={editor}
+          formattingToolbar
+          linkToolbar={false}
+          sideMenu={editable}
+          slashMenu={false}
+        >
+          {editable && (
+            <SuggestionMenuController
+              triggerCharacter="/"
+              getItems={(query) => {
+                const normalizedQuery = query.trim().toLowerCase()
+                const items = [
+                  ...getDefaultReactSlashMenuItems(editor),
+                  {
+                    title: 'Value',
+                    subtext: 'Create a referenceable value or formula',
+                    aliases: ['formula', 'stat', 'property'],
+                    group: 'Other',
+                    icon: <Sigma />,
+                    onItemClick: insertValue,
+                  },
+                ]
+                return Promise.resolve(
+                  items.filter((item) =>
+                    [item.title, item.subtext ?? '', ...(item.aliases ?? [])]
+                      .join(' ')
+                      .toLowerCase()
+                      .includes(normalizedQuery),
+                  ),
+                )
+              }}
+            />
+          )}
+        </BlockNoteView>
+      </NoteValueRuntimeProvider>
     </div>
   )
 }

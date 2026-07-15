@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isUuidV7 } from '../../resources/domain-id'
 
 export interface NoteValueProps {
   valueId: string
@@ -7,7 +8,7 @@ export interface NoteValueProps {
 }
 
 export const noteValuePropsSchema = z.strictObject({
-  valueId: z.string(),
+  valueId: z.string().refine(isUuidV7, 'Expected a lowercase UUIDv7 note value id'),
   label: z.string(),
   expressionSource: z.string(),
 }) satisfies z.ZodType<NoteValueProps>
@@ -16,4 +17,4 @@ export const NOTE_VALUE_PROP_DEFAULTS = {
   valueId: '',
   label: '',
   expressionSource: '0',
-} satisfies NoteValueProps
+}

@@ -14,7 +14,6 @@ export const noteInlineContentSpecs = createCustomInlineContentSpecs({
     render: (inlineContent: { props: Partial<NoteValueProps> }) => {
       const element = document.createElement('span')
       element.className = 'note-value-inline'
-      element.dataset.valueInline = 'true'
       element.textContent = getValueInlineText(inlineContent.props)
       return { dom: element }
     },
