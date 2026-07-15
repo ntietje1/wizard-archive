@@ -12,7 +12,7 @@ export async function loadFileDownload(ctx: CampaignQueryCtx, resourceId: Resour
   const content = state.content
   if (content.assetUuid === null) {
     return content.byteSize === 0
-      ? { status: 'ready' as const, url: null }
+      ? { status: 'ready' as const, url: null, version: content.version }
       : { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
   }
   const storage = await ctx.db
@@ -24,6 +24,6 @@ export async function loadFileDownload(ctx: CampaignQueryCtx, resourceId: Resour
   }
   const url = await ctx.storage.getUrl(storage.storageId)
   return url
-    ? { status: 'ready' as const, url }
+    ? { status: 'ready' as const, url, version: content.version }
     : { status: 'integrity_error' as const, issue: 'content_missing' as const }
 }

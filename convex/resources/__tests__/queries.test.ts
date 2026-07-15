@@ -234,7 +234,7 @@ describe('authorized resource projection', () => {
           byteSize: 1,
           detectedFormat: null,
           extension: 'txt',
-          mediaType: 'text/plain',
+          mediaType: 'application/octet-stream',
           viewerUnavailableReason: 'unsupported_format',
         },
       }),
@@ -356,7 +356,11 @@ describe('authorized resource projection', () => {
         campaignId: campaignUuid,
         resourceId: fileId,
       }),
-    ).resolves.toEqual({ status: 'ready', url: expect.any(String) })
+    ).resolves.toEqual({
+      status: 'ready',
+      url: expect.any(String),
+      version: expect.objectContaining({ revision: 1 }),
+    })
     await expect(
       asPlayer(campaign).query(api.resources.queries.loadFileDownload, {
         campaignId: campaignUuid,
@@ -501,27 +505,17 @@ describe('authorized resource projection', () => {
     command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
   ) {
     const bytes = new TextEncoder().encode('x')
-    const metadata = {
-      classification: 'inert_file' as const,
-      byteSize: bytes.byteLength,
-      detectedFormat: null,
-      extension: 'txt',
-      mediaType: 'text/plain',
-      viewerUnavailableReason: 'unsupported_format' as const,
-    }
     const upload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).mutation(api.resources.mutations.createFileResource, {
+    return await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
       command,
       uploadSessionId: upload.sessionId,
-      metadata,
-      version: await initialFileContentVersion(bytes, metadata),
     })
   }
 })

@@ -46,7 +46,17 @@ function completed(resourceId: ResourceId, operationId: OperationId) {
       campaignId,
       operationId,
       result: { type: 'created' as const, resourceId },
-      postconditions: [],
+      postconditions: [
+        {
+          state: 'present' as const,
+          resourceId,
+          metadataVersion: {
+            scheme: 'authoritative-revision-v1' as const,
+            revision: 1,
+            digest: '0'.repeat(64),
+          },
+        },
+      ],
     },
   }
 }

@@ -289,6 +289,7 @@ async function createLiveContentResource(
           ),
         }),
       ),
+      campaignId,
       envelope.operationId,
       envelope.command.resourceId,
     )

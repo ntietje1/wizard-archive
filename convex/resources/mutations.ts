@@ -8,11 +8,14 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { FILE_CLASSIFICATION } from '@wizard-archive/editor/resources/file-content-contract'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
+import type { FileOwnedMetadata } from '@wizard-archive/editor/resources/file-content-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import { campaignMutation, dmMutation } from '../functions'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import { campaignInternalMutation, campaignMutation, dmMutation } from '../functions'
 import type { CampaignMutationCtx } from '../functions'
+import type { Doc, Id } from '../_generated/dataModel'
 import {
   executeStructureCommand as executeStructureCommandFn,
   compensateResourceOperation as compensateResourceOperationFn,
@@ -49,6 +52,49 @@ type StoredResourceCommandReceipt = Extract<
   { status: 'completed' }
 >['receipt']
 type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValidator>
+
+type FileCreationIdentity = Readonly<{
+  campaignId: CampaignId
+  metadata: FileOwnedMetadata
+  upload: Doc<'fileStorage'> | null
+  userId: Id<'userProfiles'>
+  version: VersionStamp
+}>
+
+function existingFileContentMatches(
+  content: Doc<'resourceFileContents'>,
+  identity: FileCreationIdentity,
+): boolean {
+  return (
+    content.campaignUuid === identity.campaignId &&
+    content.assetUuid !== null &&
+    identity.upload !== null &&
+    identity.upload.userId === identity.userId &&
+    identity.upload.assetUuid === content.assetUuid &&
+    content.byteSize === identity.metadata.byteSize &&
+    content.classification === identity.metadata.classification &&
+    content.detectedFormat === identity.metadata.detectedFormat &&
+    content.extension === identity.metadata.extension &&
+    content.mediaType === identity.metadata.mediaType &&
+    content.version.digest === identity.version.digest &&
+    content.version.revision === identity.version.revision &&
+    content.viewerUnavailableReason === identity.metadata.viewerUnavailableReason
+  )
+}
+
+function assertCommittedFileIdentity(
+  upload: Awaited<ReturnType<typeof commitUpload>>,
+  metadata: FileOwnedMetadata,
+  version: VersionStamp,
+): void {
+  if (
+    upload.assetId === null ||
+    upload.metadata.size !== metadata.byteSize ||
+    version.revision !== 1
+  ) {
+    throw new TypeError('Uploaded file metadata is inconsistent')
+  }
+}
 
 function readStructureCommand(
   value: StoredResourceStructureCommand,
@@ -321,7 +367,7 @@ export const releaseNoteAwareness = campaignMutation({
     }),
 })
 
-export const createFileResource = campaignMutation({
+export const commitFileResourceCreation = campaignInternalMutation({
   args: {
     operationId: operationIdValidator,
     command: resourceStructureCommandValidator,
@@ -347,19 +393,16 @@ export const createFileResource = campaignMutation({
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
       .unique()
     if (content) {
-      if (content.campaignUuid !== ctx.resourceScope.campaignId || content.assetUuid === null) {
-        throw new TypeError('Created file content is inconsistent')
-      }
+      const upload = await ctx.db.get('fileStorage', args.uploadSessionId)
       const version = assertVersionStamp(args.version)
       if (
-        content.byteSize !== args.metadata.byteSize ||
-        content.classification !== args.metadata.classification ||
-        content.detectedFormat !== args.metadata.detectedFormat ||
-        content.extension !== args.metadata.extension ||
-        content.mediaType !== args.metadata.mediaType ||
-        content.version.digest !== version.digest ||
-        content.version.revision !== version.revision ||
-        content.viewerUnavailableReason !== args.metadata.viewerUnavailableReason
+        !existingFileContentMatches(content, {
+          campaignId: ctx.resourceScope.campaignId,
+          metadata: args.metadata,
+          upload,
+          userId: ctx.membership.userId,
+          version,
+        })
       ) {
         return { status: 'rejected', reason: 'operation_id_reused' }
       }
@@ -368,15 +411,7 @@ export const createFileResource = campaignMutation({
 
     const upload = await commitUpload(ctx, { sessionId: args.uploadSessionId })
     const version = assertVersionStamp(args.version)
-    if (
-      upload.assetId === null ||
-      upload.metadata.size !== args.metadata.byteSize ||
-      version.revision !== 1 ||
-      (args.metadata.classification === FILE_CLASSIFICATION.inert) !==
-        (args.metadata.viewerUnavailableReason !== null)
-    ) {
-      throw new TypeError('Uploaded file metadata is inconsistent')
-    }
+    assertCommittedFileIdentity(upload, args.metadata, version)
     await Promise.all([
       ctx.db.insert('resourceFileContents', {
         campaignUuid: ctx.resourceScope.campaignId,

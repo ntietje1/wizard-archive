@@ -112,13 +112,19 @@ export function readLiveStructureResult(value: ExecuteResult): ResourceStructure
 
 export function deliverExpectedCreateResult(
   result: ResourceStructureCommandResult,
+  campaignId: CampaignId,
   operationId: OperationId,
   resourceId: ResourceId,
 ): CommandDelivery<ResourceStructureCommandResult> {
   if (result.status !== 'completed') return { status: 'received', result }
-  return result.receipt.operationId === operationId &&
+  const createdPostcondition = result.receipt.postconditions[0]
+  return result.receipt.campaignId === campaignId &&
+    result.receipt.operationId === operationId &&
     result.receipt.result.type === 'created' &&
-    result.receipt.result.resourceId === resourceId
+    result.receipt.result.resourceId === resourceId &&
+    result.receipt.postconditions.length === 1 &&
+    createdPostcondition?.state === 'present' &&
+    createdPostcondition.resourceId === resourceId
     ? { status: 'received', result }
     : { status: 'not_committed', retryable: false, reason: 'invalid_response' }
 }

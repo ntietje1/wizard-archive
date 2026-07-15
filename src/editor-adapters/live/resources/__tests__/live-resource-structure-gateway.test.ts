@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
   createLiveResourceCompensationGateway,
   createLiveResourceStructureGateway,
+  deliverExpectedCreateResult,
 } from '../live-resource-structure-gateway'
 
 const campaignId = testDomainId('campaign', 'live-gateway')
@@ -98,6 +100,60 @@ describe('createLiveResourceStructureGateway', () => {
       status: 'indeterminate',
       retryable: true,
       reason: 'response_lost',
+    })
+  })
+})
+
+describe('deliverExpectedCreateResult', () => {
+  const metadataVersion = assertVersionStamp({
+    scheme: 'authoritative-revision-v1' as const,
+    revision: 1,
+    digest: '0'.repeat(64),
+  })
+  const completed = {
+    status: 'completed' as const,
+    receipt: {
+      campaignId,
+      operationId,
+      result: { type: 'created' as const, resourceId },
+      postconditions: [{ state: 'present' as const, resourceId, metadataVersion }],
+    },
+  }
+
+  it('accepts only the exact campaign, operation, created resource, and present postcondition', () => {
+    expect(deliverExpectedCreateResult(completed, campaignId, operationId, resourceId)).toEqual({
+      status: 'received',
+      result: completed,
+    })
+  })
+
+  it.each([
+    { receipt: { ...completed.receipt, campaignId: testDomainId('campaign', 'unexpected') } },
+    { receipt: { ...completed.receipt, postconditions: [] } },
+    {
+      receipt: {
+        ...completed.receipt,
+        postconditions: [
+          {
+            state: 'present' as const,
+            resourceId: testDomainId('resource', 'unexpected'),
+            metadataVersion,
+          },
+        ],
+      },
+    },
+  ])('rejects a malformed completed receipt', (malformed) => {
+    expect(
+      deliverExpectedCreateResult(
+        { ...completed, ...malformed },
+        campaignId,
+        operationId,
+        resourceId,
+      ),
+    ).toEqual({
+      status: 'not_committed',
+      retryable: false,
+      reason: 'invalid_response',
     })
   })
 })

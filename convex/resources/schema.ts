@@ -392,7 +392,11 @@ export const noteAwarenessReleaseResultValidator = v.union(
 
 export const fileDownloadSnapshotValidator = v.union(
   v.object({ status: v.literal('loading') }),
-  v.object({ status: v.literal('ready'), url: v.nullable(v.string()) }),
+  v.object({
+    status: v.literal('ready'),
+    url: v.nullable(v.string()),
+    version: versionStampValidator,
+  }),
   contentUnavailableSnapshotValidator,
   contentIntegritySnapshotValidator,
 )

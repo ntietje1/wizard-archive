@@ -76,7 +76,7 @@ function assertAuthenticatedCtx(ctx: object): asserts ctx is AuthenticatedCtx {
   }
 }
 
-async function checkMembership(
+export async function checkCampaignMembership(
   ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignRow; membership: CampaignMemberRow }> {
@@ -104,7 +104,7 @@ export async function checkDmMembership(
   ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignRow; membership: CampaignMemberRow }> {
-  const result = await checkMembership(ctx, campaignId)
+  const result = await checkCampaignMembership(ctx, campaignId)
   if (result.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')
   }
@@ -156,7 +156,7 @@ async function campaignScopeInput(
   if (!campaignDoc) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
   }
-  const { campaign, membership } = await checkMembership(ctx, campaignDoc._id)
+  const { campaign, membership } = await checkCampaignMembership(ctx, campaignDoc._id)
   const actorId = assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid)
   return { ctx: { campaign, membership, resourceScope: { campaignId, actorId } }, args: {} }
 }
@@ -177,7 +177,7 @@ async function campaignRowScopeInput(
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<CampaignScopeInputResult> {
   assertAuthenticatedCtx(ctx)
-  const { campaign, membership } = await checkMembership(ctx, campaignId)
+  const { campaign, membership } = await checkCampaignMembership(ctx, campaignId)
   return {
     ctx: {
       campaign,

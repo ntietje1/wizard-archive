@@ -256,7 +256,7 @@ describe('resource structure commands', () => {
       'evidence.txt',
     )
 
-    const result = await asDm(campaign).mutation(api.resources.mutations.createFileResource, {
+    const result = await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
       command: {
@@ -269,14 +269,50 @@ describe('resource structure commands', () => {
         color: null,
       },
       uploadSessionId: upload.sessionId,
-      metadata,
-      version: await initialFileContentVersion(bytes, metadata),
     })
 
     expect(result).toMatchObject({
       status: 'completed',
       receipt: { result: { type: 'created', resourceId } },
     })
+    await expect(
+      asDm(campaign).action(api.resources.actions.createFileResource, {
+        campaignId: campaignUuid,
+        operationId,
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'file',
+          parentId: null,
+          title: 'evidence.txt',
+          icon: null,
+          color: null,
+        },
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    const conflictingUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([bytes]),
+      'evidence.txt',
+    )
+    await expect(
+      asDm(campaign).action(api.resources.actions.createFileResource, {
+        campaignId: campaignUuid,
+        operationId,
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'file',
+          parentId: null,
+          title: 'evidence.txt',
+          icon: null,
+          color: null,
+        },
+        uploadSessionId: conflictingUpload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
     await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
@@ -1582,27 +1618,17 @@ describe('resource structure commands', () => {
     command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
   ) {
     const bytes = new TextEncoder().encode('x')
-    const metadata = {
-      classification: 'inert_file' as const,
-      byteSize: bytes.byteLength,
-      detectedFormat: null,
-      extension: 'txt',
-      mediaType: 'text/plain',
-      viewerUnavailableReason: 'unsupported_format' as const,
-    }
     const upload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).mutation(api.resources.mutations.createFileResource, {
+    return await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
       command,
       uploadSessionId: upload.sessionId,
-      metadata,
-      version: await initialFileContentVersion(bytes, metadata),
     })
   }
 

@@ -2,6 +2,7 @@ import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type {
   FileContentSource,
   FileResourceSource,
@@ -15,7 +16,6 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
 import {
@@ -29,8 +29,8 @@ import {
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
 
-type CreateFileArgs = FunctionArgs<typeof api.resources.mutations.createFileResource>
-type CreateFileResult = FunctionReturnType<typeof api.resources.mutations.createFileResource>
+type CreateFileArgs = FunctionArgs<typeof api.resources.actions.createFileResource>
+type CreateFileResult = FunctionReturnType<typeof api.resources.actions.createFileResource>
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 
 type LiveFileContentBackend = LiveResourceContentBackend &
@@ -76,6 +76,16 @@ export function createLiveFileContentSource(
       if (bytes.byteLength !== state.content.byteSize) {
         return { status: 'integrity_error', issue: 'content_corrupt' }
       }
+      const expectedVersion = assertVersionStamp(download.version)
+      const actualVersion = await initialFileContentVersion(bytes, state.content)
+      if (
+        state.version.scheme !== expectedVersion.scheme ||
+        state.version.revision !== expectedVersion.revision ||
+        state.version.digest !== expectedVersion.digest ||
+        actualVersion.digest !== expectedVersion.digest
+      ) {
+        return { status: 'integrity_error', issue: 'content_corrupt' }
+      }
       return {
         status: 'ready',
         bytes,
@@ -92,8 +102,6 @@ export function createLiveFileContentSource(
       ) {
         return invalidCreateDelivery()
       }
-      const metadata = classifyFileResourceSource(source)
-      if (metadata.classification === 'rejected') return invalidCreateDelivery()
       const recording = beginCreate()
       let current = existing
       try {
@@ -105,7 +113,6 @@ export function createLiveFileContentSource(
           }
           pending.set(envelope.command.resourceId, current)
         }
-        const version = await initialFileContentVersion(source.bytes, metadata)
         const delivery = deliverExpectedCreateResult(
           readLiveStructureResult(
             await backend.create({
@@ -115,10 +122,9 @@ export function createLiveFileContentSource(
                 normalizeResourceStructureCommand(envelope.command),
               ),
               uploadSessionId: current.sessionId,
-              metadata,
-              version,
             }),
           ),
+          campaignId,
           envelope.operationId,
           envelope.command.resourceId,
         )

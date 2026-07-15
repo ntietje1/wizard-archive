@@ -372,6 +372,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
             update: toArrayBuffer(Y.encodeStateAsUpdate(local)),
           }),
         ),
+        this.campaignId,
         envelope.operationId,
         envelope.command.resourceId,
       )

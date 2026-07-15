@@ -50,6 +50,8 @@ import type * as errors from "../errors.js";
 import type * as functions from "../functions.js";
 import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
+import type * as resources_actions from "../resources/actions.js";
+import type * as resources_fileCreation from "../resources/fileCreation.js";
 import type * as resources_functions_ConvexResourceCatalog from "../resources/functions/ConvexResourceCatalog.js";
 import type * as resources_functions_assetContent from "../resources/functions/assetContent.js";
 import type * as resources_functions_assetContentState from "../resources/functions/assetContentState.js";
@@ -168,6 +170,8 @@ declare const fullApi: ApiFromModules<{
   functions: typeof functions;
   http: typeof http;
   httpBridge: typeof httpBridge;
+  "resources/actions": typeof resources_actions;
+  "resources/fileCreation": typeof resources_fileCreation;
   "resources/functions/ConvexResourceCatalog": typeof resources_functions_ConvexResourceCatalog;
   "resources/functions/assetContent": typeof resources_functions_assetContent;
   "resources/functions/assetContentState": typeof resources_functions_assetContentState;

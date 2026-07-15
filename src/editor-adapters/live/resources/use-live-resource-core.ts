@@ -143,7 +143,7 @@ function createScopedLiveResourceRuntime(
     currentScope.campaignId,
     {
       ...contentBackend('file'),
-      create: (args) => convex.mutation(api.resources.mutations.createFileResource, args),
+      create: (args) => convex.action(api.resources.actions.createFileResource, args),
       download: (resourceId) =>
         convex.query(api.resources.queries.loadFileDownload, {
           campaignId: currentScope.campaignId,
