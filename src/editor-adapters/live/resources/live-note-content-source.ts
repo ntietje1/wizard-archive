@@ -38,14 +38,21 @@ type LiveNoteContentBackend = Readonly<{
 type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
 type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
 const REMOTE_NOTE_UPDATE = Symbol('remote-note-update')
+const NOTE_SAVE_DELAY_MS = 250
+const NOTE_SAVE_RETRY_DELAYS_MS = [250, 500, 1000, 2000] as const
+
+type RejectedNoteSave = Extract<NoteSessionSaveResult, { status: 'rejected' }>
+type PersistedNoteSave = Extract<SaveNoteContentResult, { status: 'completed' }> | RejectedNoteSave
+type VersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
 class LiveNoteSession implements NoteSession {
   readonly awareness = { status: 'unavailable' as const }
   readonly readonly = false
   #version
-  #dirty = false
-  #disposed = false
-  #flushPromise: Promise<NoteSessionSaveResult> | null = null
+  #drainPromise: Promise<NoteSessionSaveResult> | null = null
+  #lifecycle: 'closing' | 'destroyed' | 'open' = 'open'
+  #pendingUpdate: Uint8Array | null = null
+  #terminal: RejectedNoteSave | null = null
   #timer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
@@ -55,6 +62,7 @@ class LiveNoteSession implements NoteSession {
     private readonly resourceId: ResourceId,
     private readonly backend: LiveNoteContentBackend,
     private readonly changed: () => void,
+    private readonly failed: (result: RejectedNoteSave) => void,
   ) {
     this.#version = version
     document.on('update', this.#onUpdate)
@@ -64,68 +72,114 @@ class LiveNoteSession implements NoteSession {
     return this.#version
   }
 
-  apply(update: ArrayBuffer, version: NoteSession['version']) {
+  apply(update: ArrayBuffer, version: NoteSession['version']): VersionDecision {
+    if (version.revision < this.#version.revision) return 'stale'
+    if (version.revision === this.#version.revision) {
+      if (version.digest === this.#version.digest) return 'duplicate'
+      this.#fail({ status: 'rejected', reason: 'content_corrupt' })
+      return 'conflict'
+    }
     Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_NOTE_UPDATE)
     this.#version = version
     this.changed()
+    return 'applied'
   }
 
   flush(): Promise<NoteSessionSaveResult> {
-    if (this.#disposed) {
-      return Promise.resolve({ status: 'rejected', reason: 'scope_unavailable' })
+    if (this.#lifecycle === 'destroyed') {
+      return Promise.resolve(this.#terminal ?? { status: 'rejected', reason: 'scope_unavailable' })
     }
-    if (this.#flushPromise) return this.#flushPromise
-    if (!this.#dirty) return Promise.resolve({ status: 'completed', version: this.#version })
-    this.#flushPromise = this.#save()
-    return this.#flushPromise
+    if (this.#terminal) return Promise.resolve(this.#terminal)
+    if (this.#drainPromise) return this.#drainPromise
+    if (this.#pendingUpdate === null) {
+      return Promise.resolve({ status: 'completed', version: this.#version })
+    }
+    this.#drainPromise = this.#drain().finally(() => {
+      this.#drainPromise = null
+      if (this.#lifecycle === 'closing') this.#destroy()
+    })
+    return this.#drainPromise
   }
 
   dispose(): void {
-    if (this.#disposed) return
-    if (this.#timer) clearTimeout(this.#timer)
-    this.#timer = null
-    this.document.off('update', this.#onUpdate)
-    const finalFlush = this.#dirty || this.#flushPromise ? this.flush() : Promise.resolve()
-    this.#disposed = true
-    void finalFlush.finally(() => this.document.destroy())
+    if (this.#lifecycle !== 'open') return
+    this.#close()
+    void this.flush().finally(() => this.#destroy())
   }
 
-  readonly #onUpdate = (_update: Uint8Array, origin: unknown) => {
-    if (origin === REMOTE_NOTE_UPDATE || this.#disposed) return
-    this.#dirty = true
+  readonly #onUpdate = (update: Uint8Array, origin: unknown) => {
+    if (origin === REMOTE_NOTE_UPDATE || this.#lifecycle !== 'open') return
+    this.#pendingUpdate =
+      this.#pendingUpdate === null
+        ? Uint8Array.from(update)
+        : Y.mergeUpdates([this.#pendingUpdate, update])
+    if (this.#drainPromise) return
     if (this.#timer) clearTimeout(this.#timer)
     this.#timer = setTimeout(() => {
       this.#timer = null
       void this.flush()
-    }, 250)
+    }, NOTE_SAVE_DELAY_MS)
   }
 
-  async #save(): Promise<NoteSessionSaveResult> {
-    this.#dirty = false
-    try {
-      const result = await this.backend.save({
-        campaignId: this.campaignId,
-        resourceId: this.resourceId,
-        update: toArrayBuffer(Y.encodeStateAsUpdate(this.document)),
-      })
+  async #drain(): Promise<NoteSessionSaveResult> {
+    while (this.#pendingUpdate !== null) {
+      const update = this.#pendingUpdate
+      this.#pendingUpdate = null
+      const result = await this.#persist(update)
       if (result.status === 'rejected') {
-        this.#dirty = true
-        return { status: 'rejected', reason: saveRejection(result.reason) }
+        this.#pendingUpdate =
+          this.#pendingUpdate === null ? update : Y.mergeUpdates([update, this.#pendingUpdate])
+        this.#fail(result)
+        return result
       }
-      this.apply(result.update, assertVersionStamp(result.version))
-      return { status: 'completed', version: this.#version }
-    } catch {
-      this.#dirty = true
-      return { status: 'rejected', reason: 'scope_unavailable' }
-    } finally {
-      this.#flushPromise = null
-      if (this.#dirty && !this.#disposed) {
-        this.#timer = setTimeout(() => {
-          this.#timer = null
-          void this.flush()
-        }, 250)
+      if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
+        return this.#terminal!
       }
     }
+    return { status: 'completed', version: this.#version }
+  }
+
+  async #persist(update: Uint8Array): Promise<PersistedNoteSave> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const result = await this.backend.save({
+          campaignId: this.campaignId,
+          resourceId: this.resourceId,
+          update: toArrayBuffer(update),
+        })
+        return result.status === 'rejected'
+          ? { status: 'rejected', reason: saveRejection(result.reason) }
+          : result
+      } catch {
+        const delay = NOTE_SAVE_RETRY_DELAYS_MS[attempt]
+        if (delay === undefined) {
+          return { status: 'rejected', reason: 'scope_unavailable' }
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, delay))
+      }
+    }
+  }
+
+  #fail(result: RejectedNoteSave): void {
+    if (this.#terminal) return
+    this.#terminal = result
+    this.#close()
+    this.failed(result)
+    if (!this.#drainPromise) this.#destroy()
+  }
+
+  #close(): void {
+    if (this.#lifecycle !== 'open') return
+    this.#lifecycle = 'closing'
+    if (this.#timer) clearTimeout(this.#timer)
+    this.#timer = null
+    this.document.off('update', this.#onUpdate)
+  }
+
+  #destroy(): void {
+    if (this.#lifecycle === 'destroyed') return
+    this.#lifecycle = 'destroyed'
+    this.document.destroy()
   }
 }
 
@@ -154,6 +208,20 @@ function bindingIssue(reason: Extract<BindNoteContentResult, { status: 'rejected
     : reason === 'already_initialized' || reason === 'operation_mismatch'
       ? ('version_mismatch' as const)
       : ('content_corrupt' as const)
+}
+
+function failedNoteState(result: RejectedNoteSave): NoteSessionState {
+  switch (result.reason) {
+    case 'scope_unavailable':
+    case 'unauthorized':
+      return { status: 'unavailable', reason: result.reason }
+    case 'content_corrupt':
+    case 'version_exhausted':
+      return { status: 'integrity_error', issue: result.reason }
+    case 'content_missing':
+    case 'resource_missing':
+      return { status: 'integrity_error', issue: 'content_missing' }
+  }
 }
 
 class LiveNoteSessionSource implements NoteSessionSource {
@@ -317,6 +385,11 @@ class LiveNoteSessionSource implements NoteSessionSource {
       this.backend,
       () => {
         this.#setState(resourceId, { status: 'ready', session })
+      },
+      (result) => {
+        if (this.#sessions.get(resourceId)?.document !== document) return
+        this.#sessions.delete(resourceId)
+        this.#setState(resourceId, failedNoteState(result))
       },
     )
     this.#sessions.set(resourceId, session)

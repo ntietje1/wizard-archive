@@ -14,7 +14,11 @@ export type ContentUnavailableReason =
   | 'scope_unavailable'
   | 'unauthorized'
 
-export type ContentIntegrityIssue = 'content_missing' | 'content_corrupt' | 'version_mismatch'
+export type ContentIntegrityIssue =
+  | 'content_missing'
+  | 'content_corrupt'
+  | 'version_exhausted'
+  | 'version_mismatch'
 
 export type ContentUnavailableState =
   | { readonly status: 'loading' }

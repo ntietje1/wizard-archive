@@ -22,6 +22,34 @@ import type { DataModel } from '../../_generated/dataModel'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, remapResourceId, resourceReferencesAreValid } from './contentCopyTypes'
 import { initialBinaryContentVersion } from './contentVersion'
+import { findCanonicalResource } from './findCanonicalResource'
+
+export type NoteResourceValidation =
+  | Readonly<{ status: 'valid'; resourceId: ResourceId }>
+  | Readonly<{
+      status: 'rejected'
+      reason: 'invalid_uuid' | 'resource_missing' | 'ownership_mismatch' | 'wrong_kind'
+    }>
+
+export async function validateNoteResource(
+  ctx: CampaignMutationCtx,
+  value: string,
+): Promise<NoteResourceValidation> {
+  let resourceId: ResourceId
+  try {
+    resourceId = assertDomainId(DOMAIN_ID_KIND.resource, value)
+  } catch {
+    return { status: 'rejected', reason: 'invalid_uuid' }
+  }
+  const resource = await findCanonicalResource(ctx.db, resourceId)
+  if (!resource) return { status: 'rejected', reason: 'resource_missing' }
+  if (resource.campaignUuid !== ctx.resourceScope.campaignId) {
+    return { status: 'rejected', reason: 'ownership_mismatch' }
+  }
+  return resource.kind === 'note'
+    ? { status: 'valid', resourceId }
+    : { status: 'rejected', reason: 'wrong_kind' }
+}
 
 export async function findNoteContent(
   db: GenericDatabaseReader<DataModel>,

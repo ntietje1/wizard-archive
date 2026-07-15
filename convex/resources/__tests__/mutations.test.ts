@@ -336,11 +336,15 @@ describe('resource structure commands', () => {
     const secondClient = new Y.Doc()
     Y.applyUpdate(firstClient, new Uint8Array(baseUpdate))
     Y.applyUpdate(secondClient, new Uint8Array(baseUpdate))
+    const firstDeltas: Array<Uint8Array> = []
+    const secondDeltas: Array<Uint8Array> = []
+    firstClient.on('update', (update) => firstDeltas.push(Uint8Array.from(update)))
+    secondClient.on('update', (update) => secondDeltas.push(Uint8Array.from(update)))
     noteTextType(firstClient).insert(0, 'First ')
     const secondText = noteTextType(secondClient)
     secondText.insert(secondText.length, ' Second')
-    const firstUpdate = Uint8Array.from(Y.encodeStateAsUpdate(firstClient)).buffer
-    const secondUpdate = Uint8Array.from(Y.encodeStateAsUpdate(secondClient)).buffer
+    const firstUpdate = Uint8Array.from(Y.mergeUpdates(firstDeltas)).buffer
+    const secondUpdate = Uint8Array.from(Y.mergeUpdates(secondDeltas)).buffer
     firstClient.destroy()
     secondClient.destroy()
     const first = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {

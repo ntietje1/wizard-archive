@@ -7,8 +7,7 @@ import {
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
-import { findCanonicalResource } from './findCanonicalResource'
-import { findNoteContent } from './noteContent'
+import { findNoteContent, validateNoteResource } from './noteContent'
 
 export type BindNoteContentResult =
   | {
@@ -33,23 +32,17 @@ export async function bindNoteContent(
   ctx: CampaignMutationCtx,
   args: { resourceId: string; operationId: string; update: ArrayBuffer },
 ): Promise<BindNoteContentResult> {
-  let resourceId: ResourceId
   let operationId: OperationId
   try {
-    resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     operationId = assertDomainId(DOMAIN_ID_KIND.operation, args.operationId)
   } catch {
     return { status: 'rejected', reason: 'invalid_uuid' }
   }
 
+  const validation = await validateNoteResource(ctx, args.resourceId)
+  if (validation.status === 'rejected') return validation
+  const resourceId = validation.resourceId
   const campaignId = ctx.resourceScope.campaignId
-  const resource = await findCanonicalResource(ctx.db, resourceId)
-  if (!resource) return { status: 'rejected', reason: 'resource_missing' }
-  if (resource.campaignUuid !== campaignId) {
-    return { status: 'rejected', reason: 'ownership_mismatch' }
-  }
-  if (resource.kind !== 'note') return { status: 'rejected', reason: 'wrong_kind' }
-
   const operation = await ctx.db
     .query('resourceOperations')
     .withIndex('by_campaign_and_operation', (query) =>
