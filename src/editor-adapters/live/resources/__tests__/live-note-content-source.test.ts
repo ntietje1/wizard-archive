@@ -86,8 +86,11 @@ function backend() {
       ),
     )
   }
+  const load: LiveNoteContentBackend['load'] = () =>
+    Promise.resolve({ status: 'integrity_error', issue: 'content_missing' })
   return {
     create: vi.fn(create),
+    load: vi.fn(load),
     publishAwareness: vi.fn(() => Promise.resolve({ status: 'active' as const })),
     releaseAwareness: vi.fn(() => Promise.resolve({ status: 'released' as const })),
     refresh: vi.fn(() => Promise.resolve()),
@@ -113,6 +116,41 @@ function backend() {
 }
 
 describe('LiveNoteContentSource', () => {
+  it('loads an unopened note once for Markdown export without starting a live session', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const document = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Unopened export' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const update = arrayBuffer(Y.encodeStateAsUpdate(document))
+    provider.load.mockResolvedValue({ status: 'ready', update, version: await versionFor(update) })
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+
+    const result = await source.export(resourceId)
+
+    expect(result).toMatchObject({ status: 'ready', extension: 'md', mediaType: 'text/markdown' })
+    expect(result.status === 'ready' ? new TextDecoder().decode(result.bytes) : '').toContain(
+      'Unopened export',
+    )
+    expect(provider.watch).not.toHaveBeenCalled()
+    expect(provider.watchAwareness).not.toHaveBeenCalled()
+    document.destroy()
+    source.dispose()
+  })
+
   it('keeps one local document across an indeterminate atomic create retry', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)

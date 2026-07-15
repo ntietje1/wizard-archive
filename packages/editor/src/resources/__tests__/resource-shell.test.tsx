@@ -626,6 +626,68 @@ describe('ResourceShell', () => {
     await waitFor(() => expect(ensureCollection).toHaveBeenCalledTimes(2))
     core.dispose()
   })
+
+  it('subscribes the active kind-owned content viewport and renders its loaded state', async () => {
+    const { core, resource } = await shellRuntime(false)
+    const summary = { ...authorizedResourceSummaryFromRecord(resource), kind: 'file' as const }
+    let state: ReturnType<typeof core.runtime.content.files.get> = { status: 'loading' }
+    const listeners = new Set<() => void>()
+    const unsubscribe = vi.fn()
+    const subscribe = vi.fn((_resourceId: ResourceRecord['id'], listener: () => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+        unsubscribe()
+      }
+    })
+    const runtime = {
+      ...core.runtime,
+      content: {
+        ...core.runtime.content,
+        files: {
+          ...core.runtime.content.files,
+          get: () => state,
+          subscribe,
+        },
+      },
+    }
+    const view = render(
+      <ResourceViewport
+        actions={createWorkspaceActions(runtime, vi.fn())}
+        canEdit={false}
+        resource={summary}
+        runtime={runtime}
+        selection={EMPTY_WORKSPACE_SELECTION}
+        snapshot={runtime.resources.index.getSnapshot()}
+        sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
+        onOpenContextMenu={vi.fn()}
+        onSelectionChange={vi.fn()}
+      />,
+    )
+
+    expect(subscribe).toHaveBeenCalledWith(resource.id, expect.any(Function))
+    await act(async () => {
+      state = {
+        status: 'ready',
+        content: {
+          assetId: null,
+          byteSize: 0,
+          classification: 'inert_file',
+          detectedFormat: null,
+          extension: null,
+          mediaType: 'application/octet-stream',
+          viewerUnavailableReason: 'empty_file',
+        },
+        version: initialVersion(await sha256Digest(new Uint8Array())),
+      }
+      for (const listener of listeners) listener()
+    })
+    expect(screen.getByLabelText('File content')).toBeInTheDocument()
+
+    view.unmount()
+    expect(unsubscribe).toHaveBeenCalled()
+    core.dispose()
+  })
 })
 
 async function createFolderFromSidebar(title: string) {

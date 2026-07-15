@@ -18,12 +18,36 @@ const version = {
 }
 
 describe('LiveResourceContentSource', () => {
+  it('loads an unopened map once for native export without a subscription', async () => {
+    const resourceId = testDomainId('resource', 'map-export')
+    const watch = vi.fn(() => () => undefined)
+    const source = createLiveResourceContentSource('map', {
+      load: () =>
+        Promise.resolve({
+          status: 'ready',
+          kind: 'map',
+          content: { imageAssetId: null, layers: [], pins: [] },
+          version,
+        }),
+      watch,
+    })
+
+    await expect(source.export(resourceId)).resolves.toMatchObject({
+      status: 'ready',
+      extension: 'wizardmap',
+      mediaType: 'application/vnd.wizard-archive.map+json',
+    })
+    expect(watch).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
   it('keeps loading, initializing, ready, unavailable, and integrity states distinct', () => {
     const resourceId = testDomainId('resource', 'file-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
     const unsubscribe = vi.fn()
     const listener = vi.fn()
     const source = createLiveResourceContentSource('file', {
+      load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
       watch: (_resourceId, update) => {
         apply = update
         return unsubscribe
@@ -64,6 +88,7 @@ describe('LiveResourceContentSource', () => {
     const resourceId = testDomainId('resource', 'canvas-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
     const source = createLiveResourceContentSource('canvas', {
+      load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
       watch: (_resourceId, update) => {
         apply = update
         return () => undefined
@@ -101,6 +126,7 @@ describe('LiveResourceContentSource', () => {
     const source = createLiveMapSessionSource(
       campaignId,
       {
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         watch: () => () => undefined,
         create: () =>
           Promise.resolve({

@@ -60,9 +60,10 @@ export function createLiveFileContentSource(
   const content = createLiveResourceContentSource('file', backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
   return {
-    ...content,
+    get: content.get,
+    subscribe: content.subscribe,
     export: async (resourceId) => {
-      const state = content.get(resourceId)
+      const state = await content.load(resourceId)
       if (state.status !== 'ready') {
         return state.status === 'initializing' ? { status: 'loading' } : state
       }

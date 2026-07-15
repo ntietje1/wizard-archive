@@ -19,28 +19,7 @@ describe('LiveFileContentSource', () => {
     const resourceId = testDomainId('resource', 'download-file')
     const campaignId = testDomainId('campaign', 'download-campaign')
     const bytes = new TextEncoder().encode('exact file bytes')
-    let apply: (snapshot: Snapshot) => void = () => undefined
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve(new Response(bytes))),
-    )
-    const source = createLiveFileContentSource(
-      campaignId,
-      {
-        watch: (_resourceId, update) => {
-          apply = update
-          return () => undefined
-        },
-        create: vi.fn(),
-        discard: vi.fn(),
-        download: () => Promise.resolve({ status: 'ready', url: 'https://files.test/evidence' }),
-        refresh: vi.fn(),
-        upload: vi.fn(),
-      },
-      () => ({ abandon: vi.fn(), completed: vi.fn() }),
-    )
-    source.subscribe(resourceId, () => {})
-    apply({
+    const snapshot: Snapshot = {
       status: 'ready',
       kind: 'file',
       content: {
@@ -53,7 +32,24 @@ describe('LiveFileContentSource', () => {
         viewerUnavailableReason: 'unsupported_format',
       },
       version,
-    })
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response(bytes))),
+    )
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load: () => Promise.resolve(snapshot),
+        watch: vi.fn(() => () => undefined),
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: () => Promise.resolve({ status: 'ready', url: 'https://files.test/evidence' }),
+        refresh: vi.fn(),
+        upload: vi.fn(),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
 
     const result = await source.export(resourceId)
     expect(result).toMatchObject({

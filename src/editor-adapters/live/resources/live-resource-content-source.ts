@@ -35,12 +35,19 @@ import {
 type ResourceContentSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type ResourceContentKind = 'file' | 'map' | 'canvas'
 type ResourceContentState = FileContentState | MapSessionState | CanvasSessionState
-type LiveFileContentStateSource = Pick<FileContentSource, 'dispose' | 'get' | 'subscribe'>
-type LiveMapSessionStateSource = Pick<MapSessionSource, 'dispose' | 'export' | 'get' | 'subscribe'>
+type LiveFileContentStateSource = Pick<FileContentSource, 'dispose' | 'get' | 'subscribe'> & {
+  load(resourceId: ResourceId): Promise<FileContentState>
+}
+type LiveMapSessionStateSource = Pick<
+  MapSessionSource,
+  'dispose' | 'export' | 'get' | 'subscribe'
+> & {
+  load(resourceId: ResourceId): Promise<MapSessionState>
+}
 type LiveCanvasSessionStateSource = Pick<
   CanvasSessionSource,
   'dispose' | 'export' | 'get' | 'subscribe'
->
+> & { load(resourceId: ResourceId): Promise<CanvasSessionState> }
 type LiveContentSourceForKind<TKind extends ResourceContentKind> = TKind extends 'file'
   ? LiveFileContentStateSource
   : TKind extends 'map'
@@ -51,6 +58,7 @@ type ResourceContentStore = ReturnType<
 >
 
 export type LiveResourceContentBackend = Readonly<{
+  load(resourceId: ResourceId): Promise<ResourceContentSnapshot>
   watch(resourceId: ResourceId, apply: (snapshot: ResourceContentSnapshot) => void): () => void
 }>
 
@@ -60,7 +68,7 @@ class LiveResourceContentSource {
 
   constructor(
     private readonly kind: ResourceContentKind,
-    backend: LiveResourceContentBackend,
+    private readonly backend: LiveResourceContentBackend,
   ) {
     this.#store = createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>(
       backend.watch,
@@ -73,6 +81,11 @@ class LiveResourceContentSource {
     return this.#store.get(resourceId)
   }
 
+  async load(resourceId: ResourceId): Promise<ResourceContentState> {
+    this.#apply(resourceId, await this.backend.load(resourceId))
+    return this.get(resourceId)
+  }
+
   subscribe(resourceId: ResourceId, listener: () => void): () => void {
     return this.#store.subscribe(resourceId, listener)
   }
@@ -83,8 +96,8 @@ class LiveResourceContentSource {
     this.#disposers.clear()
   }
 
-  export(resourceId: ResourceId): ContentExportResult {
-    const state = this.get(resourceId)
+  async export(resourceId: ResourceId): Promise<ContentExportResult> {
+    const state = await this.load(resourceId)
     if (state.status !== 'ready') {
       return state.status === 'initializing' ? { status: 'loading' } : state
     }
@@ -225,6 +238,7 @@ export function createLiveResourceContentSource<TKind extends ResourceContentKin
     dispose: () => source.dispose(),
     export: (resourceId: ResourceId) => source.export(resourceId),
     get: (resourceId: ResourceId) => source.get(resourceId),
+    load: (resourceId: ResourceId) => source.load(resourceId),
     subscribe: (resourceId: ResourceId, listener: () => void) =>
       source.subscribe(resourceId, listener),
   } as LiveContentSourceForKind<TKind>
@@ -297,8 +311,11 @@ export function createLiveMapSessionSource(
 ): MapSessionSource {
   const content = createLiveResourceContentSource('map', backend)
   return {
-    ...content,
     create: (envelope) => createLiveContentResource(campaignId, envelope, backend, beginCreate),
+    dispose: content.dispose,
+    export: content.export,
+    get: content.get,
+    subscribe: content.subscribe,
   }
 }
 
@@ -309,7 +326,10 @@ export function createLiveCanvasSessionSource(
 ): CanvasSessionSource {
   const content = createLiveResourceContentSource('canvas', backend)
   return {
-    ...content,
     create: (envelope) => createLiveContentResource(campaignId, envelope, backend, beginCreate),
+    dispose: content.dispose,
+    export: content.export,
+    get: content.get,
+    subscribe: content.subscribe,
   }
 }

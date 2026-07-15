@@ -1,5 +1,5 @@
 import { FileUp, Folder } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -74,20 +74,34 @@ export function ResourceViewport({
       />
     )
   }
-  if (resource.kind === 'note') {
-    return <NoteViewport canEdit={canEdit} resource={resource} runtime={runtime} />
+  switch (resource.kind) {
+    case 'note':
+      return <NoteViewport canEdit={canEdit} resource={resource} runtime={runtime} />
+    case 'file':
+      return (
+        <ResourceContentViewport
+          canEdit={canEdit}
+          resource={resource}
+          source={runtime.content.files}
+        />
+      )
+    case 'map':
+      return (
+        <ResourceContentViewport
+          canEdit={canEdit}
+          resource={resource}
+          source={runtime.content.maps}
+        />
+      )
+    case 'canvas':
+      return (
+        <ResourceContentViewport
+          canEdit={canEdit}
+          resource={resource}
+          source={runtime.content.canvases}
+        />
+      )
   }
-  const state = contentState(resource, runtime)
-  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
-
-  return (
-    <div
-      aria-label={`${resourceKindLabel(resource.kind)} content`}
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
-      data-resource-kind={resource.kind}
-      data-workspace-mode={canEdit ? 'editor' : 'viewer'}
-    />
-  )
 }
 
 function NoteViewport({
@@ -99,7 +113,8 @@ function NoteViewport({
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  const state = runtime.content.notes.get(resource.id)
+  const source = runtime.content.notes
+  const state = useContentSnapshot(source, resource.id)
   if (state.status === 'initializing') {
     return (
       <NoteEditor
@@ -119,6 +134,51 @@ function NoteViewport({
       label={`${resource.title} note editor`}
       onFlush={() => state.session.flush()}
     />
+  )
+}
+
+type ResourceContentState =
+  | ReturnType<EditorRuntime['content']['files']['get']>
+  | ReturnType<EditorRuntime['content']['maps']['get']>
+  | ReturnType<EditorRuntime['content']['canvases']['get']>
+
+type ResourceContentSource = Readonly<{
+  get(resourceId: AuthorizedResourceSummary['id']): ResourceContentState
+  subscribe(resourceId: AuthorizedResourceSummary['id'], listener: () => void): () => void
+}>
+
+function ResourceContentViewport({
+  canEdit,
+  resource,
+  source,
+}: {
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+  source: ResourceContentSource
+}) {
+  const state = useContentSnapshot(source, resource.id)
+  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
+  return (
+    <div
+      aria-label={`${resourceKindLabel(resource.kind)} content`}
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+      data-resource-kind={resource.kind}
+      data-workspace-mode={canEdit ? 'editor' : 'viewer'}
+    />
+  )
+}
+
+function useContentSnapshot<TState>(
+  source: Readonly<{
+    get(resourceId: AuthorizedResourceSummary['id']): TState
+    subscribe(resourceId: AuthorizedResourceSummary['id'], listener: () => void): () => void
+  }>,
+  resourceId: AuthorizedResourceSummary['id'],
+): TState {
+  return useSyncExternalStore(
+    (listener) => source.subscribe(resourceId, listener),
+    () => source.get(resourceId),
+    () => source.get(resourceId),
   )
 }
 
@@ -386,21 +446,6 @@ type SessionState =
   | ReturnType<EditorRuntime['content']['files']['get']>
   | ReturnType<EditorRuntime['content']['maps']['get']>
   | ReturnType<EditorRuntime['content']['canvases']['get']>
-
-function contentState(resource: AuthorizedResourceSummary, runtime: EditorRuntime): SessionState {
-  switch (resource.kind) {
-    case 'note':
-      return runtime.content.notes.get(resource.id)
-    case 'file':
-      return runtime.content.files.get(resource.id)
-    case 'map':
-      return runtime.content.maps.get(resource.id)
-    case 'canvas':
-      return runtime.content.canvases.get(resource.id)
-    case 'folder':
-      throw new TypeError('Folder content is collection-owned')
-  }
-}
 
 function ContentState({
   resource,

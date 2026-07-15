@@ -44,6 +44,7 @@ type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.s
 
 type LiveNoteContentBackend = LiveNoteAwarenessBackend &
   Readonly<{
+    load(resourceId: ResourceId): Promise<NoteSnapshot>
     watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
     create(args: CreateNoteArgs): Promise<CreateNoteResult>
     refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
@@ -59,6 +60,32 @@ const NOTE_SAVE_RETRY_DELAYS_MS = [250, 500, 1000, 2000] as const
 type RejectedNoteSave = Extract<NoteSessionSaveResult, { status: 'rejected' }>
 type PersistedNoteSave = Extract<SaveNoteContentResult, { status: 'completed' }> | RejectedNoteSave
 type VersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
+
+function exportNoteDocument(document: Y.Doc): ContentExportResult {
+  try {
+    return {
+      status: 'ready',
+      bytes: new TextEncoder().encode(noteDocumentToMarkdown(document)),
+      extension: 'md',
+      mediaType: 'text/markdown',
+    }
+  } catch {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  }
+}
+
+function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
+  if (snapshot.status !== 'ready') return snapshot
+  const document = new Y.Doc()
+  try {
+    Y.applyUpdate(document, new Uint8Array(snapshot.update))
+    return exportNoteDocument(document)
+  } catch {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  } finally {
+    document.destroy()
+  }
+}
 
 class LiveNoteSession implements NoteSession {
   readonly readonly = false
@@ -282,21 +309,11 @@ class LiveNoteSessionSource implements NoteSessionSource {
     return this.#store.subscribe(resourceId, listener)
   }
 
-  export(resourceId: ResourceId): ContentExportResult {
+  async export(resourceId: ResourceId): Promise<ContentExportResult> {
     const state = this.get(resourceId)
-    if (state.status !== 'ready') {
-      return state.status === 'initializing' ? { status: 'loading' } : state
-    }
-    try {
-      return {
-        status: 'ready',
-        bytes: new TextEncoder().encode(noteDocumentToMarkdown(state.session.document)),
-        extension: 'md',
-        mediaType: 'text/markdown',
-      }
-    } catch {
-      return { status: 'integrity_error', issue: 'content_corrupt' }
-    }
+    return state.status === 'ready'
+      ? exportNoteDocument(state.session.document)
+      : exportNoteSnapshot(await this.backend.load(resourceId))
   }
 
   async create(

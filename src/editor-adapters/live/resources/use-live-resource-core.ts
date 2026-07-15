@@ -91,6 +91,11 @@ function createScopedLiveResourceRuntime(
       create: (args) => convex.mutation(api.resources.mutations.createNoteResource, args),
       refresh,
       save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
+      load: (resourceId) =>
+        convex.query(api.resources.queries.loadNoteContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        }),
       publishAwareness: (args) =>
         convex.mutation(api.resources.mutations.publishNoteAwareness, {
           campaignId: currentScope.campaignId,
@@ -119,6 +124,12 @@ function createScopedLiveResourceRuntime(
     undo.begin,
   )
   const contentBackend = (kind: 'file' | 'map' | 'canvas'): LiveResourceContentBackend => ({
+    load: (resourceId) =>
+      convex.query(api.resources.queries.loadContent, {
+        campaignId: currentScope.campaignId,
+        resourceId,
+        kind,
+      }),
     watch: (resourceId, apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadContent, {
         campaignId: currentScope.campaignId,
