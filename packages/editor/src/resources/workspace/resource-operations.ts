@@ -96,38 +96,40 @@ export async function updateWorkspaceResource(
   )
 }
 
-export async function moveWorkspaceResourceToRoot(
+export async function moveWorkspaceResources(
   runtime: EditorRuntime,
-  resourceId: ResourceId,
+  resourceIds: ReadonlyArray<ResourceId>,
+  destinationParentId: ResourceId | null,
   report: WorkspaceReport,
 ) {
-  await executeWorkspaceStructureCommand(
+  return await executeWorkspaceStructureCommand(
     runtime,
-    { type: 'move', resourceIds: [resourceId], destinationParentId: null },
+    { type: 'move', resourceIds, destinationParentId },
     report,
   )
 }
 
-export async function changeWorkspaceResourceLifecycle(
+export async function changeWorkspaceResourcesLifecycle(
   runtime: EditorRuntime,
-  resourceId: ResourceId,
+  resourceIds: ReadonlyArray<ResourceId>,
   type: 'permanentlyDelete' | 'restore' | 'trash',
   report: WorkspaceReport,
 ) {
-  await executeWorkspaceStructureCommand(runtime, { type, resourceIds: [resourceId] }, report)
+  return await executeWorkspaceStructureCommand(runtime, { type, resourceIds }, report)
 }
 
-export async function duplicateWorkspaceResource(
+export async function duplicateWorkspaceResources(
   runtime: EditorRuntime,
-  resource: AuthorizedResourceSummary,
+  resourceIds: ReadonlyArray<ResourceId>,
+  destinationParentId: ResourceId | null,
   report: WorkspaceReport,
 ) {
-  await executeWorkspaceStructureCommand(
+  return await executeWorkspaceStructureCommand(
     runtime,
     {
       type: 'deepCopy',
-      sourceRootIds: [resource.id],
-      destinationParentId: resource.displayParentId,
+      sourceRootIds: resourceIds,
+      destinationParentId,
     },
     report,
     (delivery) => {
@@ -136,9 +138,9 @@ export async function duplicateWorkspaceResource(
         delivery.result.status === 'completed' &&
         delivery.result.receipt.result.type === 'deepCopied'
       ) {
-        const destinationId = delivery.result.receipt.result.roots[0]?.destinationRootId
-        if (destinationId) runtime.navigation.open(destinationId)
-        report('Resource duplicated')
+        const roots = delivery.result.receipt.result.roots
+        if (roots.length === 1 && roots[0]) runtime.navigation.open(roots[0].destinationRootId)
+        report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
         return
       }
       report(deliveryMessage(delivery))
@@ -161,6 +163,18 @@ export async function copyWorkspaceResourceLink(
   )
   await navigator.clipboard.writeText(url.href)
   report('Link copied')
+}
+
+export async function copyWorkspaceResourceId(
+  resource: AuthorizedResourceSummary,
+  report: WorkspaceReport,
+) {
+  if (!globalThis.navigator?.clipboard) {
+    report('Copy resource ID is unavailable')
+    return
+  }
+  await navigator.clipboard.writeText(resource.id)
+  report('Resource ID copied')
 }
 
 async function executeWorkspaceStructureCommand(

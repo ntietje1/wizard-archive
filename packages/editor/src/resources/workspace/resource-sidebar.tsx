@@ -25,6 +25,8 @@ import { updateWorkspaceSelection, workspaceSelectionIntent } from '../workspace
 import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
+import { resourceContextMenuRequest } from './resource-context-menu-request'
+import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { useEnsureResourceCollection } from './resource-loading'
 import {
   duplicateResourceKeys,
@@ -38,6 +40,7 @@ export function ResourceSidebar({
   onLifecycleChange,
   onClose,
   onReport,
+  onOpenContextMenu,
   onSelectionChange,
   onSortChange,
   runtime,
@@ -53,6 +56,7 @@ export function ResourceSidebar({
   onLifecycleChange: (value: 'active' | 'trashed') => void
   onClose: () => void
   onReport: WorkspaceReport
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onSortChange: (sort: WorkspaceSort) => void
   runtime: EditorRuntime
@@ -154,6 +158,7 @@ export function ResourceSidebar({
           sort={sort}
           visibleIds={visibleIds}
           onSelectionChange={onSelectionChange}
+          onOpenContextMenu={onOpenContextMenu}
         />
       </div>
       <button
@@ -173,6 +178,7 @@ export function ResourceSidebar({
 function ResourceCollection({
   initialFocusId,
   onSelectionChange,
+  onOpenContextMenu,
   query,
   runtime,
   selectedResourceId,
@@ -183,6 +189,7 @@ function ResourceCollection({
 }: {
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   query: ResourceCollectionQuery
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -217,6 +224,7 @@ function ResourceCollection({
           sort={sort}
           visibleIds={visibleIds}
           onSelectionChange={onSelectionChange}
+          onOpenContextMenu={onOpenContextMenu}
         />
       ))}
       {!collection.complete && (
@@ -230,6 +238,7 @@ function ResourceTreeRow({
   ambiguous,
   initialFocusId,
   onSelectionChange,
+  onOpenContextMenu,
   resource,
   runtime,
   selectedResourceId,
@@ -241,6 +250,7 @@ function ResourceTreeRow({
   ambiguous: boolean
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -273,6 +283,7 @@ function ResourceTreeRow({
           initialFocusId={initialFocusId}
           onExpandedChange={setExpanded}
           onSelectionChange={onSelectionChange}
+          onOpenContextMenu={onOpenContextMenu}
           resource={resource}
           runtime={runtime}
           selectedResourceId={selectedResourceId}
@@ -292,6 +303,7 @@ function ResourceTreeRow({
             sort={sort}
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
+            onOpenContextMenu={onOpenContextMenu}
           />
         </div>
       )}
@@ -329,6 +341,7 @@ function ResourceTreeButton({
   initialFocusId,
   onExpandedChange,
   onSelectionChange,
+  onOpenContextMenu,
   resource,
   runtime,
   selectedResourceId,
@@ -340,6 +353,7 @@ function ResourceTreeButton({
   initialFocusId: ResourceId | null
   onExpandedChange: (expanded: boolean) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -362,7 +376,9 @@ function ResourceTreeButton({
       onClick={(event) =>
         selectTreeResource({ event, resource, runtime, visibleIds, onSelectionChange })
       }
-      onContextMenu={() => onSelectionChange({ type: 'normalizeContext', resourceId: resource.id })}
+      onContextMenu={(event) => {
+        onOpenContextMenu(resourceContextMenuRequest(event, resource))
+      }}
       onFocus={() => onSelectionChange({ type: 'focus', resourceId: resource.id })}
       onKeyDown={(event) =>
         handleTreeResourceKey({

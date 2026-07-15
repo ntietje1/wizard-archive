@@ -264,6 +264,47 @@ describe('ResourceShell', () => {
     expect(third).toHaveAttribute('data-selected', 'false')
     core.dispose()
   })
+
+  it('copies and pastes resources through the canonical deep-copy command', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    await createFolderFromSidebar('Destination')
+    fireEvent.contextMenu(screen.getByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy' }))
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Destination' }), {
+      clientX: 80,
+      clientY: 90,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Paste into folder' }))
+
+    expect(await screen.findByText('Resource duplicated')).toBeInTheDocument()
+    const destination = core.runtime.resources.index
+      .getSnapshot()
+      .list({ parentId: null, lifecycle: 'active' })
+    if (destination.state !== 'known') throw new Error('expected loaded roots')
+    const destinationId = destination.items.find((item) => item.title === 'Destination')?.id
+    if (!destinationId) throw new Error('expected destination folder')
+    expect(
+      core.runtime.resources.index
+        .getSnapshot()
+        .list({ parentId: destinationId, lifecycle: 'active' }),
+    ).toMatchObject({
+      state: 'known',
+      items: [{ title: resource.title, kind: 'folder' }],
+    })
+    core.dispose()
+  })
 })
 
 async function createFolderFromSidebar(title: string) {

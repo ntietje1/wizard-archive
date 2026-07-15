@@ -13,7 +13,10 @@ import { DEFAULT_WORKSPACE_PREFERENCES } from './workspace-preferences'
 import type { WorkspacePanelPreference, WorkspacePreferenceChange } from './workspace-preferences'
 import { EMPTY_WORKSPACE_SELECTION, updateWorkspaceSelection } from './workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
+import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
 import { useEnsureResource } from './workspace/resource-loading'
+import { ResourceContextMenu } from './workspace/resource-context-menu'
+import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
 import { ResourceSidebar } from './workspace/resource-sidebar'
 import { ResourceTopbar } from './workspace/resource-topbar'
 import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
@@ -51,6 +54,15 @@ export function ResourceShell({
     : { state: 'unknown' }
   const [lifecycle, setLifecycle] = useState<'active' | 'trashed'>('active')
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
+  const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
+  const [contextMenu, setContextMenu] = useState<
+    | Readonly<{ status: 'closed' }>
+    | Readonly<{
+        status: 'open'
+        request: ResourceContextMenuRequest
+        resourceIds: ReadonlyArray<ResourceId>
+      }>
+  >({ status: 'closed' })
   const [notice, setNotice] = useState<{ message: string; retry?: () => void } | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const report: WorkspaceReport = (message, retry) =>
@@ -61,6 +73,14 @@ export function ResourceShell({
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
   const changeSelection = (action: WorkspaceSelectionAction) =>
     setSelection((current) => updateWorkspaceSelection(current, action))
+  const openContextMenu = (request: ResourceContextMenuRequest) => {
+    const resourceIds = selection.selectedIds.includes(request.resource.id)
+      ? selection.selectedIds
+      : [request.resource.id]
+    changeSelection({ type: 'normalizeContext', resourceId: request.resource.id })
+    setContextMenu({ status: 'open', request, resourceIds })
+  }
+  const closeContextMenu = () => setContextMenu({ status: 'closed' })
 
   const changePreference = (change: WorkspacePreferenceChange) => {
     void runtime.preferences.change(change).then((result) => {
@@ -101,6 +121,7 @@ export function ResourceShell({
             onLifecycleChange={setLifecycle}
             onClose={() => changePreference({ type: 'panel', panel: 'left', visible: false })}
             onReport={report}
+            onOpenContextMenu={openContextMenu}
             onSelectionChange={changeSelection}
             onSortChange={(sort) => changePreference({ type: 'sort', sort })}
           />
@@ -131,6 +152,7 @@ export function ResourceShell({
             changePreference({ type: 'panel', panel: 'right', visible: true })
           }
           onReport={report}
+          onOpenContextMenu={openContextMenu}
           onSelectionChange={changeSelection}
         />
       </div>
@@ -149,6 +171,18 @@ export function ResourceShell({
             onReport={report}
           />
         </ResizableWorkspacePanel>
+      )}
+      {contextMenu.status === 'open' && (
+        <ResourceContextMenu
+          canEdit={canEdit}
+          clipboard={clipboard}
+          request={contextMenu.request}
+          resourceIds={contextMenu.resourceIds}
+          runtime={runtime}
+          onClipboardChange={setClipboard}
+          onClose={closeContextMenu}
+          onReport={report}
+        />
       )}
       {notice && (
         <div
@@ -184,6 +218,7 @@ function SelectedResource({
   mode,
   onModeChange,
   onOpenHistory,
+  onOpenContextMenu,
   onOpenLeftSidebar,
   onOpenRightSidebar,
   onReport,
@@ -202,6 +237,7 @@ function SelectedResource({
   mode: 'editor' | 'viewer'
   onModeChange: (mode: 'editor' | 'viewer') => void
   onOpenHistory: () => void
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onOpenLeftSidebar: () => void
   onOpenRightSidebar: () => void
   onReport: WorkspaceReport
@@ -272,6 +308,7 @@ function SelectedResource({
         snapshot={snapshot}
         sort={sort}
         onReport={onReport}
+        onOpenContextMenu={onOpenContextMenu}
         onSelectionChange={onSelectionChange}
       />
     </>

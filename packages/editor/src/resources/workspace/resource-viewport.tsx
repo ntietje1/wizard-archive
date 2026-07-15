@@ -14,6 +14,8 @@ import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
+import { resourceContextMenuRequest } from './resource-context-menu-request'
+import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import {
   duplicateResourceKeys,
   resourceKindIcon,
@@ -23,6 +25,7 @@ import {
 export function ResourceViewport({
   canEdit,
   onReport,
+  onOpenContextMenu,
   onSelectionChange,
   resource,
   runtime,
@@ -32,6 +35,7 @@ export function ResourceViewport({
 }: {
   canEdit: boolean
   onReport: WorkspaceReport
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
@@ -54,6 +58,7 @@ export function ResourceViewport({
         canEdit={canEdit}
         folder={resource}
         onReport={onReport}
+        onOpenContextMenu={onOpenContextMenu}
         onSelectionChange={onSelectionChange}
         runtime={runtime}
         selection={selection}
@@ -79,6 +84,7 @@ function FolderViewport({
   canEdit,
   folder,
   onReport,
+  onOpenContextMenu,
   onSelectionChange,
   runtime,
   selection,
@@ -88,6 +94,7 @@ function FolderViewport({
   canEdit: boolean
   folder: AuthorizedResourceSummary
   onReport: WorkspaceReport
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   runtime: EditorRuntime
   selection: WorkspaceSelection
@@ -123,6 +130,7 @@ function FolderViewport({
             selected={selectedIds.has(resource.id)}
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
+            onOpenContextMenu={onOpenContextMenu}
           />
         ))}
         {canEdit && (
@@ -188,6 +196,7 @@ function CreateNewDashboard({
 function ResourceCard({
   ambiguous,
   onSelectionChange,
+  onOpenContextMenu,
   resource,
   runtime,
   selected,
@@ -195,6 +204,7 @@ function ResourceCard({
 }: {
   ambiguous: boolean
   onSelectionChange: (action: WorkspaceSelectionAction) => void
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selected: boolean
@@ -213,7 +223,9 @@ function ResourceCard({
           : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
       }
       onClick={(event) => selectCard({ event, resource, visibleIds, runtime, onSelectionChange })}
-      onContextMenu={() => onSelectionChange({ type: 'normalizeContext', resourceId: resource.id })}
+      onContextMenu={(event) => {
+        onOpenContextMenu(resourceContextMenuRequest(event, resource))
+      }}
       onFocus={() => onSelectionChange({ type: 'focus', resourceId: resource.id })}
     >
       {folder && (

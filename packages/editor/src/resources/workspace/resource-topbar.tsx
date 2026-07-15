@@ -5,10 +5,10 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspacePreferences } from '../workspace-preferences'
 import {
-  changeWorkspaceResourceLifecycle,
+  changeWorkspaceResourcesLifecycle,
   copyWorkspaceResourceLink,
-  duplicateWorkspaceResource,
-  moveWorkspaceResourceToRoot,
+  duplicateWorkspaceResources,
+  moveWorkspaceResources,
   updateWorkspaceResource,
 } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
@@ -175,13 +175,24 @@ function ResourceMenu({
         <>
           <MenuButton onClick={onEdit}>Edit details</MenuButton>
           <MenuButton
-            onClick={() => run(() => duplicateWorkspaceResource(runtime, resource, onReport))}
+            onClick={() =>
+              run(() =>
+                duplicateWorkspaceResources(
+                  runtime,
+                  [resource.id],
+                  resource.displayParentId,
+                  onReport,
+                ),
+              )
+            }
           >
             Duplicate
           </MenuButton>
           {resource.displayParentId !== null && (
             <MenuButton
-              onClick={() => run(() => moveWorkspaceResourceToRoot(runtime, resource.id, onReport))}
+              onClick={() =>
+                run(() => moveWorkspaceResources(runtime, [resource.id], null, onReport))
+              }
             >
               Move to root
             </MenuButton>
@@ -196,7 +207,7 @@ function ResourceMenu({
           ariaLabel={`Move ${resource.title} to trash`}
           destructive
           onClick={() =>
-            run(() => changeWorkspaceResourceLifecycle(runtime, resource.id, 'trash', onReport))
+            run(() => changeWorkspaceResourcesLifecycle(runtime, [resource.id], 'trash', onReport))
           }
         >
           Move to trash
@@ -207,7 +218,9 @@ function ResourceMenu({
           <MenuButton
             ariaLabel={`Restore ${resource.title}`}
             onClick={() =>
-              run(() => changeWorkspaceResourceLifecycle(runtime, resource.id, 'restore', onReport))
+              run(() =>
+                changeWorkspaceResourcesLifecycle(runtime, [resource.id], 'restore', onReport),
+              )
             }
           >
             Restore
@@ -218,9 +231,9 @@ function ResourceMenu({
               destructive
               onClick={() =>
                 run(() =>
-                  changeWorkspaceResourceLifecycle(
+                  changeWorkspaceResourcesLifecycle(
                     runtime,
-                    resource.id,
+                    [resource.id],
                     'permanentlyDelete',
                     onReport,
                   ),

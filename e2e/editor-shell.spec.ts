@@ -17,6 +17,10 @@ test.describe('editor shell', () => {
     await expect(invoice).toHaveAttribute('data-selected', 'true')
     await expect(canvas).toHaveAttribute('data-selected', 'true')
     await expect(map).toHaveAttribute('data-selected', 'true')
+    await invoice.click({ button: 'right' })
+    await expect(page.getByRole('menu', { name: 'Blue-glass Invoice actions' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy 3 items' })).toBeVisible()
+    await page.keyboard.press('Escape')
 
     await page.getByRole('button', { name: 'The Lantern Market' }).click()
     await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
