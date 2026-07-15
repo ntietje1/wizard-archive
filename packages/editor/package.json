@@ -70,6 +70,10 @@
       "types": "./dist/resources/resource-command-protocol.d.mts",
       "default": "./dist/resources/resource-command-protocol.mjs"
     },
+    "./resources/undo-history": {
+      "types": "./dist/resources/resource-undo-history.d.mts",
+      "default": "./dist/resources/resource-undo-history.mjs"
+    },
     "./resources/graph-transition": {
       "types": "./dist/resources/resource-graph-transition.d.mts",
       "default": "./dist/resources/resource-graph-transition.mjs"
@@ -186,6 +190,7 @@
       "./resources/workspace-index",
       "./resources/command-contract",
       "./resources/command-protocol",
+      "./resources/undo-history",
       "./resources/graph-transition",
       "./resources/operation-ledger",
       "./resources/in-memory-catalog",

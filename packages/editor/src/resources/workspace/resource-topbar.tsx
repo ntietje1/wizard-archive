@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronRight, Eye, Menu, MoreVertical, PanelRightOpen, Pencil, Share2 } from 'lucide-react'
+import {
+  ChevronRight,
+  Eye,
+  Menu,
+  MoreVertical,
+  PanelRightOpen,
+  Pencil,
+  Redo2,
+  Share2,
+  Undo2,
+} from 'lucide-react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspacePreferences } from '../workspace-preferences'
@@ -12,6 +22,7 @@ import {
   updateWorkspaceResource,
 } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
+import { runResourceUndo, useResourceUndoSnapshot } from './resource-undo'
 
 export function ResourceTopbar({
   canEdit,
@@ -105,6 +116,7 @@ export function ResourceTopbar({
           ))}
         </div>
       )}
+      <ResourceUndoButtons runtime={runtime} onReport={onReport} />
       {runtime.scope.projection === 'player' && (
         <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
           <Eye className="size-3.5" /> Player view
@@ -143,6 +155,40 @@ export function ResourceTopbar({
         )}
       </div>
     </header>
+  )
+}
+
+function ResourceUndoButtons({
+  onReport,
+  runtime,
+}: {
+  onReport: WorkspaceReport
+  runtime: EditorRuntime
+}) {
+  const snapshot = useResourceUndoSnapshot(runtime.resources.undo)
+  if (runtime.resources.undo.status !== 'available') return null
+  const history = runtime.resources.undo.value
+  return (
+    <div className="hidden items-center sm:flex" aria-label="Resource history">
+      <TopbarIcon
+        disabled={snapshot.status === 'running' || snapshot.undo === null}
+        label={
+          snapshot.status === 'ready' && snapshot.undo ? `Undo ${snapshot.undo.label}` : 'Undo'
+        }
+        onClick={() => void runResourceUndo(history, 'undo', onReport)}
+      >
+        <Undo2 className="size-4" />
+      </TopbarIcon>
+      <TopbarIcon
+        disabled={snapshot.status === 'running' || snapshot.redo === null}
+        label={
+          snapshot.status === 'ready' && snapshot.redo ? `Redo ${snapshot.redo.label}` : 'Redo'
+        }
+        onClick={() => void runResourceUndo(history, 'redo', onReport)}
+      >
+        <Redo2 className="size-4" />
+      </TopbarIcon>
+    </div>
   )
 }
 

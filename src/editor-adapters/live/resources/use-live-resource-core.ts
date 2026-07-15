@@ -9,7 +9,11 @@ import type {
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { createOptimisticResourceStructureRuntime } from '@wizard-archive/editor/resources/optimistic-runtime'
 import { createLiveResourceIndexRuntime } from './live-resource-index'
-import { createLiveResourceStructureGateway } from './live-resource-structure-gateway'
+import {
+  createLiveResourceCompensationGateway,
+  createLiveResourceStructureGateway,
+} from './live-resource-structure-gateway'
+import { createResourceUndoHistory } from '@wizard-archive/editor/resources/undo-history'
 import { createLiveNoteContentSource } from './live-note-content-source'
 import { createLiveResourceContentSource } from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
@@ -58,6 +62,9 @@ function createScopedLiveResourceRuntime(
     currentScope.campaignId,
     (args) => convex.mutation(api.resources.mutations.executeStructureCommand, args),
   )
+  const compensation = createLiveResourceCompensationGateway(currentScope.campaignId, (args) =>
+    convex.mutation(api.resources.mutations.executeStructureCompensation, args),
+  )
   let notes: ReturnType<typeof createLiveNoteContentSource> | null = null
   const optimistic = createOptimisticResourceStructureRuntime(
     base.index,
@@ -74,7 +81,8 @@ function createScopedLiveResourceRuntime(
       },
     },
   )
-  notes = createLiveNoteContentSource(currentScope.campaignId, optimistic.structure, {
+  const undo = createResourceUndoHistory(optimistic.index, optimistic.structure, compensation)
+  notes = createLiveNoteContentSource(currentScope.campaignId, undo.structure, {
     bind: (args) => convex.mutation(api.resources.mutations.bindNoteContent, args),
     watch: (resourceId, apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadNoteContent, {
@@ -94,38 +102,42 @@ function createScopedLiveResourceRuntime(
       return subscribeToWatch(watch, apply)
     },
   })
-  const files = createLiveFileContentSource(currentScope.campaignId, {
-    ...contentBackend('file'),
-    create: (args) => convex.mutation(api.resources.mutations.createFileResource, args),
-    discard: async (sessionId) => {
-      await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
+  const files = createLiveFileContentSource(
+    currentScope.campaignId,
+    {
+      ...contentBackend('file'),
+      create: (args) => convex.mutation(api.resources.mutations.createFileResource, args),
+      discard: async (sessionId) => {
+        await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
+      },
+      refresh: async (resourceId, parentId) => {
+        await Promise.all([
+          base.loader.ensureResource(resourceId),
+          base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
+        ])
+      },
+      upload: async (source) => {
+        const { sessionId, uploadUrl } = await convex.mutation(
+          api.storage.mutations.createUploadSession,
+          {},
+        )
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: new Blob([Uint8Array.from(source.bytes).buffer]),
+        })
+        if (!response.ok) throw new Error('File upload failed')
+        const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+        await convex.mutation(api.storage.mutations.bindUpload, {
+          sessionId,
+          storageId,
+          originalFileName: source.fileName,
+        })
+        return sessionId
+      },
     },
-    refresh: async (resourceId, parentId) => {
-      await Promise.all([
-        base.loader.ensureResource(resourceId),
-        base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
-      ])
-    },
-    upload: async (source) => {
-      const { sessionId, uploadUrl } = await convex.mutation(
-        api.storage.mutations.createUploadSession,
-        {},
-      )
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: new Blob([Uint8Array.from(source.bytes).buffer]),
-      })
-      if (!response.ok) throw new Error('File upload failed')
-      const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
-      await convex.mutation(api.storage.mutations.bindUpload, {
-        sessionId,
-        storageId,
-        originalFileName: source.fileName,
-      })
-      return sessionId
-    },
-  })
+    undo.begin,
+  )
   const maps = createLiveResourceContentSource('map', contentBackend('map'))
   const canvases = createLiveResourceContentSource('canvas', contentBackend('canvas'))
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
@@ -146,10 +158,14 @@ function createScopedLiveResourceRuntime(
     status: 'unavailable',
     reason: 'capability_not_supported',
   } as const
-  const structure =
+  const structure: EditorRuntime['resources']['structure'] =
     currentScope.projection === 'dm'
-      ? ({ status: 'available', value: optimistic.structure } as const)
-      : ({ status: 'unavailable', reason: 'unauthorized' } as const)
+      ? { status: 'available', value: undo.structure }
+      : { status: 'unavailable', reason: 'unauthorized' }
+  const undoCapability: EditorRuntime['resources']['undo'] =
+    currentScope.projection === 'dm'
+      ? { status: 'available', value: undo.history }
+      : { status: 'unavailable', reason: 'unauthorized' }
   const content = { notes, files, maps, canvases }
   return {
     runtime: {
@@ -164,6 +180,7 @@ function createScopedLiveResourceRuntime(
             ? ({ status: 'available', value: bookmarks.gateway } as const)
             : unsupported,
         previews: unsupported,
+        undo: undoCapability,
       },
       content,
       navigation,

@@ -24,6 +24,7 @@ import type {
 import type { ResourceNavigation, EditorRuntime } from './editor-runtime-contract'
 import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
+import { createResourceUndoHistory } from './resource-undo-history'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
 import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
@@ -246,7 +247,7 @@ export function createInMemoryEditorRuntime({
     contentCopy: createInMemoryContentCopyPlanner(kinds, { notes, files, maps, canvases }),
     ...(now ? { now } : {}),
   })
-  const editorStructure: ResourceStructureCommandGateway = {
+  const contentAwareStructure: ResourceStructureCommandGateway = {
     execute: async (envelope) => {
       const createWasKnown =
         envelope.command.type === 'create' && kinds.has(envelope.command.resourceId)
@@ -268,13 +269,18 @@ export function createInMemoryEditorRuntime({
       return delivery
     },
   }
-  executeStructure = (envelope) => editorStructure.execute(envelope)
+  const undo = createResourceUndoHistory(
+    resources.index,
+    contentAwareStructure,
+    resources.compensation,
+  )
+  executeStructure = (envelope) => undo.structure.execute(envelope)
   const unsupported = {
     status: 'unavailable',
     reason: 'capability_not_supported',
   } as const
   const structure = canEdit
-    ? ({ status: 'available', value: editorStructure } as const)
+    ? ({ status: 'available', value: undo.structure } as const)
     : ({ status: 'unavailable', reason: 'unauthorized' } as const)
   const contentSources = { notes, files, maps, canvases }
   let preferencesSnapshot: WorkspacePreferencesSnapshot = {
@@ -307,6 +313,9 @@ export function createInMemoryEditorRuntime({
         access: unsupported,
         bookmarks: { status: 'available', value: bookmarks },
         previews: unsupported,
+        undo: canEdit
+          ? { status: 'available', value: undo.history }
+          : { status: 'unavailable', reason: 'unauthorized' },
       },
       content: contentSources,
       navigation,

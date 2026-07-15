@@ -23,12 +23,14 @@ describe('workspace keyboard commands', () => {
     fireEvent.keyDown(resource, { key: 'x', metaKey: true })
     fireEvent.keyDown(resource, { key: 'v', ctrlKey: true })
     fireEvent.keyDown(resource, { key: 'd', ctrlKey: true })
+    fireEvent.keyDown(resource, { key: 'z', ctrlKey: true })
+    fireEvent.keyDown(resource, { key: 'z', ctrlKey: true, shiftKey: true })
     fireEvent.keyDown(resource, { key: 'Delete' })
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Title' }), {
-      key: 'd',
+      key: 'z',
       ctrlKey: true,
     })
 
-    expect(commands).toEqual(['copy', 'cut', 'paste', 'duplicate', 'trash'])
+    expect(commands).toEqual(['copy', 'cut', 'paste', 'duplicate', 'undo', 'redo', 'trash'])
   })
 })

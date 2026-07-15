@@ -14,6 +14,7 @@ import type { WorkspacePanelPreference, WorkspacePreferenceChange } from './work
 import { EMPTY_WORKSPACE_SELECTION, updateWorkspaceSelection } from './workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
 import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
+import type { WorkspaceClipboard } from './workspace-clipboard'
 import { workspaceKeyboardCommand } from './workspace-keyboard'
 import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
 import { useEnsureResource } from './workspace/resource-loading'
@@ -33,6 +34,7 @@ import {
   duplicateWorkspaceResources,
   pasteWorkspaceClipboard,
 } from './workspace/resource-operations'
+import { runResourceUndo } from './workspace/resource-undo'
 
 const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
@@ -110,41 +112,29 @@ export function ResourceShell({
       return
     }
     const command = workspaceKeyboardCommand(event)
-    if (!command || !canEdit) return
-    const resourceIds =
-      selection.selectedIds.length > 0
-        ? selection.selectedIds
-        : selectedResourceId
-          ? [selectedResourceId]
-          : []
-    const targetId = selection.focusedId ?? selectedResourceId
-    const target = targetId ? snapshot.lookup(targetId) : { state: 'missing' as const }
-    if (resourceIds.length === 0 || target.state !== 'known') return
-    event.preventDefault()
-    closeContextMenu()
-    const setClipboardOperation = (operation: 'copy' | 'move') =>
-      setClipboard({ status: 'ready', operation, resourceIds })
-    const actions: Record<WorkspaceKeyboardCommand, () => void> = {
-      copy: () => setClipboardOperation('copy'),
-      cut: () => setClipboardOperation('move'),
-      duplicate: () =>
-        void duplicateWorkspaceResources(
-          runtime,
-          resourceIds,
-          target.value.displayParentId,
-          report,
-        ),
-      paste: () => {
-        if (target.value.kind !== 'folder' || target.value.lifecycle !== 'active') return
-        void pasteWorkspaceClipboard(runtime, clipboard, target.value.id, report).then(setClipboard)
-      },
-      trash: () => {
-        if (target.value.lifecycle === 'active') {
-          void changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'trash', report)
-        }
-      },
+    if (!command) return
+    if (command === 'undo' || command === 'redo') {
+      runUndoShortcut(command, event, runtime, report)
+      return
     }
-    actions[command]()
+    if (!canEdit) return
+    runResourceShortcut({
+      clipboard,
+      command,
+      focusedId: selection.focusedId ?? selectedResourceId,
+      resourceIds:
+        selection.selectedIds.length > 0
+          ? selection.selectedIds
+          : selectedResourceId
+            ? [selectedResourceId]
+            : [],
+      runtime,
+      snapshot,
+      onClipboardChange: setClipboard,
+      onCloseContextMenu: closeContextMenu,
+      onPreventDefault: () => event.preventDefault(),
+      onReport: report,
+    })
   }
 
   const changePreference = (change: WorkspacePreferenceChange) => {
@@ -301,6 +291,72 @@ export function ResourceShell({
       )}
     </section>
   )
+}
+
+function runUndoShortcut(
+  command: Extract<WorkspaceKeyboardCommand, 'redo' | 'undo'>,
+  event: KeyboardEvent<HTMLElement>,
+  runtime: EditorRuntime,
+  report: WorkspaceReport,
+): void {
+  if (runtime.resources.undo.status === 'available') {
+    event.preventDefault()
+    void runResourceUndo(runtime.resources.undo.value, command, report)
+  }
+}
+
+function runResourceShortcut({
+  clipboard,
+  command,
+  focusedId,
+  onClipboardChange,
+  onCloseContextMenu,
+  onPreventDefault,
+  onReport,
+  resourceIds,
+  runtime,
+  snapshot,
+}: Readonly<{
+  clipboard: WorkspaceClipboard
+  command: Exclude<WorkspaceKeyboardCommand, 'redo' | 'undo'>
+  focusedId: ResourceId | null
+  onClipboardChange: (clipboard: WorkspaceClipboard) => void
+  onCloseContextMenu: () => void
+  onPreventDefault: () => void
+  onReport: WorkspaceReport
+  resourceIds: ReadonlyArray<ResourceId>
+  runtime: EditorRuntime
+  snapshot: WorkspaceResourceIndexSnapshot
+}>): void {
+  if (!focusedId || resourceIds.length === 0) return
+  const target = snapshot.lookup(focusedId)
+  if (target.state !== 'known') return
+  onPreventDefault()
+  onCloseContextMenu()
+  const setClipboard = (operation: 'copy' | 'move') =>
+    onClipboardChange({ status: 'ready', operation, resourceIds })
+  switch (command) {
+    case 'copy':
+      setClipboard('copy')
+      return
+    case 'cut':
+      setClipboard('move')
+      return
+    case 'duplicate':
+      void duplicateWorkspaceResources(runtime, resourceIds, target.value.displayParentId, onReport)
+      return
+    case 'paste':
+      if (target.value.kind === 'folder' && target.value.lifecycle === 'active') {
+        void pasteWorkspaceClipboard(runtime, clipboard, target.value.id, onReport).then(
+          onClipboardChange,
+        )
+      }
+      return
+    case 'trash':
+      if (target.value.lifecycle === 'active') {
+        void changeWorkspaceResourcesLifecycle(runtime, resourceIds, 'trash', onReport)
+      }
+  }
 }
 
 function SelectedResource({

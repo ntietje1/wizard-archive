@@ -28,6 +28,81 @@ function navigation(): ResourceNavigation {
 }
 
 describe('createInMemoryEditorRuntime', () => {
+  it('undoes and redoes resource edits while treating permanent deletion as a history barrier', async () => {
+    const snapshot = emptySnapshot()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const core = createInMemoryEditorRuntime({
+      scope: {
+        campaignId: snapshot.campaignId,
+        actorId: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+        projection: 'dm',
+        schema: RESOURCE_INDEX_SCHEMA,
+      },
+      snapshot,
+      navigation: navigation(),
+    })
+    await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
+    if (
+      core.runtime.resources.structure.status !== 'available' ||
+      core.runtime.resources.undo.status !== 'available'
+    ) {
+      throw new Error('Expected editable resource history')
+    }
+    const structure = core.runtime.resources.structure.value
+    const history = core.runtime.resources.undo.value
+    await structure.execute({
+      campaignId: snapshot.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'folder',
+        parentId: null,
+        title: canonicalizeResourceTitle('Original'),
+        icon: null,
+        color: null,
+      },
+    })
+    await structure.execute({
+      campaignId: snapshot.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'updateMetadata',
+        resourceId,
+        changes: { title: canonicalizeResourceTitle('Renamed') },
+      },
+    })
+
+    expect(history.getSnapshot()).toMatchObject({
+      status: 'ready',
+      undo: { label: 'Edit Original' },
+      redo: null,
+    })
+    await history.undo()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { title: 'Original' },
+    })
+    await history.redo()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { title: 'Renamed' },
+    })
+
+    await structure.execute({
+      campaignId: snapshot.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'trash', resourceIds: [resourceId] },
+    })
+    await structure.execute({
+      campaignId: snapshot.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'permanentlyDelete', resourceIds: [resourceId] },
+    })
+    expect(history.getSnapshot()).toEqual({ status: 'ready', undo: null, redo: null })
+    core.dispose()
+  })
+
   it('uses the canonical index, loader, and structure command contract', async () => {
     const snapshot = emptySnapshot()
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)

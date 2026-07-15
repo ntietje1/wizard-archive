@@ -86,6 +86,30 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('exposes safe resource undo and redo through controls and keyboard shortcuts', async () => {
+    const { core, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Resource title' }), {
+      target: { value: 'Undoable name' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('button', { name: `Undo Edit ${resource.title}` })).toBeEnabled()
+
+    fireEvent.keyDown(screen.getByLabelText('Editable resources'), { key: 'z', ctrlKey: true })
+    expect(await screen.findByRole('heading', { name: resource.title })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: `Redo Edit ${resource.title}` }))
+    expect(await screen.findByRole('heading', { name: 'Undoable name' })).toBeInTheDocument()
+    core.dispose()
+  })
+
   it('uploads a file from the sidebar through the file content owner', async () => {
     const { core } = await shellRuntime(true)
     render(

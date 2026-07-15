@@ -4,20 +4,27 @@ import { assertVersionStamp } from '@wizard-archive/editor/resources/component-v
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type {
+  CommandDelivery,
   ResourceCommandReceipt,
   ResourceStructureCommandGateway,
+  ResourceStructureCompensationGateway,
   ResourceStructureCommandResult,
   ResourceStructureResult,
 } from '@wizard-archive/editor/resources/command-contract'
 import {
   normalizeResourceStructureCommand,
+  normalizeResourcePostconditions,
   resourceStructureInputRejection,
 } from '@wizard-archive/editor/resources/command-protocol'
 
 type ExecuteArgs = FunctionArgs<typeof api.resources.mutations.executeStructureCommand>
 type ExecuteResult = FunctionReturnType<typeof api.resources.mutations.executeStructureCommand>
+type ExecuteCompensationArgs = FunctionArgs<
+  typeof api.resources.mutations.executeStructureCompensation
+>
 
 type LiveResourceStructureMutation = (args: ExecuteArgs) => Promise<ExecuteResult>
+type LiveResourceCompensationMutation = (args: ExecuteCompensationArgs) => Promise<ExecuteResult>
 
 export function toLiveStructureMutationCommand(
   command: ReturnType<typeof normalizeResourceStructureCommand>,
@@ -94,6 +101,50 @@ export function readLiveStructureResult(value: ExecuteResult): ResourceStructure
   return value
 }
 
+function scopeUnavailable(): CommandDelivery<ResourceStructureCommandResult> {
+  return {
+    status: 'received',
+    result: { status: 'unavailable', reason: 'scope_unavailable' },
+  }
+}
+
+function invalidInput(error: unknown): CommandDelivery<ResourceStructureCommandResult> {
+  return {
+    status: 'received',
+    result: { status: 'rejected', reason: resourceStructureInputRejection(error) },
+  }
+}
+
+async function deliver(
+  campaignId: CampaignId,
+  operationId: ExecuteArgs['operationId'],
+  mutate: () => Promise<ExecuteResult>,
+): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+  try {
+    const result = readLiveStructureResult(await mutate())
+    if (
+      result.status === 'completed' &&
+      (result.receipt.campaignId !== campaignId || result.receipt.operationId !== operationId)
+    ) {
+      throw new TypeError('Resource command receipt does not match its envelope')
+    }
+    return { status: 'received', result }
+  } catch {
+    return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
+  }
+}
+
+function executeArgs(
+  campaignId: CampaignId,
+  envelope: Parameters<ResourceStructureCommandGateway['execute']>[0],
+): ExecuteArgs {
+  return {
+    campaignId,
+    operationId: assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId),
+    command: toLiveStructureMutationCommand(normalizeResourceStructureCommand(envelope.command)),
+  }
+}
+
 export function createLiveResourceStructureGateway(
   campaignId: CampaignId,
   executeMutation: LiveResourceStructureMutation,
@@ -101,41 +152,48 @@ export function createLiveResourceStructureGateway(
   return {
     execute: async (envelope) => {
       if (envelope.campaignId !== campaignId) {
-        return {
-          status: 'received',
-          result: { status: 'unavailable', reason: 'scope_unavailable' },
-        }
+        return scopeUnavailable()
       }
 
       let args: ExecuteArgs
       try {
+        args = executeArgs(campaignId, envelope)
+      } catch (error) {
+        return invalidInput(error)
+      }
+      return await deliver(campaignId, args.operationId, () => executeMutation(args))
+    },
+  }
+}
+
+export function createLiveResourceCompensationGateway(
+  campaignId: CampaignId,
+  executeMutation: LiveResourceCompensationMutation,
+): ResourceStructureCompensationGateway {
+  return {
+    executeCompensation: async (envelope) => {
+      if (envelope.campaignId !== campaignId) {
+        return scopeUnavailable()
+      }
+      let args: ExecuteCompensationArgs
+      try {
         args = {
-          campaignId,
-          operationId: assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId),
-          command: toLiveStructureMutationCommand(
-            normalizeResourceStructureCommand(envelope.command),
+          ...executeArgs(campaignId, envelope),
+          expectedPostconditions: normalizeResourcePostconditions(
+            envelope.expectedPostconditions,
+          ).map((condition) =>
+            condition.state === 'missing'
+              ? condition
+              : {
+                  ...condition,
+                  metadataVersion: { ...condition.metadataVersion },
+                },
           ),
         }
       } catch (error) {
-        return {
-          status: 'received',
-          result: { status: 'rejected', reason: resourceStructureInputRejection(error) },
-        }
+        return invalidInput(error)
       }
-
-      try {
-        const result = readLiveStructureResult(await executeMutation(args))
-        if (
-          result.status === 'completed' &&
-          (result.receipt.campaignId !== campaignId ||
-            result.receipt.operationId !== envelope.operationId)
-        ) {
-          throw new TypeError('Resource command receipt does not match its envelope')
-        }
-        return { status: 'received', result }
-      } catch {
-        return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
-      }
+      return await deliver(campaignId, args.operationId, () => executeMutation(args))
     },
   }
 }

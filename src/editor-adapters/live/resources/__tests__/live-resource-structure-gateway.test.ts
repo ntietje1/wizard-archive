@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { createLiveResourceStructureGateway } from '../live-resource-structure-gateway'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import {
+  createLiveResourceCompensationGateway,
+  createLiveResourceStructureGateway,
+} from '../live-resource-structure-gateway'
 
 const campaignId = testDomainId('campaign', 'live-gateway')
 const operationId = testDomainId('operation', 'live-gateway')
@@ -95,6 +99,44 @@ describe('createLiveResourceStructureGateway', () => {
       status: 'indeterminate',
       retryable: true,
       reason: 'response_lost',
+    })
+  })
+})
+
+describe('createLiveResourceCompensationGateway', () => {
+  it('sends exact expected postconditions and preserves stale rejection', async () => {
+    const expectedPostconditions = [
+      {
+        state: 'present' as const,
+        resourceId,
+        metadataVersion: assertVersionStamp({
+          scheme: 'authoritative-revision-v1' as const,
+          revision: 1,
+          digest: '0'.repeat(64),
+        }),
+      },
+    ]
+    const execute = vi.fn(() =>
+      Promise.resolve({ status: 'rejected' as const, reason: 'stale_history' as const }),
+    )
+    const gateway = createLiveResourceCompensationGateway(campaignId, execute)
+
+    await expect(
+      gateway.executeCompensation({
+        campaignId,
+        operationId,
+        command: { type: 'trash', resourceIds: [resourceId] },
+        expectedPostconditions,
+      }),
+    ).resolves.toEqual({
+      status: 'received',
+      result: { status: 'rejected', reason: 'stale_history' },
+    })
+    expect(execute).toHaveBeenCalledWith({
+      campaignId,
+      operationId,
+      command: { type: 'trash', resourceIds: [resourceId] },
+      expectedPostconditions,
     })
   })
 })

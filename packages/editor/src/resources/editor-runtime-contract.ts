@@ -19,6 +19,7 @@ import type {
 } from './resource-index-contract'
 import type { VersionStamp } from './component-version'
 import type { WorkspacePreferencesSource } from './workspace-preferences'
+import type { ResourceUndoHistory } from './resource-undo-history'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -81,6 +82,7 @@ export interface EditorRuntime {
     readonly access: ResourceCapability<ResourceAccessGateway>
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>
+    readonly undo: ResourceCapability<ResourceUndoHistory>
   }
   readonly content: {
     readonly notes: NoteSessionSource

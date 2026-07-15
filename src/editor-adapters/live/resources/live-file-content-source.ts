@@ -8,6 +8,8 @@ import type {
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
   CommandDelivery,
+  CommandEnvelope,
+  ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
 import type {
@@ -17,6 +19,7 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
+import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
 import { createLiveResourceContentSource } from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
 import {
@@ -48,6 +51,7 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
+  beginCreate: (envelope: CommandEnvelope<ResourceStructureCommand>) => ResourceHistoryRecording,
 ): FileContentSource {
   const content = createLiveResourceContentSource('file', backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
@@ -64,6 +68,7 @@ export function createLiveFileContentSource(
       }
       const metadata = classifyFileResourceSource(source)
       if (metadata.classification === 'rejected') return invalidCreateDelivery()
+      const recording = beginCreate(envelope)
       let current = existing
       try {
         if (!current) {
@@ -89,10 +94,12 @@ export function createLiveFileContentSource(
         )
         pending.delete(envelope.command.resourceId)
         if (result.status !== 'completed') {
+          recording.abandon()
           await backend.discard(current.sessionId)
           return { status: 'received', result }
         }
         await backend.refresh(envelope.command.resourceId, envelope.command.parentId)
+        recording.completed(result.receipt)
         return { status: 'received', result }
       } catch {
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }

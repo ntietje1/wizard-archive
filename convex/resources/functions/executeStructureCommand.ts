@@ -498,14 +498,16 @@ async function applyCommand(
         return row ? resourceRecordFromRow(row) : undefined
       }),
     )
-    const matches = expectedPostconditions.every((condition, index) => {
-      const resource = resources[index]
-      if (condition.state === 'missing') return resource === undefined
-      return (
-        resource?.metadataVersion.revision === condition.metadataVersion.revision &&
-        resource.metadataVersion.digest === condition.metadataVersion.digest
-      )
-    })
+    const matches =
+      resources.length === expectedPostconditions.length &&
+      expectedPostconditions.every((condition, index) => {
+        const resource = resources[index]
+        if (condition.state === 'missing') return resource === undefined
+        return (
+          resource?.metadataVersion.revision === condition.metadataVersion.revision &&
+          resource.metadataVersion.digest === condition.metadataVersion.digest
+        )
+      })
     if (!matches) return { status: 'rejected', reason: 'stale_history' }
   }
   if (command.type === 'deepCopy') {
