@@ -10,6 +10,12 @@ import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import type { WorkspaceSort } from '../workspace-preferences'
 import { workspaceSelectionIntent } from '../workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
+import {
+  allowWorkspaceResourceDrop,
+  finishWorkspaceResourceDrop,
+  leaveWorkspaceResourceDrop,
+  workspaceResourceDragProps,
+} from '../workspace-resource-drag'
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
@@ -119,18 +125,30 @@ function FolderViewport({
   const selectedIds = new Set(selection.selectedIds)
   const visibleIds = resources.map((resource) => resource.id)
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div
+      className="min-h-0 flex-1 overflow-y-auto data-[drop-target=true]:bg-muted/40"
+      onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
+      onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
+      onDrop={
+        canEdit
+          ? (event) => void finishWorkspaceResourceDrop(event, runtime, folder.id, onReport)
+          : undefined
+      }
+    >
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 p-6">
         {resources.map((resource) => (
           <ResourceCard
             ambiguous={ambiguous.has(resourcePresentationKey(resource))}
+            canEdit={canEdit}
             key={resource.id}
             resource={resource}
             runtime={runtime}
             selected={selectedIds.has(resource.id)}
+            selection={selection}
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
+            onReport={onReport}
           />
         ))}
         {canEdit && (
@@ -195,19 +213,25 @@ function CreateNewDashboard({
 
 function ResourceCard({
   ambiguous,
+  canEdit,
   onSelectionChange,
   onOpenContextMenu,
+  onReport,
   resource,
   runtime,
   selected,
+  selection,
   visibleIds,
 }: {
   ambiguous: boolean
+  canEdit: boolean
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selected: boolean
+  selection: WorkspaceSelection
   visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
 }) {
   const Icon = resourceKindIcon(resource.kind)
@@ -217,10 +241,18 @@ function ResourceCard({
       type="button"
       aria-label={resource.title}
       data-selected={selected}
+      {...workspaceResourceDragProps({
+        canEdit,
+        onReport,
+        onSelectionChange,
+        resource,
+        runtime,
+        selection,
+      })}
       className={
         folder
-          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
-          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
+          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
+          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
       }
       onClick={(event) => selectCard({ event, resource, visibleIds, runtime, onSelectionChange })}
       onContextMenu={(event) => {

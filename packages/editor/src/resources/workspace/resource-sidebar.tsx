@@ -23,6 +23,12 @@ import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import type { WorkspaceSort } from '../workspace-preferences'
 import { updateWorkspaceSelection, workspaceSelectionIntent } from '../workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
+import {
+  allowWorkspaceResourceDrop,
+  finishWorkspaceResourceDrop,
+  leaveWorkspaceResourceDrop,
+  workspaceResourceDragProps,
+} from '../workspace-resource-drag'
 import { createWorkspaceResource, resourceKindLabel } from './resource-operations'
 import type { WorkspaceReport } from './resource-operations'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
@@ -147,8 +153,18 @@ export function ResourceSidebar({
           <option value="created:descending">Recently created</option>
         </select>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-1">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:bg-muted/40"
+        onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
+        onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
+        onDrop={
+          canEdit
+            ? (event) => void finishWorkspaceResourceDrop(event, runtime, null, onReport)
+            : undefined
+        }
+      >
         <ResourceCollection
+          canEdit={canEdit}
           query={query}
           runtime={runtime}
           initialFocusId={initialFocusId}
@@ -159,6 +175,7 @@ export function ResourceSidebar({
           visibleIds={visibleIds}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
+          onReport={onReport}
         />
       </div>
       <button
@@ -176,9 +193,11 @@ export function ResourceSidebar({
 }
 
 function ResourceCollection({
+  canEdit,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
+  onReport,
   query,
   runtime,
   selectedResourceId,
@@ -187,9 +206,11 @@ function ResourceCollection({
   sort,
   visibleIds,
 }: {
+  canEdit: boolean
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onReport: WorkspaceReport
   query: ResourceCollectionQuery
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -214,6 +235,7 @@ function ResourceCollection({
       {items.map((resource) => (
         <ResourceTreeRow
           ambiguous={ambiguous.has(resourcePresentationKey(resource))}
+          canEdit={canEdit}
           key={resource.id}
           resource={resource}
           runtime={runtime}
@@ -225,6 +247,7 @@ function ResourceCollection({
           visibleIds={visibleIds}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
+          onReport={onReport}
         />
       ))}
       {!collection.complete && (
@@ -236,9 +259,11 @@ function ResourceCollection({
 
 function ResourceTreeRow({
   ambiguous,
+  canEdit,
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
+  onReport,
   resource,
   runtime,
   selectedResourceId,
@@ -248,9 +273,11 @@ function ResourceTreeRow({
   visibleIds,
 }: {
   ambiguous: boolean
+  canEdit: boolean
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -279,11 +306,13 @@ function ResourceTreeRow({
         )}
         <ResourceTreeButton
           ambiguous={ambiguous}
+          canEdit={canEdit}
           expanded={expanded}
           initialFocusId={initialFocusId}
           onExpandedChange={setExpanded}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
+          onReport={onReport}
           resource={resource}
           runtime={runtime}
           selectedResourceId={selectedResourceId}
@@ -294,6 +323,7 @@ function ResourceTreeRow({
       {resource.kind === 'folder' && expanded && (
         <div className="ml-3 border-l border-border pl-1">
           <ResourceCollection
+            canEdit={canEdit}
             query={childQuery}
             runtime={runtime}
             initialFocusId={initialFocusId}
@@ -304,6 +334,7 @@ function ResourceTreeRow({
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
+            onReport={onReport}
           />
         </div>
       )}
@@ -337,11 +368,13 @@ function FolderExpansionButton({
 
 function ResourceTreeButton({
   ambiguous,
+  canEdit,
   expanded,
   initialFocusId,
   onExpandedChange,
   onSelectionChange,
   onOpenContextMenu,
+  onReport,
   resource,
   runtime,
   selectedResourceId,
@@ -349,11 +382,13 @@ function ResourceTreeButton({
   visibleIds,
 }: {
   ambiguous: boolean
+  canEdit: boolean
   expanded: boolean
   initialFocusId: ResourceId | null
   onExpandedChange: (expanded: boolean) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onReport: WorkspaceReport
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -371,8 +406,16 @@ function ResourceTreeButton({
       aria-current={selectedResourceId === resource.id ? 'page' : undefined}
       data-resource-id={resource.id}
       data-selected={selected}
+      {...workspaceResourceDragProps({
+        canEdit,
+        onReport,
+        onSelectionChange,
+        resource,
+        runtime,
+        selection,
+      })}
       tabIndex={tabbable ? 0 : -1}
-      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
       onClick={(event) =>
         selectTreeResource({ event, resource, runtime, visibleIds, onSelectionChange })
       }

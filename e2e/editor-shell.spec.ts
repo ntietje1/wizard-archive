@@ -22,6 +22,15 @@ test.describe('editor shell', () => {
     await expect(page.getByRole('menuitem', { name: 'Copy 3 items' })).toBeVisible()
     await page.keyboard.press('Escape')
 
+    await page.getByRole('button', { name: 'Create resource' }).click()
+    await page.getByRole('textbox', { name: 'New resource title' }).fill('Drop destination')
+    await page.getByRole('menuitem', { name: 'Folder' }).click()
+    const destination = page.getByRole('button', { name: 'Drop destination', exact: true })
+    await expect(destination).toBeVisible()
+    await expect(invoice).toHaveAttribute('draggable', 'true')
+    await invoice.dragTo(destination)
+    await expect(page.getByRole('status')).toContainText('Completed')
+
     await page.getByRole('button', { name: 'The Lantern Market' }).click()
     await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
     await expect(page.getByLabel('Note content')).toBeVisible()
