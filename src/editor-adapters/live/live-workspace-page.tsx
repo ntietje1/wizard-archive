@@ -18,10 +18,10 @@ export function LiveWorkspacePage() {
         <WizardEditor
           ariaLabel="Editor workspace"
           runtime={runtime}
-          sidebarSlots={{
-            railStartControls: <CampaignPlayersButton />,
-            railEndControls: <UserMenu />,
-            bottomPanel: (
+          resourcePanelSlots={{
+            headerStart: <CampaignPlayersButton />,
+            headerEnd: <UserMenu />,
+            footer: (
               <CampaignPanel
                 source={campaignPanelSource}
                 onSwitchCampaign={() => {

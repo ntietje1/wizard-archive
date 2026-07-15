@@ -22,16 +22,16 @@ vi.mock('../live-workspace-runtime-provider', () => ({
 vi.mock('@wizard-archive/editor', () => ({
   WizardEditor: (props: Record<string, unknown>) => {
     editorProps.current = props
-    const slots = props.sidebarSlots as {
-      bottomPanel: React.ReactNode
-      railEndControls: React.ReactNode
-      railStartControls: React.ReactNode
+    const slots = props.resourcePanelSlots as {
+      footer: React.ReactNode
+      headerEnd: React.ReactNode
+      headerStart: React.ReactNode
     }
     return (
       <section aria-label={props.ariaLabel as string}>
-        {slots.railStartControls}
-        {slots.railEndControls}
-        {slots.bottomPanel}
+        {slots.headerStart}
+        {slots.headerEnd}
+        {slots.footer}
       </section>
     )
   },

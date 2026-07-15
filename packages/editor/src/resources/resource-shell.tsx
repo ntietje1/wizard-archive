@@ -21,7 +21,7 @@ import { canonicalizeResourceTitle, RESOURCE_KIND } from './resource-record'
 import type { ResourceKind } from './resource-record'
 import { sortAuthorizedResourceSummaries } from './workspace-resource-index'
 
-export type ResourceShellSort = Readonly<{
+export type ResourceSort = Readonly<{
   by: 'created' | 'title' | 'updated'
   direction: 'ascending' | 'descending'
 }>
@@ -31,20 +31,20 @@ type Report = (message: string, retry?: () => void) => void
 export function ResourceShell({
   ariaLabel,
   runtime,
-  sidebarSlots,
-  showSidebar = true,
+  resourcePanelSlots,
+  showResourcePanel = true,
   sort = { by: 'title', direction: 'ascending' },
   workspaceName,
 }: {
   ariaLabel: string
   runtime: WizardEditorRuntime
-  sidebarSlots?: Readonly<{
-    bottomPanel?: ReactNode
-    railEndControls?: ReactNode
-    railStartControls?: ReactNode
+  resourcePanelSlots?: Readonly<{
+    footer?: ReactNode
+    headerEnd?: ReactNode
+    headerStart?: ReactNode
   }>
-  showSidebar?: boolean
-  sort?: ResourceShellSort
+  showResourcePanel?: boolean
+  sort?: ResourceSort
   workspaceName: string | null
 }) {
   const snapshot = useResourceSnapshot(runtime)
@@ -64,12 +64,12 @@ export function ResourceShell({
       aria-label={ariaLabel}
       className="flex h-full min-h-0 flex-col bg-background text-foreground sm:flex-row"
     >
-      {showSidebar && (
+      {showResourcePanel && (
         <aside className="flex max-h-72 w-full shrink-0 flex-col border-b border-border sm:max-h-none sm:w-72 sm:min-w-56 sm:border-r sm:border-b-0">
           <div className="flex items-center justify-between border-b border-border p-2">
-            <div className="flex items-center gap-1">{sidebarSlots?.railStartControls}</div>
+            <div className="flex items-center gap-1">{resourcePanelSlots?.headerStart}</div>
             <strong className="truncate px-2 text-sm">{workspaceName ?? 'Resources'}</strong>
-            <div className="flex items-center gap-1">{sidebarSlots?.railEndControls}</div>
+            <div className="flex items-center gap-1">{resourcePanelSlots?.headerEnd}</div>
           </div>
           {runtime.resources.structure.status === 'available' && (
             <ResourceCreateMenu runtime={runtime} parentId={null} onReport={report} />
@@ -106,7 +106,7 @@ export function ResourceShell({
               )}
             </p>
           )}
-          {sidebarSlots?.bottomPanel}
+          {resourcePanelSlots?.footer}
         </aside>
       )}
       <main className="min-w-0 flex-1 overflow-auto">
@@ -190,7 +190,7 @@ function ResourceCollection({
   runtime: WizardEditorRuntime
   selectedResourceId: ResourceId | null
   snapshot: WorkspaceResourceIndexSnapshot
-  sort: ResourceShellSort
+  sort: ResourceSort
 }) {
   const load = useEnsureCollection(runtime, query)
   const collection = snapshot.list(query)
@@ -268,7 +268,7 @@ function ResourceTreeRow({
   runtime: WizardEditorRuntime
   selectedResourceId: ResourceId | null
   snapshot: WorkspaceResourceIndexSnapshot
-  sort: ResourceShellSort
+  sort: ResourceSort
 }) {
   const [expanded, setExpanded] = useState(true)
   const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const

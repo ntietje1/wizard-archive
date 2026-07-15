@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ReactNode } from 'react'
 import type * as TanStackRouter from '@tanstack/react-router'
 import { LocalDemoRouteContent } from '~/routes/-demo-content'
@@ -45,7 +45,6 @@ vi.mock('@wizard-archive/editor', () => ({
     workspaceRuntimeHostProps.current = props
     return <div aria-label={props.ariaLabel as string}>Local demo workspace</div>
   },
-  createBrowserWizardEditorViewStateStores: () => ({}),
 }))
 
 describe('LocalDemoRouteContent', () => {

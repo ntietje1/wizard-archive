@@ -19,7 +19,7 @@ export function PublicDemoWorkspaceFeatureIsland() {
       ariaLabel="Text editor link autocomplete preview"
       canEdit
       scenario={scenario}
-      sidebar="none"
+      resourcePanel="hidden"
     />
   )
 }
@@ -28,7 +28,11 @@ export function PublicDemoCanvasFeatureIsland() {
   const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.connectedCanvas)
 
   return scenario.initialResourceId ? (
-    <PublicDemoIsland ariaLabel="Canvas feature preview" scenario={scenario} sidebar="none" />
+    <PublicDemoIsland
+      ariaLabel="Canvas feature preview"
+      resourcePanel="hidden"
+      scenario={scenario}
+    />
   ) : null
 }
 
@@ -36,7 +40,7 @@ export function PublicDemoMapFeatureIsland() {
   const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap)
 
   return scenario.initialResourceId ? (
-    <PublicDemoIsland ariaLabel="Map feature preview" scenario={scenario} sidebar="none" />
+    <PublicDemoIsland ariaLabel="Map feature preview" resourcePanel="hidden" scenario={scenario} />
   ) : null
 }
 
@@ -48,7 +52,7 @@ export function PublicDemoSharingFeatureIsland() {
       ariaLabel="Collaborative note preview"
       canEdit
       scenario={scenario}
-      sidebar="none"
+      resourcePanel="hidden"
     />
   )
 }
@@ -57,7 +61,12 @@ export function PublicDemoTemplateFeatureIsland() {
   const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignTemplate)
 
   return (
-    <PublicDemoIsland ariaLabel="Template note editor" canEdit scenario={scenario} sidebar="none" />
+    <PublicDemoIsland
+      ariaLabel="Template note editor"
+      canEdit
+      resourcePanel="hidden"
+      scenario={scenario}
+    />
   )
 }
 
@@ -65,12 +74,12 @@ function PublicDemoIsland({
   ariaLabel,
   canEdit = true,
   scenario,
-  sidebar = 'fixed',
+  resourcePanel = 'visible',
 }: {
   ariaLabel: string
   canEdit?: boolean
   scenario: PublicDemoScenario
-  sidebar?: 'fixed' | 'none'
+  resourcePanel?: 'visible' | 'hidden'
 }) {
   return (
     <LocalWorkspaceRuntimeHost
@@ -78,7 +87,7 @@ function PublicDemoIsland({
       canEdit={canEdit}
       initialResourceId={scenario.initialResourceId}
       initialWorkspace={scenario.workspace}
-      sidebar={sidebar}
+      resourcePanel={resourcePanel}
       workspaceName="Demo workspace"
     />
   )

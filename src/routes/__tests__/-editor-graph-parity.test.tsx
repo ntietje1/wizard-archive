@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type * as TanStackRouter from '@tanstack/react-router'
 import { PublicDemoHeroIsland } from '~/features/landing/components/public-demo-islands'
 import { LiveWorkspacePage } from '~/editor-adapters/live/live-workspace-page'
@@ -51,7 +51,6 @@ vi.mock('@wizard-archive/editor', () => ({
     graphState.hostProps.push(props)
     return <section aria-label={props.ariaLabel as string}>Workspace runtime host</section>
   },
-  createBrowserWizardEditorViewStateStores: () => ({}),
 }))
 
 vi.mock('~/editor-adapters/local/use-local-workspace-runtime', () => ({
@@ -65,10 +64,6 @@ vi.mock('~/editor-adapters/live/live-workspace-runtime-provider', () => ({
   LiveWorkspaceRuntimeProvider: ({ children }: { children: (runtime: unknown) => ReactNode }) => (
     <>{children(graphState.liveRuntime)}</>
   ),
-}))
-
-vi.mock('~/editor-adapters/live/sidebar/use-live-sidebar-sort-options', () => ({
-  useLiveSidebarSortOptions: () => ({ options: { order: 'manual' }, setOptions: vi.fn() }),
 }))
 
 vi.mock('~/editor-adapters/live/use-live-workspace-navigation', () => ({
@@ -150,7 +145,7 @@ describe('editor graph parity', () => {
         expect.objectContaining({
           ariaLabel: 'Demo workspace',
           runtime: graphState.localRuntime,
-          sidebar: 'fixed',
+          resourcePanel: 'visible',
           workspaceName: 'Demo workspace',
         }),
       ]),
