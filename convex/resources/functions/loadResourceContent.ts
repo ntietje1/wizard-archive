@@ -2,6 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignQueryCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
+import { loadMapContentRows } from './mapContent'
 
 type ResourceContentKind = 'file' | 'map' | 'canvas'
 
@@ -57,16 +58,7 @@ async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
 }
 
 async function loadMapContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
-  const [content, pins] = await Promise.all([
-    ctx.db
-      .query('resourceMapContents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-      .unique(),
-    ctx.db
-      .query('resourceMapPins')
-      .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', resourceId))
-      .take(501),
-  ])
+  const { content, pins } = await loadMapContentRows(ctx.db, resourceId)
   if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
   if (
     content.campaignUuid !== ctx.resourceScope.campaignId ||

@@ -9,7 +9,7 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
-import type { CampaignMutationCtx } from '../../functions'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import { initialJsonContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { remapResourceId } from './contentCopyTypes'
@@ -33,13 +33,13 @@ export async function createMapContent(
   })
 }
 
-export async function loadMapContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {
+export async function loadMapContentRows(db: CampaignQueryCtx['db'], resourceId: ResourceId) {
   const [content, pins] = await Promise.all([
-    ctx.db
+    db
       .query('resourceMapContents')
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
       .unique(),
-    ctx.db
+    db
       .query('resourceMapPins')
       .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', resourceId))
       .take(501),
@@ -54,7 +54,7 @@ export async function prepareMapContentCopy(
   sourceResourceId: ResourceId,
   destinationResourceId: ResourceId,
 ): Promise<ContentCopyPreparation> {
-  const { content, pins } = await loadMapContentDeletion(ctx, sourceResourceId)
+  const { content, pins } = await loadMapContentRows(ctx.db, sourceResourceId)
   if (!content || content.campaignUuid !== campaignId || pins.length > 500) {
     return { status: 'integrity_error' }
   }

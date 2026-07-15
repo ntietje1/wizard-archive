@@ -4,7 +4,7 @@ import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { loadCanvasContentDeletion } from './canvasContent'
 import { loadFileContentDeletion } from './fileContent'
-import { loadMapContentDeletion } from './mapContent'
+import { loadMapContentRows } from './mapContent'
 import { loadNoteContentDeletion } from './noteContent'
 import { fileAssetIds, mapAssetIds } from './assetContent'
 import { internal } from '../../_generated/api'
@@ -84,7 +84,7 @@ async function addContent(
       return
     }
     case 'map': {
-      const deletion = await loadMapContentDeletion(ctx, resourceId)
+      const deletion = await loadMapContentRows(ctx.db, resourceId)
       if (deletion.content) {
         plan.mapContents.push(deletion.content)
         mapAssetIds(deletion.content).forEach((assetUuid) =>
