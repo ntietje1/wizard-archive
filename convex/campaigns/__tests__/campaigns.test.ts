@@ -164,6 +164,15 @@ describe('getUserCampaigns', () => {
     expect(campaigns[0].id).toBe(campaignDomainId)
   })
 
+  it('bounds the campaign projection for supported user counts', async () => {
+    const user = await setupUser(t)
+    await Promise.all(Array.from({ length: 101 }, () => createCampaignWithDm(t, user.profile)))
+
+    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+
+    expect(campaigns).toHaveLength(100)
+  })
+
   it('excludes Pending memberships', async () => {
     const user = await setupUser(t)
     const dm = await setupUser(t)

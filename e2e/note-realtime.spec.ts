@@ -5,30 +5,31 @@ import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
-import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
-import { createE2EConvexClient, getCampaignIdFromUrl } from './helpers/convex-helpers'
+import {
+  deleteCampaignById,
+  navigateToCampaignResource,
+  provisionCampaign,
+} from './helpers/campaign-helpers'
+import { testName } from './helpers/constants'
+import { createE2EConvexClient } from './helpers/convex-helpers'
+import { provisionNoteResource } from './helpers/resource-helpers'
 
 const campaignName = testName('Canonical note collaboration')
+const noteName = 'Shared field notes'
+let campaignId: CampaignId
 
 test.describe.serial('canonical note collaboration', () => {
   test.describe.configure({ timeout: 120_000 })
 
   test('persists, reloads, and converges concurrent live edits', async ({ context, page }) => {
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await createCampaign(page, campaignName)
-    await navigateToCampaign(page, campaignName)
-    const campaignId = getCampaignIdFromUrl(page.url())
+    campaignId = await provisionCampaign(campaignName)
+    const resourceId = await provisionNoteResource(campaignId, noteName)
+    await navigateToCampaignResource(page, campaignId, resourceId)
 
-    await page.getByRole('button', { name: 'Create resource' }).click()
-    await page.getByRole('textbox', { name: 'New resource title' }).fill('Shared field notes')
-    await page.getByRole('menuitem', { name: 'Note' }).click()
-    const firstEditor = page.getByRole('textbox', { name: 'Shared field notes note editor' })
+    const firstEditor = page.getByRole('textbox', { name: `${noteName} note editor` })
     await expect(firstEditor).toBeVisible()
-    const resourceId = resourceIdFromEditorUrl(page.url())
     const convex = await createE2EConvexClient()
     const created = await convex.query(api.resources.queries.loadNoteContent, {
       campaignId,
@@ -65,7 +66,7 @@ test.describe.serial('canonical note collaboration', () => {
     const secondPage = await context.newPage()
     await secondPage.goto(page.url(), { waitUntil: 'commit' })
     const secondEditor = secondPage.getByRole('textbox', {
-      name: 'Shared field notes note editor',
+      name: `${noteName} note editor`,
     })
     await expect(secondEditor).toContainText('Recovered across immediate reload')
 
@@ -98,21 +99,13 @@ test.describe.serial('canonical note collaboration', () => {
     await secondPage.close()
   })
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    try {
-      await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort cleanup */
-    }
-    await context.close()
+  test.afterAll(async () => {
+    if (campaignId) await deleteCampaignById(campaignId)
   })
 })
 
 async function flushEditor(page: Page) {
-  await page.getByRole('heading', { name: 'Shared field notes' }).click()
+  await page.getByRole('heading', { name: noteName }).click()
   await expect
     .poll(
       () =>
@@ -127,19 +120,13 @@ async function flushEditor(page: Page) {
     .toBe(true)
 }
 
-function resourceIdFromEditorUrl(url: string): ResourceId {
-  const resourceId = new URL(url).searchParams.get('resource')
-  if (!resourceId) throw new Error(`Expected resource editor route, got ${url}`)
-  return assertDomainId(DOMAIN_ID_KIND.resource, resourceId)
-}
-
 async function loadNoteText(
   convex: Awaited<ReturnType<typeof createE2EConvexClient>>,
-  campaignId: CampaignId,
+  targetCampaignId: CampaignId,
   resourceId: ResourceId,
 ) {
   const snapshot = await convex.query(api.resources.queries.loadNoteContent, {
-    campaignId,
+    campaignId: targetCampaignId,
     resourceId,
   })
   if (snapshot.status !== 'ready') return ''

@@ -1,9 +1,15 @@
 import { expect, test } from '@playwright/test'
-import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  deleteCampaignById,
+  navigateToCampaignId,
+  provisionCampaign,
+} from './helpers/campaign-helpers'
+import { testName } from './helpers/constants'
 import type { Page } from '@playwright/test'
 
 const campaignName = testName('E2E People')
+let campaignId: CampaignId
 
 async function openSettingsPeopleTab(page: Page) {
   await page.getByRole('button', { name: 'User menu' }).click()
@@ -16,35 +22,17 @@ async function openSettingsPeopleTab(page: Page) {
 }
 
 test.describe.serial('campaign people management', () => {
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await createCampaign(page, campaignName)
-    await page.close()
-    await context.close()
+  test.beforeAll(async () => {
+    campaignId = await provisionCampaign(campaignName)
   })
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    try {
-      await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
-    }
-    await page.close()
-    await context.close()
+  test.afterAll(async () => {
+    if (campaignId) await deleteCampaignById(campaignId)
   })
 
   test('view members list in people tab', async ({ page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
-    await navigateToCampaign(page, campaignName)
+    await navigateToCampaignId(page, campaignId)
 
     const dialog = await openSettingsPeopleTab(page)
 
@@ -54,7 +42,7 @@ test.describe.serial('campaign people management', () => {
 
   test('invite link section is visible', async ({ page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
-    await navigateToCampaign(page, campaignName)
+    await navigateToCampaignId(page, campaignId)
 
     const dialog = await openSettingsPeopleTab(page)
 
@@ -66,7 +54,7 @@ test.describe.serial('campaign people management', () => {
 
   test('accept pending request if available', async ({ page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
-    await navigateToCampaign(page, campaignName)
+    await navigateToCampaignId(page, campaignId)
 
     const dialog = await openSettingsPeopleTab(page)
 
@@ -85,7 +73,7 @@ test.describe.serial('campaign people management', () => {
 
   test('reject pending request if available', async ({ page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
-    await navigateToCampaign(page, campaignName)
+    await navigateToCampaignId(page, campaignId)
 
     const dialog = await openSettingsPeopleTab(page)
 
@@ -103,7 +91,7 @@ test.describe.serial('campaign people management', () => {
 
   test('remove member if available', async ({ page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
-    await navigateToCampaign(page, campaignName)
+    await navigateToCampaignId(page, campaignId)
 
     const dialog = await openSettingsPeopleTab(page)
 

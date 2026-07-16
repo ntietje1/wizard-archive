@@ -2,35 +2,28 @@ import { readFile } from 'node:fs/promises'
 import { PDFDocument } from 'pdf-lib'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
-import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  deleteCampaignById,
+  navigateToCampaignId,
+  provisionCampaign,
+} from './helpers/campaign-helpers'
+import { testName } from './helpers/constants'
 
 const campaignName = testName('File Lifecycle')
+let campaignId: CampaignId
 
 test.describe.serial('canonical file lifecycle', () => {
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await createCampaign(page, campaignName)
-    await context.close()
+  test.beforeAll(async () => {
+    campaignId = await provisionCampaign(campaignName)
   })
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    try {
-      await deleteCampaign(page, campaignName)
-    } catch {
-      // Cleanup is best-effort so a failed assertion keeps its original evidence.
-    }
-    await context.close()
+  test.afterAll(async () => {
+    if (campaignId) await deleteCampaignById(campaignId)
   })
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await navigateToCampaign(page, campaignName)
+    await navigateToCampaignId(page, campaignId)
   })
 
   test('uploads, views, downloads, and replaces exact file bytes', async ({ page }) => {

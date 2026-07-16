@@ -3,8 +3,10 @@ import { api } from 'convex/_generated/api'
 import { signInByApi } from './auth-helpers'
 import { createE2EConvexClient } from './convex-helpers'
 import type { Locator, Page } from '@playwright/test'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
-export async function createCampaign(page: Page, name: string) {
+export async function createCampaign(page: Page, name: string): Promise<CampaignId> {
   const newCampaignButton = await waitForCampaignsDashboard(page)
   await newCampaignButton.click()
 
@@ -30,8 +32,12 @@ export async function createCampaign(page: Page, name: string) {
       await expect(createBtn).toBeEnabled({ timeout: 15000 })
       await createBtn.click({ timeout: 5000 })
       await expect(dialog).not.toBeVisible({ timeout: 30000 })
-      await expect(page.getByRole('article', { name })).toBeVisible({ timeout: 15000 })
-      return
+      const card = page.getByRole('article', { name })
+      await expect(card).toBeVisible({ timeout: 15000 })
+      const href = await card.getByRole('link').getAttribute('href')
+      const campaignId = href?.match(/^\/campaigns\/([^/]+)\/editor$/)?.[1]
+      if (!campaignId) throw new Error(`Created campaign card has no canonical route: ${href}`)
+      return assertDomainId(DOMAIN_ID_KIND.campaign, decodeURIComponent(campaignId))
     } catch (error) {
       lastError = error
       if (!(await dialog.isVisible().catch(() => false))) {
@@ -89,31 +95,45 @@ export async function navigateToCampaign(page: Page, campaignName: string) {
   }
 }
 
-export async function deleteCampaign(page: Page, name: string) {
-  await waitForCampaignsDashboard(page)
-
-  const card = page.getByRole('article', { name })
-  if (!(await card.isVisible({ timeout: 15000 }).catch(() => false))) {
-    await deleteCampaignByApi(name)
-    return
-  }
-
-  await card.getByRole('button', { name: /delete campaign/i }).click()
-  const dialog = page.getByRole('dialog', { name: /delete campaign/i })
-  await expect(dialog).toBeVisible({ timeout: 10000 })
-  await dialog.getByRole('button', { name: /^delete/i }).click()
-  await expect(dialog).not.toBeVisible({ timeout: 10000 })
+export async function provisionCampaign(name: string): Promise<CampaignId> {
+  const client = await createE2EConvexClient()
+  return await client.mutation(api.campaigns.mutations.createCampaign, {
+    name,
+    slug: slugForCampaignName(name),
+  })
 }
 
-async function deleteCampaignByApi(name: string) {
-  const client = await createE2EConvexClient()
-  const campaigns = await client.query(api.campaigns.queries.getUserCampaigns, {})
-  const campaign = campaigns.find((candidate) => candidate.name === name)
-  if (!campaign) return
+export async function navigateToCampaignId(page: Page, campaignId: CampaignId) {
+  await navigateToCampaignRoute(page, campaignId)
+}
 
-  await client.mutation(api.campaigns.mutations.deleteCampaign, {
-    campaignId: campaign.id,
-  })
+export async function navigateToCampaignResource(
+  page: Page,
+  campaignId: CampaignId,
+  resourceId: ResourceId,
+) {
+  await navigateToCampaignRoute(page, campaignId, resourceId)
+}
+
+async function navigateToCampaignRoute(
+  page: Page,
+  campaignId: CampaignId,
+  resourceId?: ResourceId,
+) {
+  await authenticatePage(page)
+  const search = resourceId ? `?resource=${resourceId}` : ''
+  await page.goto(`/campaigns/${campaignId}/editor${search}`, { waitUntil: 'commit' })
+  const resources = page.getByRole('navigation', { name: 'Sidebar' })
+  const campaignNotFound = page.getByRole('heading', { name: 'Campaign Not Found' })
+  await expect(resources.or(campaignNotFound)).toBeVisible({ timeout: 30_000 })
+  if (await campaignNotFound.isVisible()) {
+    throw new Error(`Provisioned campaign is unavailable: ${campaignId}`)
+  }
+}
+
+export async function deleteCampaignById(campaignId: CampaignId) {
+  const client = await createE2EConvexClient()
+  await client.mutation(api.campaigns.mutations.deleteCampaign, { campaignId })
 }
 
 async function waitForCampaignsDashboard(page: Page) {
@@ -141,7 +161,7 @@ async function waitForCampaignsDashboard(page: Page) {
       break
     }
 
-    await refreshAuthStorageState(page)
+    await authenticatePage(page)
     await page.goto('/campaigns', { waitUntil: 'commit' })
   }
 
@@ -149,7 +169,7 @@ async function waitForCampaignsDashboard(page: Page) {
   return newCampaignButton
 }
 
-async function refreshAuthStorageState(page: Page) {
+async function authenticatePage(page: Page) {
   const email = process.env.E2E_TEST_EMAIL
   const password = process.env.E2E_TEST_PASSWORD
   if (!email || !password) {

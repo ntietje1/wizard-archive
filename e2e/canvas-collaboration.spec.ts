@@ -1,33 +1,29 @@
 import { expect, test } from '@playwright/test'
-import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  deleteCampaignById,
+  navigateToCampaignResource,
+  provisionCampaign,
+} from './helpers/campaign-helpers'
 import { testName } from './helpers/constants'
+import { provisionCanvasResource } from './helpers/resource-helpers'
 import type { Browser, BrowserContext, Page } from '@playwright/test'
 
 const campaignName = testName('Canvas collaboration')
 const canvasName = 'Shared canvas'
+let campaignId: CampaignId
+let canvasId: ResourceId
 
 test.describe.serial('canvas collaboration', () => {
   test.setTimeout(60_000)
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: 'e2e/.auth/user.json' })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await createCampaign(page, campaignName)
-    await navigateToCampaign(page, campaignName)
-    await page.getByRole('button', { name: 'Create resource' }).click()
-    await page.getByRole('textbox', { name: 'New resource title' }).fill(canvasName)
-    await page.getByRole('menuitem', { name: 'Canvas' }).click()
-    await expect(page.getByRole('heading', { name: canvasName })).toBeVisible()
-    await context.close()
+  test.beforeAll(async () => {
+    campaignId = await provisionCampaign(campaignName)
+    canvasId = await provisionCanvasResource(campaignId, canvasName)
   })
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: 'e2e/.auth/user.json' })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await deleteCampaign(page, campaignName)
-    await context.close()
+  test.afterAll(async () => {
+    if (campaignId) await deleteCampaignById(campaignId)
   })
 
   test('converges content while cursor and selection state remain ephemeral', async ({
@@ -103,9 +99,8 @@ async function openCollaboration(browser: Browser) {
 }
 
 async function openCanvas(page: Page) {
-  await page.goto('/campaigns', { waitUntil: 'commit' })
-  await navigateToCampaign(page, campaignName)
-  await page.getByRole('button', { name: canvasName }).click()
+  await navigateToCampaignResource(page, campaignId, canvasId)
+  await expect(page.getByRole('application', { name: `${canvasName} canvas editor` })).toBeVisible()
 }
 
 async function closeCollaboration({

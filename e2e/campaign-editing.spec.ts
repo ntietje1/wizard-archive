@@ -1,45 +1,24 @@
 import { expect, test } from '@playwright/test'
-import { createCampaign, deleteCampaign } from './helpers/campaign-helpers'
-import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import { deleteCampaignById, provisionCampaign } from './helpers/campaign-helpers'
+import { testName } from './helpers/constants'
 
 const campaignName = testName('CampEdit')
 let updatedName: string
 let updatedDescription: string
+let campaignId: CampaignId
 
 test.describe.serial('campaign editing', () => {
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async () => {
     const ts = Date.now()
     updatedName = `Updated ${ts}`
     updatedDescription = `Description updated at ${ts}`
 
-    const context = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    await createCampaign(page, campaignName)
-    await page.close()
-    await context.close()
+    campaignId = await provisionCampaign(campaignName)
   })
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page = await context.newPage()
-    await page.goto('/campaigns', { waitUntil: 'commit' })
-    try {
-      await deleteCampaign(page, updatedName)
-    } catch {
-      /* best-effort */
-    }
-    try {
-      await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
-    }
-    await page.close()
-    await context.close()
+  test.afterAll(async () => {
+    if (campaignId) await deleteCampaignById(campaignId)
   })
 
   test('edit campaign name and description', async ({ page }) => {
