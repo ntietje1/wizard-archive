@@ -13,6 +13,7 @@ import {
   normalizeResourceCollectionQuery,
 } from '@wizard-archive/editor/resources/index-contract'
 import { MAX_RESOURCE_CATALOG_PAGE_SIZE } from '@wizard-archive/editor/resources/catalog-contract'
+import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
 import { indexRevision } from '@wizard-archive/editor/resources/workspace-index'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
@@ -24,6 +25,12 @@ type CollectionPage = Readonly<{
   cursor: string | null
 }>
 
+type LoadResource = (resourceId: ResourceId) => Promise<ResourceRecord | null>
+type ResourceProjectionCache = Readonly<{
+  loadResource: LoadResource
+  folderSpines: Map<ResourceId, ReadonlyArray<ResourceRecord>>
+}>
+
 function projectionScope(ctx: CampaignQueryCtx): ResourceProjectionScope {
   return {
     ...ctx.resourceScope,
@@ -33,27 +40,50 @@ function projectionScope(ctx: CampaignQueryCtx): ResourceProjectionScope {
 }
 
 async function visibleSpine(
-  catalog: ConvexResourceCatalog,
+  cache: ResourceProjectionCache,
   resource: ResourceRecord,
 ): Promise<ReadonlyArray<ResourceRecord>> {
-  const ancestors: Array<ResourceRecord> = []
+  const cached = cache.folderSpines.get(resource.id)
+  if (cached) return cached
+  const path = [resource]
   const visited = new Set<ResourceId>([resource.id])
   let parentId = resource.parentId
   while (parentId !== null) {
     if (visited.has(parentId)) throw new Error('Resource hierarchy contains a cycle')
     visited.add(parentId)
-    const parent = await catalog.getResource(resource.campaignId, parentId)
+    if (visited.size > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) {
+      throw new Error('Resource hierarchy exceeds its bound')
+    }
+    const parent = await cache.loadResource(parentId)
     if (!parent || parent.kind !== 'folder') {
       throw new Error('Resource hierarchy contains an invalid parent')
     }
-    ancestors.push(parent)
+    const parentSpine = cache.folderSpines.get(parent.id)
+    if (parentSpine) return cacheSpines(cache, path, [...parentSpine, parent])
+    path.push(parent)
     parentId = parent.parentId
   }
-  return ancestors.reverse()
+  return cacheSpines(cache, path, [])
+}
+
+function cacheSpines(
+  cache: ResourceProjectionCache,
+  path: ReadonlyArray<ResourceRecord>,
+  base: ReadonlyArray<ResourceRecord>,
+): ReadonlyArray<ResourceRecord> {
+  let ancestors = base
+  let result = base
+  for (let index = path.length - 1; index >= 0; index -= 1) {
+    const resource = path[index]!
+    result = ancestors
+    if (resource.kind === 'folder') cache.folderSpines.set(resource.id, ancestors)
+    ancestors = [...ancestors, resource]
+  }
+  return result
 }
 
 async function uniqueSummaries(
-  catalog: ConvexResourceCatalog,
+  loadResource: LoadResource,
   resources: ReadonlyArray<ResourceRecord>,
 ): Promise<ReadonlyArray<AuthorizedResourceSummary>> {
   const summaries = new Map<ResourceId, AuthorizedResourceSummary>()
@@ -61,7 +91,7 @@ async function uniqueSummaries(
     resources.map(async (resource) => {
       const parent =
         resource.lifecycle.state === 'trashed' && resource.parentId !== null
-          ? await catalog.getResource(resource.campaignId, resource.parentId)
+          ? await loadResource(resource.parentId)
           : null
       const displayParentId =
         resource.lifecycle.state === 'trashed' && parent?.lifecycle.state !== 'trashed'
@@ -73,7 +103,26 @@ async function uniqueSummaries(
   for (const summary of projected) {
     summaries.set(summary.id, summary)
   }
-  return Array.from(summaries.values()).sort((left, right) => left.id.localeCompare(right.id))
+  return Array.from(summaries.values()).sort((left, right) => compareText(left.id, right.id))
+}
+
+function createResourceProjectionCache(
+  catalog: ConvexResourceCatalog,
+  campaignId: ResourceRecord['campaignId'],
+): ResourceProjectionCache {
+  const resources = new Map<ResourceId, Promise<ResourceRecord | null>>()
+  const loadResource: LoadResource = (resourceId) => {
+    const cached = resources.get(resourceId)
+    if (cached) return cached
+    const pending = catalog.getResource(campaignId, resourceId)
+    resources.set(resourceId, pending)
+    return pending
+  }
+  return { loadResource, folderSpines: new Map() }
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
 }
 
 async function snapshotRevision(
@@ -104,7 +153,8 @@ export async function loadAuthorizedResource(
     })
   }
 
-  const resource = await catalog.getResource(scope.campaignId, resourceId)
+  const cache = createResourceProjectionCache(catalog, scope.campaignId)
+  const resource = await cache.loadResource(resourceId)
   if (!resource) {
     return await createSnapshot({
       scope,
@@ -113,10 +163,10 @@ export async function loadAuthorizedResource(
       collections: [],
     })
   }
-  const spine = await visibleSpine(catalog, resource)
+  const spine = await visibleSpine(cache, resource)
   return await createSnapshot({
     scope,
-    resources: await uniqueSummaries(catalog, [...spine, resource]),
+    resources: await uniqueSummaries(cache.loadResource, [...spine, resource]),
     missingResourceIds: [],
     collections: [],
   })
@@ -137,20 +187,19 @@ export async function loadAuthorizedResourceProjection(
     })
   }
   const catalog = new ConvexResourceCatalog(ctx.db)
+  const cache = createResourceProjectionCache(catalog, scope.campaignId)
   const resources = new Map(
-    (await Promise.all(uniqueIds.map((id) => catalog.getResource(scope.campaignId, id)))).flatMap(
-      (resource) => (resource === null ? [] : [[resource.id, resource] as const]),
+    (await Promise.all(uniqueIds.map(cache.loadResource))).flatMap((resource) =>
+      resource === null ? [] : [[resource.id, resource] as const],
     ),
   )
-  const projected = await Promise.all(
-    Array.from(resources.values(), async (resource) => [
-      ...(await visibleSpine(catalog, resource)),
-      resource,
-    ]),
-  )
+  const projected: Array<ResourceRecord> = []
+  for (const resource of resources.values()) {
+    projected.push(...(await visibleSpine(cache, resource)), resource)
+  }
   return await createSnapshot({
     scope,
-    resources: await uniqueSummaries(catalog, projected.flat()),
+    resources: await uniqueSummaries(cache.loadResource, projected),
     missingResourceIds: uniqueIds.filter((resourceId) => !resources.has(resourceId)),
     collections: [],
   })
@@ -166,6 +215,7 @@ export async function loadAuthorizedCollection(
   const scope = projectionScope(ctx)
   const query = normalizeResourceCollectionQuery(input.query)
   const catalog = new ConvexResourceCatalog(ctx.db)
+  const cache = createResourceProjectionCache(catalog, scope.campaignId)
   if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     return {
       snapshot: await createSnapshot({
@@ -180,7 +230,7 @@ export async function loadAuthorizedCollection(
 
   let parentSpine: ReadonlyArray<ResourceRecord> = []
   if (query.parentId !== null) {
-    const parent = await catalog.getResource(scope.campaignId, query.parentId)
+    const parent = await cache.loadResource(query.parentId)
     if (!parent || parent.kind !== 'folder') {
       return {
         snapshot: await createSnapshot({
@@ -192,7 +242,7 @@ export async function loadAuthorizedCollection(
         cursor: null,
       }
     }
-    parentSpine = [...(await visibleSpine(catalog, parent)), parent]
+    parentSpine = [...(await visibleSpine(cache, parent)), parent]
   }
 
   const page = await catalog.listCollection(
@@ -205,7 +255,7 @@ export async function loadAuthorizedCollection(
   return {
     snapshot: await createSnapshot({
       scope,
-      resources: await uniqueSummaries(catalog, [...parentSpine, ...items]),
+      resources: await uniqueSummaries(cache.loadResource, [...parentSpine, ...items]),
       missingResourceIds: [],
       collections: [
         {

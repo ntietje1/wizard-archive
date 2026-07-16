@@ -5,6 +5,7 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
+import { createResourceSearchDocument } from '@wizard-archive/editor/resources/search-policy'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 import { resourceRecordFromRow } from './resourceRecordRow'
@@ -23,12 +24,12 @@ export async function syncResourceSearchProjection(
     body ??
     existing?.body ??
     (resource.kind === 'note' ? await loadNoteSearchBody(ctx, resource.id) : '')
+  const document = createResourceSearchDocument(resource.id, resource.title, projectedBody)
   const value = {
     campaignUuid: resource.campaignId,
     resourceUuid: resource.id,
-    title: resource.title,
-    body: projectedBody,
-    searchableText: `${resource.title}\n${projectedBody}`,
+    title: document.title,
+    body: document.body,
   }
   if (existing) await ctx.db.replace('resourceSearchDocuments', existing._id, value)
   else await ctx.db.insert('resourceSearchDocuments', value)

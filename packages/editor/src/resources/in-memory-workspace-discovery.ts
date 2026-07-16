@@ -6,7 +6,7 @@ import type { CampaignId, ResourceId } from './domain-id'
 import type { ResourceBookmarkGateway, WorkspaceSearch } from './editor-runtime-contract'
 import type { CommandDelivery, ResourceBookmarkCommandResult } from './resource-command-contract'
 import type { ResourceRecord } from './resource-record'
-import { searchResourceDocuments } from './resource-search-policy'
+import { createResourceSearchDocument, searchResourceDocuments } from './resource-search-policy'
 
 export function createInMemoryBookmarks(
   campaignId: CampaignId,
@@ -88,11 +88,11 @@ function searchResources(
     resources.flatMap((resource) =>
       resource.lifecycle.state === 'active'
         ? [
-            {
-              resourceId: resource.id,
-              title: resource.title,
-              body: resource.kind === 'note' ? noteBody(notes, resource.id) : '',
-            },
+            createResourceSearchDocument(
+              resource.id,
+              resource.title,
+              resource.kind === 'note' ? noteBody(notes, resource.id) : '',
+            ),
           ]
         : [],
     ),
