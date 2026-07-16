@@ -17,6 +17,7 @@ import type { CanvasTextDocument } from './text/model'
 import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { DOMAIN_ID_KIND, parseDomainId } from '../resources/domain-id'
 import type { CanvasNodeId } from '../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS, canvasContentWithinWorkload } from './workload'
 
 export interface CanvasStrokeNodeData {
   points: Array<[number, number, number]>
@@ -297,6 +298,9 @@ export interface CanvasDocumentContent {
 const CANVAS_DOCUMENT_INIT_ORIGIN = 'canvas-document-init'
 
 export function createCanvasDocumentDoc(content: CanvasDocumentContent): Y.Doc {
+  if (!canvasContentWithinWorkload(content)) {
+    throw new TypeError('Canvas document exceeds the workload contract')
+  }
   const doc = new Y.Doc()
   const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
   doc.transact(() => {
@@ -350,6 +354,12 @@ export function canonicalizeCanvasDocumentContent(
 
 function parseCanvasDocumentEntries(doc: Y.Doc): CanvasDocumentContent | null {
   const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
+  if (
+    nodesMap.size > CANVAS_WORKLOAD_LIMITS.nodes ||
+    edgesMap.size > CANVAS_WORKLOAD_LIMITS.edges
+  ) {
+    return null
+  }
   const nodes = Array.from(nodesMap.entries(), ([key, value]) => {
     return parseCanvasDocumentNode(readCanvasNodeMap(key, value))
   })
@@ -357,8 +367,9 @@ function parseCanvasDocumentEntries(doc: Y.Doc): CanvasDocumentContent | null {
     return parseCanvasDocumentEdge(readCanvasEdgeMap(key, value))
   })
   if (nodes.some((node) => node === null) || edges.some((edge) => edge === null)) return null
-  return {
+  const content = {
     nodes: nodes as Array<CanvasDocumentNode>,
     edges: edges as Array<CanvasDocumentEdge>,
   }
+  return canvasContentWithinWorkload(content) ? content : null
 }

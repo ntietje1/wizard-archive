@@ -31,6 +31,7 @@ import {
 import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
 import { liveContentPendingState } from './live-content-pending-state'
+import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
@@ -148,6 +149,14 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     const decoded = new Y.Doc()
     try {
       version = assertVersionStamp(snapshot.version)
+      if (!canvasEncodedBytesWithinWorkload(snapshot.update)) {
+        decoded.destroy()
+        this.#replaceState(resourceId, {
+          status: 'integrity_error',
+          issue: 'content_limit_exceeded',
+        })
+        return
+      }
       Y.applyUpdate(decoded, new Uint8Array(snapshot.update))
       if (!parseCanvasDocumentContent(decoded)) throw new TypeError('Invalid canvas document')
     } catch {

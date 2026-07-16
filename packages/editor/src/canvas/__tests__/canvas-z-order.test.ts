@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { createCanvasReorderChange } from '../canvas-z-order'
 import type { CanvasDocumentContent } from '../document-contract'
-import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -18,7 +19,7 @@ const CONTENT: CanvasDocumentContent = {
 }
 
 describe('canvas z-order', () => {
-  it('normalizes tied indices in stable mixed document order', () => {
+  it('moves tied elements without rewriting unrelated order fields', () => {
     const tied = {
       nodes: CONTENT.nodes.map((node) => ({ ...node, zIndex: 4 })),
       edges: CONTENT.edges.map((edge) => ({ ...edge, zIndex: 4 })),
@@ -31,11 +32,8 @@ describe('canvas z-order', () => {
       ),
     ).toEqual({
       type: 'update',
-      nodes: [
-        { id: NODE_A, type: 'text', zIndex: 1 },
-        { id: NODE_B, type: 'text', zIndex: 2 },
-      ],
-      edges: [{ id: 'edge-a', zIndex: 3 }],
+      nodes: [{ id: NODE_A, type: 'text', zIndex: -1 }],
+      edges: [],
     })
   })
 
@@ -48,11 +46,8 @@ describe('canvas z-order', () => {
       ),
     ).toEqual({
       type: 'update',
-      nodes: [{ id: NODE_B, type: 'text', zIndex: 2 }],
-      edges: [
-        { id: 'edge-b', zIndex: 3 },
-        { id: 'edge-a', zIndex: 4 },
-      ],
+      nodes: [],
+      edges: [{ id: 'edge-a', zIndex: 5 }],
     })
   })
 
@@ -98,5 +93,31 @@ describe('canvas z-order', () => {
         'bringToFront',
       ),
     ).toBeNull()
+  })
+
+  it('bounds adversarial layer changes to the selected records', () => {
+    const nodes = Array.from({ length: CANVAS_WORKLOAD_LIMITS.nodes }, (_, zIndex) => ({
+      id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+      type: 'text' as const,
+      position: { x: 0, y: 0 },
+      data: {},
+      zIndex,
+    }))
+    const selected = new Set(
+      nodes.slice(0, CANVAS_WORKLOAD_LIMITS.selectedElements).map((node) => node.id),
+    )
+
+    const change = createCanvasReorderChange(
+      { nodes, edges: [] },
+      { nodeIds: selected, edgeIds: new Set() },
+      'bringToFront',
+    )
+
+    expect(change?.type).toBe('update')
+    if (change?.type !== 'update') throw new Error('Expected bounded layer update')
+    expect(change.nodes).toHaveLength(CANVAS_WORKLOAD_LIMITS.selectedElements)
+    expect(change.nodes.every((node) => selected.has(node.id))).toBe(true)
+    expect(change.edges).toEqual([])
+    expect(nodes.at(-1)?.zIndex).toBe(CANVAS_WORKLOAD_LIMITS.nodes - 1)
   })
 })

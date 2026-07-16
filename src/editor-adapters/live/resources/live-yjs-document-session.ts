@@ -225,6 +225,7 @@ export function createLiveYjsDocumentSession(options: LiveYjsDocumentSessionOpti
 
 type BackendContentSaveRejection =
   | 'content_corrupt'
+  | 'content_limit_exceeded'
   | 'content_missing'
   | 'unauthorized'
   | 'version_exhausted'
@@ -235,6 +236,7 @@ export function failedYjsSessionState(result: RejectedYjsSave): ContentUnavailab
     case 'unauthorized':
       return { status: 'unavailable', reason: result.reason }
     case 'content_corrupt':
+    case 'content_limit_exceeded':
     case 'version_exhausted':
       return { status: 'integrity_error', issue: result.reason }
     case 'content_missing':

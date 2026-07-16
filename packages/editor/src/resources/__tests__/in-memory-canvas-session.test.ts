@@ -4,6 +4,12 @@ import { CanvasDocumentController } from '../../canvas/document-controller'
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import { createInMemoryCanvasSession } from '../in-memory-canvas-session'
+import { createCanvasTextDocument } from '../../canvas/text/model'
+import { CANVAS_WORKLOAD_LIMITS } from '../../canvas/workload'
+import {
+  decodeWizardCanvasDocument,
+  encodeWizardCanvasDocument,
+} from '../../canvas/native-document'
 import * as Y from 'yjs'
 
 describe('createInMemoryCanvasSession', () => {
@@ -110,6 +116,53 @@ describe('createInMemoryCanvasSession', () => {
       position: { x: 10, y: 20 },
       width: 240,
       data: { backgroundColor: '#ff0000' },
+    })
+    session.dispose()
+  })
+
+  it('round-trips and flushes a near-limit canonical document', async () => {
+    const document = createCanvasDocumentDoc({
+      nodes: Array.from({ length: 28 }, (_, index) => ({
+        id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+        type: 'text' as const,
+        position: { x: index, y: 0 },
+        data: {
+          content: createCanvasTextDocument(
+            'x'.repeat(CANVAS_WORKLOAD_LIMITS.textCharactersPerNode),
+          ),
+        },
+      })),
+      edges: [],
+    })
+    const encoded = encodeWizardCanvasDocument(document)
+    document.destroy()
+    const decoded = decodeWizardCanvasDocument(encoded)
+    expect(decoded).not.toBeNull()
+    if (!decoded) throw new Error('Expected near-limit canvas document')
+    const initial = initialVersion(await sha256Digest(Y.encodeStateAsUpdate(decoded)))
+    const session = createInMemoryCanvasSession(decoded, initial)
+    const controller = new CanvasDocumentController(decoded)
+    const first = controller.read().nodes[0]!
+    controller.apply({
+      type: 'update',
+      nodes: [{ id: first.id, type: first.type, position: { x: -1, y: -1 } }],
+      edges: [],
+    })
+    controller.dispose()
+
+    await expect(session.flush()).resolves.toMatchObject({ status: 'completed' })
+    session.dispose()
+  })
+
+  it('truthfully rejects an oversized encoded document', async () => {
+    const document = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const initial = initialVersion(await sha256Digest(Y.encodeStateAsUpdate(document)))
+    const session = createInMemoryCanvasSession(document, initial)
+    document.getMap('overflow').set('data', 'x'.repeat(CANVAS_WORKLOAD_LIMITS.encodedBytes * 2))
+
+    await expect(session.flush()).resolves.toEqual({
+      status: 'rejected',
+      reason: 'content_limit_exceeded',
     })
     session.dispose()
   })

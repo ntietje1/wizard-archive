@@ -21,6 +21,10 @@
       "types": "./dist/canvas/document-contract.d.mts",
       "default": "./dist/canvas/document-contract.mjs"
     },
+    "./canvas/workload": {
+      "types": "./dist/canvas/workload.d.mts",
+      "default": "./dist/canvas/workload.mjs"
+    },
     "./canvas/document-controller": {
       "types": "./dist/canvas/document-controller.d.mts",
       "default": "./dist/canvas/document-controller.mjs"
@@ -180,6 +184,7 @@
   "wizardArchive": {
     "backendSafeSubpaths": [
       "./canvas/document-contract",
+      "./canvas/workload",
       "./canvas/document-controller",
       "./canvas/interaction-controller",
       "./canvas/native-document",

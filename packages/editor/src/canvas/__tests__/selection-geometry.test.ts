@@ -5,7 +5,8 @@ import {
   selectCanvasContentInPolygon,
   selectCanvasContentInRectangle,
 } from '../selection-geometry'
-import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -102,5 +103,31 @@ describe('canvas selection geometry', () => {
     expect(
       selectCanvasContentInRectangle(hidden, { x: 0, y: 0, width: 600, height: 300 }, 1),
     ).toEqual({ nodeIds: new Set(), edgeIds: new Set() })
+  })
+
+  it('bounds adversarial stroke selection work deterministically', () => {
+    const points = Array.from(
+      { length: CANVAS_WORKLOAD_LIMITS.pointsPerStroke },
+      (_, index) => [index, 0, 0.5] as [number, number, number],
+    )
+    const content: CanvasDocumentContent = {
+      nodes: Array.from({ length: 32 }, () => ({
+        id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+        type: 'stroke' as const,
+        position: { x: 0, y: 0 },
+        data: {
+          bounds: { x: 0, y: 0, width: points.length - 1, height: 0 },
+          points,
+          color: '#000000',
+          size: 1,
+        },
+      })),
+      edges: [],
+    }
+    const bounds = { x: 0, y: 100, width: points.length, height: 10 }
+
+    const first = selectCanvasContentInRectangle(content, bounds, 1)
+    expect(selectCanvasContentInRectangle(content, bounds, 1)).toEqual(first)
+    expect(first).toEqual({ nodeIds: new Set(), edgeIds: new Set() })
   })
 })

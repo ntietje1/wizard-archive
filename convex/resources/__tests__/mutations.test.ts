@@ -19,6 +19,7 @@ import {
   readCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import { CanvasDocumentController } from '@wizard-archive/editor/canvas/document-controller'
+import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import * as Y from 'yjs'
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
@@ -689,6 +690,14 @@ describe('resource structure commands', () => {
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'content_corrupt' })
     invalid.destroy()
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        update: new Uint8Array(CANVAS_WORKLOAD_LIMITS.encodedBytes + 1).buffer,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_limit_exceeded' })
 
     await expect(
       asDm(campaign).query(api.resources.queries.loadContent, {

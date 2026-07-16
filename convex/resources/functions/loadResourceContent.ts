@@ -4,6 +4,7 @@ import { authorizeResourceContent } from './authorizeResourceContent'
 import { loadPendingAssetState } from './assetContentState'
 import { loadFileContentState } from './fileContent'
 import { loadMapContentRows } from './mapContent'
+import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 
 type ResourceContentKind = 'file' | 'map' | 'canvas'
 
@@ -69,6 +70,12 @@ async function loadCanvasContent(ctx: CampaignQueryCtx, resourceId: ResourceId) 
     .query('resourceCanvasContents')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
+  if (
+    content?.campaignUuid === ctx.resourceScope.campaignId &&
+    !canvasEncodedBytesWithinWorkload(content.update)
+  ) {
+    return { status: 'integrity_error' as const, issue: 'content_limit_exceeded' as const }
+  }
   return content?.campaignUuid === ctx.resourceScope.campaignId
     ? {
         status: 'ready' as const,

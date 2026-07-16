@@ -22,6 +22,7 @@ import {
 } from './document-crdt'
 import { assertDomainId, DOMAIN_ID_KIND } from '../resources/domain-id'
 import type { CanvasNodeId } from '../resources/domain-id'
+import { canvasContentWithinWorkload } from './workload'
 
 export type CanvasDocumentChange =
   | Readonly<{
@@ -119,6 +120,12 @@ function parseDocumentElements(
   assertUniqueIds(nodes, 'node')
   assertUniqueIds(edges, 'edge')
   return { nodes, edges }
+}
+
+function assertCanvasContentWorkload(content: CanvasDocumentContent): void {
+  if (!canvasContentWithinWorkload(content)) {
+    throw new TypeError('Canvas document change exceeds the workload contract')
+  }
 }
 
 function mergePatch(current: Readonly<object>, patch: Readonly<object>): Record<string, unknown> {
@@ -290,6 +297,10 @@ export class CanvasDocumentController {
       ...edge,
       zIndex: edge.zIndex ?? nextZIndex++,
     }))
+    assertCanvasContentWorkload({
+      nodes: [...content.nodes, ...insertedNodes],
+      edges: [...content.edges, ...insertedEdges],
+    })
 
     this.#commit(() => {
       insertedNodes.forEach((node) => this.#nodesMap.set(node.id, createCanvasNodeMap(node)))
@@ -322,6 +333,12 @@ export class CanvasDocumentController {
       new Set(nodesById.keys()),
     )
     if (nodeUpdates.length === 0 && edgeUpdates.length === 0) return NO_DOCUMENT_CHANGES
+    const nextNodes = new Map(nodeUpdates.map(({ next }) => [next.id, next]))
+    const nextEdges = new Map(edgeUpdates.map(({ next }) => [next.id, next]))
+    assertCanvasContentWorkload({
+      nodes: content.nodes.map((node) => nextNodes.get(node.id) ?? node),
+      edges: content.edges.map((edge) => nextEdges.get(edge.id) ?? edge),
+    })
 
     this.#commit(() => {
       nodeUpdates.forEach(({ update }) =>

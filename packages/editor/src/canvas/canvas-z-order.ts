@@ -9,6 +9,7 @@ import type {
   CanvasDocumentNode,
 } from './document-contract'
 import type { CanvasSelection } from './interaction-controller'
+import { canvasSelectionWithinWorkload } from './workload'
 
 export const CANVAS_REORDER_ACTIONS = [
   { id: 'sendToBack', label: 'Send to back' },
@@ -28,6 +29,7 @@ export function createCanvasReorderChange(
   selection: CanvasSelection,
   direction: CanvasReorderDirection,
 ): CanvasDocumentChange | null {
+  if (!canvasSelectionWithinWorkload(selection)) return null
   const elements = sortCanvasElements([
     ...content.nodes.map((value) => ({
       key: `node:${value.id}`,
@@ -50,11 +52,10 @@ export function createCanvasReorderChange(
     elements.flatMap((element) => (requested.has(element.key) ? [element.key] : [])),
   )
   if (selected.size === 0) return null
-  const ordered = reorderCanvasElements(elements, selected, direction)
+  const updates = reorderCanvasElements(elements, selected, direction)
   const nodes: Array<CanvasDocumentNodeUpdate> = []
   const edges: Array<CanvasDocumentEdgeUpdate> = []
-  ordered.forEach((element, index) => {
-    const zIndex = index + 1
+  updates.forEach(({ element, zIndex }) => {
     if (element.value.zIndex === zIndex) return
     if (element.kind === 'node') {
       nodes.push({ id: element.value.id, type: element.value.type, zIndex })
@@ -66,14 +67,16 @@ export function createCanvasReorderChange(
 }
 
 function sortCanvasElements<TElement extends Readonly<{ zIndex?: number }>>(
-  elements: ReadonlyArray<TElement>,
-): Array<TElement> {
+  elements: ReadonlyArray<TElement & Readonly<{ key: string }>>,
+): Array<TElement & Readonly<{ key: string }>> {
   return elements
     .map((element, index) => ({ element, index }))
     .sort((left, right) => {
       const leftOrder = left.element.zIndex ?? left.index
       const rightOrder = right.element.zIndex ?? right.index
-      return leftOrder === rightOrder ? left.index - right.index : leftOrder - rightOrder
+      return leftOrder === rightOrder
+        ? left.element.key.localeCompare(right.element.key)
+        : leftOrder - rightOrder
     })
     .map(({ element }) => element)
 }
@@ -82,32 +85,63 @@ function reorderCanvasElements(
   elements: ReadonlyArray<CanvasOrderedElement>,
   selected: ReadonlySet<string>,
   direction: CanvasReorderDirection,
-): Array<CanvasOrderedElement> {
-  if (direction === 'sendToBack') {
-    return [
-      ...elements.filter((element) => selected.has(element.key)),
-      ...elements.filter((element) => !selected.has(element.key)),
-    ]
+): Array<Readonly<{ element: CanvasOrderedElement; zIndex: number }>> {
+  if (direction === 'sendToBack' || direction === 'bringToFront') {
+    return moveCanvasElementsToBoundary(elements, selected, direction)
   }
-  if (direction === 'bringToFront') {
-    return [
-      ...elements.filter((element) => !selected.has(element.key)),
-      ...elements.filter((element) => selected.has(element.key)),
-    ]
-  }
+  return moveCanvasElementsOneLayer(elements, selected, direction === 'sendBackward' ? -1 : 1)
+}
+
+function moveCanvasElementsToBoundary(
+  elements: ReadonlyArray<CanvasOrderedElement>,
+  selected: ReadonlySet<string>,
+  direction: 'bringToFront' | 'sendToBack',
+): Array<Readonly<{ element: CanvasOrderedElement; zIndex: number }>> {
+  const selectedElements = elements.filter((element) => selected.has(element.key))
+  const boundary =
+    direction === 'sendToBack'
+      ? elements.slice(0, selectedElements.length)
+      : elements.slice(-selectedElements.length)
+  if (boundary.every((element) => selected.has(element.key))) return []
+  const outsideOrder = elements.reduce((value, element, index) => {
+    const order = element.zIndex ?? index
+    return direction === 'sendToBack' ? Math.min(value, order) : Math.max(value, order)
+  }, 0)
+  const firstOrder =
+    direction === 'sendToBack' ? outsideOrder - selectedElements.length : outsideOrder + 1
+  return selectedElements.map((element, index) => ({
+    element,
+    zIndex: firstOrder + index,
+  }))
+}
+
+function moveCanvasElementsOneLayer(
+  elements: ReadonlyArray<CanvasOrderedElement>,
+  selected: ReadonlySet<string>,
+  step: -1 | 1,
+): Array<Readonly<{ element: CanvasOrderedElement; zIndex: number }>> {
   const reordered = [...elements]
-  if (direction === 'sendBackward') {
-    for (let index = 1; index < reordered.length; index += 1) {
-      if (selected.has(reordered[index]!.key) && !selected.has(reordered[index - 1]!.key)) {
-        ;[reordered[index - 1], reordered[index]] = [reordered[index]!, reordered[index - 1]!]
-      }
+  const updates = new Map<string, Readonly<{ element: CanvasOrderedElement; zIndex: number }>>()
+  let index = step === -1 ? 1 : reordered.length - 2
+  while (index >= 0 && index < reordered.length) {
+    const neighborIndex = index + step
+    const element = reordered[index]!
+    const neighbor = reordered[neighborIndex]!
+    if (selected.has(element.key) && !selected.has(neighbor.key)) {
+      updates.set(element.key, {
+        element,
+        zIndex: neighbor.zIndex ?? neighborIndex,
+      })
+      updates.set(neighbor.key, {
+        element: neighbor,
+        zIndex: element.zIndex ?? index,
+      })
+      ;[reordered[index], reordered[neighborIndex]] = [neighbor, element]
     }
-    return reordered
+    index -= step
   }
-  for (let index = reordered.length - 2; index >= 0; index -= 1) {
-    if (selected.has(reordered[index]!.key) && !selected.has(reordered[index + 1]!.key)) {
-      ;[reordered[index], reordered[index + 1]] = [reordered[index + 1]!, reordered[index]!]
-    }
-  }
-  return reordered
+  return elements.flatMap((element) => {
+    const update = updates.get(element.key)
+    return update ? [update] : []
+  })
 }

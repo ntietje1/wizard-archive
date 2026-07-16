@@ -41,4 +41,24 @@ describe('canvas snap geometry', () => {
       }),
     ).toEqual({ delta: { x: 20, y: 0 }, guides: [] })
   })
+
+  it('resolves adversarial target sets within one deterministic candidate budget', () => {
+    const options = {
+      delta: { x: 96, y: 46 },
+      draggedBounds: [{ x: 0, y: 0, width: 100, height: 50 }],
+      targetBounds: Array.from({ length: 20_000 }, (_, index) => ({
+        x: 200 + index,
+        y: 100 + index,
+        width: 100,
+        height: 50,
+      })),
+      constrain: false,
+      snap: true,
+      zoom: 2,
+    }
+
+    const first = resolveCanvasDrag(options)
+    expect(resolveCanvasDrag(options)).toEqual(first)
+    expect(first.delta).toEqual({ x: 100, y: 46 })
+  })
 })

@@ -1,5 +1,6 @@
 import type { ZodLiteral, z } from 'zod'
 import { z as zod } from 'zod'
+import { canvasTextWithinWorkload } from '../workload'
 
 const textStyleKeys = [
   'bold',
@@ -129,6 +130,7 @@ const canvasTextDocumentSchema: z.ZodType<CanvasTextDocument> = zod.array(canvas
 export type CanvasTextDocument = Array<CanvasTextBlock>
 
 export function parseCanvasTextDocument(value: unknown): CanvasTextDocument | null {
+  if (!canvasTextWithinWorkload(value)) return null
   const result = canvasTextDocumentSchema.safeParse(value)
   return result.success ? result.data : null
 }

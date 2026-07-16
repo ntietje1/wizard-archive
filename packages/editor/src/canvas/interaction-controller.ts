@@ -1,6 +1,7 @@
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasSnapGuide } from './canvas-snap-geometry'
+import { CANVAS_WORKLOAD_LIMITS } from './workload'
 
 export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
 
@@ -131,9 +132,22 @@ function emptySelection(): CanvasSelection {
 }
 
 function cloneSelection(selection: CanvasSelection): CanvasSelection {
+  let remaining: number = CANVAS_WORKLOAD_LIMITS.selectedElements
+  const nodeIds = new Set<CanvasNodeId>()
+  const edgeIds = new Set<string>()
+  for (const id of selection.nodeIds) {
+    if (remaining === 0) break
+    nodeIds.add(id)
+    remaining -= 1
+  }
+  for (const id of selection.edgeIds) {
+    if (remaining === 0) break
+    edgeIds.add(id)
+    remaining -= 1
+  }
   return {
-    nodeIds: new Set(selection.nodeIds),
-    edgeIds: new Set(selection.edgeIds),
+    nodeIds,
+    edgeIds,
   }
 }
 
@@ -187,10 +201,10 @@ function normalizeViewport(viewport: CanvasViewport): CanvasViewport {
 }
 
 function mergeSelection(current: CanvasSelection, incoming: CanvasSelection): CanvasSelection {
-  return {
+  return cloneSelection({
     nodeIds: new Set([...current.nodeIds, ...incoming.nodeIds]),
     edgeIds: new Set([...current.edgeIds, ...incoming.edgeIds]),
-  }
+  })
 }
 
 function toggleSelectionId<T>(selected: ReadonlySet<T>, id: T, additive: boolean): ReadonlySet<T> {
@@ -290,6 +304,42 @@ function reconcileResizing(
     if (!nodeIds.has(nodeId)) return { type: 'idle' }
   }
   return interaction
+}
+
+function appendBoundedPoint<TPoint>(
+  points: ReadonlyArray<TPoint>,
+  point: TPoint,
+  limit: number,
+): ReadonlyArray<TPoint> {
+  if (points.length < limit) return [...points, point]
+  const resampled: Array<TPoint> = [points[0]!]
+  for (let index = 2; index < points.length; index += 2) resampled.push(points[index]!)
+  if (resampled[resampled.length - 1] !== points[points.length - 1]) {
+    resampled.push(points[points.length - 1]!)
+  }
+  return [...resampled.slice(0, limit - 1), point]
+}
+
+function appendDrawPoint(
+  points: ReadonlyArray<CanvasDrawPoint>,
+  point: CanvasDrawPoint,
+): ReadonlyArray<CanvasDrawPoint> {
+  const previous = points[points.length - 1]
+  if (previous && Math.hypot(point[0] - previous[0], point[1] - previous[1]) < 1) {
+    return [...points.slice(0, -1), point]
+  }
+  return appendBoundedPoint(points, point, CANVAS_WORKLOAD_LIMITS.pointsPerStroke)
+}
+
+function appendGesturePoint(
+  points: ReadonlyArray<CanvasPoint>,
+  point: CanvasPoint,
+): ReadonlyArray<CanvasPoint> {
+  const previous = points[points.length - 1]
+  if (previous && Math.hypot(point.x - previous.x, point.y - previous.y) < 1) {
+    return [...points.slice(0, -1), point]
+  }
+  return appendBoundedPoint(points, point, CANVAS_WORKLOAD_LIMITS.gesturePoints)
 }
 
 export function getVisualCanvasSelection(snapshot: CanvasInteractionSnapshot): CanvasSelection {
@@ -451,7 +501,12 @@ export class CanvasInteractionController {
     initialPositions: ReadonlyMap<CanvasNodeId, CanvasPoint>,
   ): void {
     this.#assertActive()
-    if (initialPositions.size === 0) throw new Error('Canvas drag requires at least one node')
+    if (
+      initialPositions.size === 0 ||
+      initialPositions.size > CANVAS_WORKLOAD_LIMITS.selectedElements
+    ) {
+      throw new Error('Canvas drag requires a bounded non-empty node selection')
+    }
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -518,7 +573,9 @@ export class CanvasInteractionController {
     nodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
   ): void {
     this.#assertActive()
-    if (nodeBounds.size === 0) throw new TypeError('Canvas resize requires at least one node')
+    if (nodeBounds.size === 0 || nodeBounds.size > CANVAS_WORKLOAD_LIMITS.selectedElements) {
+      throw new TypeError('Canvas resize requires a bounded non-empty node selection')
+    }
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -589,8 +646,8 @@ export class CanvasInteractionController {
       ...this.#snapshot,
       interaction: {
         ...interaction,
-        points: [...interaction.points.slice(-199), point],
-        nodeIds: new Set(nodeIds),
+        points: appendGesturePoint(interaction.points, point),
+        nodeIds: new Set(Array.from(nodeIds).slice(0, CANVAS_WORKLOAD_LIMITS.selectedElements)),
       },
     })
   }
@@ -611,7 +668,7 @@ export class CanvasInteractionController {
       ...this.#snapshot,
       interaction: {
         ...interaction,
-        rawPoints: [...interaction.rawPoints, drawPoint(point, pressure)],
+        rawPoints: appendDrawPoint(interaction.rawPoints, drawPoint(point, pressure)),
         constrain,
       },
     })
@@ -723,7 +780,11 @@ export class CanvasInteractionController {
       interaction:
         interaction.kind === 'marquee'
           ? { ...interaction, current: point, candidate: nextCandidate }
-          : { ...interaction, points: [...interaction.points, point], candidate: nextCandidate },
+          : {
+              ...interaction,
+              points: appendGesturePoint(interaction.points, point),
+              candidate: nextCandidate,
+            },
     })
   }
 

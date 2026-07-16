@@ -335,7 +335,13 @@ export const contentSessionSaveResultValidator = v.union(
   }),
   v.object({
     status: v.literal('rejected'),
-    reason: literals('unauthorized', 'content_missing', 'content_corrupt', 'version_exhausted'),
+    reason: literals(
+      'unauthorized',
+      'content_missing',
+      'content_corrupt',
+      'content_limit_exceeded',
+      'version_exhausted',
+    ),
   }),
 )
 
@@ -346,7 +352,12 @@ const contentUnavailableSnapshotValidator = v.object({
 
 const contentIntegritySnapshotValidator = v.object({
   status: v.literal('integrity_error'),
-  issue: literals('content_missing', 'content_corrupt', 'version_mismatch'),
+  issue: literals(
+    'content_missing',
+    'content_corrupt',
+    'content_limit_exceeded',
+    'version_mismatch',
+  ),
 })
 
 export const noteContentSnapshotValidator = v.union(

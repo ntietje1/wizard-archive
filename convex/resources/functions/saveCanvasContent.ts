@@ -12,6 +12,7 @@ import { authorizeResourceContent } from './authorizeResourceContent'
 import { loadCanvasContentDeletion } from './canvasContent'
 import { contentMergeRejection } from './contentVersion'
 import type { ContentMergeRejection } from './contentVersion'
+import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 
 export type SaveCanvasContentResult =
   | Readonly<{
@@ -22,7 +23,12 @@ export type SaveCanvasContentResult =
     }>
   | Readonly<{
       status: 'rejected'
-      reason: 'unauthorized' | 'content_missing' | 'content_corrupt' | 'version_exhausted'
+      reason:
+        | 'unauthorized'
+        | 'content_missing'
+        | 'content_corrupt'
+        | 'content_limit_exceeded'
+        | 'version_exhausted'
     }>
 
 export async function saveCanvasContent(
@@ -58,7 +64,11 @@ async function mergeCanvasUpdate(
 ): Promise<
   | Readonly<{ status: 'completed'; update: ArrayBuffer; version: VersionStamp }>
   | ContentMergeRejection
+  | Readonly<{ status: 'rejected'; reason: 'content_limit_exceeded' }>
 > {
+  if (!canvasEncodedBytesWithinWorkload(current) || !canvasEncodedBytesWithinWorkload(delta)) {
+    return { status: 'rejected', reason: 'content_limit_exceeded' }
+  }
   const document = new Y.Doc()
   try {
     Y.applyUpdate(document, new Uint8Array(current))
@@ -67,6 +77,9 @@ async function mergeCanvasUpdate(
       return { status: 'rejected', reason: 'content_corrupt' }
     }
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    if (!canvasEncodedBytesWithinWorkload(update)) {
+      return { status: 'rejected', reason: 'content_limit_exceeded' }
+    }
     const version = advanceVersion(
       assertVersionStamp(currentVersion),
       await sha256Digest(new Uint8Array(update)),

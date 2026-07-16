@@ -36,6 +36,7 @@ import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import { canvasTextDocumentPlainText, createCanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from './workload'
 
 export function CanvasScene({
   canEdit,
@@ -500,6 +501,7 @@ function CanvasNodeContent({
         aria-label="Canvas text"
         className="nowheel nopan size-full resize-none rounded-md border bg-card p-2 text-sm outline-none ring-2 ring-ring"
         defaultValue={text}
+        maxLength={CANVAS_WORKLOAD_LIMITS.textCharactersPerNode}
         style={sharedStyle}
         onBlur={(event) => {
           onSaveText(event.currentTarget.value)

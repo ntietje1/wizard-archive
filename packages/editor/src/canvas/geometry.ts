@@ -1,4 +1,5 @@
 import { isFiniteNumber, isRecord } from './parser-primitives'
+import { CANVAS_WORKLOAD_LIMITS } from './workload'
 
 interface ParsedCanvasPoint2D {
   x: number
@@ -26,7 +27,11 @@ function parsePoint(value: unknown): [number, number, number] | null {
 }
 
 export function parseCanvasPoints(value: unknown): Array<[number, number, number]> | null {
-  if (!Array.isArray(value) || value.length === 0) {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.length > CANVAS_WORKLOAD_LIMITS.pointsPerStroke
+  ) {
     return null
   }
 

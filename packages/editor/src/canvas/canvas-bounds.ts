@@ -15,9 +15,15 @@ export function canvasNodeBounds(node: CanvasDocumentNode): CanvasBounds {
 
 export function canvasBoundsUnion(bounds: ReadonlyArray<CanvasBounds>): CanvasBounds | null {
   if (bounds.length === 0) return null
-  const left = Math.min(...bounds.map((value) => value.x))
-  const top = Math.min(...bounds.map((value) => value.y))
-  const right = Math.max(...bounds.map((value) => value.x + value.width))
-  const bottom = Math.max(...bounds.map((value) => value.y + value.height))
+  let left = Infinity
+  let top = Infinity
+  let right = -Infinity
+  let bottom = -Infinity
+  for (const value of bounds) {
+    left = Math.min(left, value.x)
+    top = Math.min(top, value.y)
+    right = Math.max(right, value.x + value.width)
+    bottom = Math.max(bottom, value.y + value.height)
+  }
   return { x: left, y: top, width: right - left, height: bottom - top }
 }

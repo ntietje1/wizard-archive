@@ -13,6 +13,7 @@ import type {
 } from '../document-contract'
 import { createCanvasEdgeMap, createCanvasNodeMap, getCanvasDocumentMaps } from '../document-crdt'
 import { createCanvasTextDocument } from '../text/model'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -96,6 +97,32 @@ describe('CanvasDocumentController', () => {
       }),
     ).toThrow('invalid node')
     expect(controller.read().nodes).toEqual([textNode(NODE_A), textNode(NODE_B)])
+    controller.dispose()
+    document.destroy()
+  })
+
+  it('rejects an oversized text update before changing the document', () => {
+    const { controller, document } = createController({ nodes: [textNode(NODE_A)] })
+
+    expect(() =>
+      controller.apply({
+        type: 'update',
+        nodes: [
+          {
+            id: NODE_A,
+            type: 'text',
+            data: {
+              content: createCanvasTextDocument(
+                'x'.repeat(CANVAS_WORKLOAD_LIMITS.textCharactersPerNode + 1),
+              ),
+            },
+          },
+        ],
+        edges: [],
+      }),
+    ).toThrow('invalid node update')
+    expect(controller.read().nodes).toEqual([textNode(NODE_A)])
+    expect(controller.canUndo).toBe(false)
     controller.dispose()
     document.destroy()
   })

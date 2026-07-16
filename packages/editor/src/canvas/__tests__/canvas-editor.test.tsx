@@ -638,11 +638,11 @@ describe('CanvasEditor', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Layer selection' }), {
       target: { value: 'bringToFront' },
     })
-    expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '1' })
-    expect(nodes[0]).toHaveStyle({ zIndex: '2' })
+    expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '2' })
+    expect(nodes[0]).toHaveStyle({ zIndex: '4' })
     expect(readCanvasDocumentContent(session.document)).toMatchObject({
-      nodes: [{ zIndex: 2 }, { zIndex: 3 }],
-      edges: [{ zIndex: 1 }],
+      nodes: [{ zIndex: 4 }, { zIndex: 5 }],
+      edges: [{ zIndex: 2 }],
     })
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(readCanvasDocumentContent(session.document)).toMatchObject({

@@ -6,6 +6,12 @@ import type { CanvasDocumentContent, CanvasDocumentNode } from './document-contr
 import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasPoint, CanvasSelection } from './interaction-controller'
 import type { CanvasNodeId } from '../resources/domain-id'
+import {
+  CANVAS_WORKLOAD_LIMITS,
+  consumeCanvasCandidateWork,
+  createCanvasCandidateWorkBudget,
+} from './workload'
+import type { CanvasCandidateWorkBudget } from './workload'
 
 const STROKE_SELECTION_PADDING_PX = 12
 
@@ -25,8 +31,8 @@ export function selectCanvasContentInRectangle(
 ): CanvasSelection {
   return selectCanvasContent(
     content,
-    (node) => nodeIntersectsRectangle(node, bounds, zoom),
-    (path) => polylineIntersectsRectangle(path, bounds),
+    (node, budget) => nodeIntersectsRectangle(node, bounds, zoom, budget),
+    (path, budget) => polylineIntersectsRectangle(path, bounds, budget),
   )
 }
 
@@ -37,26 +43,29 @@ export function selectCanvasContentInPolygon(
   if (polygon.length < 3) return emptySelection()
   return selectCanvasContent(
     content,
-    (node) => nodeIntersectsPolygon(node, polygon),
-    (path) => polylineIntersectsPolygon(path, polygon),
+    (node, budget) => nodeIntersectsPolygon(node, polygon, budget),
+    (path, budget) => polylineIntersectsPolygon(path, polygon, budget),
   )
 }
 
 function selectCanvasContent(
   content: CanvasDocumentContent,
-  nodeMatches: (node: CanvasDocumentNode) => boolean,
-  edgeMatches: (path: ReadonlyArray<CanvasPoint>) => boolean,
+  nodeMatches: (node: CanvasDocumentNode, budget: CanvasCandidateWorkBudget) => boolean,
+  edgeMatches: (path: ReadonlyArray<CanvasPoint>, budget: CanvasCandidateWorkBudget) => boolean,
 ): CanvasSelection {
+  const budget = createCanvasCandidateWorkBudget()
   const nodeIds = new Set<CanvasNodeId>()
   for (const node of content.nodes) {
-    if (!node.hidden && nodeMatches(node)) nodeIds.add(node.id)
+    if (!node.hidden && nodeMatches(node, budget)) nodeIds.add(node.id)
+    if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) break
   }
   const edgeIds = new Set<string>()
   const nodesById = new Map(content.nodes.map((node) => [node.id, node]))
   for (const edge of content.edges) {
+    if (nodeIds.size + edgeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) break
     if (edge.hidden) continue
     const path = canvasEdgePolyline(edge, nodesById)
-    if (path && edgeMatches(path)) edgeIds.add(edge.id)
+    if (path && edgeMatches(path, budget)) edgeIds.add(edge.id)
   }
   return { nodeIds, edgeIds }
 }
@@ -65,22 +74,25 @@ function nodeIntersectsRectangle(
   node: CanvasDocumentNode,
   bounds: CanvasBounds,
   zoom: number,
+  budget: CanvasCandidateWorkBudget,
 ): boolean {
   if (node.type !== 'stroke') return rectanglesIntersect(bounds, nodeBounds(node))
   const padding = Math.max(node.data.size / 2, STROKE_SELECTION_PADDING_PX / zoom)
   return polylineIntersectsRectangle(
     canvasStrokeDocumentPoints(node),
     expandBounds(bounds, padding),
+    budget,
   )
 }
 
 function nodeIntersectsPolygon(
   node: CanvasDocumentNode,
   polygon: ReadonlyArray<CanvasPoint>,
+  budget: CanvasCandidateWorkBudget,
 ): boolean {
   return node.type === 'stroke'
-    ? polylineIntersectsPolygon(canvasStrokeDocumentPoints(node), polygon)
-    : polygonIntersectsRectangle(polygon, nodeBounds(node))
+    ? polylineIntersectsPolygon(canvasStrokeDocumentPoints(node), polygon, budget)
+    : polygonIntersectsRectangle(polygon, nodeBounds(node), budget)
 }
 
 function nodeBounds(node: CanvasDocumentNode): CanvasBounds {
@@ -122,32 +134,59 @@ function pointInRectangle(point: CanvasPoint, bounds: CanvasBounds): boolean {
 function polylineIntersectsRectangle(
   points: ReadonlyArray<CanvasPoint>,
   bounds: CanvasBounds,
+  budget: CanvasCandidateWorkBudget,
 ): boolean {
-  if (points.some((point) => pointInRectangle(point, bounds))) return true
+  if (anyPointInRectangle(points, bounds, budget)) return true
   const corners = rectangleCorners(bounds)
-  return canvasPolylinesIntersect(points, [...corners, corners[0]])
+  return canvasPolylinesIntersect(points, [...corners, corners[0]], budget)
 }
 
 function polygonIntersectsRectangle(
   polygon: ReadonlyArray<CanvasPoint>,
   bounds: CanvasBounds,
+  budget: CanvasCandidateWorkBudget,
 ): boolean {
   const corners = rectangleCorners(bounds)
   return (
-    corners.some((point) => pointInPolygon(point, polygon)) ||
-    polygon.some((point) => pointInRectangle(point, bounds)) ||
-    canvasPolylinesIntersect([...polygon, polygon[0]], [...corners, corners[0]])
+    anyPointInPolygon(corners, polygon, budget) ||
+    anyPointInRectangle(polygon, bounds, budget) ||
+    canvasPolylinesIntersect([...polygon, polygon[0]], [...corners, corners[0]], budget)
   )
 }
 
 function polylineIntersectsPolygon(
   points: ReadonlyArray<CanvasPoint>,
   polygon: ReadonlyArray<CanvasPoint>,
+  budget: CanvasCandidateWorkBudget,
 ): boolean {
   return (
-    points.some((point) => pointInPolygon(point, polygon)) ||
-    canvasPolylinesIntersect(points, [...polygon, polygon[0]])
+    anyPointInPolygon(points, polygon, budget) ||
+    canvasPolylinesIntersect(points, [...polygon, polygon[0]], budget)
   )
+}
+
+function anyPointInRectangle(
+  points: ReadonlyArray<CanvasPoint>,
+  bounds: CanvasBounds,
+  budget: CanvasCandidateWorkBudget,
+): boolean {
+  for (const point of points) {
+    if (!consumeCanvasCandidateWork(budget)) return false
+    if (pointInRectangle(point, bounds)) return true
+  }
+  return false
+}
+
+function anyPointInPolygon(
+  points: ReadonlyArray<CanvasPoint>,
+  polygon: ReadonlyArray<CanvasPoint>,
+  budget: CanvasCandidateWorkBudget,
+): boolean {
+  for (const point of points) {
+    if (budget.remaining === 0) return false
+    if (pointInPolygon(point, polygon, budget)) return true
+  }
+  return false
 }
 
 function rectangleCorners(
@@ -161,9 +200,14 @@ function rectangleCorners(
   ]
 }
 
-function pointInPolygon(point: CanvasPoint, polygon: ReadonlyArray<CanvasPoint>): boolean {
+function pointInPolygon(
+  point: CanvasPoint,
+  polygon: ReadonlyArray<CanvasPoint>,
+  budget: CanvasCandidateWorkBudget,
+): boolean {
   let inside = false
   for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    if (!consumeCanvasCandidateWork(budget)) return false
     const currentPoint = polygon[index]
     const previousPoint = polygon[previous]
     if (

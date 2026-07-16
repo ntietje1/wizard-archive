@@ -7,6 +7,7 @@ import {
   screenToCanvasPoint,
 } from '../interaction-controller'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -164,16 +165,34 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
+  it('resamples tens of thousands of drawing events into one bounded stroke', () => {
+    const controller = new CanvasInteractionController()
+    controller.beginDrawing(5, { x: 0, y: 0 }, 0.5, {
+      color: '#112233',
+      size: 4,
+      opacity: 60,
+    })
+    for (let index = 1; index <= 20_000; index += 1) {
+      controller.updateDrawing(5, { x: index, y: index }, 0.5, false)
+    }
+
+    const stroke = controller.commitDrawing(5)
+    expect(stroke?.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.pointsPerStroke)
+    expect(stroke?.points[0]).toEqual([0, 0, 0.5])
+    expect(stroke?.points.at(-1)).toEqual([20_000, 20_000, 0.5])
+    controller.dispose()
+  })
+
   it('bounds eraser trails and returns only the marked canonical node ids', () => {
     const controller = new CanvasInteractionController()
     controller.beginErasing(8, { x: 0, y: 0 })
-    for (let index = 1; index <= 220; index += 1) {
+    for (let index = 1; index <= 20_000; index += 1) {
       controller.updateErasing(8, { x: index, y: index }, new Set([NODE_A, NODE_B]))
     }
     const interaction = controller.get().interaction
     expect(interaction.type).toBe('erasing')
     if (interaction.type !== 'erasing') throw new Error('Expected erasing interaction')
-    expect(interaction.points).toHaveLength(200)
+    expect(interaction.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.gesturePoints)
 
     controller.reconcileDocument(new Set([NODE_B]), new Set())
     expect(controller.commitErasing(8)).toEqual(new Set([NODE_B]))

@@ -19,6 +19,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import { initialBinaryContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
+import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
 
@@ -88,6 +89,9 @@ export async function prepareCanvasContentCopy(
           target: nodeMap.get(edge.target)!,
         }))
         const update = encodeYjsDocument(createCanvasDocumentDoc({ nodes, edges }))
+        if (!canvasEncodedBytesWithinWorkload(update)) {
+          throw new TypeError('Copied canvas exceeds the workload contract')
+        }
         const version = await initialBinaryContentVersion(update)
         return async () => {
           await ctx.db.insert('resourceCanvasContents', {
@@ -105,6 +109,7 @@ export async function prepareCanvasContentCopy(
 function decodeCanvasContent(
   update: ArrayBuffer,
 ): { nodes: Array<CanvasDocumentNode>; edges: Array<CanvasDocumentEdge> } | null {
+  if (!canvasEncodedBytesWithinWorkload(update)) return null
   const doc = new Y.Doc()
   try {
     Y.applyUpdate(doc, new Uint8Array(update))

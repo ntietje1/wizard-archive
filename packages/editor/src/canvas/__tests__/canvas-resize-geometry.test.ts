@@ -86,4 +86,27 @@ describe('canvas resize geometry', () => {
       ],
     })
   })
+
+  it('resolves adversarial resize targets within one deterministic candidate budget', () => {
+    const initialBounds = { x: 0, y: 0, width: 180, height: 80 }
+    const options = {
+      handle: 'bottom-right' as const,
+      initialBounds,
+      point: { x: 296, y: 126 },
+      initialNodeBounds: new Map([[NODE_A, initialBounds]]),
+      targetBounds: Array.from({ length: 20_000 }, (_, index) => ({
+        x: 300 + index,
+        y: 130 + index,
+        width: 180,
+        height: 80,
+      })),
+      square: false,
+      snap: true,
+      zoom: 1,
+    }
+
+    const first = resolveCanvasResize(options)
+    expect(resolveCanvasResize(options)).toEqual(first)
+    expect(first.bounds).toEqual({ x: 0, y: 0, width: 300, height: 126 })
+  })
 })

@@ -3,6 +3,8 @@ import { canvasNodeSize } from './canvas-layout'
 import type { CanvasDrawPoint, CanvasPoint } from './interaction-controller'
 import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
+import { createCanvasCandidateWorkBudget } from './workload'
+import { canvasNodeBounds } from './canvas-bounds'
 
 export function findCanvasStrokesIntersectingTrail(
   nodes: ReadonlyArray<CanvasDocumentNode>,
@@ -11,17 +13,35 @@ export function findCanvasStrokesIntersectingTrail(
 ): ReadonlySet<CanvasNodeId> {
   const marked = new Set(alreadyMarked)
   if (trail.length < 2) return marked
+  const budget = createCanvasCandidateWorkBudget()
+  const trailBounds = canvasStrokeBounds(
+    trail.map(({ x, y }) => [x, y, 0] as const),
+    0,
+  )
   for (const node of nodes) {
     if (
       node.type === 'stroke' &&
       !node.hidden &&
       !marked.has(node.id) &&
-      canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node))
+      boundsIntersect(trailBounds, canvasNodeBounds(node)) &&
+      canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node), budget)
     ) {
       marked.add(node.id)
     }
   }
   return marked
+}
+
+function boundsIntersect(
+  left: ReturnType<typeof canvasStrokeBounds>,
+  right: ReturnType<typeof canvasNodeBounds>,
+) {
+  return (
+    left.x <= right.x + right.width &&
+    left.x + left.width >= right.x &&
+    left.y <= right.y + right.height &&
+    left.y + left.height >= right.y
+  )
 }
 
 export function canvasStrokeBounds(points: ReadonlyArray<CanvasDrawPoint>, size: number) {

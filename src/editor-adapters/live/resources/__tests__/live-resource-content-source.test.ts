@@ -10,6 +10,7 @@ import {
   readCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import { CanvasDocumentController } from '@wizard-archive/editor/canvas/document-controller'
+import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import {
   createLiveMapSessionSource,
@@ -104,7 +105,7 @@ describe('LiveResourceContentSource', () => {
     expect(unsubscribe).toHaveBeenCalledOnce()
   })
 
-  it('owns decoded canvas documents and rejects corrupt updates', () => {
+  it('owns decoded canvas documents and rejects corrupt or oversized updates', () => {
     const campaignId = testDomainId('campaign', 'canvas-content-campaign')
     const resourceId = testDomainId('resource', 'canvas-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
@@ -140,6 +141,16 @@ describe('LiveResourceContentSource', () => {
     expect(source.get(resourceId)).toEqual({
       status: 'integrity_error',
       issue: 'content_corrupt',
+    })
+    apply({
+      status: 'ready',
+      kind: 'canvas',
+      update: new Uint8Array(CANVAS_WORKLOAD_LIMITS.encodedBytes + 1).buffer,
+      version,
+    })
+    expect(source.get(resourceId)).toEqual({
+      status: 'integrity_error',
+      issue: 'content_limit_exceeded',
     })
 
     unsubscribe()

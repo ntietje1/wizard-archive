@@ -1,8 +1,10 @@
-import { canvasNodeBounds } from './canvas-bounds'
+import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentNode } from './document-contract'
 import type { CanvasPoint } from './interaction-controller'
 import type { CanvasNodeId } from '../resources/domain-id'
+import { consumeCanvasCandidateWork, createCanvasCandidateWorkBudget } from './workload'
+import type { CanvasCandidateWorkBudget } from './workload'
 
 const CANVAS_SNAP_THRESHOLD_PX = 8
 
@@ -50,17 +52,18 @@ export function resolveCanvasDrag({
     x: bounds.x + constrained.x,
     y: bounds.y + constrained.y,
   }))
+  const dragged = canvasBoundsUnion(translated)!
+  const threshold = canvasSnapThreshold(zoom)
+  const budget = createCanvasCandidateWorkBudget()
   const vertical = bestSnapCandidate(
-    translated.flatMap((dragged) =>
-      targetBounds.flatMap((target) => snapCandidates('x', dragged, target)),
-    ),
-    canvasSnapThreshold(zoom),
+    snapCandidatesForTargets('x', dragged, targetBounds),
+    threshold,
+    budget,
   )
   const horizontal = bestSnapCandidate(
-    translated.flatMap((dragged) =>
-      targetBounds.flatMap((target) => snapCandidates('y', dragged, target)),
-    ),
-    canvasSnapThreshold(zoom),
+    snapCandidatesForTargets('y', dragged, targetBounds),
+    threshold,
+    budget,
   )
   return {
     delta: {
@@ -91,12 +94,14 @@ export type CanvasSnapCandidate = Readonly<{
 }>
 
 export function bestSnapCandidate<TCandidate extends CanvasSnapCandidate>(
-  candidates: ReadonlyArray<TCandidate>,
+  candidates: Iterable<TCandidate>,
   threshold: number,
+  budget: CanvasCandidateWorkBudget = createCanvasCandidateWorkBudget(),
 ): TCandidate | null {
   let best: TCandidate | null = null
   let bestDistance = threshold + 1
   for (const candidate of candidates) {
+    if (!consumeCanvasCandidateWork(budget)) break
     const distance = Math.abs(candidate.target - candidate.dragged)
     if (distance <= threshold && distance < bestDistance) {
       best = candidate
@@ -120,27 +125,37 @@ function constrainCanvasDrag(delta: CanvasPoint, constrain: boolean): CanvasPoin
   return Math.abs(delta.x) >= Math.abs(delta.y) ? { x: delta.x, y: 0 } : { x: 0, y: delta.y }
 }
 
-function snapCandidates(
+function* snapCandidatesForTargets(
+  axis: 'x' | 'y',
+  dragged: CanvasBounds,
+  targets: ReadonlyArray<CanvasBounds>,
+): Generator<CanvasSnapCandidate> {
+  for (const target of targets) yield* snapCandidates(axis, dragged, target)
+}
+
+function* snapCandidates(
   axis: 'x' | 'y',
   dragged: CanvasBounds,
   target: CanvasBounds,
-): ReadonlyArray<CanvasSnapCandidate> {
+): Generator<CanvasSnapCandidate> {
   const draggedValues = boundsAxisValues(dragged, axis)
   const targetValues = boundsAxisValues(target, axis)
   const draggedStart = axis === 'x' ? dragged.y : dragged.x
   const draggedEnd = draggedStart + (axis === 'x' ? dragged.height : dragged.width)
   const targetStart = axis === 'x' ? target.y : target.x
   const targetEnd = targetStart + (axis === 'x' ? target.height : target.width)
-  return draggedValues.flatMap((draggedValue) =>
-    targetValues.map((targetValue) => ({
-      dragged: draggedValue,
-      target: targetValue,
-      draggedStart,
-      draggedEnd,
-      targetStart,
-      targetEnd,
-    })),
-  )
+  for (const draggedValue of draggedValues) {
+    for (const targetValue of targetValues) {
+      yield {
+        dragged: draggedValue,
+        target: targetValue,
+        draggedStart,
+        draggedEnd,
+        targetStart,
+        targetEnd,
+      }
+    }
+  }
 }
 
 function boundsAxisValues(

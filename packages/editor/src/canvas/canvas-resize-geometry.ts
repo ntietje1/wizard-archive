@@ -3,6 +3,7 @@ import type { CanvasResizeHandle } from './interaction-controller'
 import { bestSnapCandidate, canvasSnapThreshold, snapGuide } from './canvas-snap-geometry'
 import type { CanvasSnapCandidate, CanvasSnapGuide } from './canvas-snap-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
+import { createCanvasCandidateWorkBudget } from './workload'
 
 const MIN_CANVAS_NODE_SIZE = 40
 
@@ -28,15 +29,19 @@ export function resolveCanvasResize({
   const bounds = resolveCanvasResizeBounds(handle, initialBounds, point, initialNodeBounds, square)
   if (!snap || targetBounds.length === 0) return { bounds, guides: [] }
   const threshold = canvasSnapThreshold(zoom)
+  const budget = createCanvasCandidateWorkBudget()
   const xCandidates = affectsResizeAxis(handle, 'x')
-    ? targetBounds.flatMap((target) => resizeSnapCandidates('x', bounds, target, handle))
+    ? resizeSnapCandidatesForTargets('x', bounds, targetBounds, handle)
     : []
   const yCandidates = affectsResizeAxis(handle, 'y')
-    ? targetBounds.flatMap((target) => resizeSnapCandidates('y', bounds, target, handle))
+    ? resizeSnapCandidatesForTargets('y', bounds, targetBounds, handle)
     : []
   const candidates = square
-    ? [bestSnapCandidate([...xCandidates, ...yCandidates], threshold)]
-    : [bestSnapCandidate(xCandidates, threshold), bestSnapCandidate(yCandidates, threshold)]
+    ? [bestSnapCandidate(chainCandidates(xCandidates, yCandidates), threshold, budget)]
+    : [
+        bestSnapCandidate(xCandidates, threshold, budget),
+        bestSnapCandidate(yCandidates, threshold, budget),
+      ]
   const selected = candidates.filter(
     (candidate): candidate is CanvasResizeSnapCandidate => candidate !== null,
   )
@@ -187,12 +192,29 @@ function normalizeBounds(
 type CanvasResizeSnapCandidate = CanvasSnapCandidate &
   Readonly<{ axis: 'x' | 'y'; point: number; center: boolean }>
 
-function resizeSnapCandidates(
+function* resizeSnapCandidatesForTargets(
+  axis: 'x' | 'y',
+  bounds: CanvasBounds,
+  targets: ReadonlyArray<CanvasBounds>,
+  handle: CanvasResizeHandle,
+): Generator<CanvasResizeSnapCandidate> {
+  for (const target of targets) yield* resizeSnapCandidates(axis, bounds, target, handle)
+}
+
+function* chainCandidates(
+  first: Iterable<CanvasResizeSnapCandidate>,
+  second: Iterable<CanvasResizeSnapCandidate>,
+): Generator<CanvasResizeSnapCandidate> {
+  yield* first
+  yield* second
+}
+
+function* resizeSnapCandidates(
   axis: 'x' | 'y',
   bounds: CanvasBounds,
   target: CanvasBounds,
   handle: CanvasResizeHandle,
-): ReadonlyArray<CanvasResizeSnapCandidate> {
+): Generator<CanvasResizeSnapCandidate> {
   const size = axis === 'x' ? bounds.width : bounds.height
   const leading = isLeadingResizeHandle(handle, axis)
   const active = bounds[axis] + (leading ? 0 : size)
@@ -204,8 +226,8 @@ function resizeSnapCandidates(
   const draggedEnd = draggedStart + (axis === 'x' ? bounds.height : bounds.width)
   const targetStart = axis === 'x' ? target.y : target.x
   const targetEnd = targetStart + (axis === 'x' ? target.height : target.width)
-  return targetValues.flatMap((targetValue) => [
-    {
+  for (const targetValue of targetValues) {
+    yield {
       axis,
       point: targetValue,
       center: false,
@@ -215,8 +237,8 @@ function resizeSnapCandidates(
       draggedEnd,
       targetStart,
       targetEnd,
-    },
-    {
+    }
+    yield {
       axis,
       point: 2 * targetValue - anchor,
       center: true,
@@ -226,8 +248,8 @@ function resizeSnapCandidates(
       draggedEnd,
       targetStart,
       targetEnd,
-    },
-  ])
+    }
+  }
 }
 
 function resizeCandidatePreserved(

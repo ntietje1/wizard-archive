@@ -19,6 +19,7 @@ export type ContentUnavailableReason =
 export type ContentIntegrityIssue =
   | 'content_missing'
   | 'content_corrupt'
+  | 'content_limit_exceeded'
   | 'version_exhausted'
   | 'version_mismatch'
 
@@ -60,6 +61,7 @@ export type ContentSessionSaveResult =
       readonly status: 'rejected'
       readonly reason:
         | 'content_corrupt'
+        | 'content_limit_exceeded'
         | 'content_missing'
         | 'resource_missing'
         | 'scope_unavailable'

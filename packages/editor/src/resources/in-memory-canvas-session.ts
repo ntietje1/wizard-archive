@@ -3,6 +3,7 @@ import { canonicalizeCanvasDocumentContent } from '../canvas/document-contract'
 import { advanceVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
 import type { CanvasSession, ContentSessionSaveResult } from './content-session-contract'
+import { canvasEncodedBytesWithinWorkload } from '../canvas/workload'
 
 export function createInMemoryCanvasSession(
   document: Y.Doc,
@@ -27,11 +28,17 @@ export function createInMemoryCanvasSession(
     async flush(): Promise<ContentSessionSaveResult> {
       if (disposed) return { status: 'rejected', reason: 'scope_unavailable' }
       if (!dirty) return { status: 'completed', version }
+      if (!canvasEncodedBytesWithinWorkload(Y.encodeStateAsUpdate(document))) {
+        return { status: 'rejected', reason: 'content_limit_exceeded' }
+      }
       if (!canonicalizeCanvasDocumentContent(document)) {
         return { status: 'rejected', reason: 'content_corrupt' }
       }
       try {
         const update = Y.encodeStateAsUpdate(document)
+        if (!canvasEncodedBytesWithinWorkload(update)) {
+          return { status: 'rejected', reason: 'content_limit_exceeded' }
+        }
         version = advanceVersion(version, await sha256Digest(update))
         dirty = false
         changed(session)

@@ -646,7 +646,8 @@ function updateErasing(
 ) {
   const interaction = controller.get().interaction
   if (interaction.type !== 'erasing' || interaction.pointerId !== pointerId) return
-  const trail = [...interaction.points.slice(-199), point]
+  const previous = interaction.points[interaction.points.length - 1]
+  const trail = previous ? [previous, point] : [point]
   controller.updateErasing(
     pointerId,
     point,
