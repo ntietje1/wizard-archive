@@ -6,11 +6,70 @@ import { testDomainId } from '../../../../../shared/test/domain-id'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { createLiveFileContentSource } from '../live-file-content-source'
 
-type Snapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
+type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('LiveFileContentSource', () => {
+  it('keeps loading, initializing, ready, unavailable, and integrity states distinct', () => {
+    const resourceId = testDomainId('resource', 'file-content')
+    const campaignId = testDomainId('campaign', 'file-content-campaign')
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const unsubscribe = vi.fn()
+    const listener = vi.fn()
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        watch: (_resourceId, update) => {
+          apply = update
+          return unsubscribe
+        },
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload: vi.fn(),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    expect(source.get(resourceId)).toEqual({ status: 'loading' })
+    source.subscribe(resourceId, listener)
+    const operationId = testDomainId('operation', 'file-copy')
+    apply({ status: 'initializing', operationId })
+    expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId })
+
+    const content = {
+      attachment: 'unattached' as const,
+      classification: 'inert_file' as const,
+      byteSize: 0,
+      detectedFormat: null,
+      extension: 'txt',
+      mediaType: 'application/octet-stream',
+      viewerUnavailableReason: 'empty_file' as const,
+    }
+    const version = {
+      scheme: 'authoritative-revision-v1' as const,
+      revision: 1,
+      digest: 'a'.repeat(64),
+    }
+    apply({ status: 'ready', content, version })
+    expect(source.get(resourceId)).toEqual({ status: 'ready', content, version })
+    apply({ status: 'unavailable', reason: 'unauthorized' })
+    expect(source.get(resourceId)).toEqual({ status: 'unavailable', reason: 'unauthorized' })
+    apply({ status: 'integrity_error', issue: 'content_missing' })
+    expect(source.get(resourceId)).toEqual({
+      status: 'integrity_error',
+      issue: 'content_missing',
+    })
+    expect(listener).toHaveBeenCalledTimes(4)
+
+    source.dispose()
+    expect(unsubscribe).toHaveBeenCalledOnce()
+  })
+
   it('downloads the authorized exact bytes and verifies their owned metadata', async () => {
     const resourceId = testDomainId('resource', 'download-file')
     const campaignId = testDomainId('campaign', 'download-campaign')
@@ -26,7 +85,6 @@ describe('LiveFileContentSource', () => {
     const version = await initialFileContentVersion(bytes, metadata)
     const snapshot: Snapshot = {
       status: 'ready',
-      kind: 'file',
       content: { ...metadata, attachment: 'attached' as const },
       version,
     }
@@ -83,7 +141,6 @@ describe('LiveFileContentSource', () => {
         load: () =>
           Promise.resolve({
             status: 'ready',
-            kind: 'file',
             content: { ...metadata, attachment: 'attached' as const },
             version,
           }),
@@ -123,7 +180,6 @@ describe('LiveFileContentSource', () => {
     const load = vi.fn(() =>
       Promise.resolve({
         status: 'ready' as const,
-        kind: 'file' as const,
         content: { ...metadata, attachment: 'attached' as const },
         version,
       }),

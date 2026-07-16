@@ -29,10 +29,10 @@ import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/
 import { encodeWizardMapDocument } from '@wizard-archive/editor/resources/map-native-document'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
-import { createLiveFixedContentResource } from './live-resource-content-source'
-import type { LiveResourceContentBackend } from './live-resource-content-source'
+import { createLiveFixedContentResource } from './live-fixed-content-create'
+import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 
-type MapSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
+type MapSnapshot = FunctionReturnType<typeof api.resources.queries.loadMapContent>
 type RawMapImage =
   | Readonly<{ status: 'unattached' }>
   | Readonly<{ status: 'attached'; byteSize: number; digest: string; mediaType: string }>
@@ -57,12 +57,10 @@ type ExecuteMapCommandArgs = FunctionArgs<typeof api.resources.mutations.execute
 type ExecuteMapCommandResult = FunctionReturnType<
   typeof api.resources.mutations.executeMapContentCommand
 >
-type CreateMapArgs = FunctionArgs<typeof api.resources.mutations.createMapResource>
-type CreateMapResult = FunctionReturnType<typeof api.resources.mutations.createMapResource>
-
-type LiveMapBackend = LiveResourceContentBackend &
+type LiveMapBackend = LiveFixedContentCreateBackend &
   Readonly<{
-    create(args: CreateMapArgs): Promise<CreateMapResult>
+    load(resourceId: ResourceId): Promise<MapSnapshot>
+    watch(resourceId: ResourceId, apply: (snapshot: MapSnapshot) => void): () => void
     discard(sessionId: Id<'fileStorage'>): Promise<void>
     download(resourceId: ResourceId, layerId: string | null): Promise<MapImageDownload>
     execute(args: ExecuteMapCommandArgs): Promise<ExecuteMapCommandResult>
@@ -85,10 +83,6 @@ export function createLiveMapSessionSource(
       sessions.get(resourceId)?.dispose()
       sessions.delete(resourceId)
       store.set(resourceId, liveContentPendingState(snapshot))
-      return
-    }
-    if (snapshot.kind !== 'map') {
-      store.set(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
       return
     }
     try {

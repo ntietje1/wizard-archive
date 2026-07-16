@@ -8,18 +8,22 @@ import {
 } from './functions/projectAuthorizedResources'
 import {
   authorizedResourceSnapshotValidator,
+  canvasContentSnapshotValidator,
+  fileContentSnapshotValidator,
   fileDownloadSnapshotValidator,
+  mapContentSnapshotValidator,
   mapImageDownloadSnapshotValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
-  resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
 import { loadResourcePresence as loadResourcePresenceFn } from './functions/resourcePresence'
-import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
+import { loadCanvasContent as loadCanvasContentFn } from './functions/canvasContent'
+import { loadFileContent as loadFileContentFn } from './functions/fileContent'
+import { loadMapContent as loadMapContentFn } from './functions/mapContent'
 import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
@@ -131,15 +135,30 @@ export const loadResourcePresence = campaignQuery({
     ),
 })
 
-export const loadContent = campaignQuery({
-  args: {
-    resourceId: resourceIdValidator,
-    kind: v.union(v.literal('file'), v.literal('map'), v.literal('canvas')),
-  },
-  returns: resourceContentSnapshotValidator,
+export const loadFileContent = campaignQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: fileContentSnapshotValidator,
   handler: async (ctx, args) => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
-    return await loadResourceContentFn(ctx, resourceId, args.kind)
+    return await loadFileContentFn(ctx, resourceId)
+  },
+})
+
+export const loadMapContent = campaignQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: mapContentSnapshotValidator,
+  handler: async (ctx, args) => {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+    return await loadMapContentFn(ctx, resourceId)
+  },
+})
+
+export const loadCanvasContent = campaignQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: canvasContentSnapshotValidator,
+  handler: async (ctx, args) => {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+    return await loadCanvasContentFn(ctx, resourceId)
   },
 })
 

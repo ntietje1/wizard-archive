@@ -1498,14 +1498,12 @@ describe('resource structure commands', () => {
     ).resolves.toEqual({ status: 'rejected', reason: 'content_limit_exceeded' })
 
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadCanvasContent, {
         campaignId: campaignUuid,
         resourceId,
-        kind: 'canvas',
       }),
     ).resolves.toMatchObject({
       status: 'ready',
-      kind: 'canvas',
       version: { revision: 3 },
     })
   })

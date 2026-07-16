@@ -22,8 +22,8 @@ import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { createResourceWatchStore } from './resource-watch-store'
-import { createLiveFixedContentResource } from './live-resource-content-source'
-import type { LiveFixedContentBackend } from './live-resource-content-source'
+import { createLiveFixedContentResource } from './live-fixed-content-create'
+import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 import {
   createBackendYjsPersistence,
   failedYjsSessionState,
@@ -36,13 +36,15 @@ import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/
 import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
 
-type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
+type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
 type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
 type SaveCanvasContentResult = FunctionReturnType<typeof api.resources.mutations.saveCanvasContent>
 
-type LiveCanvasBackend = LiveFixedContentBackend &
+type LiveCanvasBackend = LiveFixedContentCreateBackend &
   LiveResourcePresenceBackend &
   Readonly<{
+    load(resourceId: ResourceId): Promise<CanvasSnapshot>
+    watch(resourceId: ResourceId, apply: (snapshot: CanvasSnapshot) => void): () => void
     save(args: SaveCanvasContentArgs): Promise<SaveCanvasContentResult>
   }>
 
@@ -244,10 +246,6 @@ function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): CanvasPreviewSta
     const pending = liveContentPendingState(snapshot)
     return pending.status === 'initializing' ? { status: 'loading' } : pending
   }
-  if (snapshot.kind !== 'canvas') {
-    return { status: 'integrity_error', issue: 'content_corrupt' }
-  }
-
   const document = new Y.Doc()
   try {
     const version = assertVersionStamp(snapshot.version)

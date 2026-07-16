@@ -15,11 +15,12 @@ import type {
   CanvasDocumentNode,
 } from '@wizard-archive/editor/canvas/document-contract'
 import * as Y from 'yjs'
-import type { CampaignMutationCtx } from '../../functions'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import { initialBinaryContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
+import { authorizeResourceContent } from './authorizeResourceContent'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
 
@@ -42,6 +43,29 @@ export async function createCanvasContent(
     update: EMPTY_YJS_UPDATE,
     version: await initialBinaryContentVersion(EMPTY_YJS_UPDATE),
   })
+}
+
+export async function loadCanvasContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'canvas')
+  if (authorization.status !== 'authorized') return authorization
+  const content = await ctx.db
+    .query('resourceCanvasContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+  if (content?.campaignUuid !== ctx.resourceScope.campaignId) {
+    return {
+      status: 'integrity_error' as const,
+      issue: content ? ('content_corrupt' as const) : ('content_missing' as const),
+    }
+  }
+  if (!canvasEncodedBytesWithinWorkload(content.update)) {
+    return { status: 'integrity_error' as const, issue: 'content_limit_exceeded' as const }
+  }
+  return {
+    status: 'ready' as const,
+    update: content.update,
+    version: content.version,
+  }
 }
 
 export async function loadCanvasContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {

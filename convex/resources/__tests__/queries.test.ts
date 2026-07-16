@@ -221,7 +221,7 @@ describe('authorized resource projection', () => {
     ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
   })
 
-  it('loads provider-neutral file, map, and canvas content states', async () => {
+  it('loads file, map, and canvas content through their owning queries', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const fileId = await createResource(campaign, campaignUuid, 'file', null, 'File')
@@ -229,15 +229,13 @@ describe('authorized resource projection', () => {
     const canvasId = await createResource(campaign, campaignUuid, 'canvas', null, 'Canvas')
 
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadFileContent, {
         campaignId: campaignUuid,
         resourceId: fileId,
-        kind: 'file',
       }),
     ).resolves.toEqual(
       expect.objectContaining({
         status: 'ready',
-        kind: 'file',
         content: {
           attachment: 'attached',
           classification: 'inert_file',
@@ -250,25 +248,22 @@ describe('authorized resource projection', () => {
       }),
     )
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadMapContent, {
         campaignId: campaignUuid,
         resourceId: mapId,
-        kind: 'map',
       }),
     ).resolves.toEqual(
       expect.objectContaining({
         status: 'ready',
-        kind: 'map',
         content: { image: { status: 'unattached' }, layers: [], pins: [] },
       }),
     )
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadCanvasContent, {
         campaignId: campaignUuid,
         resourceId: canvasId,
-        kind: 'canvas',
       }),
-    ).resolves.toEqual(expect.objectContaining({ status: 'ready', kind: 'canvas' }))
+    ).resolves.toEqual(expect.objectContaining({ status: 'ready' }))
 
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     await t.run(async (ctx) => {
@@ -291,10 +286,9 @@ describe('authorized resource projection', () => {
       })
     })
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadFileContent, {
         campaignId: campaignUuid,
         resourceId: fileId,
-        kind: 'file',
       }),
     ).resolves.toEqual({ status: 'initializing', operationId })
     await t.run(async (ctx) => {
@@ -305,24 +299,33 @@ describe('authorized resource projection', () => {
       await ctx.db.patch(content!._id, { state: 'failed' })
     })
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadFileContent, {
         campaignId: campaignUuid,
         resourceId: fileId,
-        kind: 'file',
       }),
     ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
     await expect(
-      asPlayer(campaign).query(api.resources.queries.loadContent, {
+      asPlayer(campaign).query(api.resources.queries.loadMapContent, {
         campaignId: campaignUuid,
         resourceId: mapId,
-        kind: 'map',
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
     await expect(
-      asDm(campaign).query(api.resources.queries.loadContent, {
+      asDm(campaign).query(api.resources.queries.loadFileContent, {
         campaignId: campaignUuid,
         resourceId: mapId,
-        kind: 'canvas',
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadMapContent, {
+        campaignId: campaignUuid,
+        resourceId: canvasId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
   })

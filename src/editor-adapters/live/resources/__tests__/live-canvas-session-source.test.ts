@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
-import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import {
   canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
@@ -12,12 +11,10 @@ import {
 import type { CanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import { testDomainId } from '../../../../../shared/test/domain-id'
-import { createLiveResourceContentSource } from '../live-resource-content-source'
-import { createLiveMapSessionSource } from '../live-map-session-source'
 import { createLiveCanvasSessionSource } from '../live-canvas-session-source'
 import { createYjsUpdateOutbox } from '../yjs-update-outbox'
 
-type Snapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
+type Snapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
 type SaveCanvasArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
 type SaveCanvasResult = FunctionReturnType<typeof api.resources.mutations.saveCanvasContent>
 
@@ -49,83 +46,37 @@ function applyCanvasContentUpdate(document: Y.Doc, content: CanvasDocumentConten
   update.destroy()
 }
 
-describe('LiveResourceContentSource', () => {
-  it('loads an unopened map once for native export without a subscription', async () => {
-    const resourceId = testDomainId('resource', 'map-export')
-    const campaignId = testDomainId('campaign', 'map-export-campaign')
+describe('LiveCanvasSessionSource', () => {
+  it('loads an unopened canvas once for native export without a subscription', async () => {
+    sessionStorage.clear()
+    const campaignId = testDomainId('campaign', 'canvas-export-campaign')
+    const resourceId = testDomainId('resource', 'canvas-export-resource')
+    const document = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    document.destroy()
     const watch = vi.fn(() => () => undefined)
-    const source = createLiveMapSessionSource(
+    const source = createLiveCanvasSessionSource(
       campaignId,
+      testDomainId('campaignMember', 'canvas-export-member'),
+      collaborationUser,
       {
-        load: () =>
-          Promise.resolve({
-            status: 'ready',
-            kind: 'map',
-            content: { image: { status: 'unattached' }, layers: [], pins: [] },
-            version,
-          }),
-        watch,
+        ...presenceBackend(),
         create: vi.fn(),
-        discard: vi.fn(),
-        download: vi.fn(),
-        execute: vi.fn(),
+        load: () => Promise.resolve({ status: 'ready', update, version }),
         refresh: vi.fn(),
-        replace: vi.fn(),
-        upload: vi.fn(),
+        save: vi.fn(),
+        watch,
       },
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
     )
 
     await expect(source.export(resourceId)).resolves.toMatchObject({
       status: 'ready',
-      extension: 'wizardmap',
-      mediaType: 'application/vnd.wizard-archive.map+json',
+      extension: 'wizardcanvas',
+      mediaType: 'application/vnd.wizard-archive.canvas',
     })
     expect(watch).not.toHaveBeenCalled()
     source.dispose()
-  })
-
-  it('keeps loading, initializing, ready, unavailable, and integrity states distinct', () => {
-    const resourceId = testDomainId('resource', 'file-content')
-    let apply: (snapshot: Snapshot) => void = () => undefined
-    const unsubscribe = vi.fn()
-    const listener = vi.fn()
-    const source = createLiveResourceContentSource({
-      load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
-      watch: (_resourceId, update) => {
-        apply = update
-        return unsubscribe
-      },
-    })
-
-    expect(source.get(resourceId)).toEqual({ status: 'loading' })
-    source.subscribe(resourceId, listener)
-    const operationId = testDomainId('operation', 'file-copy')
-    apply({ status: 'initializing', operationId })
-    expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId })
-
-    const content = {
-      attachment: 'unattached' as const,
-      classification: 'inert_file' as const,
-      byteSize: 0,
-      detectedFormat: null,
-      extension: 'txt',
-      mediaType: 'application/octet-stream',
-      viewerUnavailableReason: 'empty_file' as const,
-    }
-    apply({ status: 'ready', kind: 'file', content, version })
-    expect(source.get(resourceId)).toEqual({ status: 'ready', content, version })
-    apply({ status: 'unavailable', reason: 'unauthorized' })
-    expect(source.get(resourceId)).toEqual({ status: 'unavailable', reason: 'unauthorized' })
-    apply({ status: 'integrity_error', issue: 'content_missing' })
-    expect(source.get(resourceId)).toEqual({
-      status: 'integrity_error',
-      issue: 'content_missing',
-    })
-    expect(listener).toHaveBeenCalledTimes(4)
-
-    source.dispose()
-    expect(unsubscribe).toHaveBeenCalledOnce()
   })
 
   it('owns decoded canvas documents, collaboration, and rejects invalid updates', async () => {
@@ -162,7 +113,7 @@ describe('LiveResourceContentSource', () => {
     const update = Y.encodeStateAsUpdate(new Y.Doc())
 
     const unsubscribe = source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', kind: 'canvas', update: update.buffer as ArrayBuffer, version })
+    apply({ status: 'ready', update: update.buffer as ArrayBuffer, version })
     expect(source.get(resourceId)).toEqual({
       status: 'ready',
       session: expect.objectContaining({
@@ -177,7 +128,6 @@ describe('LiveResourceContentSource', () => {
     expect(heartbeatPresence).toHaveBeenCalledOnce()
     apply({
       status: 'ready',
-      kind: 'canvas',
       update: new Uint8Array([255]).buffer,
       version,
     })
@@ -187,7 +137,6 @@ describe('LiveResourceContentSource', () => {
     })
     apply({
       status: 'ready',
-      kind: 'canvas',
       update: new Uint8Array(CANVAS_WORKLOAD_LIMITS.encodedBytes + 1).buffer,
       version,
     })
@@ -239,7 +188,7 @@ describe('LiveResourceContentSource', () => {
     )
 
     source.previews.subscribe(resourceId, () => {})
-    apply({ status: 'ready', kind: 'canvas', update, version })
+    apply({ status: 'ready', update, version })
 
     const preview = source.previews.get(resourceId)
     expect(preview.status).toBe('ready')
@@ -303,7 +252,6 @@ describe('LiveResourceContentSource', () => {
         load: () =>
           Promise.resolve({
             status: 'ready' as const,
-            kind: 'canvas' as const,
             update: persistedUpdate,
             version: persistedVersion,
           }),
@@ -318,7 +266,7 @@ describe('LiveResourceContentSource', () => {
     )
 
     source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', kind: 'canvas', update: persistedUpdate, version })
+    apply({ status: 'ready', update: persistedUpdate, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas')
     applyCanvasContentUpdate(ready.session.document, {
@@ -337,7 +285,6 @@ describe('LiveResourceContentSource', () => {
     persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
     apply({
       status: 'ready',
-      kind: 'canvas',
       update: persistedUpdate,
       version: persistedVersion,
     })
@@ -349,7 +296,6 @@ describe('LiveResourceContentSource', () => {
     expect(save).toHaveBeenCalledOnce()
     apply({
       status: 'ready',
-      kind: 'canvas',
       update: persistedUpdate,
       version: persistedVersion,
     })
@@ -430,7 +376,6 @@ describe('LiveResourceContentSource', () => {
     source.subscribe(resourceId, () => {})
     apply({
       status: 'ready',
-      kind: 'canvas',
       update: persistedUpdate,
       version: persistedVersion,
     })
@@ -506,7 +451,7 @@ describe('LiveResourceContentSource', () => {
         () => ({ abandon: vi.fn(), completed: vi.fn() }),
       )
       source.subscribe(resourceId, () => {})
-      apply({ status: 'ready', kind: 'canvas', update: initialUpdate, version })
+      apply({ status: 'ready', update: initialUpdate, version })
       const ready = source.get(resourceId)
       if (ready.status !== 'ready') throw new Error('Expected ready canvas')
       applyCanvasContentUpdate(ready.session.document, {
@@ -578,7 +523,7 @@ describe('LiveResourceContentSource', () => {
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
     )
     source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', kind: 'canvas', update: initialUpdate, version })
+    apply({ status: 'ready', update: initialUpdate, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas')
     let destroyed = false
@@ -669,7 +614,7 @@ describe('LiveResourceContentSource', () => {
     })
 
     try {
-      apply({ status: 'ready', kind: 'canvas', update, version })
+      apply({ status: 'ready', update, version })
       expect(source.get(resourceId)).toEqual({
         status: 'unavailable',
         reason: 'scope_unavailable',
@@ -678,61 +623,5 @@ describe('LiveResourceContentSource', () => {
       getItem.mockRestore()
       source.dispose()
     }
-  })
-
-  it('rejects a completed kind-owned create with the wrong receipt identity', async () => {
-    const campaignId = testDomainId('campaign', 'map-create-campaign')
-    const resourceId = testDomainId('resource', 'map-create-resource')
-    const operationId = testDomainId('operation', 'map-create-operation')
-    const recording = { abandon: vi.fn(), completed: vi.fn() }
-    const refresh = vi.fn()
-    const source = createLiveMapSessionSource(
-      campaignId,
-      {
-        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
-        watch: () => () => undefined,
-        create: () =>
-          Promise.resolve({
-            status: 'completed',
-            receipt: {
-              campaignId,
-              operationId: testDomainId('operation', 'unexpected-operation'),
-              result: { type: 'created', resourceId },
-              postconditions: [],
-            },
-          }),
-        discard: vi.fn(),
-        download: vi.fn(),
-        execute: vi.fn(),
-        refresh,
-        replace: vi.fn(),
-        upload: vi.fn(),
-      },
-      () => recording,
-    )
-
-    await expect(
-      source.create({
-        campaignId,
-        operationId,
-        command: {
-          type: 'create',
-          resourceId,
-          kind: 'map',
-          parentId: null,
-          title: canonicalizeResourceTitle('Map'),
-          icon: null,
-          color: null,
-        },
-      }),
-    ).resolves.toEqual({
-      status: 'not_committed',
-      retryable: false,
-      reason: 'invalid_response',
-    })
-    expect(recording.abandon).toHaveBeenCalledOnce()
-    expect(recording.completed).not.toHaveBeenCalled()
-    expect(refresh).not.toHaveBeenCalled()
-    source.dispose()
   })
 })

@@ -11,6 +11,28 @@ import {
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { prepareAssetCopies } from './assetContent'
 import { loadPendingAssetState } from './assetContentState'
+import { authorizeResourceContent } from './authorizeResourceContent'
+
+export async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'file')
+  if (authorization.status !== 'authorized') return authorization
+  const state = await loadFileContentState(ctx, resourceId)
+  if (state.status !== 'ready') return state
+  const content = state.content
+  return {
+    status: 'ready' as const,
+    content: {
+      attachment: content.assetUuid === null ? ('unattached' as const) : ('attached' as const),
+      classification: content.classification,
+      byteSize: content.byteSize,
+      detectedFormat: content.detectedFormat,
+      extension: content.extension,
+      mediaType: content.mediaType,
+      viewerUnavailableReason: content.viewerUnavailableReason,
+    },
+    version: content.version,
+  }
+}
 
 export async function loadFileContentState(ctx: CampaignQueryCtx, resourceId: ResourceId) {
   const content = await ctx.db

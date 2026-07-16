@@ -24,6 +24,7 @@ import type { ContentCopyPreparation } from './contentCopyTypes'
 import { findCanonicalResource } from './findCanonicalResource'
 import { prepareAssetCopies } from './assetContent'
 import { loadPendingAssetState } from './assetContentState'
+import { authorizeResourceContent } from './authorizeResourceContent'
 
 const EMPTY_MAP_CONTENT = {
   image: { status: 'unattached' as const },
@@ -106,6 +107,18 @@ export async function loadMapContentState(ctx: CampaignQueryCtx, resourceId: Res
   }
   const pending = await loadPendingAssetState(ctx, resourceId, rows.content.state)
   return pending ?? rows
+}
+
+export async function loadMapContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'map')
+  if (authorization.status !== 'authorized') return authorization
+  const state = await loadMapContentState(ctx, resourceId)
+  if (state.status !== 'ready') return state
+  return {
+    status: 'ready' as const,
+    content: state.projected,
+    version: state.content.version,
+  }
 }
 
 export async function prepareMapContentCopy(

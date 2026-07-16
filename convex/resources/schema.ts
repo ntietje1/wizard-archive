@@ -560,23 +560,31 @@ export const fileDownloadSnapshotValidator = v.union(
   contentIntegritySnapshotValidator,
 )
 
-export const resourceContentSnapshotValidator = v.union(
+export const fileContentSnapshotValidator = v.union(
   v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({
     status: v.literal('ready'),
-    kind: v.literal('file'),
     content: fileResourceContentValidator,
     version: versionStampValidator,
   }),
+  contentUnavailableSnapshotValidator,
+  contentIntegritySnapshotValidator,
+)
+
+export const mapContentSnapshotValidator = v.union(
+  v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({
     status: v.literal('ready'),
-    kind: v.literal('map'),
     content: mapResourceContentValidator,
     version: versionStampValidator,
   }),
+  contentUnavailableSnapshotValidator,
+  contentIntegritySnapshotValidator,
+)
+
+export const canvasContentSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
-    kind: v.literal('canvas'),
     update: v.bytes(),
     version: versionStampValidator,
   }),

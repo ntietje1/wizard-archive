@@ -8,6 +8,7 @@ import {
 } from '@wizard-archive/editor/resources/component-version'
 import type {
   FileContentSource,
+  FileContentState,
   FileResourceSource,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
@@ -21,32 +22,79 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
-import {
-  createLiveResourceContentSource,
-  finalizeLiveContentCreate,
-} from './live-resource-content-source'
-import type { LiveResourceContentBackend } from './live-resource-content-source'
+import { finalizeLiveContentCreate } from './live-fixed-content-create'
 import {
   deliverExpectedCreateResult,
   readLiveStructureResult,
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
+import { createResourceWatchStore } from './resource-watch-store'
+import { liveContentPendingState } from './live-content-pending-state'
 
 type CreateFileArgs = FunctionArgs<typeof api.resources.actions.createFileResource>
 type CreateFileResult = FunctionReturnType<typeof api.resources.actions.createFileResource>
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 type ReplaceFileArgs = FunctionArgs<typeof api.resources.actions.replaceFileContent>
 type ReplaceFileResult = FunctionReturnType<typeof api.resources.actions.replaceFileContent>
+type FileSnapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 
-type LiveFileContentBackend = LiveResourceContentBackend &
-  Readonly<{
-    create(args: CreateFileArgs): Promise<CreateFileResult>
-    download(resourceId: ResourceId): Promise<FileDownloadResult>
-    discard(sessionId: Id<'fileStorage'>): Promise<void>
-    refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
-    replace(args: ReplaceFileArgs): Promise<ReplaceFileResult>
-    upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
-  }>
+type LiveFileContentBackend = Readonly<{
+  load(resourceId: ResourceId): Promise<FileSnapshot>
+  watch(resourceId: ResourceId, apply: (snapshot: FileSnapshot) => void): () => void
+  create(args: CreateFileArgs): Promise<CreateFileResult>
+  download(resourceId: ResourceId): Promise<FileDownloadResult>
+  discard(sessionId: Id<'fileStorage'>): Promise<void>
+  refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
+  replace(args: ReplaceFileArgs): Promise<ReplaceFileResult>
+  upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
+}>
+
+type FileContentStore = ReturnType<typeof createResourceWatchStore<FileSnapshot, FileContentState>>
+
+class LiveFileContentStateSource {
+  readonly #store: FileContentStore
+
+  constructor(private readonly backend: LiveFileContentBackend) {
+    this.#store = createResourceWatchStore<FileSnapshot, FileContentState>(
+      backend.watch,
+      (resourceId, snapshot) => this.#apply(resourceId, snapshot),
+      { status: 'loading' },
+    )
+  }
+
+  get(resourceId: ResourceId): FileContentState {
+    return this.#store.get(resourceId)
+  }
+
+  async load(resourceId: ResourceId): Promise<FileContentState> {
+    this.#apply(resourceId, await this.backend.load(resourceId))
+    return this.get(resourceId)
+  }
+
+  subscribe(resourceId: ResourceId, listener: () => void): () => void {
+    return this.#store.subscribe(resourceId, listener)
+  }
+
+  dispose(): void {
+    this.#store.dispose()
+  }
+
+  #apply(resourceId: ResourceId, snapshot: FileSnapshot): void {
+    if (snapshot.status !== 'ready') {
+      this.#store.set(resourceId, liveContentPendingState(snapshot))
+      return
+    }
+    try {
+      this.#store.set(resourceId, {
+        status: 'ready',
+        content: snapshot.content,
+        version: assertVersionStamp(snapshot.version),
+      })
+    } catch {
+      this.#store.set(resourceId, { status: 'integrity_error', issue: 'version_mismatch' })
+    }
+  }
+}
 
 type PendingFileCreate = Readonly<{
   operationId: OperationId
@@ -63,11 +111,11 @@ export function createLiveFileContentSource(
   backend: LiveFileContentBackend,
   beginCreate: () => ResourceHistoryRecording,
 ): FileContentSource {
-  const content = createLiveResourceContentSource(backend)
+  const content = new LiveFileContentStateSource(backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
   return {
-    get: content.get,
-    subscribe: content.subscribe,
+    get: (resourceId) => content.get(resourceId),
+    subscribe: (resourceId, listener) => content.subscribe(resourceId, listener),
     export: async (resourceId) => {
       const state = await content.load(resourceId)
       if (state.status !== 'ready') {

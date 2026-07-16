@@ -17,7 +17,6 @@ import {
 import { createResourceUndoHistory } from '@wizard-archive/editor/resources/undo-history'
 import { createLiveNoteContentSource } from './live-note-content-source'
 import { createLiveMapSessionSource } from './live-map-session-source'
-import type { LiveResourceContentBackend } from './live-resource-content-source'
 import { createLiveCanvasSessionSource } from './live-canvas-session-source'
 import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveFileContentSource } from './live-file-content-source'
@@ -131,22 +130,6 @@ function createScopedLiveResourceRuntime(
     },
     undo.begin,
   )
-  const contentBackend = (kind: 'file' | 'map' | 'canvas'): LiveResourceContentBackend => ({
-    load: (resourceId) =>
-      convex.query(api.resources.queries.loadContent, {
-        campaignId: currentScope.campaignId,
-        resourceId,
-        kind,
-      }),
-    watch: (resourceId, apply) => {
-      const watch = convex.watchQuery(api.resources.queries.loadContent, {
-        campaignId: currentScope.campaignId,
-        resourceId,
-        kind,
-      })
-      return subscribeToWatch(watch, apply)
-    },
-  })
   const discardUpload = async (sessionId: Id<'fileStorage'>) => {
     await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
   }
@@ -172,7 +155,18 @@ function createScopedLiveResourceRuntime(
   const files = createLiveFileContentSource(
     currentScope.campaignId,
     {
-      ...contentBackend('file'),
+      load: (resourceId) =>
+        convex.query(api.resources.queries.loadFileContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        }),
+      watch: (resourceId, apply) => {
+        const watch = convex.watchQuery(api.resources.queries.loadFileContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        })
+        return subscribeToWatch(watch, apply)
+      },
       create: (args) => convex.action(api.resources.actions.createFileResource, args),
       download: (resourceId) =>
         convex.query(api.resources.queries.loadFileDownload, {
@@ -189,7 +183,18 @@ function createScopedLiveResourceRuntime(
   const maps = createLiveMapSessionSource(
     currentScope.campaignId,
     {
-      ...contentBackend('map'),
+      load: (resourceId) =>
+        convex.query(api.resources.queries.loadMapContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        }),
+      watch: (resourceId, apply) => {
+        const watch = convex.watchQuery(api.resources.queries.loadMapContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        })
+        return subscribeToWatch(watch, apply)
+      },
       create: (args) => convex.mutation(api.resources.mutations.createMapResource, args),
       discard: discardUpload,
       download: (resourceId, layerId) =>
@@ -211,7 +216,18 @@ function createScopedLiveResourceRuntime(
     collaborationUser,
     {
       ...presenceBackend,
-      ...contentBackend('canvas'),
+      load: (resourceId) =>
+        convex.query(api.resources.queries.loadCanvasContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        }),
+      watch: (resourceId, apply) => {
+        const watch = convex.watchQuery(api.resources.queries.loadCanvasContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        })
+        return subscribeToWatch(watch, apply)
+      },
       create: (args) => convex.mutation(api.resources.mutations.createCanvasResource, args),
       save: (args) => convex.mutation(api.resources.mutations.saveCanvasContent, args),
       refresh,
