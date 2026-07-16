@@ -20,6 +20,7 @@ import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-c
 import { CanvasInteractionController, screenToCanvasPoint } from './interaction-controller'
 import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
+import { CanvasSelectionActions } from './canvas-selection-actions'
 import { findCanvasConnectionTarget } from './canvas-edge-geometry'
 import { fitCanvasContent } from './canvas-layout'
 import { projectCanvasResizeNodeBounds, resolveCanvasResize } from './canvas-resize-geometry'
@@ -162,6 +163,12 @@ export function CanvasEditor({
         interaction={interaction}
         interactionController={interactionController}
         surface={surface}
+      />
+      <CanvasSelectionActions
+        canEdit={canEdit}
+        content={content}
+        documentController={documentController}
+        interaction={interaction}
       />
       <section
         ref={surface}

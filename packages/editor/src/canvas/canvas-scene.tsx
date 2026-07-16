@@ -53,8 +53,8 @@ export function CanvasScene({
   surface: RefObject<HTMLElement | null>
 }) {
   const resizedNodeBounds = canvasResizedNodeBounds(interaction)
-  const visualNodes = content.nodes.map((node) =>
-    canvasVisualNode(node, interaction, resizedNodeBounds),
+  const visualNodes = content.nodes.map((node, index) =>
+    canvasVisualNode({ ...node, zIndex: node.zIndex ?? index + 1 }, interaction, resizedNodeBounds),
   )
   const nodeById = new Map<CanvasNodeId, CanvasDocumentNode>(
     visualNodes.map((node) => [node.id, node]),
@@ -68,22 +68,25 @@ export function CanvasScene({
         transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
       }}
     >
-      <svg
-        className="pointer-events-none absolute left-0 top-0 overflow-visible"
-        width="1"
-        height="1"
-      >
-        {content.edges.map((edge) => (
+      {content.edges.map((edge, index) => (
+        <svg
+          key={edge.id}
+          className="pointer-events-none absolute left-0 top-0 overflow-visible"
+          data-edge-id={edge.id}
+          data-testid="canvas-edge-layer"
+          style={{ zIndex: edge.zIndex ?? content.nodes.length + index + 1 }}
+          width="1"
+          height="1"
+        >
           <CanvasEdge
-            key={edge.id}
             edge={edge}
             nodeById={nodeById}
             selected={visualSelection.edgeIds.has(edge.id)}
             tool={interaction.tool}
             onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
           />
-        ))}
-      </svg>
+        </svg>
+      ))}
       <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
       <CanvasDrawingOverlay interaction={interaction} />
       <CanvasSelectionOverlay interaction={interaction} />
@@ -183,7 +186,7 @@ function CanvasNode({
         width: size.width,
         height: size.height,
         transform: `translate(${position.x}px, ${position.y}px)`,
-        zIndex: node.zIndex,
+        zIndex: node.zIndex ?? 0,
         opacity: erasing ? 0.35 : undefined,
       }}
       onDoubleClick={(event) => {

@@ -451,6 +451,77 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('arranges and reorders mixed selections through one canonical document change', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 100, y: 0 },
+          width: 100,
+          height: 50,
+          zIndex: 1,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'text',
+          position: { x: 0, y: 100 },
+          width: 100,
+          height: 50,
+          zIndex: 3,
+          data: {},
+        },
+      ],
+      edges: [{ id: 'arrange-edge', source: NODE_A, target: NODE_B, type: 'straight', zIndex: 2 }],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Arrange board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    const nodes = screen.getAllByTestId('canvas-node')
+    installPointerCapture(surface)
+    nodes.forEach(installPointerCapture)
+    fireEvent.pointerDown(nodes[0], { button: 0, clientX: 120, clientY: 20, pointerId: 19 })
+    fireEvent.pointerUp(nodes[0], { clientX: 120, clientY: 20, pointerId: 19 })
+    fireEvent.pointerDown(nodes[1], {
+      button: 0,
+      clientX: 20,
+      clientY: 120,
+      ctrlKey: true,
+      pointerId: 20,
+    })
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Arrange selection' }), {
+      target: { value: 'alignLeft' },
+    })
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      { position: { x: 0, y: 0 } },
+      { position: { x: 0, y: 100 } },
+    ])
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 100, y: 0 },
+    })
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Layer selection' }), {
+      target: { value: 'bringToFront' },
+    })
+    expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '1' })
+    expect(nodes[0]).toHaveStyle({ zIndex: '2' })
+    expect(readCanvasDocumentContent(session.document)).toMatchObject({
+      nodes: [{ zIndex: 2 }, { zIndex: 3 }],
+      edges: [{ zIndex: 1 }],
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document)).toMatchObject({
+      nodes: [{ zIndex: 1 }, { zIndex: 3 }],
+      edges: [{ zIndex: 2 }],
+    })
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders moved stroke coordinates with a screen-space hit target', async () => {
     const session = await createSession({
       nodes: [
