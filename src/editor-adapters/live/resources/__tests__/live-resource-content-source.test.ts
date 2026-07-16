@@ -179,6 +179,52 @@ describe('LiveResourceContentSource', () => {
     await vi.waitFor(() => expect(releaseAwareness).toHaveBeenCalledOnce())
   })
 
+  it('projects readonly canvas previews without creating awareness or a mutable session', () => {
+    const campaignId = testDomainId('campaign', 'canvas-preview-campaign')
+    const resourceId = testDomainId('resource', 'canvas-preview-resource')
+    const nodeId = testDomainId('canvasNode', 'canvas-preview-node')
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const publishAwareness = vi.fn(() => Promise.resolve({ status: 'active' as const }))
+    const document = createCanvasDocumentDoc({
+      nodes: [{ id: nodeId, type: 'text', position: { x: 10, y: 20 }, data: {} }],
+      edges: [],
+    })
+    const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    document.destroy()
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      testDomainId('campaignMember', 'canvas-preview-member'),
+      collaborationUser,
+      {
+        ...awarenessBackend(),
+        publishAwareness,
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save: vi.fn(),
+        watch: (_resourceId, updatePreview) => {
+          apply = updatePreview
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    source.previews.subscribe(resourceId, () => {})
+    apply({ status: 'ready', kind: 'canvas', update, version })
+
+    const preview = source.previews.get(resourceId)
+    expect(preview.status).toBe('ready')
+    if (preview.status !== 'ready') throw new Error('Expected ready canvas preview')
+    expect(readCanvasDocumentContent(preview.document).nodes).toEqual([
+      expect.objectContaining({ id: nodeId }),
+    ])
+    expect(source.get(resourceId)).toEqual({ status: 'loading' })
+    expect(publishAwareness).not.toHaveBeenCalled()
+
+    source.dispose()
+  })
+
   it('preserves concurrent local and remote document updates through flush and snapshots', async () => {
     const campaignId = testDomainId('campaign', 'canvas-save-campaign')
     const resourceId = testDomainId('resource', 'canvas-save-resource')

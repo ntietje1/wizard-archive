@@ -147,6 +147,19 @@ export type CanvasSessionState =
       readonly session: CanvasSession
     }
 
+export type CanvasPreviewState =
+  | ContentUnavailableState
+  | {
+      readonly status: 'ready'
+      readonly document: Y.Doc
+      readonly version: VersionStamp
+    }
+
+export interface CanvasPreviewSource {
+  get(resourceId: ResourceId): CanvasPreviewState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+}
+
 export type CreateNoteResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
   readonly kind: 'note'
 }
@@ -201,6 +214,7 @@ export interface MapSessionSource {
 }
 
 export interface CanvasSessionSource {
+  readonly previews: CanvasPreviewSource
   get(resourceId: ResourceId): CanvasSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>

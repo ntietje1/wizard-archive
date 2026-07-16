@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { StrictMode } from 'react'
+import type { ComponentProps } from 'react'
 import * as Y from 'yjs'
-import { CanvasEditor } from '../canvas-editor'
+import { CanvasEditor as ProductionCanvasEditor } from '../canvas-editor'
 import { createCanvasDocumentController } from '../document-controller'
 import { createCanvasDocumentDoc, readCanvasDocumentContent } from '../document-contract'
 import type { CanvasDocumentContent } from '../document-contract'
@@ -10,11 +11,20 @@ import { initialVersion, sha256Digest } from '../../resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createInMemoryCanvasSession } from '../../resources/in-memory-canvas-session'
 import { createCanvasTextDocument } from '../text/model'
+import type { CanvasPreviewSource } from '../../resources/content-session-contract'
 
 const RESOURCE_ID = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-444444444444')
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
 const STROKE = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-333333333333')
+const unavailablePreviews = {
+  get: () => ({ status: 'unavailable', reason: 'capability_not_supported' }) as const,
+  subscribe: () => () => {},
+} satisfies CanvasPreviewSource
+
+function CanvasEditor(props: Omit<ComponentProps<typeof ProductionCanvasEditor>, 'previews'>) {
+  return <ProductionCanvasEditor {...props} previews={unavailablePreviews} />
+}
 
 async function createSession(content: CanvasDocumentContent = { nodes: [], edges: [] }) {
   const document = createCanvasDocumentDoc(content)

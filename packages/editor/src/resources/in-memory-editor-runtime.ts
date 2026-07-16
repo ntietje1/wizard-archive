@@ -8,6 +8,7 @@ import type {
   CanvasSessionSource,
   CanvasSessionState,
   CanvasSession,
+  CanvasPreviewState,
   ContentExportResult,
   CreateCanvasResourceCommand,
   CreateFileResourceCommand,
@@ -353,10 +354,28 @@ class InMemoryCanvasSessionSource
   extends InMemoryOwnedSessionSource<CanvasSessionState>
   implements CanvasSessionSource
 {
+  readonly #previews = new ResourceSessionStore<CanvasPreviewState>({ status: 'loading' })
   readonly #sessions = createInMemoryYjsSessionRegistry(
     createInMemoryCanvasSession,
     (resourceId, session: CanvasSession) => this.set(resourceId, { status: 'ready', session }),
   )
+  readonly previews = {
+    get: (resourceId: ResourceId) => this.#previews.get(resourceId),
+    subscribe: (resourceId: ResourceId, listener: () => void) =>
+      this.#previews.subscribe(resourceId, listener),
+  }
+
+  override set(resourceId: ResourceId, state: CanvasSessionState): void {
+    super.set(resourceId, state)
+    this.#previews.set(
+      resourceId,
+      state.status === 'ready'
+        ? { status: 'ready', document: state.session.document, version: state.session.version }
+        : state.status === 'initializing'
+          ? { status: 'loading' }
+          : state,
+    )
+  }
 
   async create(
     envelope: CommandEnvelope<CreateCanvasResourceCommand>,
@@ -383,7 +402,11 @@ class InMemoryCanvasSessionSource
   readonly setReady = (resourceId: ResourceId, document: Y.Doc, version: VersionStamp) =>
     this.#sessions.replace(resourceId, document, version)
 
-  override readonly dispose = () => this.#sessions.dispose(() => super.dispose())
+  override readonly dispose = () =>
+    this.#sessions.dispose(() => {
+      this.#previews.dispose()
+      super.dispose()
+    })
 }
 
 function nativeContentExport(

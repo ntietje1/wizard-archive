@@ -32,14 +32,16 @@ import { canvasNodeSize } from './canvas-layout'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { CanvasSelectionBounds } from './canvas-selection-bounds'
 import { CanvasSnapGuides } from './canvas-snap-guides'
-import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import type { CanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
-import { CanvasTextEditor } from './canvas-text-editor'
-import { CanvasTextPreview } from './canvas-text-preview'
-import type { ContentCollaboration } from '../resources/content-session-contract'
+import type {
+  CanvasPreviewSource,
+  ContentCollaboration,
+} from '../resources/content-session-contract'
 import { CanvasCollaborationCursors } from './canvas-collaboration-cursors'
+import { CanvasNodeVisual } from './canvas-node-visual'
+import { CanvasEmbedPreview } from './canvas-embed-preview'
 
 export function CanvasScene({
   canEdit,
@@ -49,6 +51,7 @@ export function CanvasScene({
   interaction,
   interactionController,
   onOpenContextMenu,
+  previews,
   surface,
 }: {
   canEdit: boolean
@@ -58,6 +61,7 @@ export function CanvasScene({
   interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
+  previews: CanvasPreviewSource
   surface: RefObject<HTMLElement | null>
 }) {
   const resizedNodeBounds = canvasResizedNodeBounds(interaction)
@@ -112,6 +116,7 @@ export function CanvasScene({
           interactionController={interactionController}
           node={node}
           onOpenContextMenu={onOpenContextMenu}
+          previews={previews}
           selected={visualSelection.nodeIds.has(node.id)}
           surface={surface}
         />
@@ -168,6 +173,7 @@ function CanvasNode({
   interactionController,
   node,
   onOpenContextMenu,
+  previews,
   selected,
   surface,
 }: {
@@ -178,6 +184,7 @@ function CanvasNode({
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
+  previews: CanvasPreviewSource
   selected: boolean
   surface: RefObject<HTMLElement | null>
 }) {
@@ -247,8 +254,11 @@ function CanvasNode({
       }
       onPointerCancel={() => interactionController.cancelInteraction()}
     >
-      <CanvasNodeContent
+      <CanvasNodeVisual
         editing={editing}
+        embed={
+          node.type === 'embed' ? <CanvasEmbedPreview node={node} previews={previews} /> : undefined
+        }
         node={node}
         selected={selected}
         zoom={interaction.viewport.zoom}
@@ -443,78 +453,6 @@ function saveTextNode(
   })
 }
 
-function CanvasNodeContent({
-  editing,
-  node,
-  onFinishEditing,
-  onSaveContent,
-  selected,
-  zoom,
-}: {
-  editing: boolean
-  node: CanvasDocumentNode
-  onFinishEditing: () => void
-  onSaveContent: (content: CanvasTextDocument) => void
-  selected: boolean
-  zoom: number
-}) {
-  if (node.type === 'stroke') {
-    const size = canvasNodeSize(node)
-    const points = canvasStrokeLocalPoints(node)
-      .map(({ x, y }) => `${x},${y}`)
-      .join(' ')
-    return (
-      <svg className="size-full overflow-visible" viewBox={`0 0 ${size.width} ${size.height}`}>
-        <polyline
-          data-testid="canvas-stroke-hit-target"
-          fill="none"
-          points={points}
-          pointerEvents="stroke"
-          stroke="transparent"
-          strokeWidth={Math.max(node.data.size, 24 / zoom)}
-        />
-        <polyline
-          fill="none"
-          points={points}
-          pointerEvents="none"
-          stroke={node.data.color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeOpacity={(node.data.opacity ?? 100) / 100}
-          strokeWidth={node.data.size}
-        />
-      </svg>
-    )
-  }
-  const sharedStyle = {
-    color: node.data.textColor ?? undefined,
-    backgroundColor: node.data.backgroundColor ?? undefined,
-    opacity: node.data.backgroundOpacity ?? undefined,
-    borderColor: node.data.borderStroke ?? undefined,
-    borderWidth: node.data.borderWidth ?? 1,
-  }
-  if (node.type === 'embed') {
-    return (
-      <div
-        className="flex size-full items-center justify-center rounded-md border bg-card p-3 text-center text-sm shadow-sm"
-        style={sharedStyle}
-      >
-        {canvasEmbedLabel(node)}
-      </div>
-    )
-  }
-  if (editing) {
-    return (
-      <CanvasTextEditor
-        content={node.data.content}
-        onChange={onSaveContent}
-        onFinish={onFinishEditing}
-      />
-    )
-  }
-  return <CanvasTextPreview content={node.data.content} selected={selected} style={sharedStyle} />
-}
-
 function CanvasEdge({
   edge,
   nodeById,
@@ -674,12 +612,4 @@ function selectionStatus(selection: CanvasSelection): string {
   const nodes = `${selection.nodeIds.size} ${selection.nodeIds.size === 1 ? 'node' : 'nodes'}`
   const edges = `${selection.edgeIds.size} ${selection.edgeIds.size === 1 ? 'edge' : 'edges'}`
   return `Selecting ${nodes} and ${edges}`
-}
-
-function canvasEmbedLabel(node: Extract<CanvasDocumentNode, { type: 'embed' }>) {
-  const destination = node.data.destination
-  if (!destination) return 'Empty embed'
-  if (destination.kind === 'externalUrl') return destination.url
-  if (destination.kind === 'unresolved') return destination.rawTarget || 'Unresolved embed'
-  return `${destination.target.kind} embed`
 }

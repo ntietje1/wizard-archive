@@ -7,6 +7,7 @@ import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type {
   CanvasSession,
+  CanvasPreviewState,
   CanvasSessionSource,
   CanvasSessionState,
   CollaborationUser,
@@ -46,6 +47,9 @@ type LiveCanvasBackend = LiveFixedContentBackend &
   }>
 
 type CanvasStore = ReturnType<typeof createResourceWatchStore<CanvasSnapshot, CanvasSessionState>>
+type CanvasPreviewStore = ReturnType<
+  typeof createResourceWatchStore<CanvasSnapshot, CanvasPreviewState>
+>
 
 class LiveCanvasSession implements CanvasSession {
   readonly #liveAwareness: ReturnType<typeof createLiveCollaborativeYjsSession>['awareness']
@@ -107,7 +111,14 @@ class LiveCanvasSession implements CanvasSession {
 
 class LiveCanvasSessionSource implements CanvasSessionSource {
   readonly #store: CanvasStore
+  readonly #previewStore: CanvasPreviewStore
+  readonly #previewDocuments = new Map<ResourceId, Y.Doc>()
   readonly #sessions = new Map<ResourceId, LiveCanvasSession>()
+  readonly previews = {
+    get: (resourceId: ResourceId) => this.#previewStore.get(resourceId),
+    subscribe: (resourceId: ResourceId, listener: () => void) =>
+      this.#previewStore.subscribe(resourceId, listener),
+  }
 
   constructor(
     private readonly campaignId: CampaignId,
@@ -119,6 +130,11 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     this.#store = createResourceWatchStore<CanvasSnapshot, CanvasSessionState>(
       backend.watch,
       (resourceId, snapshot) => this.#apply(resourceId, snapshot),
+      { status: 'loading' },
+    )
+    this.#previewStore = createResourceWatchStore<CanvasSnapshot, CanvasPreviewState>(
+      backend.watch,
+      (resourceId, snapshot) => this.#applyPreview(resourceId, snapshot),
       { status: 'loading' },
     )
   }
@@ -150,50 +166,32 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
 
   dispose(): void {
     this.#store.dispose()
+    this.#previewStore.dispose()
     for (const session of this.#sessions.values()) session.dispose()
+    for (const document of this.#previewDocuments.values()) document.destroy()
     this.#sessions.clear()
+    this.#previewDocuments.clear()
   }
 
   #apply(resourceId: ResourceId, snapshot: CanvasSnapshot): void {
-    if (snapshot.status !== 'ready') {
-      this.#replaceState(resourceId, liveContentPendingState(snapshot))
+    const decoded = decodeCanvasPreviewSnapshot(snapshot)
+    if (decoded.status !== 'ready') {
+      this.#replaceState(resourceId, decoded)
       return
     }
-    if (snapshot.kind !== 'canvas') {
-      this.#replaceState(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
-      return
-    }
-
-    let version: CanvasSession['version']
-    const decoded = new Y.Doc()
-    try {
-      version = assertVersionStamp(snapshot.version)
-      if (!canvasEncodedBytesWithinWorkload(snapshot.update)) {
-        decoded.destroy()
-        this.#replaceState(resourceId, {
-          status: 'integrity_error',
-          issue: 'content_limit_exceeded',
-        })
-        return
-      }
-      Y.applyUpdate(decoded, new Uint8Array(snapshot.update))
-      if (!parseCanvasDocumentContent(decoded)) throw new TypeError('Invalid canvas document')
-    } catch {
-      decoded.destroy()
-      this.#replaceState(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
-      return
-    }
+    const { document, version } = decoded
 
     const existing = this.#sessions.get(resourceId)
     if (existing) {
-      decoded.destroy()
-      existing.apply(snapshot.update, version)
+      const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+      document.destroy()
+      existing.apply(update, version)
       return
     }
     let session: LiveCanvasSession
     try {
       session = new LiveCanvasSession(
-        decoded,
+        document,
         version,
         this.campaignId,
         resourceId,
@@ -204,7 +202,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
         (result) => this.#fail(resourceId, session, result),
       )
     } catch (error) {
-      decoded.destroy()
+      document.destroy()
       this.#store.set(
         resourceId,
         error instanceof YjsUpdateOutboxUnavailableError
@@ -217,6 +215,10 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     this.#store.set(resourceId, { status: 'ready', session })
   }
 
+  #applyPreview(resourceId: ResourceId, snapshot: CanvasSnapshot): void {
+    this.#replacePreview(resourceId, decodeCanvasPreviewSnapshot(snapshot))
+  }
+
   #fail(resourceId: ResourceId, session: LiveCanvasSession, result: RejectedYjsSave): void {
     if (this.#sessions.get(resourceId) !== session) return
     this.#sessions.delete(resourceId)
@@ -227,6 +229,38 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     this.#sessions.get(resourceId)?.dispose()
     this.#sessions.delete(resourceId)
     this.#store.set(resourceId, state)
+  }
+
+  #replacePreview(resourceId: ResourceId, state: CanvasPreviewState): void {
+    this.#previewDocuments.get(resourceId)?.destroy()
+    if (state.status === 'ready') this.#previewDocuments.set(resourceId, state.document)
+    else this.#previewDocuments.delete(resourceId)
+    this.#previewStore.set(resourceId, state)
+  }
+}
+
+function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): CanvasPreviewState {
+  if (snapshot.status !== 'ready') {
+    const pending = liveContentPendingState(snapshot)
+    return pending.status === 'initializing' ? { status: 'loading' } : pending
+  }
+  if (snapshot.kind !== 'canvas') {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  }
+
+  const document = new Y.Doc()
+  try {
+    const version = assertVersionStamp(snapshot.version)
+    if (!canvasEncodedBytesWithinWorkload(snapshot.update)) {
+      document.destroy()
+      return { status: 'integrity_error', issue: 'content_limit_exceeded' }
+    }
+    Y.applyUpdate(document, new Uint8Array(snapshot.update))
+    if (!parseCanvasDocumentContent(document)) throw new TypeError('Invalid canvas document')
+    return { status: 'ready', document, version }
+  } catch {
+    document.destroy()
+    return { status: 'integrity_error', issue: 'content_corrupt' }
   }
 }
 

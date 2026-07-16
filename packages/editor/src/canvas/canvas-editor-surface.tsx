@@ -19,7 +19,10 @@ import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
-import type { ContentCollaboration } from '../resources/content-session-contract'
+import type {
+  CanvasPreviewSource,
+  ContentCollaboration,
+} from '../resources/content-session-contract'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
@@ -39,6 +42,7 @@ type CanvasEditorSurfaceProps = Readonly<{
   collaboration: ContentCollaboration
   documentController: CanvasDocumentController
   interactionController: CanvasInteractionController
+  previews: CanvasPreviewSource
   resourceId: ResourceId
   title: string
 }>
@@ -48,6 +52,7 @@ export function CanvasEditorSurface({
   collaboration,
   documentController,
   interactionController,
+  previews,
   resourceId,
   title,
 }: CanvasEditorSurfaceProps) {
@@ -313,6 +318,7 @@ export function CanvasEditorSurface({
           interaction={interaction}
           interactionController={interactionController}
           onOpenContextMenu={openSelectionContextMenu}
+          previews={previews}
           surface={surface}
         />
       </section>

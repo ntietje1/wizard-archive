@@ -29,6 +29,8 @@ import {
 } from './resource-presentation'
 import { NoteEditor } from '../../notes/note-editor'
 import { CanvasEditor } from '../../canvas/canvas-editor'
+import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
+import type { CanvasPreviewSource } from '../content-session-contract'
 
 export function ResourceViewport({
   actions,
@@ -114,6 +116,7 @@ function CanvasViewport({
     <CanvasEditor
       key={`${resource.id}:${state.session.document.guid}`}
       canEdit={canEdit}
+      previews={runtime.content.canvases.previews}
       resourceId={resource.id}
       session={state.session}
       title={resource.title}
@@ -263,6 +266,7 @@ function FolderViewport({
             ambiguous={ambiguous.has(resourcePresentationKey(resource))}
             canEdit={canEdit}
             key={resource.id}
+            previews={runtime.content.canvases.previews}
             resource={resource}
             selected={selectedIds.has(resource.id)}
             selection={selection}
@@ -368,6 +372,7 @@ function ResourceCard({
   canEdit,
   onSelectionChange,
   onOpenContextMenu,
+  previews,
   resource,
   selected,
   selection,
@@ -378,6 +383,7 @@ function ResourceCard({
   canEdit: boolean
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  previews: CanvasPreviewSource
   resource: AuthorizedResourceSummary
   selected: boolean
   selection: WorkspaceSelection
@@ -412,12 +418,31 @@ function ResourceCard({
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{resource.title}</span>
       </span>
+      {resource.kind === 'canvas' && (
+        <CanvasCardPreview previews={previews} resourceId={resource.id} />
+      )}
       <span className="mt-auto text-xs text-muted-foreground">
         {ambiguous
           ? `${resourceKindLabel(resource.kind)} · ${resource.id.slice(-6)}`
           : resourceKindLabel(resource.kind)}
       </span>
     </button>
+  )
+}
+
+function CanvasCardPreview({
+  previews,
+  resourceId,
+}: {
+  previews: CanvasPreviewSource
+  resourceId: AuthorizedResourceSummary['id']
+}) {
+  const state = useContentSnapshot(previews, resourceId)
+  if (state.status !== 'ready') return null
+  return (
+    <div className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60">
+      <CanvasReadonlyPreview document={state.document} />
+    </div>
   )
 }
 

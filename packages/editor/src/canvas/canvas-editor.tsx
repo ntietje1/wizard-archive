@@ -2,11 +2,12 @@ import { useState, useSyncExternalStore } from 'react'
 import { CanvasEditorSurface } from './canvas-editor-surface'
 import { createCanvasDocumentController } from './document-controller'
 import { createCanvasInteractionController } from './interaction-controller'
-import type { CanvasSession } from '../resources/content-session-contract'
+import type { CanvasPreviewSource, CanvasSession } from '../resources/content-session-contract'
 import type { ResourceId } from '../resources/domain-id'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
+  previews: CanvasPreviewSource
   resourceId: ResourceId
   session: CanvasSession
   title: string
@@ -27,6 +28,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
       collaboration={props.session.collaboration}
       documentController={runtime.documentController}
       interactionController={runtime.interactionController}
+      previews={props.previews}
       resourceId={props.resourceId}
       title={props.title}
     />
