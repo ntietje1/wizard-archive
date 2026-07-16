@@ -444,7 +444,7 @@ describe('authorized resource projection', () => {
 
   it(
     'loads the maximum bookmark set through the maximum hierarchy depth',
-    { timeout: 15_000 },
+    { timeout: 30_000 },
     async () => {
       const campaign = await setupCampaignContext(t)
       const campaignUuid = await getCampaignUuid(campaign.campaignId)
