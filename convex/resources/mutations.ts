@@ -27,7 +27,7 @@ import {
   resourceStructureCommandValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
-  contentSessionSaveResultValidator,
+  contentProviderSaveResultValidator,
   noteAwarenessLeaseResultValidator,
   noteAwarenessReleaseResultValidator,
   versionStampValidator,
@@ -331,7 +331,7 @@ export const saveNoteContent = campaignMutation({
     resourceId: resourceIdValidator,
     update: v.bytes(),
   },
-  returns: contentSessionSaveResultValidator,
+  returns: contentProviderSaveResultValidator,
   handler: async (ctx, args) =>
     await saveNoteContentFn(ctx, {
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
@@ -344,7 +344,7 @@ export const saveCanvasContent = campaignMutation({
     resourceId: resourceIdValidator,
     update: v.bytes(),
   },
-  returns: contentSessionSaveResultValidator,
+  returns: contentProviderSaveResultValidator,
   handler: async (ctx, args) =>
     await saveCanvasContentFn(ctx, {
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),

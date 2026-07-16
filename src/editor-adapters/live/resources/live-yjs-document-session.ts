@@ -12,13 +12,18 @@ export type RejectedYjsSave = Extract<ContentSessionSaveResult, { status: 'rejec
 type PersistedYjsUpdate =
   | Readonly<{ status: 'completed'; update: ArrayBuffer; version: VersionStamp }>
   | RejectedYjsSave
+type RetryableYjsUpdate = Readonly<{
+  status: 'retryable'
+  reason: 'dependency_pending'
+  stateVector: ArrayBuffer
+}>
 export type YjsVersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
 type LiveYjsDocumentSessionOptions = Readonly<{
   document: Y.Doc
   version: VersionStamp
   outbox: YjsUpdateOutbox
-  persist(update: Uint8Array): Promise<PersistedYjsUpdate>
+  persist(update: Uint8Array): Promise<PersistedYjsUpdate | RetryableYjsUpdate>
   changed(): void
   failed(result: RejectedYjsSave): void
   canonicalize(document: Y.Doc, origin: unknown): 'changed' | 'invalid' | 'unchanged'
@@ -189,14 +194,20 @@ class LiveYjsDocumentSession {
   }
 
   async #persist(update: Uint8Array): Promise<PersistedYjsUpdate> {
+    let candidate = update
     for (let attempt = 0; ; attempt += 1) {
       try {
-        return await this.#persistUpdate(update)
-      } catch {
-        const delay = YJS_SAVE_RETRY_DELAYS_MS[attempt]
-        if (delay === undefined) return { status: 'rejected', reason: 'scope_unavailable' }
-        await new Promise<void>((resolve) => setTimeout(resolve, delay))
-      }
+        const result = await this.#persistUpdate(candidate)
+        if (result.status !== 'retryable') return result
+        const repair = Y.encodeStateAsUpdate(this.document, new Uint8Array(result.stateVector))
+        if (this.#outbox.merge(repair).status === 'unavailable') {
+          return { status: 'rejected', reason: 'scope_unavailable' }
+        }
+        candidate = Y.mergeUpdates([candidate, repair])
+      } catch {}
+      const delay = YJS_SAVE_RETRY_DELAYS_MS[attempt]
+      if (delay === undefined) return { status: 'rejected', reason: 'scope_unavailable' }
+      await new Promise<void>((resolve) => setTimeout(resolve, delay))
     }
   }
 
@@ -272,6 +283,7 @@ type BackendYjsSaveResult =
       version: VersionStamp
     }>
   | Readonly<{ status: 'rejected'; reason: BackendContentSaveRejection }>
+  | RetryableYjsUpdate
 
 export function createBackendYjsPersistence(
   campaignId: CampaignId,
@@ -282,7 +294,7 @@ export function createBackendYjsPersistence(
     update: ArrayBuffer
   }) => Promise<BackendYjsSaveResult>,
 ) {
-  return async (update: Uint8Array): Promise<PersistedYjsUpdate> => {
+  return async (update: Uint8Array): Promise<PersistedYjsUpdate | RetryableYjsUpdate> => {
     const result = await save({
       campaignId,
       resourceId,

@@ -910,6 +910,64 @@ describe('LiveNoteContentSource', () => {
     }
   })
 
+  it('backs off a causally pending delta and recovers within the same drain', async () => {
+    vi.useFakeTimers()
+    try {
+      const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+      const provider = backend()
+      const persist = provider.save.getMockImplementation()!
+      const server = new Y.Doc()
+      const stateVector = arrayBuffer(Y.encodeStateVector(server))
+      server.destroy()
+      provider.save
+        .mockResolvedValueOnce({ status: 'retryable', reason: 'dependency_pending', stateVector })
+        .mockImplementation(persist)
+      const source = createLiveNoteContentSource(
+        campaignId,
+        memberId,
+        user,
+        provider,
+        historyRecording,
+      )
+      const initialDocument = new Y.Doc()
+      initialDocument.getMap('dependency').set('nested', new Y.Map())
+      const initial = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+      initialDocument.destroy()
+      const version = await versionFor(initial)
+      source.subscribe(resourceId, () => {})
+      provider.emit(resourceId, { status: 'ready', update: initial, version })
+      const ready = source.get(resourceId)
+      if (ready.status !== 'ready') throw new Error('Expected ready note')
+
+      const nested = ready.session.document.getMap('dependency').get('nested')
+      if (
+        !nested ||
+        typeof nested !== 'object' ||
+        !('set' in nested) ||
+        typeof nested.set !== 'function'
+      ) {
+        throw new Error('Expected causal dependency map')
+      }
+      nested.set('value', true)
+      const drain = ready.session.flush()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(provider.save).toHaveBeenCalledOnce()
+      await vi.advanceTimersByTimeAsync(250)
+
+      await expect(drain).resolves.toMatchObject({ status: 'completed' })
+      expect(provider.save).toHaveBeenCalledTimes(2)
+      expect(provider.save.mock.calls[1]![0].update.byteLength).toBeGreaterThan(
+        provider.save.mock.calls[0]![0].update.byteLength,
+      )
+      expect(source.get(resourceId).status).toBe('ready')
+      source.dispose()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(provider.releaseAwareness).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('merges rapid updates into one incremental save for a large document', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()

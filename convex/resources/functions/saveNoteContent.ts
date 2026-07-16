@@ -4,12 +4,12 @@ import { advanceNoteContentVersion } from '@wizard-archive/editor/resources/cont
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
   NOTE_YJS_FRAGMENT,
-  decodeNoteYjsUpdatesToBlocks,
+  canonicalizeNoteYjsDocument,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
-import { contentMergeRejection } from './contentVersion'
-import type { ContentMergeRejection } from './contentVersion'
+import { applyYjsContentDelta, contentMergeRejection } from './contentVersion'
+import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
 import { findNoteContent } from './noteContent'
 import { syncNoteSearchProjection } from './resourceSearchProjection'
 
@@ -24,6 +24,7 @@ export type SaveNoteContentResult =
       status: 'rejected'
       reason: 'unauthorized' | 'content_missing' | 'content_corrupt' | 'version_exhausted'
     }
+  | ContentMergeRetry
 
 export async function saveNoteContent(
   ctx: CampaignMutationCtx,
@@ -43,7 +44,7 @@ export async function saveNoteContent(
   }
 
   const merged = await mergeNoteUpdate(content.update, args.update, content.version)
-  if (merged.status === 'rejected') return merged
+  if (merged.status !== 'completed') return merged
   if (merged.version.digest !== content.version.digest) {
     await ctx.db.patch('resourceNoteContents', content._id, {
       update: merged.update,
@@ -65,13 +66,16 @@ async function mergeNoteUpdate(
       version: Awaited<ReturnType<typeof advanceNoteContentVersion>>
     }>
   | ContentMergeRejection
+  | ContentMergeRetry
 > {
   const document = new Y.Doc()
   try {
-    Y.applyUpdate(document, new Uint8Array(current))
-    Y.applyUpdate(document, new Uint8Array(delta))
+    const pending = applyYjsContentDelta(document, current, delta)
+    if (pending) return pending
+    if (!canonicalizeNoteYjsDocument(document, NOTE_YJS_FRAGMENT)) {
+      return { status: 'rejected', reason: 'content_corrupt' }
+    }
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
-    decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
     const version = await advanceNoteContentVersion(
       assertVersionStamp(currentVersion),
       new Uint8Array(update),

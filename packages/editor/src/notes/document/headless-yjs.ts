@@ -60,6 +60,80 @@ export function noteYDocToBlocks(doc: Y.Doc, fragment: string): Array<NoteBlock>
   }
 }
 
+export function canonicalizeNoteYjsDocument(
+  doc: Y.Doc,
+  fragment: string,
+  origin?: unknown,
+): Array<NoteBlock> | null {
+  const editor = createHeadlessNoteEditor()
+  let decoded: Array<Record<string, unknown>>
+  try {
+    decoded = normalizeDecodedNoteBlocks(
+      bnYDocToBlocks(editor, doc, fragment) as Array<Record<string, unknown>>,
+    )
+  } finally {
+    destroyHeadlessBlockNoteEditor(editor)
+  }
+
+  const normalized = normalizeNoteBlockIdentities(decoded)
+  let blocks: Array<NoteBlock>
+  try {
+    blocks = parseNoteBlocks(normalized.blocks)
+  } catch {
+    return null
+  }
+  if (!normalized.changed) return blocks
+
+  const canonical = noteBlocksToYDoc(blocks, fragment)
+  try {
+    const source = canonical.getXmlFragment(fragment)
+    const target = doc.getXmlFragment(fragment)
+    const content = source
+      .toArray()
+      .filter(
+        (item): item is Y.XmlElement | Y.XmlText =>
+          item instanceof Y.XmlElement || item instanceof Y.XmlText,
+      )
+    if (content.length !== source.length) return null
+    doc.transact(() => {
+      target.delete(0, target.length)
+      target.insert(
+        0,
+        content.map((item) => item.clone()),
+      )
+    }, origin)
+  } finally {
+    canonical.destroy()
+  }
+  return blocks
+}
+
+function normalizeNoteBlockIdentities(blocks: Array<Record<string, unknown>>): {
+  blocks: Array<Record<string, unknown>>
+  changed: boolean
+} {
+  const identities = new Set<string>()
+  let changed = false
+  const normalize = (block: Record<string, unknown>): Record<string, unknown> => {
+    const id = block.id
+    const replace = id === undefined || (typeof id === 'string' && identities.has(id))
+    if (typeof id === 'string' && !replace) identities.add(id)
+    if (replace) changed = true
+    const normalizedId = replace ? generateDomainId(DOMAIN_ID_KIND.noteBlock) : id
+    if (typeof normalizedId === 'string') identities.add(normalizedId)
+    return {
+      ...block,
+      ...(replace ? { id: normalizedId } : {}),
+      ...(Array.isArray(block.children)
+        ? {
+            children: (block.children as Array<Record<string, unknown>>).map(normalize),
+          }
+        : {}),
+    }
+  }
+  return { blocks: blocks.map(normalize), changed }
+}
+
 function parseNoteBlocks(blocks: unknown): Array<NoteBlock> {
   const result = noteDocumentSchema.safeParse(blocks)
   if (!result.success) {

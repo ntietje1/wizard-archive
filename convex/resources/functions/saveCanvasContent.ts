@@ -10,8 +10,8 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { loadCanvasContentDeletion } from './canvasContent'
-import { contentMergeRejection } from './contentVersion'
-import type { ContentMergeRejection } from './contentVersion'
+import { applyYjsContentDelta, contentMergeRejection } from './contentVersion'
+import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 
 export type SaveCanvasContentResult =
@@ -30,6 +30,7 @@ export type SaveCanvasContentResult =
         | 'content_limit_exceeded'
         | 'version_exhausted'
     }>
+  | ContentMergeRetry
 
 export async function saveCanvasContent(
   ctx: CampaignMutationCtx,
@@ -47,7 +48,7 @@ export async function saveCanvasContent(
   if (!content) return { status: 'rejected', reason: 'content_missing' }
 
   const merged = await mergeCanvasUpdate(content.update, args.update, content.version)
-  if (merged.status === 'rejected') return merged
+  if (merged.status !== 'completed') return merged
   if (merged.version.digest !== content.version.digest) {
     await ctx.db.patch('resourceCanvasContents', content._id, {
       update: merged.update,
@@ -64,6 +65,7 @@ async function mergeCanvasUpdate(
 ): Promise<
   | Readonly<{ status: 'completed'; update: ArrayBuffer; version: VersionStamp }>
   | ContentMergeRejection
+  | ContentMergeRetry
   | Readonly<{ status: 'rejected'; reason: 'content_limit_exceeded' }>
 > {
   if (!canvasEncodedBytesWithinWorkload(current) || !canvasEncodedBytesWithinWorkload(delta)) {
@@ -71,8 +73,8 @@ async function mergeCanvasUpdate(
   }
   const document = new Y.Doc()
   try {
-    Y.applyUpdate(document, new Uint8Array(current))
-    Y.applyUpdate(document, new Uint8Array(delta))
+    const pending = applyYjsContentDelta(document, current, delta)
+    if (pending) return pending
     if (!canonicalizeCanvasDocumentContent(document)) {
       return { status: 'rejected', reason: 'content_corrupt' }
     }

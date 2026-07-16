@@ -527,6 +527,68 @@ describe('resource structure commands', () => {
     ).toBe(`${firstInsertion}Middle${secondInsertion}`)
   })
 
+  it('completes a causally incomplete note delta from the authoritative state vector', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const baseUpdate = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Causal note' }],
+      },
+    ])
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Causal note',
+        icon: null,
+        color: null,
+      },
+      update: baseUpdate,
+    })
+
+    const client = new Y.Doc()
+    Y.applyUpdate(client, new Uint8Array(baseUpdate))
+    const deltas: Array<Uint8Array> = []
+    client.on('update', (update) => deltas.push(Uint8Array.from(update)))
+    client.getMap('causal').set('prerequisite', true)
+    client.getMap('causal').set('dependent', true)
+    const prerequisite = Uint8Array.from(deltas[0]!).buffer
+    const dependent = Uint8Array.from(deltas[1]!).buffer
+
+    const pending = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: dependent,
+    })
+    expect(pending).toMatchObject({ status: 'retryable', reason: 'dependency_pending' })
+    if (pending.status !== 'retryable') throw new Error('Expected causal dependency request')
+    const repair = Uint8Array.from(
+      Y.encodeStateAsUpdate(client, new Uint8Array(pending.stateVector)),
+    ).buffer
+    client.destroy()
+    expect(new Uint8Array(repair).byteLength).toBeGreaterThan(
+      new Uint8Array(prerequisite).byteLength,
+    )
+    const completed = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: repair,
+    })
+    expect(completed).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    if (completed.status !== 'completed') throw new Error('Expected causal note merge')
+    const merged = new Y.Doc()
+    Y.applyUpdate(merged, new Uint8Array(completed.update))
+    expect(merged.getMap('causal').toJSON()).toEqual({ prerequisite: true, dependent: true })
+    merged.destroy()
+  })
+
   it('rejects duplicate top-level and nested note block identities on create', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -558,7 +620,7 @@ describe('resource structure commands', () => {
     }
   })
 
-  it('rejects duplicate note block identities formed by concurrent updates', async () => {
+  it('canonicalizes duplicate note block identities formed by concurrent updates', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -608,13 +670,18 @@ describe('resource structure commands', () => {
     })
 
     expect(first).toMatchObject({ status: 'completed', version: { revision: 2 } })
-    expect(second).toEqual({ status: 'rejected', reason: 'content_corrupt' })
+    expect(second).toMatchObject({ status: 'completed', version: { revision: 3 } })
+    if (second.status !== 'completed') throw new Error('Expected canonical note merge')
+    const blocks = decodeNoteYjsUpdatesToBlocks([{ update: second.update }], NOTE_YJS_FRAGMENT)
+    expect(blocks).toHaveLength(2)
+    expect(blocks.filter((block) => block.id === collisionId)).toHaveLength(1)
+    expect(new Set(blocks.map((block) => block.id)).size).toBe(2)
     await expect(
       asDm(campaign).query(api.resources.queries.loadNoteContent, {
         campaignId: campaignUuid,
         resourceId,
       }),
-    ).resolves.toMatchObject({ status: 'ready', version: { revision: 2 } })
+    ).resolves.toMatchObject({ status: 'ready', version: { revision: 3 } })
   })
 
   it('authorizes every note and canvas write against current role and lifecycle', async () => {

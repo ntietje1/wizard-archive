@@ -326,12 +326,17 @@ export const resourceCompensationResultValidator = v.union(
   }),
 )
 
-export const contentSessionSaveResultValidator = v.union(
+export const contentProviderSaveResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
     resourceId: resourceIdValidator,
     update: v.bytes(),
     version: versionStampValidator,
+  }),
+  v.object({
+    status: v.literal('retryable'),
+    reason: v.literal('dependency_pending'),
+    stateVector: v.bytes(),
   }),
   v.object({
     status: v.literal('rejected'),

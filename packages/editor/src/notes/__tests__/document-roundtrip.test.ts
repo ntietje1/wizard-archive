@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import * as Y from 'yjs'
 import {
   DOMAIN_ID_KIND,
   generateDomainId,
@@ -6,7 +7,12 @@ import {
   isUuidV7,
 } from '../../resources/domain-id'
 import type { UuidV7 } from '../../resources/domain-id'
-import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../document/headless-yjs'
+import {
+  NOTE_YJS_FRAGMENT,
+  canonicalizeNoteYjsDocument,
+  noteBlocksToYDoc,
+  noteYDocToBlocks,
+} from '../document/headless-yjs'
 
 describe('canonical note document', () => {
   it('allocates canonical identities for every partial block and rejects empty documents', () => {
@@ -216,5 +222,27 @@ describe('canonical note document', () => {
         NOTE_YJS_FRAGMENT,
       ),
     ).toThrow('Duplicate note value identity')
+  })
+
+  it('canonicalizes a duplicated block identity in the Yjs fragment', () => {
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const document = noteBlocksToYDoc(
+      [{ id: blockId, type: 'paragraph', content: [{ type: 'text', text: 'First' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const blockGroup = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)
+    if (!(blockGroup instanceof Y.XmlElement)) throw new Error('Expected block group')
+    const blockContainer = blockGroup.get(0)
+    if (!(blockContainer instanceof Y.XmlElement)) throw new Error('Expected block container')
+    blockGroup.insert(1, [blockContainer.clone()])
+
+    const blocks = canonicalizeNoteYjsDocument(document, NOTE_YJS_FRAGMENT)
+
+    expect(blocks).toHaveLength(2)
+    expect(blocks?.some((block) => block.id === blockId)).toBe(true)
+    expect(new Set(blocks?.map((block) => block.id)).size).toBe(2)
+    expect(blocks?.every((block) => isUuidV7(block.id))).toBe(true)
+    expect(noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)).toEqual(blocks)
+    document.destroy()
   })
 })
