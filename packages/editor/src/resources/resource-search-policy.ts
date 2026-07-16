@@ -76,9 +76,7 @@ function rankSearchDocument(
   }
   const body = foldCase(document.body)
   if (!matchesAllTerms(body, terms)) return null
-  const firstMatch = Math.min(
-    ...terms.map((term) => body.indexOf(term)).filter((index) => index >= 0),
-  )
+  const firstMatch = Math.min(...terms.map((term) => body.indexOf(term)))
   return {
     result: {
       resourceId: document.resourceId,

@@ -63,13 +63,15 @@ export function NoteValueInline({
             />
           </label>
           <datalist id={suggestionsId}>
-            {definitions
-              .filter((definition) => definition.valueId !== props.valueId)
-              .map((definition) => (
-                <option key={definition.valueId} value={noteValueReference(definition.valueId)}>
-                  {definition.label}
-                </option>
-              ))}
+            {definitions.flatMap((definition) =>
+              definition.valueId === props.valueId
+                ? []
+                : [
+                    <option key={definition.valueId} value={noteValueReference(definition.valueId)}>
+                      {definition.label}
+                    </option>,
+                  ],
+            )}
             {['min()', 'max()', 'round()', 'floor()', 'ceil()', 'abs()'].map((formula) => (
               <option key={formula} value={formula} />
             ))}
