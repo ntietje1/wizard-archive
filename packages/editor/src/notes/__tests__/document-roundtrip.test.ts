@@ -1,9 +1,33 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../../resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  generateDomainId,
+  generateUuidV7,
+  isUuidV7,
+} from '../../resources/domain-id'
 import type { UuidV7 } from '../../resources/domain-id'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../document/headless-yjs'
 
 describe('canonical note document', () => {
+  it('allocates canonical identities for every partial block and rejects empty documents', () => {
+    const document = noteBlocksToYDoc(
+      [
+        {
+          type: 'paragraph',
+          children: [{ type: 'paragraph' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+
+    const [block] = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
+    expect(isUuidV7(block?.id ?? '')).toBe(true)
+    expect(isUuidV7(block?.children?.[0]?.id ?? '')).toBe(true)
+    expect(() => noteBlocksToYDoc([], NOTE_YJS_FRAGMENT)).toThrow(
+      'requires an array of note blocks',
+    )
+  })
+
   it('round-trips mixed formatted blocks, nesting, tables, and values with stable block IDs', () => {
     const ids = Array.from({ length: 8 }, () => generateDomainId(DOMAIN_ID_KIND.noteBlock))
     const valueId = generateUuidV7()

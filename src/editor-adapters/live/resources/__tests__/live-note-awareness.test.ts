@@ -17,6 +17,7 @@ describe('LiveNoteAwareness', () => {
     const publishAwareness = vi.fn(() => Promise.resolve({ status: 'active' as const }))
     const releaseAwareness = vi.fn(() => Promise.resolve({ status: 'released' as const }))
     const unsubscribe = vi.fn()
+    const collaboratorsChanged = vi.fn()
     const collaboration = createLiveNoteAwareness(
       document,
       resourceId,
@@ -30,9 +31,10 @@ describe('LiveNoteAwareness', () => {
           return unsubscribe
         },
       },
-      vi.fn(),
+      collaboratorsChanged,
     )
 
+    expect(collaboratorsChanged).not.toHaveBeenCalled()
     await collaboration.flush()
     expect(publishAwareness).toHaveBeenCalledWith(
       expect.objectContaining({ resourceId, clientId: document.clientID }),
@@ -57,6 +59,7 @@ describe('LiveNoteAwareness', () => {
       status: 'available',
       collaboratorIds: [memberId, remoteMemberId],
     })
+    expect(collaboratorsChanged).toHaveBeenCalledOnce()
     expect(
       collaboration.collaboration.provider.awareness.getStates().get(remoteDocument.clientID),
     ).toEqual({ user: { name: 'Remote', color: '#e06c75' } })
@@ -66,6 +69,7 @@ describe('LiveNoteAwareness', () => {
       status: 'available',
       collaboratorIds: [memberId],
     })
+    expect(collaboratorsChanged).toHaveBeenCalledTimes(2)
 
     await collaboration.dispose()
     expect(unsubscribe).toHaveBeenCalledOnce()

@@ -23,7 +23,10 @@ import {
   storeCommittedTestUploadSession,
   storeUncommittedTestUploadSession,
 } from '../../_test/storage.helper'
-import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import {
+  initialFileContentVersion,
+  initialNoteContentVersion,
+} from '@wizard-archive/editor/resources/content-version'
 import {
   parseSerializedAuthoredDestination,
   serializeAuthoredDestination,
@@ -420,7 +423,7 @@ describe('resource structure commands', () => {
       expect(content).toEqual(
         expect.objectContaining({
           creationOperationUuid: operationId,
-          version: expect.objectContaining({ revision: 1 }),
+          version: await initialNoteContentVersion(new Uint8Array(update)),
         }),
       )
     })
@@ -1592,7 +1595,7 @@ describe('resource structure commands', () => {
               campaignId: campaignUuid,
               operationId,
               command,
-              update: makeYjsUpdateWithBlocks([]),
+              update: makeYjsUpdateWithBlocks([{ type: 'paragraph' }]),
             })
           : kind === 'map'
             ? await asDm(campaign).mutation(api.resources.mutations.createMapResource, {

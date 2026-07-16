@@ -26,8 +26,8 @@ import type { GenericDatabaseReader } from 'convex/server'
 import type { DataModel } from '../../_generated/dataModel'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
-import { initialBinaryContentVersion } from './contentVersion'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
+import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { findCanonicalResource } from './findCanonicalResource'
 
 export type NoteResourceValidation =
@@ -101,7 +101,7 @@ export async function prepareNoteContentCreation(
 ): Promise<VersionStamp | null> {
   try {
     decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
-    return await initialBinaryContentVersion(update)
+    return await initialNoteContentVersion(new Uint8Array(update))
   } catch {
     return null
   }
@@ -178,7 +178,7 @@ export async function prepareNoteContentCopy(
       finalize: async (targetMap) => {
         const finalized = copiedBlocks.map((block) => remapNoteBlockResources(block, targetMap))
         const update = encodeYjsDocument(noteBlocksToYDoc(finalized, NOTE_YJS_FRAGMENT))
-        const version = await initialBinaryContentVersion(update)
+        const version = await initialNoteContentVersion(new Uint8Array(update))
         return async () => {
           await ctx.db.insert('resourceNoteContents', {
             campaignUuid: campaignId,

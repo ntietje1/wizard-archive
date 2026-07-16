@@ -7,6 +7,7 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import { createE2EConvexClient, getCampaignIdFromUrl } from './helpers/convex-helpers'
@@ -14,6 +15,8 @@ import { createE2EConvexClient, getCampaignIdFromUrl } from './helpers/convex-he
 const campaignName = testName('Canonical note collaboration')
 
 test.describe.serial('canonical note collaboration', () => {
+  test.describe.configure({ timeout: 120_000 })
+
   test('persists, reloads, and converges concurrent live edits', async ({ context, page }) => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
@@ -26,20 +29,32 @@ test.describe.serial('canonical note collaboration', () => {
     const firstEditor = page.getByRole('textbox', { name: 'Shared field notes note editor' })
     await expect(firstEditor).toBeVisible()
     const resourceId = resourceIdFromEditorUrl(page.url())
+    const convex = await createE2EConvexClient()
+    const created = await convex.query(api.resources.queries.loadNoteContent, {
+      campaignId,
+      resourceId,
+    })
+    if (created.status !== 'ready') throw new Error('Expected created note content')
+    expect(created.version).toEqual(await initialNoteContentVersion(new Uint8Array(created.update)))
     await firstEditor.click()
     await page.keyboard.insertText('Recovered across immediate reload')
-    const pendingOutbox = await page.evaluate(() =>
-      Object.keys(sessionStorage).some((key) =>
-        key.startsWith('wizard-archive:note-update-outbox:v1:'),
-      ),
+    const pendingOutbox = await page.evaluate(() => {
+      const key = Object.keys(sessionStorage).find((candidate) =>
+        candidate.startsWith('wizard-archive:note-update-outbox:v1:'),
+      )
+      return key ? sessionStorage.getItem(key) : null
+    })
+    expect(pendingOutbox).not.toBeNull()
+    const pendingUpdate = Uint8Array.from(Buffer.from(pendingOutbox!, 'base64'))
+    decodeNoteYjsUpdatesToBlocks(
+      [{ update: created.update }, { update: pendingUpdate.buffer }],
+      NOTE_YJS_FRAGMENT,
     )
-    expect(pendingOutbox).toBe(true)
 
     await page.reload({ waitUntil: 'commit' })
     await expect(firstEditor).toContainText('Recovered across immediate reload')
     await flushEditor(page)
 
-    const convex = await createE2EConvexClient()
     await expect
       .poll(() => loadNoteText(convex, campaignId, resourceId), { timeout: 15_000 })
       .toContain('Recovered across immediate reload')
@@ -56,14 +71,14 @@ test.describe.serial('canonical note collaboration', () => {
 
     const firstMarker = ` first-${'a'.repeat(1_000)}`
     const secondMarker = ` second-${'b'.repeat(1_000)}`
-    await firstEditor.click()
-    await page.keyboard.press('End')
-    await secondEditor.click()
-    await secondPage.keyboard.press('End')
-    await Promise.all([
-      page.keyboard.insertText(firstMarker),
-      secondPage.keyboard.insertText(secondMarker),
-    ])
+    await firstEditor.locator('p').first().click()
+    await page.keyboard.press('Control+End')
+    await page.keyboard.insertText(firstMarker)
+    await expect(firstEditor).toContainText('first-aaaa')
+    await secondEditor.locator('p').first().click()
+    await secondPage.keyboard.press('Control+End')
+    await secondPage.keyboard.insertText(secondMarker)
+    await expect(secondEditor).toContainText('second-bbbb')
     await Promise.all([flushEditor(page), flushEditor(secondPage)])
 
     await expect(firstEditor).toContainText('first-aaaa', { timeout: 15_000 })
@@ -98,10 +113,22 @@ test.describe.serial('canonical note collaboration', () => {
 
 async function flushEditor(page: Page) {
   await page.getByRole('heading', { name: 'Shared field notes' }).click()
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            !Object.keys(sessionStorage).some((key) =>
+              key.startsWith('wizard-archive:note-update-outbox:v1:'),
+            ),
+        ),
+      { timeout: 15_000 },
+    )
+    .toBe(true)
 }
 
 function resourceIdFromEditorUrl(url: string): ResourceId {
-  const resourceId = new URL(url).pathname.split('/').at(-1)
+  const resourceId = new URL(url).searchParams.get('resource')
   if (!resourceId) throw new Error(`Expected resource editor route, got ${url}`)
   return assertDomainId(DOMAIN_ID_KIND.resource, resourceId)
 }

@@ -65,7 +65,7 @@ class LiveNoteAwareness {
     memberId: CampaignMemberId,
     user: NoteCollaborationUser,
     private readonly backend: LiveNoteAwarenessBackend,
-    private readonly changed: () => void,
+    private readonly collaboratorsChanged: () => void,
   ) {
     this.#awareness = new Awareness(document)
     this.collaboration = { provider: { awareness: this.#awareness }, user }
@@ -163,7 +163,7 @@ class LiveNoteAwareness {
       for (const clientId of removedClientIds) this.#memberIds.delete(clientId)
     }
     this.#knownRemoteClientIds = currentRemoteClientIds
-    this.changed()
+    this.collaboratorsChanged()
   }
 
   readonly #onAwarenessUpdate = (
@@ -175,7 +175,6 @@ class LiveNoteAwareness {
     if (!update.added.includes(clientId) && !update.updated.includes(clientId)) return
     this.#dirty = true
     this.#scheduleFlush()
-    this.changed()
   }
 
   #scheduleFlush(): void {
@@ -213,9 +212,9 @@ export function createLiveNoteAwareness(
   memberId: CampaignMemberId,
   user: NoteCollaborationUser,
   backend: LiveNoteAwarenessBackend,
-  changed: () => void,
+  collaboratorsChanged: () => void,
 ) {
-  return new LiveNoteAwareness(document, resourceId, memberId, user, backend, changed)
+  return new LiveNoteAwareness(document, resourceId, memberId, user, backend, collaboratorsChanged)
 }
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {

@@ -4,6 +4,7 @@ import { noteDocumentSchema, partialNoteDocumentSchema } from './model'
 import type { NoteBlock, PartialNoteBlock } from './model'
 import { destroyHeadlessBlockNoteEditor } from './headless-editor-cleanup'
 import { createHeadlessNoteEditor } from './headless-schema'
+import { DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
 
 export class InvalidNoteYjsDocumentError extends Error {
   readonly cause: unknown
@@ -17,8 +18,12 @@ export class InvalidNoteYjsDocumentError extends Error {
 
 export const NOTE_YJS_FRAGMENT = 'document'
 
+export function createEmptyNoteYDoc(): Y.Doc {
+  return noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+}
+
 export function noteBlocksToYDoc(blocks: Array<PartialNoteBlock>, fragment: string): Y.Doc {
-  const parsedBlocks = parsePartialNoteBlocks(blocks)
+  const parsedBlocks = allocateMissingNoteBlockIds(parsePartialNoteBlocks(blocks))
   const editor = createHeadlessNoteEditor()
   try {
     // BlockNote's Yjs helpers are typed against its default schema, but the runtime accepts our custom schema.
@@ -30,6 +35,16 @@ export function noteBlocksToYDoc(blocks: Array<PartialNoteBlock>, fragment: stri
   } finally {
     destroyHeadlessBlockNoteEditor(editor)
   }
+}
+
+function allocateMissingNoteBlockIds(
+  blocks: ReadonlyArray<PartialNoteBlock>,
+): Array<PartialNoteBlock> {
+  return blocks.map((block) => ({
+    ...block,
+    id: block.id ?? generateDomainId(DOMAIN_ID_KIND.noteBlock),
+    ...(block.children ? { children: allocateMissingNoteBlockIds(block.children) } : {}),
+  }))
 }
 
 export function noteYDocToBlocks(doc: Y.Doc, fragment: string): Array<NoteBlock> {

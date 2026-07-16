@@ -158,6 +158,7 @@
     "@blocknote/core": "^0.46.2",
     "@blocknote/react": "^0.46.2",
     "@blocknote/shadcn": "^0.46.2",
+    "@tiptap/core": "^3.27.4",
     "@tiptap/pm": "^3.27.4",
     "lucide-react": "^0.541.0",
     "y-protocols": "^1.0.7",

@@ -5,9 +5,11 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
-import { initialVersion, sha256Digest } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
-import { advanceNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
+import {
+  advanceNoteContentVersion,
+  initialNoteContentVersion,
+} from '@wizard-archive/editor/resources/content-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
@@ -66,7 +68,7 @@ function historyRecording() {
 }
 
 async function versionFor(update: ArrayBuffer) {
-  return initialVersion(await sha256Digest(new Uint8Array(update)))
+  return await initialNoteContentVersion(new Uint8Array(update))
 }
 
 function arrayBuffer(update: Uint8Array): ArrayBuffer {

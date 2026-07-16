@@ -124,6 +124,28 @@ describe('NoteEditor', () => {
     })
   })
 
+  it('creates canonical block identities through native keyboard commands', async () => {
+    const document = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    render(
+      <NoteEditor
+        document={document}
+        editable
+        label="Block identity note"
+        onFlush={() => Promise.resolve()}
+      />,
+    )
+
+    const textbox = await screen.findByRole('textbox', { name: 'Block identity note' })
+    fireEvent.click(textbox)
+    fireEvent.keyDown(textbox, { key: 'Enter' })
+
+    await waitFor(() => {
+      const blocks = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
+      expect(blocks).toHaveLength(2)
+      expect(blocks.every((block) => isUuidV7(block.id))).toBe(true)
+    })
+  })
+
   it('tracks canonical document edits in native editor history', async () => {
     const document = noteBlocksToYDoc(
       [

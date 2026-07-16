@@ -16,11 +16,9 @@ import { noteInlineContentSpecs, noteStyleSpecs } from './dom-specs'
 import { reactNoteValueInlineSpec } from './values/react-spec'
 import { NoteValueRuntimeProvider } from './values/runtime-context'
 import { noteValueTransferExtension } from './values/value-transfer'
-import { configureBlockNoteUuidV7 } from '../rich-text/blocknote/uuidv7'
+import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
 import { generateUuidV7 } from '../resources/domain-id'
 import './note-editor.css'
-
-configureBlockNoteUuidV7()
 
 const noteBlockSpecs = createNoteBlockSpecs({
   renderEmbedBlock: () => {
@@ -96,7 +94,8 @@ function NoteDocumentEditor({
         headers: true,
         splitCells: true,
       },
-      extensions: [noteValueTransferExtension],
+      disableExtensions: ['uniqueID'],
+      extensions: [createBlockNoteUuidV7Extension(true), noteValueTransferExtension],
     },
     [document],
   )

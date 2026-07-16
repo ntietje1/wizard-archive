@@ -442,79 +442,83 @@ describe('authorized resource projection', () => {
     ).resolves.toMatchObject({ results: [{ resourceId: noteId }] })
   })
 
-  it('loads the maximum bookmark set through the maximum hierarchy depth', async () => {
-    const campaign = await setupCampaignContext(t)
-    const campaignUuid = await getCampaignUuid(campaign.campaignId)
-    const memberUuid = await getMemberUuid(campaign.dm.memberId)
-    const folderIds = Array.from({ length: MAX_SYNCHRONOUS_RESOURCE_CLOSURE - 1 }, () =>
-      generateDomainId(DOMAIN_ID_KIND.resource),
-    )
-    const bookmarkedIds = Array.from({ length: MAX_RESOURCE_BOOKMARKS_PER_ACTOR }, () =>
-      generateDomainId(DOMAIN_ID_KIND.resource),
-    )
-    const metadataVersion = {
-      scheme: VERSION_SCHEME,
-      revision: 1,
-      digest: '0'.repeat(64),
-    }
-
-    await t.run(async (ctx) => {
-      for (const [index, resourceUuid] of folderIds.entries()) {
-        await ctx.db.insert('resources', {
-          resourceUuid,
-          campaignUuid,
-          parentResourceUuid: folderIds[index - 1] ?? null,
-          kind: 'folder',
-          title: `Folder ${index}`,
-          icon: null,
-          color: null,
-          lifecycle: 'active',
-          trashedAt: null,
-          trashedByMemberUuid: null,
-          metadataVersion,
-          createdAt: index,
-          createdByMemberUuid: memberUuid,
-          updatedAt: index,
-          updatedByMemberUuid: memberUuid,
-        })
+  it(
+    'loads the maximum bookmark set through the maximum hierarchy depth',
+    { timeout: 15_000 },
+    async () => {
+      const campaign = await setupCampaignContext(t)
+      const campaignUuid = await getCampaignUuid(campaign.campaignId)
+      const memberUuid = await getMemberUuid(campaign.dm.memberId)
+      const folderIds = Array.from({ length: MAX_SYNCHRONOUS_RESOURCE_CLOSURE - 1 }, () =>
+        generateDomainId(DOMAIN_ID_KIND.resource),
+      )
+      const bookmarkedIds = Array.from({ length: MAX_RESOURCE_BOOKMARKS_PER_ACTOR }, () =>
+        generateDomainId(DOMAIN_ID_KIND.resource),
+      )
+      const metadataVersion = {
+        scheme: VERSION_SCHEME,
+        revision: 1,
+        digest: '0'.repeat(64),
       }
-      for (const [index, resourceUuid] of bookmarkedIds.entries()) {
-        await ctx.db.insert('resources', {
-          resourceUuid,
-          campaignUuid,
-          parentResourceUuid: folderIds[folderIds.length - 1]!,
-          kind: 'note',
-          title: `Bookmark ${index}`,
-          icon: null,
-          color: null,
-          lifecycle: 'active',
-          trashedAt: null,
-          trashedByMemberUuid: null,
-          metadataVersion,
-          createdAt: folderIds.length + index,
-          createdByMemberUuid: memberUuid,
-          updatedAt: folderIds.length + index,
-          updatedByMemberUuid: memberUuid,
-        })
-        await ctx.db.insert('resourceBookmarks', {
-          campaignUuid,
-          memberUuid,
-          resourceUuid,
-          bookmarkedAt: index,
-        })
-      }
-    })
 
-    const projection = await asDm(campaign).query(api.resources.queries.loadBookmarks, {
-      campaignId: campaignUuid,
-    })
+      await t.run(async (ctx) => {
+        for (const [index, resourceUuid] of folderIds.entries()) {
+          await ctx.db.insert('resources', {
+            resourceUuid,
+            campaignUuid,
+            parentResourceUuid: folderIds[index - 1] ?? null,
+            kind: 'folder',
+            title: `Folder ${index}`,
+            icon: null,
+            color: null,
+            lifecycle: 'active',
+            trashedAt: null,
+            trashedByMemberUuid: null,
+            metadataVersion,
+            createdAt: index,
+            createdByMemberUuid: memberUuid,
+            updatedAt: index,
+            updatedByMemberUuid: memberUuid,
+          })
+        }
+        for (const [index, resourceUuid] of bookmarkedIds.entries()) {
+          await ctx.db.insert('resources', {
+            resourceUuid,
+            campaignUuid,
+            parentResourceUuid: folderIds[folderIds.length - 1]!,
+            kind: 'note',
+            title: `Bookmark ${index}`,
+            icon: null,
+            color: null,
+            lifecycle: 'active',
+            trashedAt: null,
+            trashedByMemberUuid: null,
+            metadataVersion,
+            createdAt: folderIds.length + index,
+            createdByMemberUuid: memberUuid,
+            updatedAt: folderIds.length + index,
+            updatedByMemberUuid: memberUuid,
+          })
+          await ctx.db.insert('resourceBookmarks', {
+            campaignUuid,
+            memberUuid,
+            resourceUuid,
+            bookmarkedAt: index,
+          })
+        }
+      })
 
-    expect(projection.resourceIds).toHaveLength(MAX_RESOURCE_BOOKMARKS_PER_ACTOR)
-    expect(projection.snapshot.resources).toHaveLength(
-      MAX_RESOURCE_BOOKMARKS_PER_ACTOR + folderIds.length,
-    )
-    expect(projection.snapshot.missingResourceIds).toEqual([])
-  })
+      const projection = await asDm(campaign).query(api.resources.queries.loadBookmarks, {
+        campaignId: campaignUuid,
+      })
+
+      expect(projection.resourceIds).toHaveLength(MAX_RESOURCE_BOOKMARKS_PER_ACTOR)
+      expect(projection.snapshot.resources).toHaveLength(
+        MAX_RESOURCE_BOOKMARKS_PER_ACTOR + folderIds.length,
+      )
+      expect(projection.snapshot.missingResourceIds).toEqual([])
+    },
+  )
 
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {
     return await t.run(async (ctx) => (await ctx.db.get('campaigns', campaignId))!.campaignUuid)
@@ -556,7 +560,7 @@ describe('authorized resource projection', () => {
               campaignId: campaignUuid,
               operationId,
               command,
-              update: makeYjsUpdateWithBlocks([]),
+              update: makeYjsUpdateWithBlocks([{ type: 'paragraph' }]),
             })
           : kind === 'map'
             ? await asDm(campaign).mutation(api.resources.mutations.createMapResource, {

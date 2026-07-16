@@ -289,7 +289,7 @@ function createNoteBlockNodeSchema(): z.ZodType<NoteBlockNode> {
   ) as z.ZodType<NoteBlockNode>
 }
 
-export const noteDocumentSchema = zod.array(noteBlockSchema)
+export const noteDocumentSchema = zod.array(noteBlockSchema).min(1)
 
 type PartialFlatBlockContent = {
   [Type in NoteBlockContent['type']]: Omit<
@@ -344,7 +344,7 @@ function createPartialBlockNodeSchema(
 
 const partialBlockNoteBlockSchema = createPartialBlockSchema(allFlatBlockContentSchemas)
 
-export const partialNoteDocumentSchema = zod.array(partialBlockNoteBlockSchema)
+export const partialNoteDocumentSchema = zod.array(partialBlockNoteBlockSchema).min(1)
 
 export type HeadingLevel = Extract<NoteBlockContent, { type: 'heading' }>['props']['level']
 

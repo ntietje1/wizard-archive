@@ -1,5 +1,5 @@
-import * as Y from 'yjs'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
+import { createEmptyNoteYDoc } from '../../notes/document/headless-yjs'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -90,7 +90,7 @@ async function createWorkspaceResource(
       case 'note':
         return runtime.content.notes.create(
           { ...envelope, command: { ...command, kind: 'note' } },
-          new Y.Doc(),
+          createEmptyNoteYDoc(),
         )
       case 'map':
         return runtime.content.maps.create({
