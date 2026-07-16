@@ -156,6 +156,57 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('restores pane, node, edge, arrange, reorder, and clipboard context actions', async () => {
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+      ],
+      edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Menu board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+
+    fireEvent.contextMenu(screen.getAllByTestId('canvas-node')[0]!, {
+      clientX: 100,
+      clientY: 100,
+    })
+    expect(screen.getByRole('menu', { name: 'Canvas actions' })).toBeVisible()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(3)
+
+    fireEvent.contextMenu(surface, { clientX: 500, clientY: 500 })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Select All' }))
+    fireEvent.contextMenu(screen.getAllByTestId('canvas-node')[0]!, {
+      clientX: 100,
+      clientY: 100,
+    })
+    expect(screen.getByRole('menuitem', { name: 'Arrange' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Align left' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Reorder' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Send to back' })).toBeVisible()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy' }))
+
+    fireEvent.contextMenu(surface, { clientX: 500, clientY: 500 })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Paste' }))
+    expect(readCanvasDocumentContent(session.document)).toMatchObject({
+      nodes: [{}, {}, {}, {}, {}, {}],
+      edges: [{ id: 'edge-a-b' }, {}],
+    })
+
+    fireEvent.contextMenu(screen.getAllByTestId('canvas-edge')[0]!, {
+      clientX: 200,
+      clientY: 200,
+    })
+    expect(screen.queryByRole('menuitem', { name: 'Copy' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+    expect(readCanvasDocumentContent(session.document).edges).toHaveLength(1)
+    view.unmount()
+    session.dispose()
+  })
+
   it('cancels retained mutations and blocks undo when editing changes to viewing', async () => {
     const session = await createSession({
       nodes: [

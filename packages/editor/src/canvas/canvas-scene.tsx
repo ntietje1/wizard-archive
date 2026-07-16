@@ -1,4 +1,4 @@
-import type { CSSProperties, PointerEvent, RefObject } from 'react'
+import type { CSSProperties, MouseEvent, PointerEvent, RefObject } from 'react'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentController, CanvasDocumentNodeUpdate } from './document-controller'
 import type {
@@ -43,6 +43,7 @@ export function CanvasScene({
   documentController,
   interaction,
   interactionController,
+  onOpenContextMenu,
   surface,
 }: {
   canEdit: boolean
@@ -50,6 +51,7 @@ export function CanvasScene({
   documentController: CanvasDocumentController
   interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
+  onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   surface: RefObject<HTMLElement | null>
 }) {
   const resizedNodeBounds = canvasResizedNodeBounds(interaction)
@@ -82,7 +84,9 @@ export function CanvasScene({
             edge={edge}
             nodeById={nodeById}
             selected={visualSelection.edgeIds.has(edge.id)}
+            selection={visualSelection}
             tool={interaction.tool}
+            onOpenContextMenu={onOpenContextMenu}
             onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
           />
         </svg>
@@ -100,6 +104,7 @@ export function CanvasScene({
           interaction={interaction}
           interactionController={interactionController}
           node={node}
+          onOpenContextMenu={onOpenContextMenu}
           selected={visualSelection.nodeIds.has(node.id)}
           surface={surface}
         />
@@ -155,6 +160,7 @@ function CanvasNode({
   interaction,
   interactionController,
   node,
+  onOpenContextMenu,
   selected,
   surface,
 }: {
@@ -164,6 +170,7 @@ function CanvasNode({
   interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
+  onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   selected: boolean
   surface: RefObject<HTMLElement | null>
 }) {
@@ -195,6 +202,15 @@ function CanvasNode({
         if (!canEdit || interaction.tool !== 'select' || node.type !== 'text') return
         event.stopPropagation()
         interactionController.editNode(node.id)
+      }}
+      onContextMenu={(event) => {
+        event.stopPropagation()
+        onOpenContextMenu(
+          event,
+          selected
+            ? interaction.selection
+            : { nodeIds: new Set([node.id]), edgeIds: new Set<string>() },
+        )
       }}
       onPointerDown={(event) =>
         beginNodeDrag({
@@ -530,14 +546,18 @@ function CanvasNodeContent({
 function CanvasEdge({
   edge,
   nodeById,
+  onOpenContextMenu,
   onSelect,
   selected,
+  selection,
   tool,
 }: {
   edge: CanvasDocumentEdge
   nodeById: ReadonlyMap<CanvasNodeId, CanvasDocumentNode>
+  onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   onSelect: (additive: boolean) => void
   selected: boolean
+  selection: CanvasSelection
   tool: CanvasInteractionSnapshot['tool']
 }) {
   if (edge.hidden) return null
@@ -549,6 +569,13 @@ function CanvasEdge({
       data-edge-id={edge.id}
       data-selected={selected}
       data-testid="canvas-edge"
+      onContextMenu={(event) => {
+        event.stopPropagation()
+        onOpenContextMenu(
+          event,
+          selected ? selection : { nodeIds: new Set<CanvasNodeId>(), edgeIds: new Set([edge.id]) },
+        )
+      }}
       onPointerDown={(event) => {
         if (tool !== 'select') return
         event.stopPropagation()

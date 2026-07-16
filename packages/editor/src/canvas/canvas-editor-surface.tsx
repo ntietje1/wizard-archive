@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { KeyboardEvent, PointerEvent, WheelEvent } from 'react'
+import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from 'react'
 import type { CanvasDocumentController } from './document-controller'
 import { captureCanvasSelection, materializeCanvasPaste } from './canvas-clipboard'
 import type { CanvasClipboardEntry } from './canvas-clipboard'
 import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-contract'
 import { screenToCanvasPoint } from './interaction-controller'
-import type { CanvasInteractionController, CanvasPoint, CanvasTool } from './interaction-controller'
+import type {
+  CanvasInteractionController,
+  CanvasPoint,
+  CanvasSelection,
+  CanvasTool,
+} from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
+import { CanvasContextMenu } from './canvas-context-menu'
+import type { CanvasContextMenuRequest } from './canvas-context-menu'
 import { CanvasSelectionActions } from './canvas-selection-actions'
 import { CanvasSelectionProperties } from './canvas-selection-properties'
 import { CanvasToolbar } from './canvas-toolbar'
@@ -53,6 +60,7 @@ export function CanvasEditorSurface({
 }: CanvasEditorSurfaceProps) {
   const clipboard = useRef<CanvasClipboardEntry | null>(null)
   const surface = useRef<HTMLElement>(null)
+  const [contextMenu, setContextMenu] = useState<CanvasContextMenuRequest | null>(null)
   const content = useCanvasDocumentContent(documentController)
   const interaction = useSyncExternalStore(
     interactionController.subscribe,
@@ -143,6 +151,23 @@ export function CanvasEditorSurface({
       edgeIds: new Set(content.edges.map((edge) => edge.id)),
     })
 
+  const openSelectionContextMenu = (event: MouseEvent<Element>, selection: CanvasSelection) => {
+    event.preventDefault()
+    interactionController.setSelection(selection)
+    setContextMenu({ kind: 'selection', ...canvasMenuPosition(event) })
+  }
+
+  const actions = {
+    copy: copySelection,
+    cut: cutSelection,
+    delete: removeSelection,
+    duplicate: duplicateSelection,
+    paste: pasteClipboard,
+    redo: () => documentController.redo(),
+    selectAll,
+    undo: () => documentController.undo(),
+  }
+
   const handleKeyboard = (event: KeyboardEvent<HTMLElement>) => {
     if (event.repeat) return
     const snapshot = interactionController.get()
@@ -153,18 +178,7 @@ export function CanvasEditorSurface({
     if (isCanvasTextEntryTarget(event.target)) return
     const primary = event.metaKey || event.ctrlKey
     const key = event.key.toLowerCase()
-    if (
-      primary &&
-      handleCanvasPrimaryShortcut(event, key, canEdit, {
-        copy: copySelection,
-        cut: cutSelection,
-        duplicate: duplicateSelection,
-        paste: pasteClipboard,
-        redo: () => documentController.redo(),
-        selectAll,
-        undo: () => documentController.undo(),
-      })
-    ) {
+    if (primary && handleCanvasPrimaryShortcut(event, key, canEdit, actions)) {
       return
     }
     if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -213,6 +227,18 @@ export function CanvasEditorSurface({
         documentController={documentController}
         interaction={interaction}
       />
+      {contextMenu && (
+        <CanvasContextMenu
+          actions={actions}
+          canEdit={canEdit}
+          canPaste={clipboard.current !== null}
+          content={content}
+          documentController={documentController}
+          request={contextMenu}
+          selection={interaction.selection}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
       <section
         ref={surface}
         aria-label="Canvas surface"
@@ -220,9 +246,14 @@ export function CanvasEditorSurface({
         data-tool={interaction.tool}
         data-testid="canvas-surface"
         tabIndex={-1}
-        onPointerDown={(event) =>
+        onContextMenu={(event) => {
+          event.preventDefault()
+          setContextMenu({ kind: 'pane', ...canvasMenuPosition(event) })
+        }}
+        onPointerDown={(event) => {
+          setContextMenu(null)
           beginCanvasSurfaceInteraction(event, canEdit, interactionController, createTextNode)
-        }
+        }}
         onPointerMove={(event) => {
           const point = localPoint(event, event.currentTarget)
           interactionController.updatePan(event.pointerId, point)
@@ -286,6 +317,7 @@ export function CanvasEditorSurface({
           documentController={documentController}
           interaction={interaction}
           interactionController={interactionController}
+          onOpenContextMenu={openSelectionContextMenu}
           surface={surface}
         />
       </section>
@@ -355,6 +387,17 @@ function isCanvasTextEntryTarget(target: EventTarget | null): boolean {
     target.isContentEditable ||
     target.closest('input, select, textarea, [contenteditable="true"]') !== null
   )
+}
+
+function canvasMenuPosition(event: MouseEvent<Element>): Readonly<{ x: number; y: number }> {
+  const maximumX = Math.max(8, document.documentElement.clientWidth - 360)
+  const maximumY = Math.max(8, document.documentElement.clientHeight - 320)
+  const requestedX = Number.isFinite(event.clientX) ? event.clientX : 8
+  const requestedY = Number.isFinite(event.clientY) ? event.clientY : 8
+  return {
+    x: Math.max(8, Math.min(requestedX, maximumX)),
+    y: Math.max(8, Math.min(requestedY, maximumY)),
+  }
 }
 
 function beginCanvasSurfaceInteraction(
