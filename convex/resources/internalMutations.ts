@@ -3,11 +3,73 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import { internal } from '../_generated/api'
 import { internalMutation } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
+import { NOTE_AWARENESS_TTL_MS } from '../../shared/resources/note-awareness-protocol'
+import {
+  campaignResourceDeletionStageValidator,
+  deleteCampaignResourceBatch as deleteCampaignResourceBatchFn,
+} from './functions/resourceDeletion'
+import { campaignIdValidator } from '../campaigns/schema'
 
 const workResult = v.union(
   v.object({ status: v.literal('unavailable') }),
   v.object({ status: v.literal('completed') }),
 )
+
+export const expireNoteAwarenessLease = internalMutation({
+  args: {
+    resourceId: v.string(),
+    clientId: v.number(),
+    leaseId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+    const row = await ctx.db
+      .query('resourceNoteAwareness')
+      .withIndex('by_resourceUuid_and_clientId', (query) =>
+        query.eq('resourceUuid', resourceId).eq('clientId', args.clientId),
+      )
+      .unique()
+    if (!row || row.leaseId !== args.leaseId) return null
+
+    const remaining = row.updatedAt + NOTE_AWARENESS_TTL_MS - Date.now()
+    if (remaining <= 0) {
+      await ctx.db.delete(row._id)
+      return null
+    }
+    await ctx.scheduler.runAfter(
+      remaining,
+      internal.resources.internalMutations.expireNoteAwarenessLease,
+      args,
+    )
+    return null
+  },
+})
+
+export const deleteCampaignResourceBatch = internalMutation({
+  args: {
+    campaignId: campaignIdValidator,
+    stage: campaignResourceDeletionStageValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId)
+    const nextStage = await deleteCampaignResourceBatchFn(ctx, campaignId, args.stage)
+    if (nextStage) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.resources.internalMutations.deleteCampaignResourceBatch,
+        { campaignId, stage: nextStage },
+      )
+    } else {
+      await ctx.scheduler.runAfter(0, internal.campaigns.internalMutations.deleteCampaignRows, {
+        campaignId,
+        stage: 'sessions',
+      })
+    }
+    return null
+  },
+})
 
 async function setContentAssetState(
   ctx: MutationCtx,

@@ -5,6 +5,7 @@ import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resour
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
+import { noteCollaborationColor } from 'shared/resources/note-awareness-protocol'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { LiveWorkspaceRouteEffects } from './live-workspace-route-effects'
 import { useLiveResourceCore } from './resources/use-live-resource-core'
@@ -29,7 +30,7 @@ export function LiveWorkspaceRuntimeProvider({
   const projection = membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'
   const collaborationUser = {
     name: membership.userProfile.name?.trim() || membership.userProfile.username,
-    color: collaborationColor(membership.id),
+    color: noteCollaborationColor(membership.id),
   }
   return (
     <LoadedLiveWorkspaceRuntimeContent
@@ -81,21 +82,4 @@ function LoadedLiveWorkspaceRuntimeContent({
       {children(resourceCore)}
     </>
   )
-}
-
-const COLLABORATION_COLORS = [
-  '#e06c75',
-  '#e5c07b',
-  '#98c379',
-  '#56b6c2',
-  '#61afef',
-  '#c678dd',
-  '#d19a66',
-  '#be5046',
-] as const
-
-function collaborationColor(memberId: CampaignMemberId): string {
-  let hash = 0
-  for (const character of memberId) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0
-  return COLLABORATION_COLORS[Math.abs(hash) % COLLABORATION_COLORS.length]
 }

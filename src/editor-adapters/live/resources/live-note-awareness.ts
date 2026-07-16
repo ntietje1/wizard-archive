@@ -12,6 +12,7 @@ import type {
 } from '@wizard-archive/editor/resources/content-session-contract'
 import { generateUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { decodeAuthenticatedNoteAwarenessUpdate } from 'shared/resources/note-awareness-protocol'
 
 type NoteAwarenessSnapshot =
   | Readonly<{
@@ -52,6 +53,7 @@ class LiveNoteAwareness {
   readonly #leaseId = generateUuidV7()
   readonly #memberIds = new Map<number, CampaignMemberId>()
   readonly #unsubscribe: () => void
+  #available = false
   #destroyed = false
   #dirty = false
   #heartbeatTimer: ReturnType<typeof setTimeout> | null = null
@@ -76,6 +78,7 @@ class LiveNoteAwareness {
   }
 
   get awareness(): SessionAwareness {
+    if (!this.#available) return { status: 'unavailable' }
     return {
       status: 'available',
       collaboratorIds: [...new Set(this.#memberIds.values())],
@@ -102,8 +105,19 @@ class LiveNoteAwareness {
         leaseId: this.#leaseId,
         state,
       })
-      .then(() => this.#scheduleHeartbeat())
-      .catch(() => this.#scheduleHeartbeat())
+      .then((result) => {
+        if (result.status !== 'active') {
+          this.#setAvailable(false)
+          this.#clearHeartbeat()
+          return
+        }
+        this.#setAvailable(true)
+        this.#scheduleHeartbeat()
+      })
+      .catch(() => {
+        this.#setAvailable(false)
+        this.#scheduleHeartbeat()
+      })
       .finally(() => {
         this.#inFlight = null
         if (this.#dirty) this.#scheduleFlush()
@@ -133,10 +147,11 @@ class LiveNoteAwareness {
   readonly #apply = (snapshot: NoteAwarenessSnapshot) => {
     if (this.#destroyed) return
     if (snapshot.status !== 'ready') {
-      this.#replaceRemoteEntries([])
+      this.#setAvailable(false)
+      if (this.#replaceRemoteEntries([])) this.collaboratorsChanged()
       return
     }
-    this.#replaceRemoteEntries(snapshot.entries)
+    if (this.#replaceRemoteEntries(snapshot.entries)) this.collaboratorsChanged()
   }
 
   #replaceRemoteEntries(
@@ -145,12 +160,20 @@ class LiveNoteAwareness {
       memberId: CampaignMemberId
       state: ArrayBuffer
     }>,
-  ): void {
+  ): boolean {
     const localClientId = this.#awareness.doc.clientID
     const currentRemoteClientIds = new Set<number>()
+    let changed = false
     for (const entry of entries) {
       if (entry.clientId === localClientId) continue
+      const decoded = decodeAuthenticatedNoteAwarenessUpdate(
+        entry.state,
+        entry.clientId,
+        entry.memberId,
+      )
+      if (!decoded) continue
       currentRemoteClientIds.add(entry.clientId)
+      if (this.#memberIds.get(entry.clientId) !== entry.memberId) changed = true
       this.#memberIds.set(entry.clientId, entry.memberId)
       applyAwarenessUpdate(this.#awareness, new Uint8Array(entry.state), REMOTE_AWARENESS_UPDATE)
     }
@@ -159,10 +182,17 @@ class LiveNoteAwareness {
       (clientId) => !currentRemoteClientIds.has(clientId),
     )
     if (removedClientIds.length > 0) {
+      changed = true
       removeAwarenessStates(this.#awareness, removedClientIds, REMOTE_AWARENESS_UPDATE)
       for (const clientId of removedClientIds) this.#memberIds.delete(clientId)
     }
     this.#knownRemoteClientIds = currentRemoteClientIds
+    return changed
+  }
+
+  #setAvailable(available: boolean): void {
+    if (this.#available === available) return
+    this.#available = available
     this.collaboratorsChanged()
   }
 

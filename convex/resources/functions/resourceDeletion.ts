@@ -9,6 +9,8 @@ import { loadMapContentRows } from './mapContent'
 import { loadNoteContentDeletion } from './noteContent'
 import { fileAssetIds, mapAssetIds } from './assetContent'
 import { internal } from '../../_generated/api'
+import { literals } from 'convex-helpers/validators'
+import { CAMPAIGN_DELETION_BATCH_SIZE } from '../../campaigns/constants'
 
 type ResourceDeletionCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
 
@@ -209,108 +211,142 @@ async function queueAssetRetirements(
   )
 }
 
-export async function deleteCampaignResources(
+const CAMPAIGN_RESOURCE_DELETION_STAGES = [
+  'resources',
+  'bookmarks',
+  'bookmarkOperations',
+  'tombstones',
+  'aliases',
+  'assetsFolders',
+  'operations',
+  'noteContents',
+  'noteAwareness',
+  'fileContents',
+  'mapContents',
+  'mapPins',
+  'canvasContents',
+  'assetCopyIntents',
+  'assetOwners',
+] as const
+
+export type CampaignResourceDeletionStage = (typeof CAMPAIGN_RESOURCE_DELETION_STAGES)[number]
+export const campaignResourceDeletionStageValidator = literals(...CAMPAIGN_RESOURCE_DELETION_STAGES)
+export const FIRST_CAMPAIGN_RESOURCE_DELETION_STAGE: CampaignResourceDeletionStage = 'resources'
+type CampaignResourceRow =
+  | Doc<'resources'>
+  | Doc<'resourceBookmarks'>
+  | Doc<'resourceBookmarkOperations'>
+  | Doc<'resourceTombstones'>
+  | Doc<'resourceSourcePathAliases'>
+  | Doc<'resourceAssetsFolders'>
+  | Doc<'resourceOperations'>
+  | Doc<'resourceNoteContents'>
+  | Doc<'resourceNoteAwareness'>
+  | Doc<'resourceFileContents'>
+  | Doc<'resourceMapContents'>
+  | Doc<'resourceMapPins'>
+  | Doc<'resourceCanvasContents'>
+  | Doc<'resourceAssetCopyIntents'>
+
+export async function deleteCampaignResourceBatch(
   ctx: ResourceDeletionCtx,
   campaignId: CampaignId,
-): Promise<void> {
-  const [
-    resources,
-    bookmarks,
-    bookmarkOperations,
-    tombstones,
-    aliases,
-    assetsFolders,
-    operations,
-    noteContents,
-    noteAwareness,
-    fileContents,
-    mapContents,
-    mapPins,
-    canvasContents,
-    assetCopyIntents,
-    assetOwners,
-  ] = await Promise.all([
-    ctx.db
-      .query('resources')
-      .withIndex('by_campaign_and_parent', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceBookmarks')
-      .withIndex('by_member', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceBookmarkOperations')
-      .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceTombstones')
-      .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceSourcePathAliases')
-      .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceAssetsFolders')
-      .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceOperations')
-      .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceNoteContents')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceNoteAwareness')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceFileContents')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceMapContents')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceMapPins')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceCanvasContents')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
-      .query('resourceAssetCopyIntents')
-      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-    ctx.db
+  stage: CampaignResourceDeletionStage,
+): Promise<CampaignResourceDeletionStage | null> {
+  if (stage === 'assetOwners') {
+    const owners = await ctx.db
       .query('resourceAssetOwners')
       .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-  ])
+      .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    await queueAssetRetirements(
+      ctx,
+      new Set(owners.map((owner) => assertDomainId(DOMAIN_ID_KIND.asset, owner.assetUuid))),
+    )
+    await Promise.all(owners.map((owner) => ctx.db.delete(owner._id)))
+    return owners.length === CAMPAIGN_DELETION_BATCH_SIZE ? stage : null
+  }
+  const rows = await loadCampaignResourceDeletionBatch(ctx, campaignId, stage)
+  await Promise.all(rows.map((row) => ctx.db.delete(row._id)))
+  if (rows.length === CAMPAIGN_DELETION_BATCH_SIZE) return stage
+  const index = CAMPAIGN_RESOURCE_DELETION_STAGES.indexOf(stage)
+  return CAMPAIGN_RESOURCE_DELETION_STAGES[index + 1] ?? null
+}
 
-  await Promise.all([
-    ...resources.map((row) => ctx.db.delete(row._id)),
-    ...bookmarks.map((row) => ctx.db.delete(row._id)),
-    ...bookmarkOperations.map((row) => ctx.db.delete(row._id)),
-    ...tombstones.map((row) => ctx.db.delete(row._id)),
-    ...aliases.map((row) => ctx.db.delete(row._id)),
-    ...assetsFolders.map((row) => ctx.db.delete(row._id)),
-    ...operations.map((row) => ctx.db.delete(row._id)),
-    ...noteContents.map((row) => ctx.db.delete(row._id)),
-    ...noteAwareness.map((row) => ctx.db.delete(row._id)),
-    ...fileContents.map((row) => ctx.db.delete(row._id)),
-    ...mapContents.map((row) => ctx.db.delete(row._id)),
-    ...mapPins.map((row) => ctx.db.delete(row._id)),
-    ...canvasContents.map((row) => ctx.db.delete(row._id)),
-    ...assetCopyIntents.map((row) => ctx.db.delete(row._id)),
-    ...assetOwners.map((row) => ctx.db.delete(row._id)),
-  ])
-  await queueAssetRetirements(
-    ctx,
-    new Set(assetOwners.map((owner) => assertDomainId(DOMAIN_ID_KIND.asset, owner.assetUuid))),
-  )
+async function loadCampaignResourceDeletionBatch(
+  ctx: ResourceDeletionCtx,
+  campaignId: CampaignId,
+  stage: Exclude<CampaignResourceDeletionStage, 'assetOwners'>,
+): Promise<Array<CampaignResourceRow>> {
+  switch (stage) {
+    case 'resources':
+      return await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'bookmarks':
+      return await ctx.db
+        .query('resourceBookmarks')
+        .withIndex('by_member', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'bookmarkOperations':
+      return await ctx.db
+        .query('resourceBookmarkOperations')
+        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'tombstones':
+      return await ctx.db
+        .query('resourceTombstones')
+        .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'aliases':
+      return await ctx.db
+        .query('resourceSourcePathAliases')
+        .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'assetsFolders':
+      return await ctx.db
+        .query('resourceAssetsFolders')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'operations':
+      return await ctx.db
+        .query('resourceOperations')
+        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteContents':
+      return await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteAwareness':
+      return await ctx.db
+        .query('resourceNoteAwareness')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'fileContents':
+      return await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'mapContents':
+      return await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'mapPins':
+      return await ctx.db
+        .query('resourceMapPins')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'canvasContents':
+      return await ctx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'assetCopyIntents':
+      return await ctx.db
+        .query('resourceAssetCopyIntents')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+  }
 }

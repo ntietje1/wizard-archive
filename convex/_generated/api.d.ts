@@ -34,6 +34,7 @@ import type * as campaigns_functions_joinCampaign from "../campaigns/functions/j
 import type * as campaigns_functions_lifecycle from "../campaigns/functions/lifecycle.js";
 import type * as campaigns_functions_updateCampaign from "../campaigns/functions/updateCampaign.js";
 import type * as campaigns_functions_updateCampaignMemberStatus from "../campaigns/functions/updateCampaignMemberStatus.js";
+import type * as campaigns_internalMutations from "../campaigns/internalMutations.js";
 import type * as campaigns_internalQueries from "../campaigns/internalQueries.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
@@ -155,6 +156,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/functions/lifecycle": typeof campaigns_functions_lifecycle;
   "campaigns/functions/updateCampaign": typeof campaigns_functions_updateCampaign;
   "campaigns/functions/updateCampaignMemberStatus": typeof campaigns_functions_updateCampaignMemberStatus;
+  "campaigns/internalMutations": typeof campaigns_internalMutations;
   "campaigns/internalQueries": typeof campaigns_internalQueries;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;

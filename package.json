@@ -56,6 +56,7 @@
     "convex": "^1.35.1",
     "convex-helpers": "^0.1.114",
     "date-fns": "^4.1.0",
+    "lib0": "^0.2.117",
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.541.0",
     "motion": "^12.24.12",

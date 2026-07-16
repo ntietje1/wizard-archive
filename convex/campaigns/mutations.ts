@@ -3,7 +3,7 @@ import { authMutation, dmMutation } from '../functions'
 import { assertUsername, usernameValidator } from '../users/validation'
 import { createCampaign as createCampaignFn } from './functions/createCampaign'
 import { joinCampaign as joinCampaignFn } from './functions/joinCampaign'
-import { hardDeleteCampaign } from './functions/lifecycle'
+import { beginCampaignDeletion } from './functions/lifecycle'
 import { updateCampaign as updateCampaignFn } from './functions/updateCampaign'
 import { updateCampaignMemberStatus as updateCampaignMemberStatusFn } from './functions/updateCampaignMemberStatus'
 import {
@@ -68,7 +68,7 @@ export const deleteCampaign = dmMutation({
   returns: campaignIdValidator,
   handler: async (ctx): Promise<CampaignId> => {
     const campaignId = ctx.resourceScope.campaignId
-    await hardDeleteCampaign(ctx, ctx.campaign._id, campaignId)
+    await beginCampaignDeletion(ctx, ctx.campaign._id, campaignId)
     return campaignId
   },
 })

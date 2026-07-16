@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/identities.helper'
 import {
@@ -20,7 +20,10 @@ import {
   generateDomainId,
   isUuidV7,
 } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+
+afterEach(() => vi.useRealTimers())
 
 describe('createCampaign', () => {
   const t = createTestContext()
@@ -1017,7 +1020,7 @@ describe('updateCampaign', () => {
 })
 
 describe('deleteCampaign', () => {
-  const t = createTestContext()
+  const t = createTestContext(true)
 
   it('requires DM role', async () => {
     const ctx = await setupCampaignContext(t)
@@ -1031,16 +1034,20 @@ describe('deleteCampaign', () => {
   })
 
   it('hard-deletes campaign and all related records', async () => {
+    vi.useFakeTimers()
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
+    const resourceIds: Array<ResourceId> = []
 
     for (const kind of ['note', 'folder'] as const) {
+      const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+      resourceIds.push(resourceId)
       await dmAuth.mutation(api.resources.mutations.executeStructureCommand, {
         campaignId: ctx.campaignDomainId,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         command: {
           type: 'create',
-          resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
+          resourceId,
           kind,
           parentId: null,
           title: canonicalizeResourceTitle(kind),
@@ -1050,10 +1057,36 @@ describe('deleteCampaign', () => {
       })
     }
     await createSession(t, ctx.campaignId)
+    await Promise.all(
+      Array.from({ length: 13 }, (_, batch) =>
+        t.run(async (dbCtx) => {
+          await Promise.all(
+            Array.from({ length: 10 }, (_, index) => {
+              const clientId = batch * 10 + index
+              return dbCtx.db.insert('resourceNoteAwareness', {
+                campaignUuid: ctx.campaignDomainId,
+                resourceUuid: resourceIds[0]!,
+                memberUuid: ctx.dm.memberDomainId,
+                clientId,
+                leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
+                state: new ArrayBuffer(140_000),
+                updatedAt: Date.now(),
+              })
+            }),
+          )
+        }),
+      ),
+    )
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
       campaignId: ctx.campaignDomainId,
     })
+
+    await t.run(async (dbCtx) => {
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
+      expect(campaign?.status).toBe('Deleted')
+    })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await t.run(async (dbCtx) => {
       const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)

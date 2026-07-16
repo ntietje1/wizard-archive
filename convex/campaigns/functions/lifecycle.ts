@@ -1,42 +1,26 @@
-import { asyncMap } from 'convex-helpers'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import { deleteCampaignResources } from '../../resources/functions/resourceDeletion'
+import { internal } from '../../_generated/api'
+import { FIRST_CAMPAIGN_RESOURCE_DELETION_STAGE } from '../../resources/functions/resourceDeletion'
 
 type CampaignLifecycleCtx = Pick<MutationCtx, 'db' | 'scheduler'>
 
-export async function hardDeleteCampaign(
+export async function beginCampaignDeletion(
   ctx: CampaignLifecycleCtx,
   campaignRowId: Id<'campaigns'>,
   campaignId: CampaignId,
 ): Promise<void> {
-  const [sessions, campaignMembers, workspacePreferences] = await Promise.all([
-    ctx.db
-      .query('sessions')
-      .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignRowId))
-      .collect(),
-    ctx.db
-      .query('campaignMembers')
-      .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignRowId))
-      .collect(),
-    ctx.db
-      .query('workspacePreferences')
-      .withIndex('by_campaign_user', (query) => query.eq('campaignUuid', campaignId))
-      .collect(),
-  ])
-
-  await deleteCampaignResources(ctx, campaignId)
-  await Promise.all([
-    asyncMap(sessions, (session) => ctx.db.delete('sessions', session._id)),
-    asyncMap(campaignMembers, (member) => ctx.db.delete('campaignMembers', member._id)),
-    asyncMap(workspacePreferences, (preference) =>
-      ctx.db.delete('workspacePreferences', preference._id),
-    ),
-  ])
-
-  await ctx.db.delete('campaigns', campaignRowId)
+  await ctx.db.patch('campaigns', campaignRowId, { status: CAMPAIGN_STATUS.Deleted })
+  await ctx.scheduler.runAfter(
+    0,
+    internal.resources.internalMutations.deleteCampaignResourceBatch,
+    {
+      campaignId,
+      stage: FIRST_CAMPAIGN_RESOURCE_DELETION_STAGE,
+    },
+  )
 }
 
 async function retireCampaignForDeletedDm(

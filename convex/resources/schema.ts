@@ -368,12 +368,16 @@ export const noteAwarenessSnapshotValidator = v.union(
     ),
   }),
   contentUnavailableSnapshotValidator,
+  v.object({ status: v.literal('unavailable'), reason: v.literal('capacity_exceeded') }),
 )
 
 export const noteAwarenessLeaseResultValidator = v.union(
   v.object({ status: v.literal('active') }),
   v.object({ status: v.literal('unavailable') }),
-  v.object({ status: v.literal('rejected'), reason: v.literal('lease_conflict') }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals('lease_conflict', 'invalid_update', 'payload_too_large', 'capacity_exceeded'),
+  }),
 )
 
 export const noteAwarenessReleaseResultValidator = v.union(

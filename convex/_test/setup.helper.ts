@@ -15,7 +15,7 @@ const modules = import.meta.glob([
   '!../_test/**',
 ])
 
-export function createTestContext() {
-  const t = convexTest(schema, modules)
+export function createTestContext(transactionLimits = false) {
+  const t = convexTest({ schema, modules, transactionLimits })
   return t
 }

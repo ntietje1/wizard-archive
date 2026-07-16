@@ -4,6 +4,7 @@ import * as Y from 'yjs'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { LiveNoteAwarenessBackend } from '../live-note-awareness'
 import { createLiveNoteAwareness } from '../live-note-awareness'
+import { authenticateNoteAwarenessUpdate } from 'shared/resources/note-awareness-protocol'
 
 describe('LiveNoteAwareness', () => {
   afterEach(() => vi.useRealTimers())
@@ -35,6 +36,7 @@ describe('LiveNoteAwareness', () => {
     )
 
     expect(collaboratorsChanged).not.toHaveBeenCalled()
+    expect(collaboration.awareness).toEqual({ status: 'unavailable' })
     await collaboration.flush()
     expect(publishAwareness).toHaveBeenCalledWith(
       expect.objectContaining({ resourceId, clientId: document.clientID }),
@@ -43,14 +45,21 @@ describe('LiveNoteAwareness', () => {
     const remoteDocument = new Y.Doc()
     const remoteAwareness = new Awareness(remoteDocument)
     remoteAwareness.setLocalStateField('user', { name: 'Remote', color: '#e06c75' })
+    const remoteState = authenticateNoteAwarenessUpdate(
+      Uint8Array.from(encodeAwarenessUpdate(remoteAwareness, [remoteDocument.clientID])).buffer,
+      remoteDocument.clientID,
+      remoteMemberId,
+      { name: 'Remote', color: '#e06c75' },
+    )
+    expect(remoteState.status).toBe('accepted')
+    if (remoteState.status !== 'accepted') throw new Error('Expected valid awareness state')
     apply?.({
       status: 'ready',
       entries: [
         {
           clientId: remoteDocument.clientID,
           memberId: remoteMemberId,
-          state: Uint8Array.from(encodeAwarenessUpdate(remoteAwareness, [remoteDocument.clientID]))
-            .buffer,
+          state: remoteState.update,
         },
       ],
     })
@@ -59,17 +68,20 @@ describe('LiveNoteAwareness', () => {
       status: 'available',
       collaboratorIds: [memberId, remoteMemberId],
     })
-    expect(collaboratorsChanged).toHaveBeenCalledOnce()
+    expect(collaboratorsChanged).toHaveBeenCalledTimes(2)
     expect(
       collaboration.collaboration.provider.awareness.getStates().get(remoteDocument.clientID),
-    ).toEqual({ user: { name: 'Remote', color: '#e06c75' } })
+    ).toEqual({
+      memberId: remoteMemberId,
+      user: { name: 'Remote', color: '#e06c75' },
+    })
 
     apply?.({ status: 'ready', entries: [] })
     expect(collaboration.awareness).toEqual({
       status: 'available',
       collaboratorIds: [memberId],
     })
-    expect(collaboratorsChanged).toHaveBeenCalledTimes(2)
+    expect(collaboratorsChanged).toHaveBeenCalledTimes(3)
 
     await collaboration.dispose()
     expect(unsubscribe).toHaveBeenCalledOnce()
@@ -105,6 +117,93 @@ describe('LiveNoteAwareness', () => {
     expect(publishAwareness).toHaveBeenCalledOnce()
     await vi.advanceTimersByTimeAsync(10_000)
     expect(publishAwareness).toHaveBeenCalledTimes(2)
+
+    await collaboration.dispose()
+    document.destroy()
+  })
+
+  it('ignores malformed and identity-spoofed subscriber entries', async () => {
+    const document = new Y.Doc()
+    const remoteDocument = new Y.Doc()
+    const remoteAwareness = new Awareness(remoteDocument)
+    const remoteMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const differentMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    remoteAwareness.setLocalStateField('user', { name: 'Remote', color: '#e06c75' })
+    const authenticated = authenticateNoteAwarenessUpdate(
+      Uint8Array.from(encodeAwarenessUpdate(remoteAwareness, [remoteDocument.clientID])).buffer,
+      remoteDocument.clientID,
+      remoteMemberId,
+      { name: 'Remote', color: '#e06c75' },
+    )
+    if (authenticated.status !== 'accepted') throw new Error('Expected valid awareness state')
+    let apply: Parameters<LiveNoteAwarenessBackend['watchAwareness']>[1] | undefined
+    const collaboration = createLiveNoteAwareness(
+      document,
+      generateDomainId(DOMAIN_ID_KIND.resource),
+      generateDomainId(DOMAIN_ID_KIND.campaignMember),
+      { name: 'Local', color: '#61afef' },
+      {
+        publishAwareness: () => Promise.resolve({ status: 'active' }),
+        releaseAwareness: () => Promise.resolve({ status: 'released' }),
+        watchAwareness: (_resourceId, listener) => {
+          apply = listener
+          return () => {}
+        },
+      },
+      vi.fn(),
+    )
+
+    expect(() =>
+      apply?.({
+        status: 'ready',
+        entries: [
+          {
+            clientId: remoteDocument.clientID,
+            memberId: remoteMemberId,
+            state: new ArrayBuffer(1),
+          },
+          {
+            clientId: remoteDocument.clientID,
+            memberId: differentMemberId,
+            state: authenticated.update,
+          },
+        ],
+      }),
+    ).not.toThrow()
+    expect(
+      collaboration.collaboration.provider.awareness.getStates().has(remoteDocument.clientID),
+    ).toBe(false)
+
+    await collaboration.dispose()
+    remoteAwareness.destroy()
+    remoteDocument.destroy()
+    document.destroy()
+  })
+
+  it.each([
+    { status: 'unavailable' as const },
+    { status: 'rejected' as const, reason: 'lease_conflict' },
+  ])('does not heartbeat after a $status publish result', async (result) => {
+    vi.useFakeTimers()
+    const document = new Y.Doc()
+    const publishAwareness = vi.fn(() => Promise.resolve(result))
+    const collaboration = createLiveNoteAwareness(
+      document,
+      generateDomainId(DOMAIN_ID_KIND.resource),
+      generateDomainId(DOMAIN_ID_KIND.campaignMember),
+      { name: 'Local', color: '#61afef' },
+      {
+        publishAwareness,
+        releaseAwareness: () => Promise.resolve({ status: 'released' }),
+        watchAwareness: () => () => {},
+      },
+      vi.fn(),
+    )
+
+    await collaboration.flush()
+    expect(collaboration.awareness).toEqual({ status: 'unavailable' })
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(publishAwareness).toHaveBeenCalledOnce()
 
     await collaboration.dispose()
     document.destroy()
