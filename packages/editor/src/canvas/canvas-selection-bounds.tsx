@@ -1,13 +1,11 @@
 import type { CSSProperties, RefObject } from 'react'
-import { canvasBoundsUnion } from './canvas-bounds'
-import type { CanvasBounds } from './canvas-bounds'
+import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasDocumentNode } from './document-contract'
 import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
   CanvasResizeHandle,
 } from './interaction-controller'
-import { canvasNodeSize } from './canvas-layout'
 
 const CANVAS_RESIZE_HANDLES: ReadonlyArray<CanvasResizeHandle> = [
   'top-left',
@@ -37,11 +35,9 @@ export function CanvasSelectionBounds({
   const selectedNodes = nodes.filter(
     (node) => !node.hidden && interaction.selection.nodeIds.has(node.id),
   )
-  const bounds = canvasBoundsUnion(selectedNodes.map(canvasDocumentNodeBounds))
+  const bounds = canvasBoundsUnion(selectedNodes.map(canvasNodeBounds))
   if (!bounds) return null
-  const initialNodeBounds = new Map(
-    selectedNodes.map((node) => [node.id, canvasDocumentNodeBounds(node)]),
-  )
+  const initialNodeBounds = new Map(selectedNodes.map((node) => [node.id, canvasNodeBounds(node)]))
   return (
     <div
       className="pointer-events-none absolute border border-primary bg-primary/5"
@@ -74,11 +70,6 @@ export function CanvasSelectionBounds({
         ))}
     </div>
   )
-}
-
-function canvasDocumentNodeBounds(node: CanvasDocumentNode): CanvasBounds {
-  const size = canvasNodeSize(node)
-  return { x: node.position.x, y: node.position.y, width: size.width, height: size.height }
 }
 
 function resizeHandleStyle(handle: CanvasResizeHandle, zoom: number): CSSProperties {

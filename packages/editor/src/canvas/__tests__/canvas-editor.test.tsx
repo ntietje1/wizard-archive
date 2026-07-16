@@ -332,6 +332,125 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('snaps a drag through transient interaction state and commits once', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 50,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'text',
+          position: { x: 200, y: 200 },
+          width: 100,
+          height: 50,
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Snap board" />,
+    )
+    const node = screen.getAllByTestId('canvas-node')[0]
+    installPointerCapture(screen.getByTestId('canvas-surface'))
+    installPointerCapture(node)
+
+    fireEvent.pointerDown(node, { button: 0, clientX: 20, clientY: 20, pointerId: 16 })
+    fireEvent.pointerMove(node, {
+      buttons: 1,
+      clientX: 116,
+      clientY: 20,
+      ctrlKey: true,
+      pointerId: 16,
+    })
+
+    expect(node).toHaveStyle({ transform: 'translate(100px, 0px)' })
+    expect(screen.getByTestId('canvas-drag-snap-guide')).toHaveAttribute('x1', '200')
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 0, y: 0 },
+    })
+
+    fireEvent.pointerUp(node, { clientX: 118, clientY: 20, ctrlKey: true, pointerId: 16 })
+    expect(screen.queryByTestId('canvas-drag-snap-guide')).not.toBeInTheDocument()
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 100, y: 0 },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 0, y: 0 },
+    })
+    view.unmount()
+    session.dispose()
+  })
+
+  it('snaps resize handles without persisting pointer-move previews', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 180,
+          height: 80,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'text',
+          position: { x: 300, y: 200 },
+          width: 180,
+          height: 80,
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Resize snap board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    const node = screen.getAllByTestId('canvas-node')[0]
+    installPointerCapture(surface)
+    installPointerCapture(node)
+    fireEvent.pointerDown(node, { button: 0, clientX: 20, clientY: 20, pointerId: 17 })
+    fireEvent.pointerUp(node, { clientX: 20, clientY: 20, pointerId: 17 })
+
+    fireEvent.pointerDown(screen.getByTestId('canvas-selection-resize-zone-right'), {
+      button: 0,
+      clientX: 180,
+      clientY: 40,
+      pointerId: 18,
+    })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 296,
+      clientY: 40,
+      ctrlKey: true,
+      pointerId: 18,
+    })
+
+    expect(node).toHaveStyle({ width: '300px' })
+    expect(screen.getByTestId('canvas-drag-snap-guide')).toHaveAttribute('x1', '300')
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({ width: 180 })
+
+    fireEvent.pointerUp(surface, {
+      clientX: 298,
+      clientY: 40,
+      ctrlKey: true,
+      pointerId: 18,
+    })
+    expect(screen.queryByTestId('canvas-drag-snap-guide')).not.toBeInTheDocument()
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({ width: 300 })
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders moved stroke coordinates with a screen-space hit target', async () => {
     const session = await createSession({
       nodes: [

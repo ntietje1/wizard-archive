@@ -1,5 +1,6 @@
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { CanvasBounds } from './canvas-bounds'
+import type { CanvasSnapGuide } from './canvas-snap-geometry'
 
 export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
 
@@ -71,6 +72,7 @@ export type CanvasInteraction =
       anchor: CanvasPoint
       initialPositions: ReadonlyMap<CanvasNodeId, CanvasPoint>
       delta: CanvasPoint
+      guides: ReadonlyArray<CanvasSnapGuide>
     }>
   | Readonly<{
       type: 'drawing'
@@ -109,6 +111,7 @@ export type CanvasInteraction =
       initialBounds: CanvasBounds
       bounds: CanvasBounds
       initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
+      guides: ReadonlyArray<CanvasSnapGuide>
     }>
 
 export type CanvasInteractionSnapshot = Readonly<{
@@ -153,6 +156,22 @@ function boundsEqual(left: CanvasBounds, right: CanvasBounds): boolean {
     left.y === right.y &&
     left.width === right.width &&
     left.height === right.height
+  )
+}
+
+function snapGuidesEqual(
+  left: ReadonlyArray<CanvasSnapGuide>,
+  right: ReadonlyArray<CanvasSnapGuide>,
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (guide, index) =>
+        guide.orientation === right[index]?.orientation &&
+        guide.position === right[index]?.position &&
+        guide.start === right[index]?.start &&
+        guide.end === right[index]?.end,
+    )
   )
 }
 
@@ -441,6 +460,7 @@ export class CanvasInteractionController {
         anchor,
         initialPositions: new Map(initialPositions),
         delta: { x: 0, y: 0 },
+        guides: [],
       },
     })
   }
@@ -508,15 +528,23 @@ export class CanvasInteractionController {
         initialBounds: { ...bounds },
         bounds: { ...bounds },
         initialNodeBounds: new Map(nodeBounds),
+        guides: [],
       },
     })
   }
 
-  updateResize(pointerId: number, bounds: CanvasBounds): void {
+  updateResize(
+    pointerId: number,
+    bounds: CanvasBounds,
+    guides: ReadonlyArray<CanvasSnapGuide> = [],
+  ): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
     if (interaction.type !== 'resizing' || interaction.pointerId !== pointerId) return
-    this.#publish({ ...this.#snapshot, interaction: { ...interaction, bounds: { ...bounds } } })
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { ...interaction, bounds: { ...bounds }, guides: [...guides] },
+    })
   }
 
   commitResize(pointerId: number): CanvasResizeCommit | null {
@@ -600,13 +628,25 @@ export class CanvasInteractionController {
     return points.length >= 2 ? { points, style: interaction.style } : null
   }
 
-  updateDrag(pointerId: number, point: CanvasPoint): void {
+  updateDrag(
+    pointerId: number,
+    delta: CanvasPoint,
+    guides: ReadonlyArray<CanvasSnapGuide> = [],
+  ): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
     if (interaction.type !== 'dragging' || interaction.pointerId !== pointerId) return
-    const delta = { x: point.x - interaction.anchor.x, y: point.y - interaction.anchor.y }
-    if (delta.x === interaction.delta.x && delta.y === interaction.delta.y) return
-    this.#publish({ ...this.#snapshot, interaction: { ...interaction, delta } })
+    if (
+      delta.x === interaction.delta.x &&
+      delta.y === interaction.delta.y &&
+      snapGuidesEqual(guides, interaction.guides)
+    ) {
+      return
+    }
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { ...interaction, delta: { ...delta }, guides: [...guides] },
+    })
   }
 
   commitDrag(pointerId: number): ReadonlyMap<CanvasNodeId, CanvasPoint> | null {

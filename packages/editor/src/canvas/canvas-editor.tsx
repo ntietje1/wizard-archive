@@ -22,7 +22,8 @@ import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './inter
 import { CanvasScene } from './canvas-scene'
 import { findCanvasConnectionTarget } from './canvas-edge-geometry'
 import { fitCanvasContent } from './canvas-layout'
-import { projectCanvasResizeNodeBounds, resolveCanvasResizeBounds } from './canvas-resize-geometry'
+import { projectCanvasResizeNodeBounds, resolveCanvasResize } from './canvas-resize-geometry'
+import { canvasSnapTargetBounds } from './canvas-snap-geometry'
 import { canvasStrokeBounds, findCanvasStrokesIntersectingTrail } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
@@ -225,7 +226,14 @@ export function CanvasEditor({
             )
             updateErasing(event.pointerId, canvasPoint, content, interactionController)
             updateConnection(event.pointerId, canvasPoint, content, interactionController)
-            updateResize(event.pointerId, canvasPoint, interactionController, event.shiftKey)
+            updateResize(
+              event.pointerId,
+              canvasPoint,
+              content,
+              interactionController,
+              event.shiftKey,
+              event.metaKey || event.ctrlKey,
+            )
           }
           updateAreaSelection(
             event.pointerId,
@@ -236,6 +244,15 @@ export function CanvasEditor({
           )
         }}
         onPointerUp={(event) => {
+          const snapshot = interactionController.get()
+          updateResize(
+            event.pointerId,
+            screenToCanvasPoint(localPoint(event, event.currentTarget), snapshot.viewport),
+            content,
+            interactionController,
+            event.shiftKey,
+            event.metaKey || event.ctrlKey,
+          )
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
@@ -482,21 +499,26 @@ function canvasToolCursor(tool: CanvasTool): string {
 function updateResize(
   pointerId: number,
   point: CanvasPoint,
+  content: CanvasDocumentContent,
   controller: CanvasInteractionController,
   square: boolean,
+  snap: boolean,
 ) {
   const resizing = controller.get().interaction
   if (resizing.type !== 'resizing' || resizing.pointerId !== pointerId) return
-  controller.updateResize(
-    pointerId,
-    resolveCanvasResizeBounds(
-      resizing.handle,
-      resizing.initialBounds,
-      point,
-      resizing.initialNodeBounds,
-      square,
-    ),
-  )
+  const selectedIds = new Set(resizing.initialNodeBounds.keys())
+  const targetBounds = canvasSnapTargetBounds(content.nodes, selectedIds)
+  const resolved = resolveCanvasResize({
+    handle: resizing.handle,
+    initialBounds: resizing.initialBounds,
+    point,
+    initialNodeBounds: resizing.initialNodeBounds,
+    targetBounds,
+    square,
+    snap,
+    zoom: controller.get().viewport.zoom,
+  })
+  controller.updateResize(pointerId, resolved.bounds, resolved.guides)
 }
 
 function commitResize(

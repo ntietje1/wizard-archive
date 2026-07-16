@@ -233,7 +233,7 @@ describe('CanvasInteractionController pointer activities', () => {
         [NODE_B, { x: 50, y: 70 }],
       ]),
     )
-    controller.updateDrag(4, { x: 125, y: 110 })
+    controller.updateDrag(4, { x: 25, y: 30 })
     expect(controller.commitDrag(4)).toEqual(
       new Map([
         [NODE_A, { x: 35, y: 50 }],

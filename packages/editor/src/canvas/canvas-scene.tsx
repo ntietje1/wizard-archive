@@ -1,4 +1,5 @@
 import type { CSSProperties, PointerEvent, RefObject } from 'react'
+import { canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentController } from './document-controller'
 import type {
@@ -29,6 +30,8 @@ import type {
 import { canvasNodeSize } from './canvas-layout'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { CanvasSelectionBounds } from './canvas-selection-bounds'
+import { canvasSnapTargetBounds, resolveCanvasDrag } from './canvas-snap-geometry'
+import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import { canvasTextDocumentPlainText, createCanvasTextDocument } from './text/model'
@@ -84,6 +87,7 @@ export function CanvasScene({
       <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
       <CanvasDrawingOverlay interaction={interaction} />
       <CanvasSelectionOverlay interaction={interaction} />
+      <CanvasSnapGuides interaction={interaction} />
       {visualNodes.map((node) => (
         <CanvasNode
           key={node.id}
@@ -201,9 +205,18 @@ function CanvasNode({
         })
       }
       onPointerMove={(event) =>
-        updateNodeDrag(event, interaction.viewport, interactionController, surface)
+        updateNodeDrag(event, content, interaction.viewport, interactionController, surface)
       }
-      onPointerUp={(event) => commitNodeDrag(event, documentController, interactionController)}
+      onPointerUp={(event) =>
+        commitNodeDrag(
+          event,
+          content,
+          interaction.viewport,
+          documentController,
+          interactionController,
+          surface,
+        )
+      }
       onPointerCancel={() => interactionController.cancelInteraction()}
     >
       <CanvasNodeContent
@@ -333,6 +346,7 @@ function beginNodeDrag({
 
 function updateNodeDrag(
   event: PointerEvent<HTMLDivElement>,
+  content: CanvasDocumentContent,
   viewport: CanvasViewport,
   interactionController: CanvasInteractionController,
   surface: RefObject<HTMLElement | null>,
@@ -340,20 +354,38 @@ function updateNodeDrag(
   if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
   const bounds = surface.current?.getBoundingClientRect()
   if (!bounds) return
-  interactionController.updateDrag(
-    event.pointerId,
-    screenToCanvasPoint({ x: event.clientX, y: event.clientY }, viewport, {
-      x: bounds.left,
-      y: bounds.top,
-    }),
-  )
+  const dragging = interactionController.get().interaction
+  if (dragging.type !== 'dragging' || dragging.pointerId !== event.pointerId) return
+  const point = screenToCanvasPoint({ x: event.clientX, y: event.clientY }, viewport, {
+    x: bounds.left,
+    y: bounds.top,
+  })
+  const selectedIds = new Set(dragging.initialPositions.keys())
+  const draggedBounds = content.nodes.flatMap((node) => {
+    const position = dragging.initialPositions.get(node.id)
+    return position ? [canvasNodeBounds({ ...node, position })] : []
+  })
+  const targetBounds = canvasSnapTargetBounds(content.nodes, selectedIds)
+  const resolved = resolveCanvasDrag({
+    delta: { x: point.x - dragging.anchor.x, y: point.y - dragging.anchor.y },
+    draggedBounds,
+    targetBounds,
+    constrain: event.shiftKey,
+    snap: event.metaKey || event.ctrlKey,
+    zoom: viewport.zoom,
+  })
+  interactionController.updateDrag(event.pointerId, resolved.delta, resolved.guides)
 }
 
 function commitNodeDrag(
   event: PointerEvent<HTMLDivElement>,
+  content: CanvasDocumentContent,
+  viewport: CanvasViewport,
   documentController: CanvasDocumentController,
   interactionController: CanvasInteractionController,
+  surface: RefObject<HTMLElement | null>,
 ) {
+  updateNodeDrag(event, content, viewport, interactionController, surface)
   if (event.currentTarget.hasPointerCapture(event.pointerId)) {
     event.currentTarget.releasePointerCapture(event.pointerId)
   }

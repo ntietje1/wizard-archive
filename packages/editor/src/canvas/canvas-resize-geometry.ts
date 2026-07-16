@@ -1,10 +1,68 @@
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasResizeHandle } from './interaction-controller'
+import { bestSnapCandidate, canvasSnapThreshold, snapGuide } from './canvas-snap-geometry'
+import type { CanvasSnapCandidate, CanvasSnapGuide } from './canvas-snap-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
 
 const MIN_CANVAS_NODE_SIZE = 40
 
-export function resolveCanvasResizeBounds(
+export function resolveCanvasResize({
+  handle,
+  initialBounds,
+  point,
+  initialNodeBounds,
+  targetBounds,
+  square,
+  snap,
+  zoom,
+}: {
+  handle: CanvasResizeHandle
+  initialBounds: CanvasBounds
+  point: Readonly<{ x: number; y: number }>
+  initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
+  targetBounds: ReadonlyArray<CanvasBounds>
+  square: boolean
+  snap: boolean
+  zoom: number
+}): Readonly<{ bounds: CanvasBounds; guides: ReadonlyArray<CanvasSnapGuide> }> {
+  const bounds = resolveCanvasResizeBounds(handle, initialBounds, point, initialNodeBounds, square)
+  if (!snap || targetBounds.length === 0) return { bounds, guides: [] }
+  const threshold = canvasSnapThreshold(zoom)
+  const xCandidates = affectsResizeAxis(handle, 'x')
+    ? targetBounds.flatMap((target) => resizeSnapCandidates('x', bounds, target, handle))
+    : []
+  const yCandidates = affectsResizeAxis(handle, 'y')
+    ? targetBounds.flatMap((target) => resizeSnapCandidates('y', bounds, target, handle))
+    : []
+  const candidates = square
+    ? [bestSnapCandidate([...xCandidates, ...yCandidates], threshold)]
+    : [bestSnapCandidate(xCandidates, threshold), bestSnapCandidate(yCandidates, threshold)]
+  const selected = candidates.filter(
+    (candidate): candidate is CanvasResizeSnapCandidate => candidate !== null,
+  )
+  if (selected.length === 0) return { bounds, guides: [] }
+  const snappedPoint = { ...point }
+  selected.forEach((candidate) => {
+    snappedPoint[candidate.axis] = candidate.point
+  })
+  const snappedBounds = resolveCanvasResizeBounds(
+    handle,
+    initialBounds,
+    snappedPoint,
+    initialNodeBounds,
+    square,
+  )
+  return {
+    bounds: snappedBounds,
+    guides: selected.flatMap((candidate) =>
+      resizeCandidatePreserved(snappedBounds, handle, candidate)
+        ? [snapGuide(candidate.axis, candidate)]
+        : [],
+    ),
+  }
+}
+
+function resolveCanvasResizeBounds(
   handle: CanvasResizeHandle,
   initialBounds: CanvasBounds,
   point: Readonly<{ x: number; y: number }>,
@@ -124,4 +182,72 @@ function normalizeBounds(
     width: Math.abs(point.x - anchor.x),
     height: Math.abs(point.y - anchor.y),
   }
+}
+
+type CanvasResizeSnapCandidate = CanvasSnapCandidate &
+  Readonly<{ axis: 'x' | 'y'; point: number; center: boolean }>
+
+function resizeSnapCandidates(
+  axis: 'x' | 'y',
+  bounds: CanvasBounds,
+  target: CanvasBounds,
+  handle: CanvasResizeHandle,
+): ReadonlyArray<CanvasResizeSnapCandidate> {
+  const size = axis === 'x' ? bounds.width : bounds.height
+  const leading = isLeadingResizeHandle(handle, axis)
+  const active = bounds[axis] + (leading ? 0 : size)
+  const anchor = bounds[axis] + (leading ? size : 0)
+  const center = bounds[axis] + size / 2
+  const targetSize = axis === 'x' ? target.width : target.height
+  const targetValues = [target[axis], target[axis] + targetSize / 2, target[axis] + targetSize]
+  const draggedStart = axis === 'x' ? bounds.y : bounds.x
+  const draggedEnd = draggedStart + (axis === 'x' ? bounds.height : bounds.width)
+  const targetStart = axis === 'x' ? target.y : target.x
+  const targetEnd = targetStart + (axis === 'x' ? target.height : target.width)
+  return targetValues.flatMap((targetValue) => [
+    {
+      axis,
+      point: targetValue,
+      center: false,
+      dragged: active,
+      target: targetValue,
+      draggedStart,
+      draggedEnd,
+      targetStart,
+      targetEnd,
+    },
+    {
+      axis,
+      point: 2 * targetValue - anchor,
+      center: true,
+      dragged: center,
+      target: targetValue,
+      draggedStart,
+      draggedEnd,
+      targetStart,
+      targetEnd,
+    },
+  ])
+}
+
+function resizeCandidatePreserved(
+  bounds: CanvasBounds,
+  handle: CanvasResizeHandle,
+  candidate: CanvasResizeSnapCandidate,
+): boolean {
+  const size = candidate.axis === 'x' ? bounds.width : bounds.height
+  const value = candidate.center
+    ? bounds[candidate.axis] + size / 2
+    : bounds[candidate.axis] + (isLeadingResizeHandle(handle, candidate.axis) ? 0 : size)
+  return value === candidate.target
+}
+
+function affectsResizeAxis(handle: CanvasResizeHandle, axis: 'x' | 'y'): boolean {
+  return axis === 'x'
+    ? handle !== 'top' && handle !== 'bottom'
+    : handle !== 'left' && handle !== 'right'
+}
+
+function isLeadingResizeHandle(handle: CanvasResizeHandle, axis: 'x' | 'y'): boolean {
+  return axis === 'x' ? handle.includes('left') : handle.includes('top')
 }

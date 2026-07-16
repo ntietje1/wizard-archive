@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { projectCanvasResizeNodeBounds, resolveCanvasResizeBounds } from '../canvas-resize-geometry'
+import { projectCanvasResizeNodeBounds, resolveCanvasResize } from '../canvas-resize-geometry'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -12,13 +12,16 @@ describe('canvas resize geometry', () => {
       [NODE_A, { x: 0, y: 0, width: 180, height: 80 }],
       [NODE_B, { x: 300, y: 0, width: 180, height: 80 }],
     ])
-    const bounds = resolveCanvasResizeBounds(
-      'bottom-right',
+    const bounds = resolveCanvasResize({
+      handle: 'bottom-right',
       initialBounds,
-      { x: 960, y: 160 },
-      nodeBounds,
-      false,
-    )
+      point: { x: 960, y: 160 },
+      initialNodeBounds: nodeBounds,
+      targetBounds: [],
+      square: false,
+      snap: false,
+      zoom: 1,
+    }).bounds
 
     expect(bounds).toEqual({ x: 0, y: 0, width: 960, height: 160 })
     expect(projectCanvasResizeNodeBounds(initialBounds, bounds, nodeBounds)).toEqual(
@@ -34,16 +37,53 @@ describe('canvas resize geometry', () => {
     const nodeBounds = new Map([[NODE_A, initialBounds]])
 
     expect(
-      resolveCanvasResizeBounds('left', initialBounds, { x: 400, y: 0 }, nodeBounds, false),
+      resolveCanvasResize({
+        handle: 'left',
+        initialBounds,
+        point: { x: 400, y: 0 },
+        initialNodeBounds: nodeBounds,
+        targetBounds: [],
+        square: false,
+        snap: false,
+        zoom: 1,
+      }).bounds,
     ).toEqual({ x: 240, y: 100, width: 40, height: 80 })
     expect(
-      resolveCanvasResizeBounds(
-        'bottom-right',
+      resolveCanvasResize({
+        handle: 'bottom-right',
         initialBounds,
-        { x: 320, y: 200 },
-        nodeBounds,
-        true,
-      ),
+        point: { x: 320, y: 200 },
+        initialNodeBounds: nodeBounds,
+        targetBounds: [],
+        square: true,
+        snap: false,
+        zoom: 1,
+      }).bounds,
     ).toEqual({ x: 100, y: 100, width: 220, height: 220 })
+  })
+
+  it('snaps active resize edges only while the primary modifier is active', () => {
+    const initialBounds = { x: 0, y: 0, width: 180, height: 80 }
+    const options = {
+      handle: 'bottom-right' as const,
+      initialBounds,
+      point: { x: 296, y: 126 },
+      initialNodeBounds: new Map([[NODE_A, initialBounds]]),
+      targetBounds: [{ x: 300, y: 130, width: 180, height: 80 }],
+      square: false,
+      zoom: 1,
+    }
+
+    expect(resolveCanvasResize({ ...options, snap: false })).toEqual({
+      bounds: { x: 0, y: 0, width: 296, height: 126 },
+      guides: [],
+    })
+    expect(resolveCanvasResize({ ...options, snap: true })).toEqual({
+      bounds: { x: 0, y: 0, width: 300, height: 130 },
+      guides: [
+        { orientation: 'vertical', position: 300, start: 0, end: 210 },
+        { orientation: 'horizontal', position: 130, start: 0, end: 480 },
+      ],
+    })
   })
 })
