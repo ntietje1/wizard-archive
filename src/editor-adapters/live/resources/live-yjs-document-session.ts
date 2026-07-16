@@ -144,10 +144,7 @@ class LiveYjsDocumentSession {
     if (this.#pendingUpdate === null) {
       return Promise.resolve({ status: 'completed', version: this.#version })
     }
-    this.#drainPromise = this.#drain().finally(() => {
-      this.#drainPromise = null
-      if (this.#lifecycle === 'closing') this.#destroy()
-    })
+    this.#drainPromise = this.#runDrain()
     return this.#drainPromise
   }
 
@@ -158,6 +155,16 @@ class LiveYjsDocumentSession {
       this.#timer = null
       void this.flush()
     }, YJS_SAVE_DELAY_MS)
+  }
+
+  async #runDrain(): Promise<ContentSessionSaveResult> {
+    try {
+      return await this.#drain()
+    } finally {
+      this.#drainPromise = null
+      if (this.#lifecycle === 'closing') this.#destroy()
+      else if (this.#pendingUpdate !== null && !this.#terminal) this.#scheduleSave()
+    }
   }
 
   async #drain(): Promise<ContentSessionSaveResult> {

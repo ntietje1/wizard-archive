@@ -541,6 +541,47 @@ describe('LiveNoteContentSource', () => {
     persisted.destroy()
   })
 
+  it('schedules an update queued after the final outbox clear', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
+    const version = await versionFor(initial)
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready note')
+    const removeItem = sessionStorage.removeItem.bind(sessionStorage)
+    let queueSettlingUpdate = true
+    const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
+      removeItem(key)
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v1:')) {
+        return
+      }
+      queueSettlingUpdate = false
+      queueMicrotask(() => ready.session.document.getMap('drain').set('settled', true))
+    })
+
+    try {
+      ready.session.document.getMap('drain').set('initial', true)
+      await expect(ready.session.flush()).resolves.toMatchObject({ status: 'completed' })
+      await vi.waitFor(() => expect(provider.save).toHaveBeenCalledTimes(2))
+      expect(ready.session.document.getMap('drain').toJSON()).toEqual({
+        initial: true,
+        settled: true,
+      })
+    } finally {
+      removeItemSpy.mockRestore()
+      source.dispose()
+    }
+  })
+
   it('rehydrates a replacement session from the canonical saved snapshot', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()

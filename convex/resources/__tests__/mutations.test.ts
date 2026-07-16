@@ -493,21 +493,29 @@ describe('resource structure commands', () => {
     const secondUpdate = Uint8Array.from(Y.mergeUpdates(secondDeltas)).buffer
     firstClient.destroy()
     secondClient.destroy()
-    const first = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
-      campaignId: campaignUuid,
-      resourceId,
-      update: firstUpdate,
-    })
-    const second = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
-      campaignId: campaignUuid,
-      resourceId,
-      update: secondUpdate,
-    })
+    const results = await Promise.all([
+      asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        update: firstUpdate,
+      }),
+      asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        update: secondUpdate,
+      }),
+    ])
 
-    expect(first).toMatchObject({ status: 'completed', version: { revision: 2 } })
-    expect(second).toMatchObject({ status: 'completed', version: { revision: 3 } })
-    if (second.status !== 'completed') throw new Error('Expected merged note content')
-    const blocks = decodeNoteYjsUpdatesToBlocks([{ update: second.update }], NOTE_YJS_FRAGMENT)
+    expect(
+      results
+        .map((result) => (result.status === 'completed' ? result.version.revision : null))
+        .sort((left, right) => (left ?? 0) - (right ?? 0)),
+    ).toEqual([2, 3])
+    const final = results.find(
+      (result) => result.status === 'completed' && result.version.revision === 3,
+    )
+    if (!final || final.status !== 'completed') throw new Error('Expected merged note content')
+    const blocks = decodeNoteYjsUpdatesToBlocks([{ update: final.update }], NOTE_YJS_FRAGMENT)
     expect(
       blocks
         .flatMap((block) =>
