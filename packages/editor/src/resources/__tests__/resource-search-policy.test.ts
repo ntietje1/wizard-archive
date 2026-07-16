@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import {
   MAX_WORKSPACE_SEARCH_BODY_BYTES,
-  MAX_WORKSPACE_SEARCH_CANDIDATES,
   MAX_WORKSPACE_SEARCH_QUERY_TERMS,
   MAX_WORKSPACE_SEARCH_RESULTS,
-  MAX_WORKSPACE_SEARCH_TERM_SCALARS,
+  MAX_WORKSPACE_SEARCH_TERM_BYTES,
   createResourceSearchDocument,
   normalizeSearchQuery,
   searchResourceDocuments,
@@ -44,18 +43,16 @@ describe('resource search policy', () => {
     expect(results).toHaveLength(MAX_WORKSPACE_SEARCH_RESULTS)
   })
 
-  it('selects the same bounded identity prefix before ranking in every input order', () => {
-    const resourceIds = Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, (_, index) =>
+  it('ranks a matching document independently of its resource identity or input order', () => {
+    const resourceIds = Array.from({ length: 202 }, (_, index) =>
       testDomainId('resource', `candidate-${index}`),
     )
-    const selectedIds = [...resourceIds].sort().slice(0, MAX_WORKSPACE_SEARCH_CANDIDATES)
-    const selected = new Set(selectedIds)
+    const exactId = [...resourceIds].sort().at(-1)!
     const documents = resourceIds.map((resourceId) => ({
       resourceId,
-      title: selected.has(resourceId) ? 'Shared title' : 'needle',
-      body: selected.has(resourceId) ? 'Shared needle body' : '',
+      title: resourceId === exactId ? 'Needle' : 'Shared title',
+      body: resourceId === exactId ? '' : 'Shared needle body',
     }))
-    const expectedIds = selectedIds.slice(0, MAX_WORKSPACE_SEARCH_RESULTS)
 
     for (const input of [
       documents,
@@ -63,13 +60,12 @@ describe('resource search policy', () => {
       [...documents.slice(37), ...documents.slice(0, 37)],
     ]) {
       const results = searchResourceDocuments(input, 'NEEDLE')
-      expect(results.map((result) => result.resourceId)).toEqual(expectedIds)
-      expect(results.every((result) => result.match.type === 'body')).toBe(true)
+      expect(results[0]).toEqual({ resourceId: exactId, match: { type: 'title' } })
     }
   })
 
   it('bounds query terms and casing with locale-independent Unicode semantics', () => {
-    const term = '𐐀'.repeat(MAX_WORKSPACE_SEARCH_TERM_SCALARS + 1)
+    const term = '𐐀'.repeat(MAX_WORKSPACE_SEARCH_TERM_BYTES)
     const normalized = normalizeSearchQuery(
       ['İ', term, ...Array.from({ length: MAX_WORKSPACE_SEARCH_QUERY_TERMS }, () => 'extra')].join(
         '---',
@@ -78,7 +74,9 @@ describe('resource search policy', () => {
 
     expect(normalized.split(' ')).toHaveLength(MAX_WORKSPACE_SEARCH_QUERY_TERMS)
     expect(normalized.split(' ')[0]).toBe('i̇')
-    expect(Array.from(normalized.split(' ')[1]!)).toHaveLength(MAX_WORKSPACE_SEARCH_TERM_SCALARS)
+    expect(new TextEncoder().encode(normalized.split(' ')[1]!).byteLength).toBe(
+      MAX_WORKSPACE_SEARCH_TERM_BYTES,
+    )
   })
 
   it('caps stored search text at complete UTF-8 scalars', () => {

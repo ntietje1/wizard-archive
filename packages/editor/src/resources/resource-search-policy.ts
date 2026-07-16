@@ -3,7 +3,7 @@ import type { WorkspaceSearchResult } from './editor-runtime-contract'
 
 export const MAX_WORKSPACE_SEARCH_QUERY_BYTES = 512
 export const MAX_WORKSPACE_SEARCH_QUERY_TERMS = 16
-export const MAX_WORKSPACE_SEARCH_TERM_SCALARS = 32
+export const MAX_WORKSPACE_SEARCH_TERM_BYTES = 32
 export const MAX_WORKSPACE_SEARCH_TITLE_BYTES = 2 * 1024
 export const MAX_WORKSPACE_SEARCH_BODY_BYTES = 64 * 1024
 export const MAX_WORKSPACE_SEARCH_CANDIDATES = 200
@@ -29,7 +29,7 @@ export function searchResourceDocuments(
   if (!normalized) return []
   const terms = normalized.split(' ')
   const ranked: Array<RankedSearchResult> = []
-  for (const document of selectSearchCandidates(documents)) {
+  for (const document of documents) {
     const result = rankSearchDocument(document, normalized, terms)
     if (result) ranked.push(result)
   }
@@ -43,7 +43,8 @@ export function normalizeSearchQuery(query: string): string {
   return truncateUtf8(
     terms
       .slice(0, MAX_WORKSPACE_SEARCH_QUERY_TERMS)
-      .map((term) => Array.from(term).slice(0, MAX_WORKSPACE_SEARCH_TERM_SCALARS).join(''))
+      .map((term) => truncateUtf8(term, MAX_WORKSPACE_SEARCH_TERM_BYTES))
+      .filter(Boolean)
       .join(' '),
     MAX_WORKSPACE_SEARCH_QUERY_BYTES,
   )
@@ -66,7 +67,7 @@ function rankSearchDocument(
   query: string,
   terms: ReadonlyArray<string>,
 ): RankedSearchResult | null {
-  const title = foldCase(document.title)
+  const title = normalizeSearchText(document.title)
   if (matchesAllTerms(title, terms)) {
     return {
       result: { resourceId: document.resourceId, match: { type: 'title' } },
@@ -75,7 +76,7 @@ function rankSearchDocument(
     }
   }
   const body = foldCase(document.body)
-  if (!matchesAllTerms(body, terms)) return null
+  if (!matchesAllTerms(normalizeSearchText(document.body), terms)) return null
   const firstMatch = Math.min(...terms.map((term) => body.indexOf(term)))
   return {
     result: {
@@ -91,7 +92,10 @@ function rankSearchDocument(
 }
 
 function matchesAllTerms(value: string, terms: ReadonlyArray<string>): boolean {
-  return terms.every((term) => value.includes(term))
+  const words = value.split(' ')
+  return terms.every((term, index) =>
+    index === terms.length - 1 ? words.some((word) => word.startsWith(term)) : words.includes(term),
+  )
 }
 
 function searchExcerpt(text: string, index: number, length: number): string {
@@ -101,24 +105,6 @@ function searchExcerpt(text: string, index: number, length: number): string {
   const start = Math.max(0, matchStart - 60)
   const end = Math.min(scalars.length, matchStart + matchLength + 100)
   return `${start > 0 ? '…' : ''}${scalars.slice(start, end).join('')}${end < scalars.length ? '…' : ''}`
-}
-
-function selectSearchCandidates(
-  documents: ReadonlyArray<ResourceSearchDocument>,
-): ReadonlyArray<ResourceSearchDocument> {
-  const candidates: Array<ResourceSearchDocument> = []
-  for (const document of documents) {
-    let low = 0
-    let high = candidates.length
-    while (low < high) {
-      const middle = (low + high) >>> 1
-      if (compareText(document.resourceId, candidates[middle]!.resourceId) < 0) high = middle
-      else low = middle + 1
-    }
-    candidates.splice(low, 0, document)
-    if (candidates.length > MAX_WORKSPACE_SEARCH_CANDIDATES) candidates.pop()
-  }
-  return candidates
 }
 
 function compareRankedSearchResults(left: RankedSearchResult, right: RankedSearchResult): number {
@@ -146,6 +132,10 @@ function originalScalarIndex(text: string, foldedOffset: number): number {
 
 function foldCase(value: string): string {
   return Array.from(value, (scalar) => scalar.toLowerCase()).join('')
+}
+
+function normalizeSearchText(value: string): string {
+  return (foldCase(value).match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}]*/gu) ?? []).join(' ')
 }
 
 function truncateUtf8(value: string, maxBytes: number): string {

@@ -20,7 +20,6 @@ import { initialFileContentVersion } from '@wizard-archive/editor/resources/cont
 import {
   MAX_WORKSPACE_SEARCH_CANDIDATES,
   createResourceSearchDocument,
-  searchResourceDocuments,
 } from '@wizard-archive/editor/resources/search-policy'
 
 type StoredResourceStructureCommand = FunctionArgs<
@@ -447,19 +446,20 @@ describe('authorized resource projection', () => {
     ).resolves.toMatchObject({ results: [{ resourceId: noteId }] })
   })
 
-  it('matches local candidate selection above the bound in stable resource order', async () => {
+  it('finds a late exact title beyond the bounded resource identity prefix', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const memberUuid = await getMemberUuid(campaign.dm.memberId)
     const resourceIds = Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, () =>
       generateDomainId(DOMAIN_ID_KIND.resource),
     )
-    const selected = new Set([...resourceIds].sort().slice(0, MAX_WORKSPACE_SEARCH_CANDIDATES))
+    const sortedResourceIds = [...resourceIds].sort()
+    const exactId = sortedResourceIds[sortedResourceIds.length - 1]!
     const documents = resourceIds.map((resourceId) =>
       createResourceSearchDocument(
         resourceId,
-        selected.has(resourceId) ? 'Shared title' : 'needle',
-        selected.has(resourceId) ? 'Shared needle body' : '',
+        resourceId === exactId ? 'Needle' : 'Shared title',
+        resourceId === exactId ? '' : 'Shared needle body',
       ),
     )
     await t.run(async (ctx) => {
@@ -493,8 +493,6 @@ describe('authorized resource projection', () => {
         })
       }
     })
-    const expected = searchResourceDocuments(documents, 'NEEDLE')
-
     const first = await asDm(campaign).query(api.resources.queries.searchResources, {
       campaignId: campaignUuid,
       query: 'NEEDLE',
@@ -504,9 +502,9 @@ describe('authorized resource projection', () => {
       query: 'NEEDLE',
     })
 
-    expect(first.results).toEqual(expected)
-    expect(second.results).toEqual(expected)
-    expect(first.snapshot.resources).toHaveLength(expected.length)
+    expect(first.results[0]).toEqual({ resourceId: exactId, match: { type: 'title' } })
+    expect(second.results).toEqual(first.results)
+    expect(first.snapshot.resources).toHaveLength(first.results.length)
     expect(first.snapshot.missingResourceIds).toEqual([])
   })
 
