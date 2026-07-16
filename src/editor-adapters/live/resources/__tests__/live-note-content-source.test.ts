@@ -627,6 +627,34 @@ describe('LiveNoteContentSource', () => {
     })
   })
 
+  it('closes an active session when content-write authority is revoked', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    provider.save.mockResolvedValue({ status: 'rejected', reason: 'unauthorized' })
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
+    const version = await versionFor(initial)
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready note')
+
+    ready.session.document.getMap('revoked').set('value', true)
+    await expect(ready.session.flush()).resolves.toEqual({
+      status: 'rejected',
+      reason: 'unauthorized',
+    })
+
+    expect(provider.save).toHaveBeenCalledOnce()
+    expect(source.get(resourceId)).toEqual({ status: 'unavailable', reason: 'unauthorized' })
+  })
+
   it('backs off after a transient failure and recovers within the same drain', async () => {
     vi.useFakeTimers()
     try {

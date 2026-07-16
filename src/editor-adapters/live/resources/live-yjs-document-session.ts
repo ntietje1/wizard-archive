@@ -189,19 +189,8 @@ export function createLiveYjsDocumentSession(options: LiveYjsDocumentSessionOpti
 type BackendContentSaveRejection =
   | 'content_corrupt'
   | 'content_missing'
-  | 'invalid_uuid'
-  | 'ownership_mismatch'
-  | 'resource_missing'
+  | 'unauthorized'
   | 'version_exhausted'
-  | 'wrong_kind'
-
-function contentSessionSaveRejection(reason: BackendContentSaveRejection): RejectedYjsSave {
-  if (reason === 'ownership_mismatch') return { status: 'rejected', reason: 'unauthorized' }
-  if (reason === 'wrong_kind' || reason === 'invalid_uuid') {
-    return { status: 'rejected', reason: 'content_corrupt' }
-  }
-  return { status: 'rejected', reason }
-}
 
 export function failedYjsSessionState(result: RejectedYjsSave): ContentUnavailableState {
   switch (result.reason) {
@@ -256,6 +245,6 @@ export function createBackendYjsPersistence(
       resourceId,
       update: yjsUpdateArrayBuffer(update),
     })
-    return result.status === 'rejected' ? contentSessionSaveRejection(result.reason) : result
+    return result
   }
 }

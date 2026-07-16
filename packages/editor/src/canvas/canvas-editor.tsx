@@ -81,6 +81,12 @@ export function CanvasEditor({
   }, [content, interactionController])
 
   useEffect(() => {
+    if (canEdit) return
+    interactionController.cancelInteraction()
+    interactionController.setTool('select')
+  }, [canEdit, interactionController])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
     interactionController.setViewport(loadCanvasViewport(window.localStorage, resourceId))
     return interactionController.subscribeViewportCommit((viewport) =>
@@ -129,7 +135,7 @@ export function CanvasEditor({
       return
     }
     const primary = event.metaKey || event.ctrlKey
-    if (primary && event.key.toLowerCase() === 'z') {
+    if (canEdit && primary && event.key.toLowerCase() === 'z') {
       event.preventDefault()
       if (event.shiftKey) documentController.redo()
       else documentController.undo()
@@ -184,53 +190,13 @@ export function CanvasEditor({
         data-tool={interaction.tool}
         data-testid="canvas-surface"
         tabIndex={-1}
-        onPointerDown={(event) => {
-          event.currentTarget.focus()
-          const snapshot = interactionController.get()
-          const point = localPoint(event, event.currentTarget)
-          if (event.button === 1 || snapshot.tool === 'hand') {
-            event.preventDefault()
-            event.currentTarget.setPointerCapture(event.pointerId)
-            interactionController.beginPan(event.pointerId, point)
-            return
-          }
-          if (event.button !== 0) return
-          if (snapshot.tool === 'draw') {
-            event.currentTarget.setPointerCapture(event.pointerId)
-            interactionController.beginDrawing(
-              event.pointerId,
-              screenToCanvasPoint(point, snapshot.viewport),
-              event.pressure,
-              DEFAULT_DRAW_STYLE,
-            )
-            return
-          }
-          if (snapshot.tool === 'eraser') {
-            event.currentTarget.setPointerCapture(event.pointerId)
-            interactionController.beginErasing(
-              event.pointerId,
-              screenToCanvasPoint(point, snapshot.viewport),
-            )
-            return
-          }
-          if (snapshot.tool === 'text') {
-            createTextNode(screenToCanvasPoint(point, snapshot.viewport))
-            return
-          }
-          if (snapshot.tool === 'select' || snapshot.tool === 'lasso') {
-            event.currentTarget.setPointerCapture(event.pointerId)
-            interactionController.beginSelection(
-              snapshot.tool === 'select' ? 'marquee' : 'lasso',
-              event.metaKey || event.ctrlKey ? 'add' : 'replace',
-              event.pointerId,
-              screenToCanvasPoint(point, snapshot.viewport),
-            )
-          }
-        }}
+        onPointerDown={(event) =>
+          beginCanvasSurfaceInteraction(event, canEdit, interactionController, createTextNode)
+        }
         onPointerMove={(event) => {
           const point = localPoint(event, event.currentTarget)
           interactionController.updatePan(event.pointerId, point)
-          if ((event.buttons & 1) === 1) {
+          if (canEdit && (event.buttons & 1) === 1) {
             const canvasPoint = screenToCanvasPoint(point, interactionController.get().viewport)
             interactionController.updateDrawing(
               event.pointerId,
@@ -259,21 +225,25 @@ export function CanvasEditor({
         }}
         onPointerUp={(event) => {
           const snapshot = interactionController.get()
-          updateResize(
-            event.pointerId,
-            screenToCanvasPoint(localPoint(event, event.currentTarget), snapshot.viewport),
-            content,
-            interactionController,
-            event.shiftKey,
-            event.metaKey || event.ctrlKey,
-          )
+          if (canEdit) {
+            updateResize(
+              event.pointerId,
+              screenToCanvasPoint(localPoint(event, event.currentTarget), snapshot.viewport),
+              content,
+              interactionController,
+              event.shiftKey,
+              event.metaKey || event.ctrlKey,
+            )
+          }
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
-          if (commitResize(event.pointerId, interactionController, documentController)) return
-          if (commitConnection(event.pointerId, interactionController, documentController)) return
-          if (commitErasing(event.pointerId, interactionController, documentController)) return
-          if (commitDrawing(event.pointerId, interactionController, documentController)) return
+          if (canEdit) {
+            if (commitResize(event.pointerId, interactionController, documentController)) return
+            if (commitConnection(event.pointerId, interactionController, documentController)) return
+            if (commitErasing(event.pointerId, interactionController, documentController)) return
+            if (commitDrawing(event.pointerId, interactionController, documentController)) return
+          }
           if (interactionController.commitPan(event.pointerId)) return
           commitAreaSelection(event.pointerId, interactionController)
         }}
@@ -291,6 +261,57 @@ export function CanvasEditor({
       </section>
     </div>
   )
+}
+
+function beginCanvasSurfaceInteraction(
+  event: PointerEvent<HTMLElement>,
+  canEdit: boolean,
+  interactionController: CanvasInteractionController,
+  createTextNode: (point: CanvasPoint) => void,
+) {
+  event.currentTarget.focus()
+  const snapshot = interactionController.get()
+  const point = localPoint(event, event.currentTarget)
+  if (event.button === 1 || snapshot.tool === 'hand') {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    interactionController.beginPan(event.pointerId, point)
+    return
+  }
+  if (event.button !== 0) return
+  const canvasPoint = screenToCanvasPoint(point, snapshot.viewport)
+  switch (snapshot.tool) {
+    case 'draw':
+      if (!canEdit) return
+      event.currentTarget.setPointerCapture(event.pointerId)
+      interactionController.beginDrawing(
+        event.pointerId,
+        canvasPoint,
+        event.pressure,
+        DEFAULT_DRAW_STYLE,
+      )
+      return
+    case 'eraser':
+      if (!canEdit) return
+      event.currentTarget.setPointerCapture(event.pointerId)
+      interactionController.beginErasing(event.pointerId, canvasPoint)
+      return
+    case 'text':
+      if (canEdit) createTextNode(canvasPoint)
+      return
+    case 'select':
+    case 'lasso':
+      event.currentTarget.setPointerCapture(event.pointerId)
+      interactionController.beginSelection(
+        snapshot.tool === 'select' ? 'marquee' : 'lasso',
+        event.metaKey || event.ctrlKey ? 'add' : 'replace',
+        event.pointerId,
+        canvasPoint,
+      )
+      return
+    case 'edge':
+      return
+  }
 }
 
 function CanvasToolbar({

@@ -10,14 +10,18 @@ export async function authorizeResourceContent(
   kind: Exclude<ResourceKind, 'folder'>,
 ) {
   const resource = await findCanonicalResource(ctx.db, resourceId)
-  if (!resource || resource.campaignUuid !== ctx.resourceScope.campaignId) {
+  if (
+    !resource ||
+    resource.campaignUuid !== ctx.resourceScope.campaignId ||
+    resource.lifecycle !== 'active'
+  ) {
+    return { status: 'unavailable' as const, reason: 'unauthorized' as const }
+  }
+  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     return { status: 'unavailable' as const, reason: 'unauthorized' as const }
   }
   if (resource.kind !== kind) {
     return { status: 'unavailable' as const, reason: 'capability_not_supported' as const }
-  }
-  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    return { status: 'unavailable' as const, reason: 'unauthorized' as const }
   }
   return { status: 'authorized' as const }
 }

@@ -32,6 +32,7 @@ import {
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -497,6 +498,102 @@ describe('resource structure commands', () => {
         )
         .join(''),
     ).toBe(`${firstInsertion}Middle${secondInsertion}`)
+  })
+
+  it('authorizes every note and canvas write against current role and lifecycle', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Protected note')
+    const canvasId = await createResource(
+      campaign,
+      campaignUuid,
+      'canvas',
+      null,
+      'Protected canvas',
+    )
+    const guessedId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const noteUpdate = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Denied edit' }],
+      },
+    ])
+    const canvasDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          type: 'text',
+          position: { x: 0, y: 0 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const canvasUpdate = Uint8Array.from(Y.encodeStateAsUpdate(canvasDocument)).buffer
+    canvasDocument.destroy()
+    const before = await storedContentState(noteId, canvasId)
+
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+        update: noteUpdate,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId: canvasId,
+        update: canvasUpdate,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId: guessedId,
+        update: canvasUpdate,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    expect(await storedContentState(noteId, canvasId)).toEqual(before)
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId: canvasId,
+        update: canvasUpdate,
+      }),
+    ).resolves.toMatchObject({ status: 'completed', version: { revision: 2 } })
+    const afterDmWrite = await storedContentState(noteId, canvasId)
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch('campaignMembers', campaign.dm.memberId, {
+        role: CAMPAIGN_MEMBER_ROLE.Player,
+      })
+    })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+        update: noteUpdate,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    expect(await storedContentState(noteId, canvasId)).toEqual(afterDmWrite)
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch('campaignMembers', campaign.dm.memberId, {
+        role: CAMPAIGN_MEMBER_ROLE.DM,
+      })
+    })
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [noteId] })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+        update: noteUpdate,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    expect(await storedContentState(noteId, canvasId)).toEqual(afterDmWrite)
   })
 
   it('merges concurrent canonical canvas updates and rejects invalid document state', async () => {
@@ -1743,6 +1840,27 @@ describe('resource structure commands', () => {
         }),
       ),
     )
+  }
+
+  async function storedContentState(noteId: ResourceId, canvasId: ResourceId) {
+    return await t.run(async (ctx) => {
+      const note = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', noteId))
+        .unique()
+      const canvas = await ctx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', canvasId))
+        .unique()
+      return {
+        note: note
+          ? { update: Array.from(new Uint8Array(note.update)), version: note.version }
+          : null,
+        canvas: canvas
+          ? { update: Array.from(new Uint8Array(canvas.update)), version: canvas.version }
+          : null,
+      }
+    })
   }
 })
 

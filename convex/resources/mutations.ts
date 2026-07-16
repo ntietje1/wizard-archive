@@ -334,7 +334,7 @@ export const saveNoteContent = campaignMutation({
   returns: contentSessionSaveResultValidator,
   handler: async (ctx, args) =>
     await saveNoteContentFn(ctx, {
-      resourceId: args.resourceId,
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       update: args.update,
     }),
 })
@@ -347,7 +347,7 @@ export const saveCanvasContent = campaignMutation({
   returns: contentSessionSaveResultValidator,
   handler: async (ctx, args) =>
     await saveCanvasContentFn(ctx, {
-      resourceId: args.resourceId,
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       update: args.update,
     }),
 })

@@ -170,7 +170,9 @@ function CanvasNode({
   if (node.hidden) return null
   const position = node.position
   const editing =
-    interaction.interaction.type === 'editing' && interaction.interaction.nodeId === node.id
+    canEdit &&
+    interaction.interaction.type === 'editing' &&
+    interaction.interaction.nodeId === node.id
   const erasing =
     interaction.interaction.type === 'erasing' && interaction.interaction.nodeIds.has(node.id)
   const size = canvasNodeSize(node)
@@ -212,6 +214,7 @@ function CanvasNode({
       }
       onPointerUp={(event) =>
         commitNodeDrag(
+          canEdit,
           event,
           content,
           interaction.viewport,
@@ -228,7 +231,7 @@ function CanvasNode({
         selected={selected}
         zoom={interaction.viewport.zoom}
         onFinishEditing={() => interactionController.finishEditing()}
-        onSaveText={(text) => saveTextNode(documentController, node.id, text)}
+        onSaveText={(text) => saveTextNode(canEdit, documentController, node.id, text)}
       />
       {canEdit && interaction.tool === 'edge' && (
         <CanvasNodeConnectionHandles
@@ -381,6 +384,7 @@ function updateNodeDrag(
 }
 
 function commitNodeDrag(
+  canEdit: boolean,
   event: PointerEvent<HTMLDivElement>,
   content: CanvasDocumentContent,
   viewport: CanvasViewport,
@@ -388,6 +392,10 @@ function commitNodeDrag(
   interactionController: CanvasInteractionController,
   surface: RefObject<HTMLElement | null>,
 ) {
+  if (!canEdit) {
+    interactionController.cancelInteraction()
+    return
+  }
   updateNodeDrag(event, content, viewport, interactionController, surface)
   if (event.currentTarget.hasPointerCapture(event.pointerId)) {
     event.currentTarget.releasePointerCapture(event.pointerId)
@@ -403,10 +411,12 @@ function commitNodeDrag(
 }
 
 function saveTextNode(
+  canEdit: boolean,
   documentController: CanvasDocumentController,
   nodeId: CanvasNodeId,
   text: string,
 ) {
+  if (!canEdit) return
   const latest = documentController.read().nodes.find((candidate) => candidate.id === nodeId)
   if (!latest || latest.type !== 'text') return
   documentController.apply({

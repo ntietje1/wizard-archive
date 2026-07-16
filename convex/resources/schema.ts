@@ -335,15 +335,7 @@ export const contentSessionSaveResultValidator = v.union(
   }),
   v.object({
     status: v.literal('rejected'),
-    reason: literals(
-      'invalid_uuid',
-      'resource_missing',
-      'ownership_mismatch',
-      'wrong_kind',
-      'content_missing',
-      'content_corrupt',
-      'version_exhausted',
-    ),
+    reason: literals('unauthorized', 'content_missing', 'content_corrupt', 'version_exhausted'),
   }),
 )
 

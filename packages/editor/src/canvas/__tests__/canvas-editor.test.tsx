@@ -7,6 +7,7 @@ import type { CanvasDocumentContent } from '../document-contract'
 import { initialVersion, sha256Digest } from '../../resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createInMemoryCanvasSession } from '../../resources/in-memory-canvas-session'
+import { canvasTextDocumentPlainText } from '../text/model'
 
 const RESOURCE_ID = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-444444444444')
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -71,6 +72,136 @@ describe('CanvasEditor', () => {
     expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fit view' })).toBeVisible()
+    view.unmount()
+    session.dispose()
+  })
+
+  it('cancels retained mutations and blocks undo when editing changes to viewing', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 50,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'embed',
+          position: { x: 300, y: 0 },
+          width: 100,
+          height: 50,
+          data: {},
+        },
+        {
+          id: STROKE,
+          type: 'stroke',
+          position: { x: 0, y: 100 },
+          width: 100,
+          height: 20,
+          data: {
+            bounds: { x: 0, y: 100, width: 100, height: 20 },
+            points: [
+              [0, 110, 0.5],
+              [100, 110, 0.5],
+            ],
+            color: '#000000',
+            size: 4,
+          },
+        },
+      ],
+      edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
+    })
+    const renderEditor = (canEdit: boolean) => (
+      <CanvasEditor
+        canEdit={canEdit}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Mode boundary board"
+      />
+    )
+    const view = render(renderEditor(true))
+    const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
+    screen.getAllByTestId('canvas-node').forEach(installPointerCapture)
+    const initial = readCanvasDocumentContent(session.document)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Draw' }))
+    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 200, pointerId: 31 })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 80,
+      clientY: 220,
+      pointerId: 31,
+    })
+    expect(screen.getByTestId('canvas-drawing-preview')).toBeVisible()
+    view.rerender(renderEditor(false))
+    expect(screen.queryByTestId('canvas-drawing-preview')).not.toBeInTheDocument()
+    fireEvent.pointerUp(surface, { clientX: 80, clientY: 220, pointerId: 31 })
+    expect(readCanvasDocumentContent(session.document)).toEqual(initial)
+
+    view.rerender(renderEditor(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Eraser' }))
+    fireEvent.pointerDown(surface, { button: 0, clientX: 30, clientY: 80, pointerId: 32 })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 30,
+      clientY: 140,
+      pointerId: 32,
+    })
+    expect(screen.getAllByTestId('canvas-node')[2]).toHaveAttribute('data-erasing', 'true')
+    view.rerender(renderEditor(false))
+    fireEvent.pointerUp(surface, { clientX: 30, clientY: 140, pointerId: 32 })
+    expect(readCanvasDocumentContent(session.document)).toEqual(initial)
+
+    view.rerender(renderEditor(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Edges' }))
+    fireEvent.pointerDown(screen.getAllByTestId('canvas-node-handle-right')[0], {
+      button: 0,
+      pointerId: 33,
+    })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 300,
+      clientY: 25,
+      pointerId: 33,
+    })
+    expect(screen.getByTestId('canvas-connection-preview')).toBeVisible()
+    view.rerender(renderEditor(false))
+    fireEvent.pointerUp(surface, { clientX: 300, clientY: 25, pointerId: 33 })
+    expect(readCanvasDocumentContent(session.document)).toEqual(initial)
+
+    view.rerender(renderEditor(true))
+    const firstNode = screen.getAllByTestId('canvas-node')[0]
+    fireEvent.pointerDown(firstNode, { button: 0, clientX: 10, clientY: 10, pointerId: 34 })
+    fireEvent.pointerMove(firstNode, {
+      buttons: 1,
+      clientX: 80,
+      clientY: 80,
+      pointerId: 34,
+    })
+    view.rerender(renderEditor(false))
+    fireEvent.pointerUp(firstNode, { clientX: 80, clientY: 80, pointerId: 34 })
+    expect(readCanvasDocumentContent(session.document)).toEqual(initial)
+
+    view.rerender(renderEditor(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Text' }))
+    fireEvent.pointerDown(surface, { button: 0, clientX: 500, clientY: 300, pointerId: 35 })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Canvas text' }), {
+      target: { value: 'Must not persist' },
+    })
+    view.rerender(renderEditor(false))
+    const beforeUndo = readCanvasDocumentContent(session.document)
+    expect(beforeUndo.nodes).toHaveLength(initial.nodes.length + 1)
+    const created = beforeUndo.nodes.at(-1)
+    expect(created?.type).toBe('text')
+    if (created?.type !== 'text') throw new Error('Expected the created text node')
+    expect(canvasTextDocumentPlainText(created.data.content)).toBe('')
+    fireEvent.keyDown(screen.getByTestId('canvas-editor-shell'), { key: 'z', ctrlKey: true })
+    expect(readCanvasDocumentContent(session.document)).toEqual(beforeUndo)
+
     view.unmount()
     session.dispose()
   })

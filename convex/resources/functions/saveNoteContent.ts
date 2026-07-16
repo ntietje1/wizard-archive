@@ -8,9 +8,9 @@ import {
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
+import { authorizeResourceContent } from './authorizeResourceContent'
 import { findNoteContent } from './noteContent'
 import { syncNoteSearchProjection } from './resourceSearchProjection'
-import { validateContentResource } from './validateContentResource'
 
 export type SaveNoteContentResult =
   | {
@@ -21,23 +21,21 @@ export type SaveNoteContentResult =
     }
   | {
       status: 'rejected'
-      reason:
-        | 'invalid_uuid'
-        | 'resource_missing'
-        | 'ownership_mismatch'
-        | 'wrong_kind'
-        | 'content_missing'
-        | 'content_corrupt'
-        | 'version_exhausted'
+      reason: 'unauthorized' | 'content_missing' | 'content_corrupt' | 'version_exhausted'
     }
 
 export async function saveNoteContent(
   ctx: CampaignMutationCtx,
-  args: { resourceId: string; update: ArrayBuffer },
+  args: { resourceId: ResourceId; update: ArrayBuffer },
 ): Promise<SaveNoteContentResult> {
-  const validation = await validateContentResource(ctx, args.resourceId, 'note')
-  if (validation.status === 'rejected') return validation
-  const resourceId = validation.resourceId
+  const authorization = await authorizeResourceContent(ctx, args.resourceId, 'note')
+  if (authorization.status !== 'authorized') {
+    return {
+      status: 'rejected',
+      reason: authorization.reason === 'unauthorized' ? 'unauthorized' : 'content_corrupt',
+    }
+  }
+  const resourceId = args.resourceId
   const content = await findNoteContent(ctx.db, resourceId)
   if (!content) {
     return { status: 'rejected', reason: 'content_missing' }
