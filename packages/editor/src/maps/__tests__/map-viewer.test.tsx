@@ -117,11 +117,45 @@ describe('MapViewer', () => {
     })
     fireEvent.change(input, { target: { files: [valid] } })
     await waitFor(() =>
-      expect(replaceImage).toHaveBeenCalledWith(null, {
+      expect(replaceImage).toHaveBeenCalledWith(null, session.version, {
         bytes,
         fileName: 'map.png',
       }),
     )
+  })
+
+  it('retires a retry when layer selection changes its immutable target', async () => {
+    const replaceImage = vi.fn<MapSession['replaceImage']>(() =>
+      Promise.resolve({ status: 'retryable' as const, reason: 'response_lost' as const }),
+    )
+    const session = mapSession(
+      {
+        image: { status: 'unattached' },
+        layers: [
+          { id: 'day', image: { status: 'unattached' }, name: 'Day' },
+          { id: 'night', image: { status: 'unattached' }, name: 'Night' },
+        ],
+        pins: [],
+      },
+      { replaceImage },
+    )
+    renderMap(session)
+    const bytes = new Uint8Array([1, 2, 3])
+    const image = new File([Uint8Array.from(bytes).buffer], 'map.png', { type: 'image/png' })
+    Object.defineProperty(image, 'arrayBuffer', {
+      value: () => Promise.resolve(Uint8Array.from(bytes).buffer),
+    })
+
+    fireEvent.change(screen.getByLabelText('Choose map image'), { target: { files: [image] } })
+    expect(await screen.findByRole('alert')).toBeVisible()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Map layer' }), {
+      target: { value: 'night' },
+    })
+
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(replaceImage).toHaveBeenCalledOnce()
+    expect(replaceImage.mock.calls[0]![0]).toBe('day')
   })
 
   it('shows a truthful readonly banner and keeps image replacement unavailable', () => {

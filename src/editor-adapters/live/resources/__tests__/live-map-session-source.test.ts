@@ -186,7 +186,10 @@ describe('LiveMapSessionSource', () => {
       mediaType: 'image/png',
     })
     await expect(
-      session.replaceImage(null, { bytes: replacement, fileName: 'replacement.png' }),
+      session.replaceImage(null, session.version, {
+        bytes: replacement,
+        fileName: 'replacement.png',
+      }),
     ).resolves.toEqual({
       status: 'completed',
       content: { image: replacementImage, layers: [], pins: [] },
@@ -201,7 +204,10 @@ describe('LiveMapSessionSource', () => {
 
     source.dispose()
     await expect(
-      session.replaceImage(null, { bytes: replacement, fileName: 'replacement.png' }),
+      session.replaceImage(null, session.version, {
+        bytes: replacement,
+        fileName: 'replacement.png',
+      }),
     ).resolves.toEqual({ status: 'rejected', reason: 'resource_missing' })
     await expect(session.loadImage(null)).resolves.toEqual({
       status: 'unavailable',

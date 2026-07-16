@@ -207,6 +207,7 @@ export interface MapSession {
   loadImage(layerId: string | null): Promise<ContentExportResult>
   replaceImage(
     layerId: string | null,
+    expectedVersion: VersionStamp,
     source: FileResourceSource,
   ): Promise<MapContentMutationResult>
   dispose(): void

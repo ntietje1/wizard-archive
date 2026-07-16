@@ -7,6 +7,7 @@ import {
   sha256Digest,
   versionStampEquals,
 } from '@wizard-archive/editor/resources/component-version'
+import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import {
   DOMAIN_ID_KIND,
@@ -217,6 +218,7 @@ class LiveMapSession implements MapSession {
 
   async replaceImage(
     layerId: string | null,
+    expectedVersion: VersionStamp,
     source: FileResourceSource,
   ): Promise<MapContentMutationResult> {
     if (this.#disposed) return { status: 'rejected', reason: 'resource_missing' }
@@ -226,7 +228,7 @@ class LiveMapSession implements MapSession {
       const args = {
         campaignId: this.campaignId,
         resourceId: this.resourceId,
-        expectedVersion: this.currentVersion,
+        expectedVersion,
         layerId,
         uploadSessionId: sessionId,
       }

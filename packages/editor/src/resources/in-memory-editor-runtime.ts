@@ -548,8 +548,15 @@ class InMemoryMapSession implements MapSession {
     }
   }
 
-  async replaceImage(layerId: string | null, source: FileResourceSource) {
+  async replaceImage(
+    layerId: string | null,
+    expectedVersion: VersionStamp,
+    source: FileResourceSource,
+  ) {
     if (this.#disposed) return { status: 'rejected' as const, reason: 'resource_missing' as const }
+    if (!versionStampEquals(expectedVersion, this.currentVersion)) {
+      return { status: 'rejected' as const, reason: 'version_conflict' as const }
+    }
     if (layerId !== null && !this.currentContent.layers.some((layer) => layer.id === layerId)) {
       return { status: 'rejected' as const, reason: 'layer_missing' as const }
     }

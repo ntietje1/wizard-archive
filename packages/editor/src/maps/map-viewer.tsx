@@ -41,7 +41,7 @@ export function MapViewer({
   title: string
 }) {
   const layer = useSelectedMapLayer(session)
-  const replacement = useMapImageReplacement(session, layer.id)
+  const replacement = useMapImageReplacement(session, mapResourceId, layer.id)
   const transform = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
@@ -363,10 +363,22 @@ type MapImageReplacementController = AssetReplacementController
 
 function useMapImageReplacement(
   session: MapSession,
+  mapResourceId: ResourceId,
   layerId: string | null,
 ): MapImageReplacementController {
   return useAssetReplacement({
-    replace: async (source) => await session.replaceImage(layerId, source),
+    target: {
+      owner: session,
+      key: JSON.stringify([
+        mapResourceId,
+        layerId,
+        session.version.revision,
+        session.version.digest,
+      ]),
+      value: { session, mapResourceId, layerId, expectedVersion: session.version },
+    },
+    replace: async (target, source) =>
+      await target.session.replaceImage(target.layerId, target.expectedVersion, source),
     validate: validateMapImage,
     message: mapImageMutationMessage,
     retryable: (result) => result.status === 'retryable' || result.reason === 'version_conflict',

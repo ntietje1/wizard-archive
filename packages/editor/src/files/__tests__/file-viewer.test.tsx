@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { initialVersion, sha256Digest } from '../../resources/component-version'
 import type {
@@ -205,6 +205,95 @@ describe('FileViewer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(replace).toHaveBeenCalledTimes(2))
     expect(replace.mock.calls[1]![2]).toBe(replace.mock.calls[0]![2])
+  })
+
+  it('retires a retry when navigation changes its immutable resource target', async () => {
+    const bytes = new TextEncoder().encode('replacement')
+    const version = initialVersion(await sha256Digest(new Uint8Array()))
+    const replace = vi
+      .fn<FileContentSource['replace']>()
+      .mockResolvedValue({ status: 'retryable', reason: 'response_lost' })
+    const source = fileSource(vi.fn(), replace)
+    const file = new File([bytes], 'replacement.txt', { type: 'text/plain' })
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(bytes.buffer) })
+    const firstResourceId = testDomainId('resource', 'replacement-first')
+    const secondResourceId = testDomainId('resource', 'replacement-second')
+    const view = render(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={firstResourceId}
+        source={source}
+        title="First"
+        version={version}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose file replacement'), {
+      target: { files: [file] },
+    })
+    expect(await screen.findByRole('alert')).toBeVisible()
+    view.rerender(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={secondResourceId}
+        source={source}
+        title="Second"
+        version={version}
+      />,
+    )
+
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(replace).toHaveBeenCalledOnce()
+    expect(replace.mock.calls[0]![0]).toBe(firstResourceId)
+  })
+
+  it('ignores a late replacement settlement after navigation changes target', async () => {
+    const bytes = new TextEncoder().encode('replacement')
+    const version = initialVersion(await sha256Digest(new Uint8Array()))
+    let settle!: (result: Awaited<ReturnType<FileContentSource['replace']>>) => void
+    const replace = vi.fn<FileContentSource['replace']>(
+      () => new Promise((resolve) => (settle = resolve)),
+    )
+    const source = fileSource(vi.fn(), replace)
+    const file = new File([bytes], 'replacement.txt', { type: 'text/plain' })
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(bytes.buffer) })
+    const firstResourceId = testDomainId('resource', 'late-first')
+    const view = render(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={firstResourceId}
+        source={source}
+        title="First"
+        version={version}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose file replacement'), {
+      target: { files: [file] },
+    })
+    await waitFor(() => expect(replace).toHaveBeenCalledOnce())
+    view.rerender(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={testDomainId('resource', 'late-second')}
+        source={source}
+        title="Second"
+        version={version}
+      />,
+    )
+    await act(async () => {
+      settle({ status: 'retryable', reason: 'response_lost' })
+      await Promise.resolve()
+    })
+
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('The file replacement could not be confirmed.')).toBeNull()
+    expect(replace.mock.calls[0]![0]).toBe(firstResourceId)
   })
 
   it('rejects unsupported replacements before reading or uploading them', async () => {

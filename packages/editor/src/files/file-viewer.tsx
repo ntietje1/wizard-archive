@@ -155,7 +155,13 @@ function useFileReplacement(
   version: VersionStamp,
 ): FileReplacementController {
   return useAssetReplacement({
-    replace: async (candidate) => await source.replace(resourceId, version, candidate),
+    target: {
+      owner: source,
+      key: JSON.stringify([resourceId, version.revision, version.digest]),
+      value: { source, resourceId, expectedVersion: version },
+    },
+    replace: async (target, candidate) =>
+      await target.source.replace(target.resourceId, target.expectedVersion, candidate),
     validate: (file) => {
       const result = validateFileUpload(file.type || null, file.size, file.name)
       return result.valid ? null : result.error

@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test'
 
 async function openWorkspace(page: Page) {
   await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-  const workspace = page.getByRole('region', { name: 'Demo workspace' })
+  const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
   await expect(workspace).toBeVisible()
   await expect(workspace).toHaveAttribute('aria-busy', 'false')
   return workspace

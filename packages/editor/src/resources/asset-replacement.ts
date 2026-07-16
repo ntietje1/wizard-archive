@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { DragEvent, RefObject } from 'react'
 import type { FileResourceSource } from './content-session-contract'
 
@@ -7,11 +7,26 @@ type ReplacementResult =
   | Readonly<{ status: 'retryable' | 'rejected'; reason: string }>
 type ReplacementFailure = Exclude<ReplacementResult, { status: 'completed' }>
 
-type ReplacementState =
-  | Readonly<{ status: 'idle' | 'reading' }>
-  | Readonly<{ status: 'uploading'; source: FileResourceSource }>
-  | Readonly<{ status: 'retry'; message: string; source: FileResourceSource }>
-  | Readonly<{ status: 'failed'; message: string }>
+type ReplacementTarget<T> = Readonly<{
+  key: string
+  owner: object
+  value: T
+}>
+
+type ReplacementTargetIdentity = Pick<ReplacementTarget<unknown>, 'key' | 'owner'>
+
+type ReplacementAttempt<T> = ReplacementTarget<T> &
+  Readonly<{
+    id: number
+    source: FileResourceSource
+  }>
+
+type ReplacementState<T> =
+  | Readonly<{ status: 'idle' }>
+  | Readonly<{ status: 'reading'; target: ReplacementTarget<T>; id: number }>
+  | Readonly<{ status: 'uploading'; attempt: ReplacementAttempt<T> }>
+  | Readonly<{ status: 'retry'; message: string; attempt: ReplacementAttempt<T> }>
+  | Readonly<{ status: 'failed'; message: string; target: ReplacementTarget<T> }>
 
 export type AssetReplacementController = Readonly<{
   canRetry: boolean
@@ -28,8 +43,9 @@ export type AssetReplacementController = Readonly<{
   retry(): void
 }>
 
-export function useAssetReplacement(options: {
-  replace(source: FileResourceSource): Promise<ReplacementResult>
+export function useAssetReplacement<T>(options: {
+  target: ReplacementTarget<T>
+  replace(target: T, source: FileResourceSource): Promise<ReplacementResult>
   validate(file: File): string | null
   message(result: ReplacementFailure): string
   retryable(result: ReplacementFailure): boolean
@@ -39,69 +55,123 @@ export function useAssetReplacement(options: {
   responseLostMessage: string
 }): AssetReplacementController {
   const input = useRef<HTMLInputElement>(null)
-  const [dragActive, setDragActive] = useState(false)
-  const [state, setState] = useState<ReplacementState>({ status: 'idle' })
-  const attempt = async (source: FileResourceSource) => {
-    setState({ status: 'uploading', source })
+  const activeAttemptId = useRef(0)
+  const targetKey = options.target.key
+  const targetOwner = options.target.owner
+  const currentTarget = useRef<ReplacementTargetIdentity>({ key: targetKey, owner: targetOwner })
+  const [dragTarget, setDragTarget] = useState<ReplacementTarget<T> | null>(null)
+  const [state, setState] = useState<ReplacementState<T>>({ status: 'idle' })
+  useEffect(() => {
+    currentTarget.current = { key: targetKey, owner: targetOwner }
+    activeAttemptId.current += 1
+    return () => {
+      activeAttemptId.current += 1
+    }
+  }, [targetKey, targetOwner])
+  const isCurrent = (target: ReplacementTarget<T>, id: number) =>
+    activeAttemptId.current === id && sameTarget(target, currentTarget.current)
+  const attempt = async (replacement: ReplacementAttempt<T>) => {
+    if (!isCurrent(replacement, replacement.id)) return
+    setState({ status: 'uploading', attempt: replacement })
     try {
-      const result = await options.replace(source)
+      const result = await options.replace(replacement.value, replacement.source)
+      if (!isCurrent(replacement, replacement.id)) return
       if (result.status === 'completed') {
         setState({ status: 'idle' })
         return
       }
       setState(
         options.retryable(result)
-          ? { status: 'retry', message: options.message(result), source }
-          : { status: 'failed', message: options.message(result) },
+          ? { status: 'retry', message: options.message(result), attempt: replacement }
+          : { status: 'failed', message: options.message(result), target: replacement },
       )
     } catch {
-      setState({ status: 'retry', message: options.responseLostMessage, source })
+      if (isCurrent(replacement, replacement.id)) {
+        setState({ status: 'retry', message: options.responseLostMessage, attempt: replacement })
+      }
     }
   }
   const choose = (file: File) => {
+    const target = options.target
     const error = options.validate(file)
     if (error) {
-      setState({ status: 'failed', message: error })
+      setState({ status: 'failed', message: error, target })
       return
     }
-    setState({ status: 'reading' })
+    const id = activeAttemptId.current + 1
+    activeAttemptId.current = id
+    setState({ status: 'reading', target, id })
     void file.arrayBuffer().then(
-      (buffer) => attempt({ bytes: new Uint8Array(buffer), fileName: file.name }),
-      () => setState({ status: 'failed', message: options.readFailureMessage }),
+      (buffer) =>
+        attempt({
+          ...target,
+          id,
+          source: { bytes: new Uint8Array(buffer), fileName: file.name },
+        }),
+      () => {
+        if (isCurrent(target, id)) {
+          setState({ status: 'failed', message: options.readFailureMessage, target })
+        }
+      },
     )
   }
-  const pending = state.status === 'reading' || state.status === 'uploading'
+  const replacementTarget = stateTarget(state)
+  const visibleState =
+    replacementTarget === null || sameTarget(replacementTarget, options.target)
+      ? state
+      : ({ status: 'idle' } as const)
+  const pending = visibleState.status === 'reading' || visibleState.status === 'uploading'
   return {
-    canRetry: state.status === 'retry',
-    dragActive,
-    failed: state.status === 'failed' || state.status === 'retry',
+    canRetry: visibleState.status === 'retry',
+    dragActive: dragTarget !== null && sameTarget(dragTarget, options.target),
+    failed: visibleState.status === 'failed' || visibleState.status === 'retry',
     input,
     message:
-      state.status === 'reading'
+      visibleState.status === 'reading'
         ? options.readingMessage
-        : state.status === 'uploading'
+        : visibleState.status === 'uploading'
           ? options.uploadingMessage
-          : state.status === 'retry' || state.status === 'failed'
-            ? state.message
+          : visibleState.status === 'retry' || visibleState.status === 'failed'
+            ? visibleState.message
             : null,
     pending,
     choose,
     onDragLeave: (event) => {
-      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false)
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragTarget(null)
     },
     onDragOver: (event) => {
       event.preventDefault()
-      setDragActive(true)
+      setDragTarget(options.target)
     },
     onDrop: (event) => {
       event.preventDefault()
-      setDragActive(false)
+      setDragTarget(null)
       const file = event.dataTransfer.files[0]
       if (file && !pending) choose(file)
     },
     open: () => input.current?.click(),
     retry: () => {
-      if (state.status === 'retry') void attempt(state.source)
+      if (visibleState.status !== 'retry') return
+      const id = activeAttemptId.current + 1
+      activeAttemptId.current = id
+      void attempt({ ...visibleState.attempt, id })
     },
+  }
+}
+
+function sameTarget(left: ReplacementTargetIdentity, right: ReplacementTargetIdentity): boolean {
+  return left.owner === right.owner && left.key === right.key
+}
+
+function stateTarget<T>(state: ReplacementState<T>): ReplacementTarget<T> | null {
+  switch (state.status) {
+    case 'idle':
+      return null
+    case 'reading':
+    case 'failed':
+      return state.target
+    case 'uploading':
+    case 'retry':
+      return state.attempt
   }
 }

@@ -4,7 +4,7 @@ test.describe('editor shell', () => {
   test('navigates resources and preserves workspace controls', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
 
-    const workspace = page.getByRole('region', { name: 'Demo workspace' })
+    const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
     await expect(workspace).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible({ timeout: 10_000 })
 
