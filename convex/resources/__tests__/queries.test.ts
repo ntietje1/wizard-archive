@@ -18,7 +18,8 @@ import {
 } from '../../_test/storage.helper'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 import {
-  MAX_WORKSPACE_SEARCH_CANDIDATES,
+  MAX_WORKSPACE_SEARCH_DOCUMENT_READS,
+  MAX_WORKSPACE_SEARCH_PROVIDER_READ_BYTES,
   createResourceSearchDocument,
   normalizeResourceSearchText,
   searchResourceDocuments,
@@ -448,7 +449,7 @@ describe('authorized resource projection', () => {
     ).resolves.toMatchObject({ results: [{ resourceId: noteId }] })
   })
 
-  it('globally ranks more than 200 exact, prefix, generic title, and body matches', async () => {
+  it('globally ranks bounded tiers and reports broad lower-tier queries as incomplete', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const memberUuid = await getMemberUuid(campaign.dm.memberId)
@@ -511,24 +512,63 @@ describe('authorized resource projection', () => {
     })
 
     expect(first.results).toEqual(searchResourceDocuments(documents, 'NEEDLE'))
+    expect(first.status).toBe('complete')
     expect(second.results).toEqual(first.results)
     expect(first.snapshot.resources).toHaveLength(first.results.length)
     expect(first.snapshot.missingResourceIds).toEqual([])
 
-    for (const query of ['journal', 'entry', 'archive', 'ärcane', 'citadèle']) {
+    for (const query of ['journal', 'ärcane', 'citadèle']) {
       const result = await asDm(campaign).query(api.resources.queries.searchResources, {
         campaignId: campaignUuid,
         query,
       })
       expect(result.results).toEqual(searchResourceDocuments(documents, query))
+      expect(result.status).toBe('complete')
+    }
+    for (const query of ['entry', 'archive']) {
+      const result = await asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query,
+      })
+      expect(result).toMatchObject({ status: 'incomplete', results: [] })
     }
   })
 
-  it('rejects a query whose complete global rank exceeds the bounded provider window', async () => {
+  it('returns rank-safe prefix results when more than 1,024 body matches exceed the budget', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const memberUuid = await getMemberUuid(campaign.dm.memberId)
+    const exactId = generateDomainId(DOMAIN_ID_KIND.resource)
     await t.run(async (ctx) => {
-      for (let index = 0; index <= MAX_WORKSPACE_SEARCH_CANDIDATES; index += 1) {
+      await ctx.db.insert('resources', {
+        resourceUuid: exactId,
+        campaignUuid,
+        parentResourceUuid: null,
+        kind: 'note',
+        title: 'Common',
+        icon: null,
+        color: null,
+        lifecycle: 'active',
+        trashedAt: null,
+        trashedByMemberUuid: null,
+        metadataVersion: {
+          scheme: VERSION_SCHEME,
+          revision: 1,
+          digest: 'f'.repeat(64),
+        },
+        createdAt: 0,
+        createdByMemberUuid: memberUuid,
+        updatedAt: 0,
+        updatedByMemberUuid: memberUuid,
+      })
+      await ctx.db.insert('resourceSearchDocuments', {
+        campaignUuid,
+        resourceUuid: exactId,
+        title: 'Common',
+        normalizedTitle: 'common',
+        body: '',
+      })
+      for (let index = 0; index < 1_025; index += 1) {
         const title = `Overflow ${index.toString().padStart(4, '0')}`
         await ctx.db.insert('resourceSearchDocuments', {
           campaignUuid,
@@ -545,7 +585,12 @@ describe('authorized resource projection', () => {
         campaignId: campaignUuid,
         query: 'common',
       }),
-    ).rejects.toThrow('Search query exceeds the bounded candidate set')
+    ).resolves.toMatchObject({
+      status: 'incomplete',
+      results: [{ resourceId: exactId, match: { type: 'title' } }],
+    })
+    expect(MAX_WORKSPACE_SEARCH_DOCUMENT_READS).toBe(64)
+    expect(MAX_WORKSPACE_SEARCH_PROVIDER_READ_BYTES).toBeLessThan(8 * 1024 * 1024)
   })
 
   it(

@@ -20,6 +20,7 @@ import type {
 import type { VersionStamp } from './component-version'
 import type { WorkspacePreferencesSource } from './workspace-preferences'
 import type { ResourceUndoHistory } from './resource-undo-history'
+import type { WorkspaceSearchOutcome } from './resource-search-policy'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -49,13 +50,8 @@ export interface ResourceNavigation {
   subscribe(listener: () => void): () => void
 }
 
-export type WorkspaceSearchResult = Readonly<{
-  resourceId: ResourceId
-  match: Readonly<{ type: 'title' }> | Readonly<{ type: 'body'; text: string }>
-}>
-
 export interface WorkspaceSearch {
-  search(query: string): Promise<ReadonlyArray<WorkspaceSearchResult>>
+  search(query: string): Promise<WorkspaceSearchOutcome>
   recent(): ReadonlyArray<ResourceId>
   subscribeRecent(listener: () => void): () => void
   recordOpened(resourceId: ResourceId): void

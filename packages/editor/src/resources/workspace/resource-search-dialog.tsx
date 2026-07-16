@@ -1,11 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { PanelRight, Search, X } from 'lucide-react'
-import type {
-  EditorRuntime,
-  WorkspaceSearch,
-  WorkspaceSearchResult,
-} from '../editor-runtime-contract'
+import type { EditorRuntime, WorkspaceSearch } from '../editor-runtime-contract'
+import type { WorkspaceSearchResult } from '../resource-search-policy'
 import type { AuthorizedResourceSummary, ResourceKnowledge } from '../resource-index-contract'
 import type { ResourceKind } from '../resource-record'
 import { resourceKindLabel } from './resource-operations'
@@ -18,6 +15,7 @@ type SearchState =
   | Readonly<{ status: 'idle'; results: ReadonlyArray<WorkspaceSearchResult> }>
   | Readonly<{ status: 'searching'; results: ReadonlyArray<WorkspaceSearchResult> }>
   | Readonly<{ status: 'ready'; results: ReadonlyArray<WorkspaceSearchResult> }>
+  | Readonly<{ status: 'incomplete'; results: ReadonlyArray<WorkspaceSearchResult> }>
   | Readonly<{ status: 'failed'; results: ReadonlyArray<WorkspaceSearchResult> }>
 
 type SearchDisplayItem =
@@ -91,8 +89,13 @@ function OpenResourceSearchDialog({
       setState((current) => ({ status: 'searching', results: current.results }))
       void search
         .search(normalized)
-        .then((results) => {
-          if (active) setState({ status: 'ready', results })
+        .then((outcome) => {
+          if (active) {
+            setState({
+              status: outcome.status === 'complete' ? 'ready' : 'incomplete',
+              results: outcome.results,
+            })
+          }
         })
         .catch(() => {
           if (active) setState((current) => ({ status: 'failed', results: current.results }))
@@ -353,6 +356,10 @@ function searchStatus(
   if (state.status === 'searching') return 'Searching…'
   if (state.status === 'failed')
     return displayCount > 0 ? 'Search failed · showing previous results' : 'Search failed'
+  if (state.status === 'incomplete')
+    return displayCount > 0
+      ? `${displayCount} ranked results · refine your search for complete results`
+      : 'Too many matches · refine your search'
   return displayCount === 1 ? '1 result' : `${displayCount} results`
 }
 

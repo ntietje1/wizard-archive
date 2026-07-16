@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { ResourceSearchIndex } from '../resource-search-index'
 import {
-  MAX_WORKSPACE_SEARCH_CANDIDATES,
+  MAX_WORKSPACE_SEARCH_DOCUMENT_READS,
   MAX_WORKSPACE_SEARCH_RESULTS,
   createResourceSearchDocument,
   searchResourceDocuments,
 } from '../resource-search-policy'
 
 describe('ResourceSearchIndex', () => {
-  it('returns the global top results without visiting the campaign corpus', () => {
-    const documents = Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, (_, index) =>
+  it('returns the global top results without visiting the campaign corpus', async () => {
+    const documents = Array.from({ length: 60 }, (_, index) =>
       createResourceSearchDocument(
         testDomainId('resource', `bounded-search-${index}`),
         `Journal ${index.toString().padStart(4, '0')}`,
@@ -20,21 +20,20 @@ describe('ResourceSearchIndex', () => {
     const index = new ResourceSearchIndex()
     for (const document of [...documents].reverse()) index.set(document)
 
-    const result = index.search('archive')
+    const result = await index.search('archive')
 
-    expect(result.complete).toBe(true)
-    expect(result.documentsVisited).toBe(MAX_WORKSPACE_SEARCH_RESULTS)
+    expect(result.status).toBe('complete')
     expect(result.results).toEqual(searchResourceDocuments(documents, 'archive'))
   })
 
-  it('reserves exact and full-title-prefix matches beyond generic postings', () => {
+  it('reserves exact and full-title-prefix matches beyond generic postings', async () => {
     const exact = createResourceSearchDocument(
       testDomainId('resource', 'bounded-search-exact'),
       'Needle',
       '',
     )
     const documents = [
-      ...Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, (_, index) =>
+      ...Array.from({ length: 1_025 }, (_, index) =>
         createResourceSearchDocument(
           testDomainId('resource', `bounded-search-body-${index}`),
           `Archive ${index.toString().padStart(4, '0')}`,
@@ -46,33 +45,35 @@ describe('ResourceSearchIndex', () => {
     const index = new ResourceSearchIndex()
     for (const document of documents) index.set(document)
 
-    const result = index.search('needle')
+    const result = await index.search('needle')
 
-    expect(result.complete).toBe(true)
-    expect(result.results).toEqual(searchResourceDocuments(documents, 'needle'))
+    expect(result.status).toBe('incomplete')
+    expect(result.results).toEqual([{ resourceId: exact.resourceId, match: { type: 'title' } }])
     expect(result.results[0]).toEqual({ resourceId: exact.resourceId, match: { type: 'title' } })
   })
 
-  it('updates posting order on rename and removes obsolete title and body terms', () => {
+  it('updates posting order on rename and removes obsolete title and body terms', async () => {
     const resourceId = testDomainId('resource', 'bounded-search-updated')
     const index = new ResourceSearchIndex()
     index.set(createResourceSearchDocument(resourceId, 'Old title', 'Hidden citadel'))
 
-    expect(index.search('citadel').results).toHaveLength(1)
+    expect((await index.search('citadel')).results).toHaveLength(1)
     index.set(createResourceSearchDocument(resourceId, 'Renamed archive', 'Sunken vault'))
 
-    expect(index.search('old').results).toEqual([])
-    expect(index.search('citadel').results).toEqual([])
-    expect(index.search('renamed').results).toEqual([{ resourceId, match: { type: 'title' } }])
-    expect(index.search('vault').results).toEqual([
+    expect((await index.search('old')).results).toEqual([])
+    expect((await index.search('citadel')).results).toEqual([])
+    expect((await index.search('renamed')).results).toEqual([
+      { resourceId, match: { type: 'title' } },
+    ])
+    expect((await index.search('vault')).results).toEqual([
       { resourceId, match: { type: 'body', text: 'Sunken vault' } },
     ])
 
     index.delete(resourceId)
-    expect(index.search('renamed').results).toEqual([])
+    expect((await index.search('renamed')).results).toEqual([])
   })
 
-  it('fully ranks multi-term title phrases before lower-ranked term matches', () => {
+  it('fully ranks multi-term title phrases before lower-ranked term matches', async () => {
     const phrase = createResourceSearchDocument(
       testDomainId('resource', 'bounded-search-phrase'),
       'Z alpha beta',
@@ -91,18 +92,18 @@ describe('ResourceSearchIndex', () => {
     const index = new ResourceSearchIndex()
     for (const document of documents) index.set(document)
 
-    const result = index.search('alpha beta')
+    const result = await index.search('alpha beta')
 
-    expect(result.complete).toBe(true)
+    expect(result.status).toBe('complete')
     expect(result.results).toEqual(searchResourceDocuments(documents, 'alpha beta'))
     expect(result.results[0]).toEqual({ resourceId: phrase.resourceId, match: { type: 'title' } })
   })
 
-  it('reports an incomplete conjunctive query instead of returning a wrong bounded rank', () => {
+  it('finds a sparse conjunctive match without charging unrelated postings', async () => {
     const index = new ResourceSearchIndex()
-    for (let value = 0; value < MAX_WORKSPACE_SEARCH_CANDIDATES * 2 + 1; value += 1) {
-      const inFirstPosting = value <= MAX_WORKSPACE_SEARCH_CANDIDATES
-      const inSecondPosting = value >= MAX_WORKSPACE_SEARCH_CANDIDATES
+    for (let value = 0; value < MAX_WORKSPACE_SEARCH_DOCUMENT_READS * 2 + 1; value += 1) {
+      const inFirstPosting = value <= MAX_WORKSPACE_SEARCH_DOCUMENT_READS
+      const inSecondPosting = value >= MAX_WORKSPACE_SEARCH_DOCUMENT_READS
       index.set(
         createResourceSearchDocument(
           testDomainId('resource', `bounded-search-intersection-${value}`),
@@ -112,10 +113,37 @@ describe('ResourceSearchIndex', () => {
       )
     }
 
-    const result = index.search('alpha beta')
+    const result = await index.search('alpha beta')
 
-    expect(result.complete).toBe(false)
-    expect(result.documentsVisited).toBe(MAX_WORKSPACE_SEARCH_CANDIDATES)
-    expect(result.results).toEqual([])
+    expect(result.status).toBe('complete')
+    expect(result.results).toHaveLength(1)
+    expect(result.results[0]?.match).toEqual({ type: 'body', text: 'alpha beta' })
+  })
+
+  it('uses one read budget across disjoint title and body stages', async () => {
+    const index = new ResourceSearchIndex()
+    for (let value = 0; value < MAX_WORKSPACE_SEARCH_RESULTS - 1; value += 1) {
+      index.set(
+        createResourceSearchDocument(
+          testDomainId('resource', `bounded-search-title-${value}`),
+          `Archive ${value.toString().padStart(3, '0')} needle`,
+          '',
+        ),
+      )
+    }
+    for (let value = 0; value < 16; value += 1) {
+      index.set(
+        createResourceSearchDocument(
+          testDomainId('resource', `bounded-search-body-after-title-budget-${value}`),
+          `Z body result ${value}`,
+          'needle',
+        ),
+      )
+    }
+
+    const result = await index.search('needle')
+
+    expect(result.status).toBe('incomplete')
+    expect(result.results).toHaveLength(MAX_WORKSPACE_SEARCH_RESULTS - 1)
   })
 })

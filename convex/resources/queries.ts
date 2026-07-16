@@ -37,6 +37,7 @@ const authorizedResourceBookmarksValidator = v.object({
 })
 
 const authorizedResourceSearchValidator = v.object({
+  status: v.union(v.literal('complete'), v.literal('incomplete')),
   results: v.array(workspaceSearchResultValidator),
   snapshot: authorizedResourceSnapshotValidator,
 })
@@ -161,11 +162,13 @@ export const searchResources = dmQuery({
   args: { query: v.string() },
   returns: authorizedResourceSearchValidator,
   handler: async (ctx, args) => {
-    const results = (await searchResourcesFn(ctx, args.query)).map((result) => ({
+    const outcome = await searchResourcesFn(ctx, args.query)
+    const results = outcome.results.map((result) => ({
       resourceId: result.resourceId,
       match: result.match.type === 'title' ? { type: 'title' as const } : { ...result.match },
     }))
     return {
+      status: outcome.status,
       results,
       snapshot: storedSnapshot(
         await loadAuthorizedResourceProjection(

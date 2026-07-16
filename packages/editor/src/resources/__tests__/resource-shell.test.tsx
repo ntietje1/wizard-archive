@@ -570,6 +570,43 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('reports an incomplete bounded search without discarding rank-safe results', async () => {
+    const { core, resource } = await shellRuntime(true)
+    if (core.runtime.search.status !== 'available') throw new TypeError('Search is unavailable')
+    const runtime = {
+      ...core.runtime,
+      search: {
+        status: 'available' as const,
+        value: {
+          ...core.runtime.search.value,
+          search: () =>
+            Promise.resolve({
+              status: 'incomplete' as const,
+              results: [{ resourceId: resource.id, match: { type: 'title' as const } }],
+            }),
+        },
+      },
+    }
+
+    render(
+      <ResourceShell ariaLabel="Editable resources" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    fireEvent.keyDown(screen.getByRole('region', { name: 'Editable resources' }), {
+      key: 'k',
+      ctrlKey: true,
+    })
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Search' }), {
+      target: { value: 'common' },
+    })
+
+    expect(
+      await screen.findByText('1 ranked results · refine your search for complete results'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Campaign folder/ })).toBeInTheDocument()
+    core.dispose()
+  })
+
   it('bookmarks through the gateway and shows a bookmarks-only sidebar', async () => {
     const { core, resource } = await shellRuntime(true)
 

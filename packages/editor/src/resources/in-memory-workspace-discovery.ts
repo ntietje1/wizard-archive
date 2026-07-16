@@ -113,12 +113,7 @@ export function createInMemoryWorkspaceSearch(
   const unsubscribeResources = subscribeResources(refreshResources)
 
   const gateway: WorkspaceSearch = {
-    search: (query) => {
-      const result = documents.search(query)
-      return result.complete
-        ? Promise.resolve(result.results)
-        : Promise.reject(new Error('Search query exceeds the bounded candidate set'))
-    },
+    search: (query) => documents.search(query),
     recent: () => recent,
     subscribeRecent: (listener) => {
       listeners.add(listener)

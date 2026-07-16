@@ -9,8 +9,8 @@ import type {
 import type {
   ResourceBookmarkGateway,
   WorkspaceSearch,
-  WorkspaceSearchResult,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type { WorkspaceSearchOutcome } from '@wizard-archive/editor/resources/search-policy'
 import type { ResourceLoadResult } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceBookmarkCommandResult } from '@wizard-archive/editor/resources/command-contract'
 import {
@@ -118,7 +118,7 @@ export function createLiveWorkspaceSearch(
       if (applyProjection(projection.snapshot).status !== 'completed') {
         throw new TypeError('Invalid authorized search projection')
       }
-      return results
+      return { status: projection.status, results }
     },
     recent: () => getLiveRecentResources(campaignId, actorId),
     subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, actorId, listener),
@@ -154,9 +154,7 @@ function readBookmarkResourceIds(
   return resourceIds
 }
 
-function readSearchResults(
-  values: SearchProjection['results'],
-): ReadonlyArray<WorkspaceSearchResult> {
+function readSearchResults(values: SearchProjection['results']): WorkspaceSearchOutcome['results'] {
   const results = values.map((result) => ({
     resourceId: resourceId(result.resourceId),
     match: result.match,

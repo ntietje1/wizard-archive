@@ -1,18 +1,50 @@
 import type { ResourceId } from './domain-id'
-import type { WorkspaceSearchResult } from './editor-runtime-contract'
 
 export const MAX_WORKSPACE_SEARCH_QUERY_BYTES = 512
 export const MAX_WORKSPACE_SEARCH_QUERY_TERMS = 16
 export const MAX_WORKSPACE_SEARCH_TERM_BYTES = 32
 export const MAX_WORKSPACE_SEARCH_TITLE_BYTES = 2 * 1024
 export const MAX_WORKSPACE_SEARCH_BODY_BYTES = 64 * 1024
-export const MAX_WORKSPACE_SEARCH_CANDIDATES = 1024
+export const MAX_WORKSPACE_SEARCH_DOCUMENT_READS = 64
 export const MAX_WORKSPACE_SEARCH_RESULTS = 50
+export const MAX_WORKSPACE_SEARCH_PROVIDER_READ_BYTES =
+  (MAX_WORKSPACE_SEARCH_DOCUMENT_READS + MAX_WORKSPACE_SEARCH_RESULTS) *
+  (MAX_WORKSPACE_SEARCH_BODY_BYTES + 2 * MAX_WORKSPACE_SEARCH_TITLE_BYTES + 1024)
 
 export type ResourceSearchDocument = Readonly<{
   resourceId: ResourceId
   title: string
   body: string
+}>
+
+export type WorkspaceSearchResult = Readonly<{
+  resourceId: ResourceId
+  match: Readonly<{ type: 'title' }> | Readonly<{ type: 'body'; text: string }>
+}>
+
+export type WorkspaceSearchOutcome = Readonly<{
+  status: 'complete' | 'incomplete'
+  results: ReadonlyArray<WorkspaceSearchResult>
+}>
+
+export type ResourceSearchPage = Readonly<{
+  documents: ReadonlyArray<ResourceSearchDocument>
+  complete: boolean
+}>
+
+export type ResourceSearchProvider = Readonly<{
+  titlePrefix(
+    normalizedQuery: string,
+    limit: number,
+  ): ResourceSearchPage | Promise<ResourceSearchPage>
+  titleMatches(
+    normalizedQuery: string,
+    limit: number,
+  ): ResourceSearchPage | Promise<ResourceSearchPage>
+  bodyMatches(
+    normalizedQuery: string,
+    limit: number,
+  ): ResourceSearchPage | Promise<ResourceSearchPage>
 }>
 
 type RankedSearchResult = Readonly<{
@@ -34,6 +66,69 @@ export function searchResourceDocuments(
     if (result) insertRankedResult(ranked, result)
   }
   return ranked.map(({ result }) => result)
+}
+
+export async function executeResourceSearchPlan(
+  query: string,
+  provider: ResourceSearchProvider,
+): Promise<WorkspaceSearchOutcome> {
+  const normalized = normalizeSearchQuery(query)
+  if (!normalized) return { status: 'complete', results: [] }
+
+  const prefix = await provider.titlePrefix(normalized, MAX_WORKSPACE_SEARCH_RESULTS)
+  assertSearchPage(prefix, MAX_WORKSPACE_SEARCH_RESULTS)
+  if (prefix.documents.length === MAX_WORKSPACE_SEARCH_RESULTS) {
+    return completeSearch(prefix.documents, normalized)
+  }
+
+  let remainingReads = MAX_WORKSPACE_SEARCH_DOCUMENT_READS
+  const title = await provider.titleMatches(normalized, remainingReads)
+  assertSearchPage(title, remainingReads)
+  if (!title.complete) return incompleteSearch(prefix.documents, normalized)
+
+  remainingReads -= title.documents.length
+  const titleDocuments = uniqueSearchDocuments([...prefix.documents, ...title.documents])
+  const titleResults = searchResourceDocuments(titleDocuments, normalized)
+  if (titleResults.length === MAX_WORKSPACE_SEARCH_RESULTS) {
+    return { status: 'complete', results: titleResults }
+  }
+  if (remainingReads === 0) return { status: 'incomplete', results: titleResults }
+
+  const body = await provider.bodyMatches(normalized, remainingReads)
+  assertSearchPage(body, remainingReads)
+  if (!body.complete) return { status: 'incomplete', results: titleResults }
+
+  return completeSearch([...titleDocuments, ...body.documents], normalized)
+}
+
+function completeSearch(
+  documents: ReadonlyArray<ResourceSearchDocument>,
+  query: string,
+): WorkspaceSearchOutcome {
+  return {
+    status: 'complete',
+    results: searchResourceDocuments(uniqueSearchDocuments(documents), query),
+  }
+}
+
+function incompleteSearch(
+  documents: ReadonlyArray<ResourceSearchDocument>,
+  query: string,
+): WorkspaceSearchOutcome {
+  return {
+    status: 'incomplete',
+    results: searchResourceDocuments(uniqueSearchDocuments(documents), query),
+  }
+}
+
+function uniqueSearchDocuments(
+  documents: ReadonlyArray<ResourceSearchDocument>,
+): ReadonlyArray<ResourceSearchDocument> {
+  return Array.from(new Map(documents.map((document) => [document.resourceId, document])).values())
+}
+
+function assertSearchPage(page: ResourceSearchPage, limit: number): void {
+  if (page.documents.length > limit) throw new TypeError('Search provider exceeded its read limit')
 }
 
 export function normalizeSearchQuery(query: string): string {

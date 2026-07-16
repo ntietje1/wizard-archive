@@ -151,16 +151,39 @@ describe('live workspace discovery', () => {
       applyProjection,
       vi.fn(() =>
         Promise.resolve({
+          status: 'complete' as const,
           results: [{ resourceId, match: { type: 'title' as const } }],
           snapshot,
         }),
       ),
     )
 
-    await expect(search.search('discovery')).resolves.toEqual([
-      { resourceId, match: { type: 'title' } },
-    ])
+    await expect(search.search('discovery')).resolves.toEqual({
+      status: 'complete',
+      results: [{ resourceId, match: { type: 'title' } }],
+    })
     expect(applyProjection).toHaveBeenCalledWith(snapshot)
+  })
+
+  it('preserves a truthful incomplete search outcome', async () => {
+    const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
+    const search = createLiveWorkspaceSearch(
+      campaignId,
+      actorId,
+      applyProjection,
+      vi.fn(() =>
+        Promise.resolve({
+          status: 'incomplete' as const,
+          results: [{ resourceId, match: { type: 'title' as const } }],
+          snapshot,
+        }),
+      ),
+    )
+
+    await expect(search.search('common')).resolves.toEqual({
+      status: 'incomplete',
+      results: [{ resourceId, match: { type: 'title' } }],
+    })
   })
 
   it('rejects an incomplete search envelope before applying it', async () => {
@@ -171,6 +194,7 @@ describe('live workspace discovery', () => {
       applyProjection,
       vi.fn(() =>
         Promise.resolve({
+          status: 'complete' as const,
           results: [{ resourceId, match: { type: 'title' as const } }],
           snapshot: { ...snapshot, resources: [] },
         }),
@@ -191,6 +215,7 @@ describe('live workspace discovery', () => {
       applyProjection,
       vi.fn(() =>
         Promise.resolve({
+          status: 'complete' as const,
           results: [{ resourceId, match: { type: 'title' as const } }],
           snapshot: { ...snapshot, resources: [], missingResourceIds: [resourceId] },
         }),
@@ -211,6 +236,7 @@ describe('live workspace discovery', () => {
       applyProjection,
       vi.fn(() =>
         Promise.resolve({
+          status: 'complete' as const,
           results: [{ resourceId, match: { type: 'title' as const } }],
           snapshot: {
             ...snapshot,
@@ -227,9 +253,10 @@ describe('live workspace discovery', () => {
       ),
     )
 
-    await expect(search.search('discovery')).resolves.toEqual([
-      { resourceId, match: { type: 'title' } },
-    ])
+    await expect(search.search('discovery')).resolves.toEqual({
+      status: 'complete',
+      results: [{ resourceId, match: { type: 'title' } }],
+    })
     expect(applyProjection).toHaveBeenCalledOnce()
   })
 })

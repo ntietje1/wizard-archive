@@ -68,8 +68,14 @@ describe('in-memory workspace search', () => {
     )
 
     expect(getCount).toBe(1)
-    await expect(search.gateway.search('citadel')).resolves.toMatchObject([{ resourceId }])
-    await expect(search.gateway.search('citadel')).resolves.toMatchObject([{ resourceId }])
+    await expect(search.gateway.search('citadel')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ resourceId }],
+    })
+    await expect(search.gateway.search('citadel')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ resourceId }],
+    })
     expect(getCount).toBe(1)
 
     const replacementDocument = noteBlocksToYDoc(
@@ -79,11 +85,17 @@ describe('in-memory workspace search', () => {
     const replacementSession = createInMemoryNoteSession(replacementDocument, version)
     setState({ status: 'ready', session: replacementSession })
     expect(getCount).toBe(2)
-    await expect(search.gateway.search('archive')).resolves.toMatchObject([{ resourceId }])
+    await expect(search.gateway.search('archive')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ resourceId }],
+    })
 
     resources = [{ ...resources[0]!, title: canonicalizeResourceTitle('Renamed notes') }]
     resourceListener?.()
-    await expect(search.gateway.search('renamed')).resolves.toMatchObject([{ resourceId }])
+    await expect(search.gateway.search('renamed')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ resourceId }],
+    })
     expect(getCount).toBe(2)
 
     resources = [
@@ -93,12 +105,18 @@ describe('in-memory workspace search', () => {
       },
     ]
     resourceListener?.()
-    await expect(search.gateway.search('archive')).resolves.toEqual([])
+    await expect(search.gateway.search('archive')).resolves.toEqual({
+      status: 'complete',
+      results: [],
+    })
     expect(noteListeners.size).toBe(0)
 
     resources = [{ ...resources[0]!, lifecycle: { state: 'active' } }]
     resourceListener?.()
-    await expect(search.gateway.search('archive')).resolves.toMatchObject([{ resourceId }])
+    await expect(search.gateway.search('archive')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ resourceId }],
+    })
     expect(getCount).toBe(3)
     expect(noteListeners.size).toBe(1)
 

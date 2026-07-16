@@ -1,14 +1,14 @@
 import type { ResourceId } from './domain-id'
-import type { WorkspaceSearchResult } from './editor-runtime-contract'
 import {
-  MAX_WORKSPACE_SEARCH_CANDIDATES,
-  MAX_WORKSPACE_SEARCH_RESULTS,
   MAX_WORKSPACE_SEARCH_TERM_BYTES,
+  executeResourceSearchPlan,
   normalizeResourceSearchText,
-  normalizeSearchQuery,
-  searchResourceDocuments,
 } from './resource-search-policy'
-import type { ResourceSearchDocument } from './resource-search-policy'
+import type {
+  ResourceSearchDocument,
+  ResourceSearchPage,
+  WorkspaceSearchOutcome,
+} from './resource-search-policy'
 
 type IndexedSearchDocument = Readonly<{
   document: ResourceSearchDocument
@@ -16,12 +16,6 @@ type IndexedSearchDocument = Readonly<{
 }>
 
 type Posting = Array<ResourceId>
-
-type ResourceSearchQueryResult = Readonly<{
-  results: ReadonlyArray<WorkspaceSearchResult>
-  documentsVisited: number
-  complete: boolean
-}>
 
 export class ResourceSearchIndex {
   readonly #documents = new Map<ResourceId, IndexedSearchDocument>()
@@ -68,43 +62,14 @@ export class ResourceSearchIndex {
     return this.#documents.keys()
   }
 
-  search(query: string): ResourceSearchQueryResult {
-    const normalized = normalizeSearchQuery(query)
-    if (!normalized) return { results: [], documentsVisited: 0, complete: true }
-    const terms = normalized.split(' ')
-    const candidates = new Map<ResourceId, ResourceSearchDocument>()
-    let documentsVisited = 0
-    let workExhausted = false
-    const visit = (
-      resourceId: ResourceId,
-      include: boolean,
-      stopAtResultLimit: boolean,
-    ): boolean => {
-      if (documentsVisited === MAX_WORKSPACE_SEARCH_CANDIDATES) {
-        workExhausted = true
-        return false
-      }
-      documentsVisited += 1
-      const document = include ? this.#documents.get(resourceId)?.document : null
-      if (document) candidates.set(resourceId, document)
-      if (stopAtResultLimit && candidates.size === MAX_WORKSPACE_SEARCH_RESULTS) return false
-      return true
-    }
-
-    for (const resourceId of this.#titlePrefix(normalized)) {
-      if (!visit(resourceId, true, true)) break
-    }
-    if (candidates.size < MAX_WORKSPACE_SEARCH_RESULTS) {
-      this.#visitMatches(terms, this.#titleTerms, this.#titlePrefixes, terms.length === 1, visit)
-    }
-    if (candidates.size < MAX_WORKSPACE_SEARCH_RESULTS) {
-      this.#visitMatches(terms, this.#bodyTerms, this.#bodyPrefixes, true, visit)
-    }
-    return {
-      results: searchResourceDocuments(Array.from(candidates.values()), normalized),
-      documentsVisited,
-      complete: !workExhausted,
-    }
+  search(query: string): Promise<WorkspaceSearchOutcome> {
+    return executeResourceSearchPlan(query, {
+      titlePrefix: (normalized, limit) => this.#titlePrefix(normalized, limit),
+      titleMatches: (normalized, limit) =>
+        this.#matches(normalized, this.#titleTerms, this.#titlePrefixes, limit),
+      bodyMatches: (normalized, limit) =>
+        this.#matches(normalized, this.#bodyTerms, this.#bodyPrefixes, limit),
+    })
   }
 
   clear(): void {
@@ -116,40 +81,44 @@ export class ResourceSearchIndex {
     this.#bodyPrefixes.clear()
   }
 
-  #titlePrefix(query: string): ReadonlyArray<ResourceId> {
+  #titlePrefix(query: string, limit: number): ResourceSearchPage {
     const start = lowerBound(this.#ranked, (resourceId) => {
       const title = this.#documents.get(resourceId)!.normalizedTitle
       return compareText(query, title)
     })
-    const matches: Array<ResourceId> = []
+    const matches: Array<ResourceSearchDocument> = []
     for (let index = start; index < this.#ranked.length; index += 1) {
       const resourceId = this.#ranked[index]!
       if (!this.#documents.get(resourceId)!.normalizedTitle.startsWith(query)) break
-      matches.push(resourceId)
-      if (matches.length === MAX_WORKSPACE_SEARCH_RESULTS) break
+      matches.push(this.#documents.get(resourceId)!.document)
+      if (matches.length === limit) break
     }
-    return matches
+    return { documents: matches, complete: true }
   }
 
-  #visitMatches(
-    terms: ReadonlyArray<string>,
+  #matches(
+    normalizedQuery: string,
     exactPostings: ReadonlyMap<string, Posting>,
     prefixPostings: ReadonlyMap<string, Posting>,
-    stopAtResultLimit: boolean,
-    visit: (resourceId: ResourceId, include: boolean, stopAtResultLimit: boolean) => boolean,
-  ): void {
+    limit: number,
+  ): ResourceSearchPage {
+    const terms = normalizedQuery.split(' ')
     const postings = terms.map((term, index) =>
       (index === terms.length - 1 ? prefixPostings : exactPostings).get(term),
     )
-    if (postings.some((candidate) => !candidate)) return
+    if (postings.some((candidate) => !candidate)) return { documents: [], complete: true }
     const available = postings as ReadonlyArray<Posting>
     const first = available.reduce((smallest, candidate) =>
       candidate.length < smallest.length ? candidate : smallest,
     )
+    const documents: Array<ResourceSearchDocument> = []
     for (const resourceId of first) {
       const matches = available.every((candidate) => this.#has(candidate, resourceId))
-      if (!visit(resourceId, matches, stopAtResultLimit)) return
+      if (!matches) continue
+      if (documents.length === limit) return { documents, complete: false }
+      documents.push(this.#documents.get(resourceId)!.document)
     }
+    return { documents, complete: true }
   }
 
   #insertKeys(postings: Map<string, Posting>, keys: ReadonlySet<string>, resourceId: ResourceId) {
