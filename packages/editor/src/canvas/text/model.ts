@@ -133,6 +133,21 @@ export function parseCanvasTextDocument(value: unknown): CanvasTextDocument | nu
   return result.success ? result.data : null
 }
 
+export function createCanvasTextDocument(text: string): CanvasTextDocument {
+  return [{ type: 'paragraph', content: [{ type: 'text', text }] }]
+}
+
+export function canvasTextDocumentPlainText(document: CanvasTextDocument | undefined): string {
+  if (!document) return ''
+  const blocks: Array<string> = []
+  const visit = (block: CanvasTextBlock) => {
+    blocks.push(block.content?.map((content) => content.text).join('') ?? '')
+    block.children?.forEach(visit)
+  }
+  document.forEach(visit)
+  return blocks.join('\n')
+}
+
 function createCanvasTextStyleShape() {
   return Object.fromEntries(
     textStyleKeys.map((key) => [

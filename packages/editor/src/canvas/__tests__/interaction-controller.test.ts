@@ -86,7 +86,7 @@ describe('CanvasInteractionController selection', () => {
       edgeIds: new Set(['edge-b-c']),
     })
 
-    controller.reconcileSelection(new Set([NODE_B]), new Set(['edge-b-c']))
+    controller.reconcileDocument(new Set([NODE_B]), new Set(['edge-b-c']))
     expect(controller.get().selection).toEqual({
       nodeIds: new Set([NODE_B]),
       edgeIds: new Set(['edge-b-c']),
@@ -97,6 +97,52 @@ describe('CanvasInteractionController selection', () => {
       mode: 'add',
       candidate: { nodeIds: new Set([NODE_B]), edgeIds: new Set(['edge-b-c']) },
     })
+    controller.dispose()
+  })
+})
+
+describe('CanvasInteractionController pointer activities', () => {
+  it('previews a multi-node drag and commits only a non-zero delta', () => {
+    const controller = new CanvasInteractionController()
+    controller.beginDrag(
+      4,
+      { x: 100, y: 80 },
+      new Map([
+        [NODE_A, { x: 10, y: 20 }],
+        [NODE_B, { x: 50, y: 70 }],
+      ]),
+    )
+    controller.updateDrag(4, { x: 125, y: 110 })
+    expect(controller.commitDrag(4)).toEqual(
+      new Map([
+        [NODE_A, { x: 35, y: 50 }],
+        [NODE_B, { x: 75, y: 100 }],
+      ]),
+    )
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
+
+    controller.beginDrag(5, { x: 0, y: 0 }, new Map([[NODE_A, { x: 10, y: 20 }]]))
+    expect(controller.commitDrag(5)).toBeNull()
+    controller.dispose()
+  })
+
+  it('owns pan lifecycle and commits the resulting viewport once', () => {
+    const controller = new CanvasInteractionController({ x: 10, y: 20, zoom: 2 })
+    const committed = vi.fn()
+    controller.subscribeViewportCommit(committed)
+    controller.beginPan(7, { x: 100, y: 80 })
+    controller.updatePan(7, { x: 140, y: 50 })
+    expect(controller.get().viewport).toEqual({ x: 50, y: -10, zoom: 2 })
+    expect(controller.commitPan(7)).toBe(true)
+    expect(committed).toHaveBeenCalledWith({ x: 50, y: -10, zoom: 2 })
+    controller.dispose()
+  })
+
+  it('ends editing when the edited node disappears', () => {
+    const controller = new CanvasInteractionController()
+    controller.editNode(NODE_A)
+    controller.reconcileDocument(new Set([NODE_B]), new Set())
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
     controller.dispose()
   })
 })

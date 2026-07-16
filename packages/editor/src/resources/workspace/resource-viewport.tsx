@@ -28,6 +28,7 @@ import {
   resourcePresentationKey,
 } from './resource-presentation'
 import { NoteEditor } from '../../notes/note-editor'
+import { CanvasEditor } from '../../canvas/canvas-editor'
 
 export function ResourceViewport({
   actions,
@@ -94,14 +95,30 @@ export function ResourceViewport({
         />
       )
     case 'canvas':
-      return (
-        <ResourceContentViewport
-          canEdit={canEdit}
-          resource={resource}
-          source={runtime.content.canvases}
-        />
-      )
+      return <CanvasViewport canEdit={canEdit} resource={resource} runtime={runtime} />
   }
+}
+
+function CanvasViewport({
+  canEdit,
+  resource,
+  runtime,
+}: {
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  const state = useContentSnapshot(runtime.content.canvases, resource.id)
+  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
+  return (
+    <CanvasEditor
+      key={resource.id}
+      canEdit={canEdit}
+      resourceId={resource.id}
+      session={state.session}
+      title={resource.title}
+    />
+  )
 }
 
 function NoteViewport({

@@ -22,6 +22,23 @@ export type CanvasInteraction =
       mode: CanvasSelectionMode
       candidate: CanvasSelection | null
     }>
+  | Readonly<{
+      type: 'dragging'
+      pointerId: number
+      anchor: CanvasPoint
+      initialPositions: ReadonlyMap<CanvasNodeId, CanvasPoint>
+      delta: CanvasPoint
+    }>
+  | Readonly<{
+      type: 'panning'
+      pointerId: number
+      anchor: CanvasPoint
+      initialViewport: CanvasViewport
+    }>
+  | Readonly<{
+      type: 'editing'
+      nodeId: CanvasNodeId
+    }>
 
 export type CanvasInteractionSnapshot = Readonly<{
   tool: CanvasTool
@@ -98,10 +115,23 @@ function filterSelection(
 
 export function getVisualCanvasSelection(snapshot: CanvasInteractionSnapshot): CanvasSelection {
   const { interaction, selection } = snapshot
-  if (interaction.type === 'idle' || interaction.candidate === null) return selection
+  if (interaction.type !== 'selecting' || interaction.candidate === null) return selection
   return interaction.mode === 'replace'
     ? interaction.candidate
     : mergeSelection(selection, interaction.candidate)
+}
+
+export function getCanvasNodeInteractionPosition(
+  snapshot: CanvasInteractionSnapshot,
+  nodeId: CanvasNodeId,
+  documentPosition: CanvasPoint,
+): CanvasPoint {
+  const { interaction } = snapshot
+  if (interaction.type !== 'dragging') return documentPosition
+  const initial = interaction.initialPositions.get(nodeId)
+  return initial
+    ? { x: initial.x + interaction.delta.x, y: initial.y + interaction.delta.y }
+    : documentPosition
 }
 
 export function screenToCanvasPoint(
@@ -207,6 +237,98 @@ export class CanvasInteractionController {
     })
   }
 
+  beginDrag(
+    pointerId: number,
+    anchor: CanvasPoint,
+    initialPositions: ReadonlyMap<CanvasNodeId, CanvasPoint>,
+  ): void {
+    this.#assertActive()
+    if (initialPositions.size === 0) throw new Error('Canvas drag requires at least one node')
+    this.#publish({
+      ...this.#snapshot,
+      interaction: {
+        type: 'dragging',
+        pointerId,
+        anchor,
+        initialPositions: new Map(initialPositions),
+        delta: { x: 0, y: 0 },
+      },
+    })
+  }
+
+  updateDrag(pointerId: number, point: CanvasPoint): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'dragging' || interaction.pointerId !== pointerId) return
+    const delta = { x: point.x - interaction.anchor.x, y: point.y - interaction.anchor.y }
+    if (delta.x === interaction.delta.x && delta.y === interaction.delta.y) return
+    this.#publish({ ...this.#snapshot, interaction: { ...interaction, delta } })
+  }
+
+  commitDrag(pointerId: number): ReadonlyMap<CanvasNodeId, CanvasPoint> | null {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'dragging' || interaction.pointerId !== pointerId) return null
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+    if (interaction.delta.x === 0 && interaction.delta.y === 0) return null
+    return new Map(
+      Array.from(interaction.initialPositions, ([nodeId, position]) => [
+        nodeId,
+        { x: position.x + interaction.delta.x, y: position.y + interaction.delta.y },
+      ]),
+    )
+  }
+
+  beginPan(pointerId: number, anchor: CanvasPoint): void {
+    this.#assertActive()
+    this.#publish({
+      ...this.#snapshot,
+      interaction: {
+        type: 'panning',
+        pointerId,
+        anchor,
+        initialViewport: this.#snapshot.viewport,
+      },
+    })
+  }
+
+  updatePan(pointerId: number, point: CanvasPoint): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'panning' || interaction.pointerId !== pointerId) return
+    this.setViewport({
+      ...interaction.initialViewport,
+      x: interaction.initialViewport.x + point.x - interaction.anchor.x,
+      y: interaction.initialViewport.y + point.y - interaction.anchor.y,
+    })
+  }
+
+  commitPan(pointerId: number): boolean {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'panning' || interaction.pointerId !== pointerId) return false
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+    this.#notifyViewportCommit(this.#snapshot.viewport)
+    return true
+  }
+
+  editNode(nodeId: CanvasNodeId): void {
+    this.#assertActive()
+    if (
+      this.#snapshot.interaction.type === 'editing' &&
+      this.#snapshot.interaction.nodeId === nodeId
+    ) {
+      return
+    }
+    this.#publish({ ...this.#snapshot, interaction: { type: 'editing', nodeId } })
+  }
+
+  finishEditing(): void {
+    this.#assertActive()
+    if (this.#snapshot.interaction.type !== 'editing') return
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+  }
+
   previewSelection(candidate: CanvasSelection): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
@@ -239,27 +361,46 @@ export class CanvasInteractionController {
     this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
   }
 
-  reconcileSelection(nodeIds: ReadonlySet<CanvasNodeId>, edgeIds: ReadonlySet<string>): void {
+  reconcileDocument(nodeIds: ReadonlySet<CanvasNodeId>, edgeIds: ReadonlySet<string>): void {
     this.#assertActive()
     const selection = filterSelection(this.#snapshot.selection, nodeIds, edgeIds)
-    const interaction = this.#snapshot.interaction
-    const candidate =
-      interaction.type === 'selecting' && interaction.candidate
-        ? filterSelection(interaction.candidate, nodeIds, edgeIds)
-        : null
-    const nextInteraction =
-      interaction.type === 'selecting' ? { ...interaction, candidate } : interaction
+    const currentInteraction = this.#snapshot.interaction
+    let interaction: CanvasInteraction = currentInteraction
+    switch (currentInteraction.type) {
+      case 'selecting':
+        if (currentInteraction.candidate) {
+          const candidate = filterSelection(currentInteraction.candidate, nodeIds, edgeIds)
+          if (!selectionsEqual(candidate, currentInteraction.candidate)) {
+            interaction = { ...currentInteraction, candidate }
+          }
+        }
+        break
+      case 'dragging': {
+        const initialPositions = new Map(
+          Array.from(currentInteraction.initialPositions).filter(([id]) => nodeIds.has(id)),
+        )
+        interaction =
+          initialPositions.size === 0
+            ? { type: 'idle' }
+            : initialPositions.size === currentInteraction.initialPositions.size
+              ? currentInteraction
+              : { ...currentInteraction, initialPositions }
+        break
+      }
+      case 'editing':
+        if (!nodeIds.has(currentInteraction.nodeId)) interaction = { type: 'idle' }
+        break
+      case 'idle':
+      case 'panning':
+        break
+    }
     if (
       selectionsEqual(selection, this.#snapshot.selection) &&
-      (interaction.type === 'idle' ||
-        (interaction.candidate === null && candidate === null) ||
-        (interaction.candidate !== null &&
-          candidate !== null &&
-          selectionsEqual(interaction.candidate, candidate)))
+      interaction === currentInteraction
     ) {
       return
     }
-    this.#publish({ ...this.#snapshot, selection, interaction: nextInteraction })
+    this.#publish({ ...this.#snapshot, selection, interaction })
   }
 
   setViewport(viewport: CanvasViewport, commit = false): void {
