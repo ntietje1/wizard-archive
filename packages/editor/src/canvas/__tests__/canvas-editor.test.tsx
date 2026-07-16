@@ -497,7 +497,7 @@ describe('CanvasEditor', () => {
     fireEvent.pointerMove(surface, { clientX: 220, clientY: 0, pointerId: 8 })
     fireEvent.pointerMove(surface, { clientX: 220, clientY: 120, pointerId: 8 })
     expect(screen.getByTestId('canvas-lasso')).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('Selecting 1 node and 1 edge')
+    expect(await screen.findByRole('status')).toHaveTextContent('Selecting 1 node and 1 edge')
     fireEvent.pointerUp(surface, { clientX: 220, clientY: 120, pointerId: 8 })
     expect(screen.getAllByTestId('canvas-node')[0]).toHaveAttribute('data-selected', 'true')
     expect(screen.getAllByTestId('canvas-node')[1]).toHaveAttribute('data-selected', 'false')

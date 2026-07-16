@@ -42,6 +42,8 @@ import type {
 import { CanvasCollaborationCursors } from './canvas-collaboration-cursors'
 import { CanvasNodeVisual } from './canvas-node-visual'
 import { CanvasEmbedPreview } from './canvas-embed-preview'
+import { projectCanvasRenderContent } from './canvas-render-projection'
+import type { CanvasSurfaceSize } from './canvas-render-projection'
 
 export function CanvasScene({
   canEdit,
@@ -53,6 +55,7 @@ export function CanvasScene({
   onOpenContextMenu,
   previews,
   surface,
+  surfaceSize,
 }: {
   canEdit: boolean
   collaboration: ContentCollaboration
@@ -63,6 +66,7 @@ export function CanvasScene({
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   previews: CanvasPreviewSource
   surface: RefObject<HTMLElement | null>
+  surfaceSize: CanvasSurfaceSize
 }) {
   const resizedNodeBounds = canvasResizedNodeBounds(interaction)
   const visualNodes = content.nodes.map((node, index) =>
@@ -71,16 +75,21 @@ export function CanvasScene({
   const nodeById = new Map<CanvasNodeId, CanvasDocumentNode>(
     visualNodes.map((node) => [node.id, node]),
   )
+  const rendered = projectCanvasRenderContent(visualNodes, content.edges, interaction, surfaceSize)
   const visualSelection = getVisualCanvasSelection(interaction)
   return (
     <div
       className="absolute left-0 top-0 size-0 origin-top-left"
+      data-rendered-edge-count={rendered.edges.length}
+      data-rendered-node-count={rendered.nodes.length}
+      data-surface-height={surfaceSize.height}
+      data-surface-width={surfaceSize.width}
       data-testid="canvas-viewport"
       style={{
         transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
       }}
     >
-      {content.edges.map((edge, index) => (
+      {rendered.edges.map((edge, index) => (
         <svg
           key={edge.id}
           className="pointer-events-none absolute left-0 top-0 overflow-visible"
@@ -106,7 +115,7 @@ export function CanvasScene({
       <CanvasSelectionOverlay interaction={interaction} />
       <CanvasSnapGuides interaction={interaction} />
       <CanvasCollaborationCursors collaboration={collaboration} zoom={interaction.viewport.zoom} />
-      {visualNodes.map((node) => (
+      {rendered.nodes.map((node) => (
         <CanvasNode
           key={node.id}
           canEdit={canEdit}

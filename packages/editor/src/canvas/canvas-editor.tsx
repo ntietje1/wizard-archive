@@ -4,6 +4,7 @@ import { createCanvasDocumentController } from './document-controller'
 import { createCanvasInteractionController } from './interaction-controller'
 import type { CanvasPreviewSource, CanvasSession } from '../resources/content-session-contract'
 import type { ResourceId } from '../resources/domain-id'
+import { createCanvasInteractionRenderStore } from './interaction-render-store'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
@@ -16,6 +17,7 @@ type CanvasEditorProps = Readonly<{
 type CanvasEditorRuntime = Readonly<{
   documentController: ReturnType<typeof createCanvasDocumentController>
   interactionController: ReturnType<typeof createCanvasInteractionController>
+  interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
 }>
 
 export function CanvasEditor(props: CanvasEditorProps) {
@@ -28,6 +30,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
       collaboration={props.session.collaboration}
       documentController={runtime.documentController}
       interactionController={runtime.interactionController}
+      interactionRenderStore={runtime.interactionRenderStore}
       previews={props.previews}
       resourceId={props.resourceId}
       title={props.title}
@@ -43,17 +46,20 @@ function createCanvasEditorRuntimeStore(document: CanvasSession['document']) {
     listeners.add(listener)
     if (!runtime) {
       const documentController = createCanvasDocumentController(document)
+      const interactionController = createCanvasInteractionController({
+        readContent: () => documentController.read(),
+      })
       runtime = {
         documentController,
-        interactionController: createCanvasInteractionController({
-          readContent: () => documentController.read(),
-        }),
+        interactionController,
+        interactionRenderStore: createCanvasInteractionRenderStore(interactionController),
       }
       listener()
     }
     return () => {
       listeners.delete(listener)
       if (listeners.size > 0 || !runtime) return
+      runtime.interactionRenderStore.dispose()
       runtime.interactionController.dispose()
       runtime.documentController.dispose()
       runtime = null

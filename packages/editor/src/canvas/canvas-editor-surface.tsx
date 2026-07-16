@@ -6,6 +6,7 @@ import type { CanvasClipboardEntry } from './canvas-clipboard'
 import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-contract'
 import { screenToCanvasPoint } from './canvas-viewport'
 import type { CanvasInteractionController } from './interaction-controller'
+import type { createCanvasInteractionRenderStore } from './interaction-render-store'
 import type { CanvasPoint, CanvasSelection, CanvasTool } from './interaction-types'
 import { CanvasScene } from './canvas-scene'
 import { CanvasContextMenu } from './canvas-context-menu'
@@ -24,6 +25,7 @@ import type {
   ContentCollaboration,
 } from '../resources/content-session-contract'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
+import { useCanvasSurface } from './use-canvas-surface'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
 const DEFAULT_DRAW_STYLE = { color: 'var(--foreground)', size: 4, opacity: 100 } as const
@@ -42,6 +44,7 @@ type CanvasEditorSurfaceProps = Readonly<{
   collaboration: ContentCollaboration
   documentController: CanvasDocumentController
   interactionController: CanvasInteractionController
+  interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
   previews: CanvasPreviewSource
   resourceId: ResourceId
   title: string
@@ -52,18 +55,19 @@ export function CanvasEditorSurface({
   collaboration,
   documentController,
   interactionController,
+  interactionRenderStore,
   previews,
   resourceId,
   title,
 }: CanvasEditorSurfaceProps) {
   const clipboard = useRef<CanvasClipboardEntry | null>(null)
-  const surface = useRef<HTMLElement>(null)
+  const { attach: attachSurface, size: surfaceSize, surface } = useCanvasSurface()
   const [contextMenu, setContextMenu] = useState<CanvasContextMenuRequest | null>(null)
   const content = useCanvasDocumentContent(documentController)
   const interaction = useSyncExternalStore(
-    interactionController.subscribe,
-    interactionController.get,
-    interactionController.get,
+    interactionRenderStore.subscribe,
+    interactionRenderStore.get,
+    interactionRenderStore.get,
   )
   const history = useCanvasHistoryState(documentController)
 
@@ -240,7 +244,7 @@ export function CanvasEditorSurface({
         />
       )}
       <section
-        ref={surface}
+        ref={attachSurface}
         aria-label="Canvas surface"
         className={`relative size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
         data-tool={interaction.tool}
@@ -320,6 +324,7 @@ export function CanvasEditorSurface({
           onOpenContextMenu={openSelectionContextMenu}
           previews={previews}
           surface={surface}
+          surfaceSize={surfaceSize}
         />
       </section>
     </div>
