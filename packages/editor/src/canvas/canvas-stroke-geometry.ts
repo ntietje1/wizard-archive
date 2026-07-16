@@ -1,49 +1,51 @@
 import type { CanvasDocumentNode, CanvasStrokeDocumentNode } from './document-contract'
 import { canvasNodeSize } from './canvas-layout'
-import type { CanvasDrawPoint, CanvasPoint } from './interaction-controller'
+import type { CanvasDrawPoint, CanvasPoint } from './interaction-types'
 import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { CanvasCandidateWorkBudget } from './workload'
 import { canvasNodeBounds } from './canvas-bounds'
+import { createCanvasBoundsIndex } from './bounds-index'
 
-export function findCanvasStrokesIntersectingTrail(
-  nodes: ReadonlyArray<CanvasDocumentNode>,
-  trail: ReadonlyArray<CanvasPoint>,
-  alreadyMarked: ReadonlySet<CanvasNodeId>,
-  budget: CanvasCandidateWorkBudget,
-): ReadonlySet<CanvasNodeId> {
-  const marked = new Set(alreadyMarked)
-  if (budget.exhausted) return marked
-  if (trail.length < 2) return marked
-  const trailBounds = canvasStrokeBounds(
-    trail.map(({ x, y }) => [x, y, 0] as const),
-    0,
+type CanvasEraserQuery = Readonly<{
+  nodeIds: ReadonlySet<CanvasNodeId>
+  exhausted: boolean
+  visited: number
+}>
+
+export function createCanvasEraserCandidateIndex(nodes: ReadonlyArray<CanvasDocumentNode>) {
+  const index = createCanvasBoundsIndex(
+    nodes.flatMap((node) =>
+      node.type === 'stroke' && !node.hidden
+        ? [{ bounds: canvasNodeBounds(node), value: node }]
+        : [],
+    ),
   )
-  for (const node of nodes) {
-    if (!budget.consume()) break
-    if (
-      node.type === 'stroke' &&
-      !node.hidden &&
-      !marked.has(node.id) &&
-      boundsIntersect(trailBounds, canvasNodeBounds(node)) &&
-      canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node), budget)
-    ) {
-      marked.add(node.id)
-    }
+  return {
+    erase(
+      trail: ReadonlyArray<CanvasPoint>,
+      alreadyMarked: ReadonlySet<CanvasNodeId>,
+      budget: CanvasCandidateWorkBudget,
+    ): CanvasEraserQuery {
+      const marked = new Set(alreadyMarked)
+      if (trail.length < 2) return { nodeIds: marked, exhausted: false, visited: 0 }
+      const trailBounds = canvasStrokeBounds(
+        trail.map(({ x, y }) => [x, y, 0] as const),
+        0,
+      )
+      const query = index.query(trailBounds, budget)
+      for (const node of query.values) {
+        if (marked.has(node.id)) continue
+        if (canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node), budget)) {
+          marked.add(node.id)
+        }
+        if (budget.exhausted) {
+          return { nodeIds: alreadyMarked, exhausted: true, visited: query.visited }
+        }
+      }
+      return { nodeIds: marked, exhausted: false, visited: query.visited }
+    },
   }
-  return budget.exhausted ? new Set(alreadyMarked) : marked
-}
-
-function boundsIntersect(
-  left: ReturnType<typeof canvasStrokeBounds>,
-  right: ReturnType<typeof canvasNodeBounds>,
-) {
-  return (
-    left.x <= right.x + right.width &&
-    left.x + left.width >= right.x &&
-    left.y <= right.y + right.height &&
-    left.y + left.height >= right.y
-  )
 }
 
 export function canvasStrokeBounds(points: ReadonlyArray<CanvasDrawPoint>, size: number) {

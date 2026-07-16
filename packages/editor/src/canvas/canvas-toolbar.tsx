@@ -19,8 +19,8 @@ import type { CanvasDocumentContent } from './document-contract'
 import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
-  CanvasTool,
 } from './interaction-controller'
+import type { CanvasTool } from './interaction-types'
 import { fitCanvasContent } from './canvas-layout'
 
 const TOOL_BUTTONS: ReadonlyArray<Readonly<{ tool: CanvasTool; label: string; icon: LucideIcon }>> =

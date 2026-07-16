@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { CanvasDocumentContent } from '../document-contract'
-import {
-  canvasBoundsFromPoints,
-  selectCanvasContentInPolygon,
-  selectCanvasContentInRectangle,
-} from '../selection-geometry'
+import { canvasBoundsFromPoints, createCanvasSelectionCandidateIndex } from '../selection-geometry'
 import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
 
@@ -50,13 +46,13 @@ const CONTENT: CanvasDocumentContent = {
   edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
 }
 
+const INDEX = createCanvasSelectionCandidateIndex(CONTENT)
+
 describe('canvas selection geometry', () => {
   it('normalizes drag direction and selects partially overlapping surface nodes', () => {
     const bounds = canvasBoundsFromPoints({ x: 30, y: 30 }, { x: 0, y: 0 })
     expect(bounds).toEqual({ x: 0, y: 0, width: 30, height: 30 })
-    expect(
-      selectCanvasContentInRectangle(CONTENT, bounds, 1, createCanvasCandidateWorkBudget()),
-    ).toEqual({
+    expect(INDEX.rectangle(bounds, 1, createCanvasCandidateWorkBudget()).selection).toEqual({
       nodeIds: new Set([NODE_A]),
       edgeIds: new Set(),
     })
@@ -64,38 +60,34 @@ describe('canvas selection geometry', () => {
 
   it('selects edge paths independently of their endpoint nodes', () => {
     expect(
-      selectCanvasContentInRectangle(
-        CONTENT,
+      INDEX.rectangle(
         { x: 110, y: 45, width: 80, height: 10 },
         1,
         createCanvasCandidateWorkBudget(),
-      ),
+      ).selection,
     ).toEqual({ nodeIds: new Set(), edgeIds: new Set(['edge-a-b']) })
   })
 
   it('uses screen-space padding and rendered offsets for stroke selection', () => {
     expect(
-      selectCanvasContentInRectangle(
-        CONTENT,
+      INDEX.rectangle(
         { x: 440, y: 120, width: 20, height: 1 },
         1,
         createCanvasCandidateWorkBudget(),
-      ).nodeIds,
+      ).selection.nodeIds,
     ).toEqual(new Set([STROKE]))
     expect(
-      selectCanvasContentInRectangle(
-        CONTENT,
+      INDEX.rectangle(
         { x: 440, y: 120, width: 20, height: 1 },
         4,
         createCanvasCandidateWorkBudget(),
-      ).nodeIds,
+      ).selection.nodeIds,
     ).toEqual(new Set())
   })
 
   it('selects mixed node-edge content intersecting a lasso polygon', () => {
     expect(
-      selectCanvasContentInPolygon(
-        CONTENT,
+      INDEX.polygon(
         [
           { x: 190, y: 0 },
           { x: 300, y: 0 },
@@ -103,20 +95,19 @@ describe('canvas selection geometry', () => {
           { x: 190, y: 100 },
         ],
         createCanvasCandidateWorkBudget(),
-      ),
+      ).selection,
     ).toEqual({ nodeIds: new Set([NODE_B]), edgeIds: new Set(['edge-a-b']) })
   })
 
   it('ignores short lasso trails and hidden content', () => {
     expect(
-      selectCanvasContentInPolygon(
-        CONTENT,
+      INDEX.polygon(
         [
           { x: 0, y: 0 },
           { x: 10, y: 10 },
         ],
         createCanvasCandidateWorkBudget(),
-      ),
+      ).selection,
     ).toEqual({
       nodeIds: new Set(),
       edgeIds: new Set(),
@@ -126,12 +117,11 @@ describe('canvas selection geometry', () => {
       edges: CONTENT.edges.map((edge) => ({ ...edge, hidden: true })),
     }
     expect(
-      selectCanvasContentInRectangle(
-        hidden,
+      createCanvasSelectionCandidateIndex(hidden).rectangle(
         { x: 0, y: 0, width: 600, height: 300 },
         1,
         createCanvasCandidateWorkBudget(),
-      ),
+      ).selection,
     ).toEqual({ nodeIds: new Set(), edgeIds: new Set() })
   })
 
@@ -160,12 +150,13 @@ describe('canvas selection geometry', () => {
       const budget = createCanvasCandidateWorkBudget()
       return {
         budget,
-        selection: selectCanvasContentInRectangle(content, bounds, 1, budget),
+        selection: createCanvasSelectionCandidateIndex(content).rectangle(bounds, 1, budget)
+          .selection,
       }
     }
     const first = select()
     expect(select().selection).toEqual(first.selection)
-    expect(first.budget.exhausted).toBe(true)
+    expect(first.budget.exhausted).toBe(false)
     expect(first.selection).toEqual({ nodeIds: new Set(), edgeIds: new Set() })
   })
 })

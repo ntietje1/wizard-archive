@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { canvasEdgePath, findCanvasConnectionTarget } from '../canvas-edge-geometry'
+import { canvasEdgePath, createCanvasConnectionCandidateIndex } from '../canvas-edge-geometry'
 import type { CanvasDocumentNode } from '../document-contract'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
@@ -29,23 +29,12 @@ describe('canvas edge geometry', () => {
   })
 
   it('snaps to the nearest non-source node handle within the canvas-space radius', () => {
+    const index = createCanvasConnectionCandidateIndex(NODES)
     expect(
-      findCanvasConnectionTarget(
-        NODES,
-        NODE_A,
-        { x: 302, y: 80 },
-        20,
-        createCanvasCandidateWorkBudget(),
-      ),
+      index.find(NODE_A, { x: 302, y: 80 }, 20, createCanvasCandidateWorkBudget()).target,
     ).toEqual({ nodeId: NODE_B, handle: 'left' })
     expect(
-      findCanvasConnectionTarget(
-        NODES,
-        NODE_A,
-        { x: 250, y: 80 },
-        20,
-        createCanvasCandidateWorkBudget(),
-      ),
+      index.find(NODE_A, { x: 250, y: 80 }, 20, createCanvasCandidateWorkBudget()).target,
     ).toBeNull()
   })
 
@@ -54,8 +43,11 @@ describe('canvas edge geometry', () => {
     let consumed = 0
     while (budget.consume()) consumed += 1
 
-    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerGesture)
-    expect(findCanvasConnectionTarget(NODES, NODE_A, { x: 302, y: 80 }, 20, budget)).toBeNull()
+    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerQuery)
+    expect(
+      createCanvasConnectionCandidateIndex(NODES).find(NODE_A, { x: 302, y: 80 }, 20, budget)
+        .target,
+    ).toBeNull()
     expect(budget.exhausted).toBe(true)
   })
 })

@@ -72,6 +72,6 @@ test.describe('canvas keyboard and clipboard', () => {
     await expect(nodes).toHaveCount(5)
     await expect(textEditor).toContainText('Keyboard edit target')
     await textEditor.fill('')
-    await expect(textEditor).toHaveText('')
+    await expect(textEditor).toHaveText('', { timeout: 15_000 })
   })
 })

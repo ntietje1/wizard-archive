@@ -1,5 +1,5 @@
 import type { CanvasBounds } from './canvas-bounds'
-import type { CanvasResizeHandle } from './interaction-controller'
+import type { CanvasResizeHandle } from './interaction-types'
 import { bestSnapCandidate, canvasSnapThreshold, snapGuide } from './canvas-snap-geometry'
 import type { CanvasSnapCandidate, CanvasSnapGuide } from './canvas-snap-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'

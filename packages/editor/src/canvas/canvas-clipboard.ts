@@ -5,7 +5,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from './document-contract'
-import type { CanvasSelection } from './interaction-controller'
+import type { CanvasSelection } from './interaction-types'
 import { canvasContentWithinWorkload, canvasSelectionWithinWorkload } from './workload'
 import { duplicateCanvasTextDocument } from './text/model'
 import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../resources/domain-id'

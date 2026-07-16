@@ -39,9 +39,12 @@ function createCanvasEditorRuntimeStore(document: CanvasSession['document']) {
   const subscribe = (listener: () => void) => {
     listeners.add(listener)
     if (!runtime) {
+      const documentController = createCanvasDocumentController(document)
       runtime = {
-        documentController: createCanvasDocumentController(document),
-        interactionController: createCanvasInteractionController(),
+        documentController,
+        interactionController: createCanvasInteractionController({
+          readContent: () => documentController.read(),
+        }),
       }
       listener()
     }

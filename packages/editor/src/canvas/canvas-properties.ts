@@ -9,7 +9,7 @@ import type {
   CanvasDocumentNode,
   CanvasEdgeType,
 } from './document-contract'
-import type { CanvasSelection } from './interaction-controller'
+import type { CanvasSelection } from './interaction-types'
 
 type CanvasPropertyCommand =
   | Readonly<{ property: 'fill'; value: string | null }>

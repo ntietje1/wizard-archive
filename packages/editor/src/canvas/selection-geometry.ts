@@ -4,12 +4,121 @@ import { canvasNodeSize } from './canvas-layout'
 import { canvasStrokeDocumentPoints } from './canvas-stroke-geometry'
 import type { CanvasDocumentContent, CanvasDocumentNode } from './document-contract'
 import { canvasPolylinesIntersect } from './polyline-geometry'
-import type { CanvasPoint, CanvasSelection } from './interaction-controller'
+import type { CanvasPoint, CanvasSelection } from './interaction-types'
 import type { CanvasNodeId } from '../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS } from './workload'
 import type { CanvasCandidateWorkBudget } from './workload'
+import { createCanvasBoundsIndex } from './bounds-index'
 
 const STROKE_SELECTION_PADDING_PX = 12
+
+type CanvasSelectionNodeCandidate = Readonly<{
+  node: CanvasDocumentNode
+  bounds: CanvasBounds
+}>
+
+type CanvasSelectionEdgeCandidate = Readonly<{
+  id: string
+  path: ReadonlyArray<CanvasPoint>
+}>
+
+type CanvasSelectionQuery = Readonly<{
+  selection: CanvasSelection
+  exhausted: boolean
+  visited: number
+}>
+
+export function createCanvasSelectionCandidateIndex(content: CanvasDocumentContent) {
+  const nodesById = new Map(content.nodes.map((node) => [node.id, node]))
+  const nodes = content.nodes.flatMap((node) => {
+    if (node.hidden) return []
+    return [{ node, bounds: nodeBounds(node) }]
+  })
+  const edges = content.edges.flatMap((edge) => {
+    if (edge.hidden) return []
+    const path = canvasEdgePolyline(edge, nodesById)
+    return path ? [{ id: edge.id, path }] : []
+  })
+  const nodeIndex = createCanvasBoundsIndex(
+    nodes.map((candidate) => ({ bounds: candidate.bounds, value: candidate })),
+  )
+  const edgeIndex = createCanvasBoundsIndex(
+    edges.map((candidate) => ({ bounds: pointsBounds(candidate.path), value: candidate })),
+  )
+  const strokePadding = Math.max(
+    0,
+    ...nodes.map(({ node }) => (node.type === 'stroke' ? node.data.size / 2 : 0)),
+  )
+  const select = (
+    queryBounds: CanvasBounds,
+    nodeMatches: (candidate: CanvasSelectionNodeCandidate) => boolean,
+    edgeMatches: (candidate: CanvasSelectionEdgeCandidate) => boolean,
+    budget: CanvasCandidateWorkBudget,
+  ): CanvasSelectionQuery => {
+    const nodeQuery = nodeIndex.query(queryBounds, budget)
+    const nodeIds = new Set<CanvasNodeId>()
+    for (const candidate of nodeQuery.values) {
+      if (nodeMatches(candidate)) nodeIds.add(candidate.node.id)
+      if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements || budget.exhausted) break
+    }
+    if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements || budget.exhausted) {
+      return {
+        selection: { nodeIds, edgeIds: new Set() },
+        exhausted: budget.exhausted,
+        visited: nodeQuery.visited,
+      }
+    }
+    const edgeQuery = edgeIndex.query(queryBounds, budget)
+    const edgeIds = new Set<string>()
+    for (const candidate of edgeQuery.values) {
+      if (edgeMatches(candidate)) edgeIds.add(candidate.id)
+      if (
+        nodeIds.size + edgeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements ||
+        budget.exhausted
+      ) {
+        break
+      }
+    }
+    return {
+      selection: { nodeIds, edgeIds },
+      exhausted: budget.exhausted,
+      visited: nodeQuery.visited + edgeQuery.visited,
+    }
+  }
+  return {
+    rectangle(
+      bounds: CanvasBounds,
+      zoom: number,
+      budget: CanvasCandidateWorkBudget,
+    ): CanvasSelectionQuery {
+      const queryBounds = expandBounds(
+        bounds,
+        Math.max(strokePadding, STROKE_SELECTION_PADDING_PX / zoom),
+      )
+      return select(
+        queryBounds,
+        (candidate) => nodeIntersectsRectangle(candidate.node, bounds, zoom, budget),
+        (candidate) => polylineIntersectsRectangle(candidate.path, bounds, budget),
+        budget,
+      )
+    },
+    polygon(
+      polygon: ReadonlyArray<CanvasPoint>,
+      budget: CanvasCandidateWorkBudget,
+    ): CanvasSelectionQuery {
+      if (polygon.length < 3) {
+        return { selection: emptySelection(), exhausted: false, visited: 0 }
+      }
+      const queryBounds = expandBounds(pointsBounds(polygon), strokePadding)
+      return select(
+        queryBounds,
+        (candidate) => nodeIntersectsPolygon(candidate.node, polygon, budget),
+        (candidate) => polylineIntersectsPolygon(candidate.path, polygon, budget),
+        budget,
+      )
+    },
+  }
+}
 
 export function canvasBoundsFromPoints(start: CanvasPoint, end: CanvasPoint): CanvasBounds {
   return {
@@ -18,78 +127,6 @@ export function canvasBoundsFromPoints(start: CanvasPoint, end: CanvasPoint): Ca
     width: Math.abs(end.x - start.x),
     height: Math.abs(end.y - start.y),
   }
-}
-
-export function selectCanvasContentInRectangle(
-  content: CanvasDocumentContent,
-  bounds: CanvasBounds,
-  zoom: number,
-  budget: CanvasCandidateWorkBudget,
-): CanvasSelection {
-  return selectCanvasContent(
-    content,
-    (node, work) => nodeIntersectsRectangle(node, bounds, zoom, work),
-    (path, work) => polylineIntersectsRectangle(path, bounds, work),
-    budget,
-  )
-}
-
-export function selectCanvasContentInPolygon(
-  content: CanvasDocumentContent,
-  polygon: ReadonlyArray<CanvasPoint>,
-  budget: CanvasCandidateWorkBudget,
-): CanvasSelection {
-  if (polygon.length < 3) return emptySelection()
-  return selectCanvasContent(
-    content,
-    (node, work) => nodeIntersectsPolygon(node, polygon, work),
-    (path, work) => polylineIntersectsPolygon(path, polygon, work),
-    budget,
-  )
-}
-
-function selectCanvasContent(
-  content: CanvasDocumentContent,
-  nodeMatches: (node: CanvasDocumentNode, budget: CanvasCandidateWorkBudget) => boolean,
-  edgeMatches: (path: ReadonlyArray<CanvasPoint>, budget: CanvasCandidateWorkBudget) => boolean,
-  budget: CanvasCandidateWorkBudget,
-): CanvasSelection {
-  const nodeIds = selectCanvasNodes(content.nodes, nodeMatches, budget)
-  return { nodeIds, edgeIds: selectCanvasEdges(content, nodeIds, edgeMatches, budget) }
-}
-
-function selectCanvasNodes(
-  nodes: CanvasDocumentContent['nodes'],
-  matches: (node: CanvasDocumentNode, budget: CanvasCandidateWorkBudget) => boolean,
-  budget: CanvasCandidateWorkBudget,
-): Set<CanvasNodeId> {
-  const nodeIds = new Set<CanvasNodeId>()
-  if (budget.exhausted) return nodeIds
-  for (const node of nodes) {
-    if (!budget.consume()) break
-    if (!node.hidden && matches(node, budget)) nodeIds.add(node.id)
-    if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) break
-  }
-  return nodeIds
-}
-
-function selectCanvasEdges(
-  content: CanvasDocumentContent,
-  nodeIds: ReadonlySet<CanvasNodeId>,
-  matches: (path: ReadonlyArray<CanvasPoint>, budget: CanvasCandidateWorkBudget) => boolean,
-  budget: CanvasCandidateWorkBudget,
-): Set<string> {
-  const edgeIds = new Set<string>()
-  if (budget.exhausted) return edgeIds
-  const nodesById = new Map(content.nodes.map((node) => [node.id, node]))
-  for (const edge of content.edges) {
-    if (!budget.consume()) break
-    if (nodeIds.size + edgeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) break
-    if (edge.hidden) continue
-    const path = canvasEdgePolyline(edge, nodesById)
-    if (path && matches(path, budget)) edgeIds.add(edge.id)
-  }
-  return edgeIds
 }
 
 function nodeIntersectsRectangle(
@@ -242,4 +279,18 @@ function pointInPolygon(
     }
   }
   return inside
+}
+
+function pointsBounds(points: ReadonlyArray<CanvasPoint>): CanvasBounds {
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  for (const point of points) {
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 }

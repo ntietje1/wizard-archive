@@ -1,5 +1,5 @@
-import { DEFAULT_CANVAS_VIEWPORT } from './interaction-controller'
-import type { CanvasViewport } from './interaction-controller'
+import { DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport'
+import type { CanvasViewport } from './interaction-types'
 import type { ResourceId } from '../resources/domain-id'
 
 type CanvasViewportStorage = Pick<Storage, 'getItem' | 'setItem'>

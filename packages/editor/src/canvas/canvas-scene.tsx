@@ -16,20 +16,21 @@ import {
   getCanvasNodeInteractionPosition,
   getCanvasDrawingPoints,
   getVisualCanvasSelection,
-  screenToCanvasPoint,
 } from './interaction-controller'
+import { screenToCanvasPoint } from './canvas-viewport'
 import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
+} from './interaction-controller'
+import type {
   CanvasConnectionHandle,
   CanvasPoint,
   CanvasSelection,
   CanvasViewport,
-} from './interaction-controller'
+} from './interaction-types'
 import { canvasNodeSize } from './canvas-layout'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { CanvasSelectionBounds } from './canvas-selection-bounds'
-import { canvasDragSnapBounds, resolveCanvasDrag } from './canvas-snap-geometry'
 import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
@@ -227,13 +228,12 @@ function CanvasNode({
         })
       }
       onPointerMove={(event) =>
-        updateNodeDrag(event, content, interaction.viewport, interactionController, surface)
+        updateNodeDrag(event, interaction.viewport, interactionController, surface)
       }
       onPointerUp={(event) =>
         commitNodeDrag(
           canEdit,
           event,
-          content,
           interaction.viewport,
           documentController,
           interactionController,
@@ -371,7 +371,6 @@ function beginNodeDrag({
 
 function updateNodeDrag(
   event: PointerEvent<HTMLDivElement>,
-  content: CanvasDocumentContent,
   viewport: CanvasViewport,
   interactionController: CanvasInteractionController,
   surface: RefObject<HTMLElement | null>,
@@ -379,36 +378,21 @@ function updateNodeDrag(
   if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
   const bounds = surface.current?.getBoundingClientRect()
   if (!bounds) return
-  const dragging = interactionController.get().interaction
-  if (dragging.type !== 'dragging' || dragging.pointerId !== event.pointerId) return
   const point = screenToCanvasPoint({ x: event.clientX, y: event.clientY }, viewport, {
     x: bounds.left,
     y: bounds.top,
   })
-  const constrain = event.shiftKey
-  const snap = event.metaKey || event.ctrlKey
-  const resolved = interactionController.withCandidateWork(event.pointerId, (candidateWork) => {
-    const snapBounds =
-      snap && !constrain
-        ? canvasDragSnapBounds(content.nodes, dragging.initialPositions, candidateWork)
-        : { draggedBounds: [], targetBounds: [] }
-    return resolveCanvasDrag({
-      delta: { x: point.x - dragging.anchor.x, y: point.y - dragging.anchor.y },
-      ...snapBounds,
-      constrain,
-      snap,
-      zoom: viewport.zoom,
-      candidateWork,
-    })
-  })
-  if (!resolved) return
-  interactionController.updateDrag(event.pointerId, resolved.delta, resolved.guides)
+  interactionController.updateDrag(
+    event.pointerId,
+    point,
+    event.shiftKey,
+    event.metaKey || event.ctrlKey,
+  )
 }
 
 function commitNodeDrag(
   canEdit: boolean,
   event: PointerEvent<HTMLDivElement>,
-  content: CanvasDocumentContent,
   viewport: CanvasViewport,
   documentController: CanvasDocumentController,
   interactionController: CanvasInteractionController,
@@ -418,7 +402,7 @@ function commitNodeDrag(
     interactionController.cancelInteraction()
     return
   }
-  updateNodeDrag(event, content, viewport, interactionController, surface)
+  updateNodeDrag(event, viewport, interactionController, surface)
   if (event.currentTarget.hasPointerCapture(event.pointerId)) {
     event.currentTarget.releasePointerCapture(event.pointerId)
   }

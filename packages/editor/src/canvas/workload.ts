@@ -12,7 +12,7 @@ export const CANVAS_WORKLOAD_LIMITS = Object.freeze({
   pointsPerStroke: 2048,
   selectedElements: 128,
   gesturePoints: 512,
-  candidateWorkPerGesture: 12_288,
+  candidateWorkPerQuery: 12_288,
 })
 
 type CanvasWorkloadContent = Readonly<{
@@ -116,7 +116,7 @@ export function createCanvasCandidateWorkBudget(): CanvasCandidateWorkBudget {
 
 class CandidateWorkBudget implements CanvasCandidateWorkBudget {
   #exhausted = false
-  #remaining: number = CANVAS_WORKLOAD_LIMITS.candidateWorkPerGesture
+  #remaining: number = CANVAS_WORKLOAD_LIMITS.candidateWorkPerQuery
 
   get exhausted(): boolean {
     return this.#exhausted

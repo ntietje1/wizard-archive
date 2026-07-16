@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import type { CanvasDocumentNode } from '../document-contract'
 import {
   canvasStrokeLocalPoints,
-  findCanvasStrokesIntersectingTrail,
+  createCanvasEraserCandidateIndex,
 } from '../canvas-stroke-geometry'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
@@ -41,28 +41,27 @@ describe('canvas stroke eraser geometry', () => {
         data: {},
       },
     ]
+    const index = createCanvasEraserCandidateIndex(nodes)
 
     expect(
-      findCanvasStrokesIntersectingTrail(
-        nodes,
+      index.erase(
         [
           { x: 40, y: 0 },
           { x: 40, y: 40 },
         ],
         new Set(),
         createCanvasCandidateWorkBudget(),
-      ),
+      ).nodeIds,
     ).toEqual(new Set([HIT]))
     expect(
-      findCanvasStrokesIntersectingTrail(
-        nodes,
+      index.erase(
         [
           { x: 40, y: 100 },
           { x: 40, y: 140 },
         ],
         new Set([HIT]),
         createCanvasCandidateWorkBudget(),
-      ),
+      ).nodeIds,
     ).toEqual(new Set([HIT, MISS]))
   })
 
@@ -81,17 +80,16 @@ describe('canvas stroke eraser geometry', () => {
     let consumed = 0
     while (budget.consume()) consumed += 1
 
-    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerGesture)
+    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerQuery)
     expect(
-      findCanvasStrokesIntersectingTrail(
-        [stroke(HIT, 10), stroke(MISS, 10)],
+      createCanvasEraserCandidateIndex([stroke(HIT, 10), stroke(MISS, 10)]).erase(
         [
           { x: 40, y: 0 },
           { x: 40, y: 40 },
         ],
         new Set([HIT]),
         budget,
-      ),
+      ).nodeIds,
     ).toEqual(new Set([HIT]))
     expect(budget.exhausted).toBe(true)
   })

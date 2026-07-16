@@ -1,21 +1,56 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import {
-  canvasToScreenPoint,
   createCanvasInteractionController,
   getCanvasDrawingPoints,
   getVisualCanvasSelection,
-  screenToCanvasPoint,
 } from '../interaction-controller'
+import { canvasToScreenPoint, screenToCanvasPoint } from '../canvas-viewport'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS } from '../workload'
-import type { CanvasCandidateWorkBudget } from '../workload'
+import type { CanvasDocumentContent } from '../document-contract'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
 
+const CONTENT: CanvasDocumentContent = {
+  nodes: [
+    { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+    { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+  ],
+  edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
+}
+
+const STROKE_CONTENT: CanvasDocumentContent = {
+  nodes: [strokeNode(NODE_A, 0), strokeNode(NODE_B, 300)],
+  edges: [],
+}
+
+function strokeNode(id: typeof NODE_A, x: number): CanvasDocumentContent['nodes'][number] {
+  return {
+    id,
+    type: 'stroke',
+    position: { x, y: 0 },
+    width: 100,
+    height: 20,
+    data: {
+      bounds: { x: 0, y: 0, width: 100, height: 20 },
+      points: [
+        [0, 10, 0.5],
+        [100, 10, 0.5],
+      ],
+      color: '#000000',
+      size: 4,
+    },
+  }
+}
+
+function contentController(content = CONTENT) {
+  return createCanvasInteractionController({ readContent: () => content })
+}
+
 describe('CanvasInteractionController selection', () => {
   it('keeps click and additive node-edge selection in one authoritative snapshot', () => {
-    const controller = createCanvasInteractionController()
+    const controller = contentController()
 
     controller.selectNode(NODE_A, false)
     controller.selectNode(NODE_B, true)
@@ -39,19 +74,12 @@ describe('CanvasInteractionController selection', () => {
   })
 
   it('models selection preview as one valid discriminated interaction', () => {
-    const controller = createCanvasInteractionController()
+    const controller = contentController()
     controller.selectNode(NODE_A, false)
     controller.beginSelection('marquee', 'add', 1, { x: 10, y: 20 })
 
     expect(getVisualCanvasSelection(controller.get()).nodeIds).toEqual(new Set([NODE_A]))
-    controller.updateSelection(
-      1,
-      { x: 50, y: 60 },
-      {
-        nodeIds: new Set([NODE_B]),
-        edgeIds: new Set(['edge-a-b']),
-      },
-    )
+    controller.updateSelection(1, { x: 400, y: 200 })
     expect(getVisualCanvasSelection(controller.get())).toEqual({
       nodeIds: new Set([NODE_A, NODE_B]),
       edgeIds: new Set(['edge-a-b']),
@@ -69,29 +97,15 @@ describe('CanvasInteractionController selection', () => {
   })
 
   it('cancels previews on escape or tool change without changing committed selection', () => {
-    const controller = createCanvasInteractionController()
+    const controller = contentController()
     controller.selectNode(NODE_A, false)
     controller.beginSelection('lasso', 'replace', 1, { x: 0, y: 0 })
-    controller.updateSelection(
-      1,
-      { x: 10, y: 0 },
-      {
-        nodeIds: new Set([NODE_B]),
-        edgeIds: new Set(),
-      },
-    )
+    controller.updateSelection(1, { x: 400, y: 0 })
     controller.cancelInteraction()
     expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_A]))
 
     controller.beginSelection('marquee', 'replace', 2, { x: 0, y: 0 })
-    controller.updateSelection(
-      2,
-      { x: 10, y: 10 },
-      {
-        nodeIds: new Set([NODE_B]),
-        edgeIds: new Set(),
-      },
-    )
+    controller.updateSelection(2, { x: 400, y: 200 })
     controller.setTool('hand')
     expect(controller.get()).toMatchObject({ tool: 'hand', interaction: { type: 'idle' } })
     expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_A]))
@@ -99,20 +113,13 @@ describe('CanvasInteractionController selection', () => {
   })
 
   it('prunes local committed and preview selection after document changes', () => {
-    const controller = createCanvasInteractionController()
+    const controller = contentController()
     controller.setSelection({
       nodeIds: new Set([NODE_A, NODE_B]),
       edgeIds: new Set(['edge-a-b', 'edge-b-c']),
     })
     controller.beginSelection('marquee', 'add', 3, { x: 5, y: 10 })
-    controller.updateSelection(
-      3,
-      { x: 15, y: 20 },
-      {
-        nodeIds: new Set([NODE_A, NODE_B]),
-        edgeIds: new Set(['edge-b-c']),
-      },
-    )
+    controller.updateSelection(3, { x: 400, y: 200 })
 
     controller.reconcileDocument(new Set([NODE_B]), new Set(['edge-b-c']))
     expect(controller.get().selection).toEqual({
@@ -125,8 +132,8 @@ describe('CanvasInteractionController selection', () => {
       pointerId: 3,
       mode: 'add',
       origin: { x: 5, y: 10 },
-      current: { x: 15, y: 20 },
-      candidate: { nodeIds: new Set([NODE_B]), edgeIds: new Set(['edge-b-c']) },
+      current: { x: 400, y: 200 },
+      candidate: { nodeIds: new Set([NODE_B]), edgeIds: new Set() },
     })
     controller.dispose()
   })
@@ -177,6 +184,12 @@ describe('CanvasInteractionController pointer activities', () => {
       controller.updateDrawing(5, { x: index, y: index }, 0.5, false)
     }
 
+    const drawing = controller.get().interaction
+    expect(drawing.type).toBe('drawing')
+    if (drawing.type !== 'drawing') throw new Error('Expected drawing interaction')
+    expect(drawing.sampleDistance).toBeGreaterThan(1)
+    expect(drawing.rawPoints.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.pointsPerStroke)
+
     const stroke = controller.commitDrawing(5)
     expect(stroke?.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.pointsPerStroke)
     expect(stroke?.points[0]).toEqual([0, 0, 0.5])
@@ -184,16 +197,34 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
-  it('bounds eraser trails and returns only the marked canonical node ids', () => {
+  it('samples long lasso trails with bounded amortized point storage', () => {
     const controller = createCanvasInteractionController()
-    controller.beginErasing(8, { x: 0, y: 0 })
+    controller.beginSelection('lasso', 'replace', 6, { x: 0, y: 0 })
     for (let index = 1; index <= 20_000; index += 1) {
-      controller.updateErasing(8, { x: index, y: index }, new Set([NODE_A, NODE_B]))
+      controller.updateSelection(6, { x: index, y: index })
     }
+
+    const lasso = controller.get().interaction
+    expect(lasso.type).toBe('selecting')
+    if (lasso.type !== 'selecting' || lasso.kind !== 'lasso') {
+      throw new Error('Expected lasso interaction')
+    }
+    expect(lasso.sampleDistance).toBeGreaterThan(1)
+    expect(lasso.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.gesturePoints)
+    expect(lasso.current).toEqual({ x: 20_000, y: 20_000 })
+    controller.dispose()
+  })
+
+  it('bounds eraser trails and returns only the marked canonical node ids', () => {
+    const controller = contentController(STROKE_CONTENT)
+    controller.beginErasing(8, { x: 50, y: -10 })
+    controller.updateErasing(8, { x: 50, y: 30 })
+    controller.updateErasing(8, { x: 350, y: -10 })
+    controller.updateErasing(8, { x: 350, y: 30 })
     const interaction = controller.get().interaction
     expect(interaction.type).toBe('erasing')
     if (interaction.type !== 'erasing') throw new Error('Expected erasing interaction')
-    expect(interaction.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.gesturePoints)
+    expect(interaction.current).toEqual({ x: 350, y: 30 })
 
     controller.reconcileDocument(new Set([NODE_B]), new Set())
     expect(controller.commitErasing(8)).toEqual(new Set([NODE_B]))
@@ -202,9 +233,9 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('keeps an edge draft local and commits only a valid canonical node-handle pair', () => {
-    const controller = createCanvasInteractionController()
+    const controller = contentController()
     controller.beginConnection(9, { nodeId: NODE_A, handle: 'right' }, { x: 10, y: 20 })
-    controller.updateConnection(9, { x: 100, y: 20 }, { nodeId: NODE_B, handle: 'left' })
+    controller.updateConnection(9, { x: 302, y: 80 })
     expect(controller.get().interaction).toMatchObject({
       type: 'connecting',
       source: { nodeId: NODE_A, handle: 'right' },
@@ -216,7 +247,7 @@ describe('CanvasInteractionController pointer activities', () => {
     expect(controller.get().interaction).toEqual({ type: 'idle' })
 
     controller.beginConnection(10, { nodeId: NODE_A, handle: 'bottom' }, { x: 10, y: 20 })
-    controller.updateConnection(10, { x: 100, y: 20 }, { nodeId: NODE_B, handle: 'top' })
+    controller.updateConnection(10, { x: 420, y: 2 })
     expect(controller.commitConnection(10)).toEqual({
       source: { nodeId: NODE_A, handle: 'bottom' },
       target: { nodeId: NODE_B, handle: 'top' },
@@ -232,7 +263,7 @@ describe('CanvasInteractionController pointer activities', () => {
       [NODE_B, { x: 300, y: 0, width: 180, height: 80 }],
     ])
     controller.beginResize(11, 'bottom-right', initialBounds, initialNodeBounds)
-    controller.updateResize(11, { x: 0, y: 0, width: 960, height: 160 })
+    controller.updateResize(11, { x: 960, y: 160 })
 
     expect(controller.commitResize(11)).toEqual({
       initialBounds,
@@ -253,7 +284,7 @@ describe('CanvasInteractionController pointer activities', () => {
         [NODE_B, { x: 50, y: 70 }],
       ]),
     )
-    controller.updateDrag(4, { x: 25, y: 30 })
+    controller.updateDrag(4, { x: 125, y: 110 })
     expect(controller.commitDrag(4)).toEqual(
       new Map([
         [NODE_A, { x: 35, y: 50 }],
@@ -267,89 +298,76 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
-  it('shares one bounded candidate-work budget for every update in each geometry gesture', () => {
-    const controller = createCanvasInteractionController()
+  it('preserves late snap and connection targets across tens of thousands of updates', () => {
+    const controller = contentController()
     const startedAt = performance.now()
-    const gestureBudgets = new Set<CanvasCandidateWorkBudget>()
-    const exercise = (pointerId: number, update: (index: number, exhausted: boolean) => void) => {
-      let firstBudget: CanvasCandidateWorkBudget | null = null
-      let lastBudget: CanvasCandidateWorkBudget | null = null
-      for (let index = 1; index <= 20_000; index += 1) {
-        const budget = controller.withCandidateWork(pointerId, (current) => {
-          current.consume()
-          return current
-        })
-        if (!budget) throw new Error('Expected active gesture candidate-work budget')
-        firstBudget ??= budget
-        lastBudget = budget
-        update(index, budget.exhausted)
-      }
-      if (!lastBudget) throw new Error('Expected candidate-work updates')
-      expect(lastBudget).toBe(firstBudget)
-      expect(lastBudget.exhausted).toBe(true)
-      expect(lastBudget.remaining).toBe(0)
-      expect(controller.withCandidateWork(pointerId, (budget) => budget)).toBe(lastBudget)
-      gestureBudgets.add(lastBudget)
-    }
 
-    controller.beginDrag(20, { x: 0, y: 0 }, new Map([[NODE_A, { x: 10, y: 20 }]]))
-    exercise(20, (index) => controller.updateDrag(20, { x: index, y: index }))
-    expect(controller.commitDrag(20)).toEqual(new Map([[NODE_A, { x: 20_010, y: 20_020 }]]))
+    controller.beginDrag(20, { x: 0, y: 0 }, new Map([[NODE_A, { x: 0, y: 0 }]]))
+    for (let index = 1; index <= 20_000; index += 1) {
+      controller.updateDrag(20, { x: index, y: index })
+    }
+    controller.updateDrag(20, { x: 116, y: 0 }, false, true)
+    expect(controller.commitDrag(20)).toEqual(new Map([[NODE_A, { x: 120, y: 0 }]]))
 
     const initialBounds = { x: 0, y: 0, width: 180, height: 80 }
     controller.beginResize(21, 'bottom-right', initialBounds, new Map([[NODE_A, initialBounds]]))
-    exercise(21, (index) =>
-      controller.updateResize(21, { ...initialBounds, width: 180 + index, height: 80 + index }),
-    )
+    for (let index = 1; index <= 20_000; index += 1) {
+      controller.updateResize(21, { x: index, y: index })
+    }
+    controller.updateResize(21, { x: 296, y: 160 }, false, true)
     expect(controller.commitResize(21)?.bounds).toEqual({
       x: 0,
       y: 0,
-      width: 20_180,
-      height: 20_080,
+      width: 300,
+      height: 160,
     })
 
-    controller.setSelection({ nodeIds: new Set([NODE_A]), edgeIds: new Set() })
-    controller.beginSelection('lasso', 'replace', 22, { x: 0, y: 0 })
-    exercise(22, (index, exhausted) =>
-      controller.updateSelection(
-        22,
-        { x: index, y: index },
-        exhausted ? null : { nodeIds: new Set([NODE_B]), edgeIds: new Set() },
-      ),
-    )
-    const lasso = controller.get().interaction
-    expect(lasso.type).toBe('selecting')
-    if (lasso.type !== 'selecting' || lasso.kind !== 'lasso') {
-      throw new Error('Expected lasso interaction')
+    controller.beginConnection(22, { nodeId: NODE_A, handle: 'right' }, { x: 0, y: 0 })
+    for (let index = 1; index <= 20_000; index += 1) {
+      controller.updateConnection(22, { x: index, y: index })
     }
-    expect(lasso.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.gesturePoints)
-    expect(controller.commitSelection(22)).toBe(false)
-    expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_A]))
+    controller.updateConnection(22, { x: 302, y: 80 })
+    expect(controller.commitConnection(22)).toEqual({
+      source: { nodeId: NODE_A, handle: 'right' },
+      target: { nodeId: NODE_B, handle: 'left' },
+    })
 
-    controller.beginErasing(23, { x: 0, y: 0 })
-    exercise(23, (index) => controller.updateErasing(23, { x: index, y: index }, new Set([NODE_A])))
-    const erasing = controller.get().interaction
-    expect(erasing.type).toBe('erasing')
-    if (erasing.type !== 'erasing') throw new Error('Expected erasing interaction')
-    expect(erasing.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.gesturePoints)
-    expect(controller.commitErasing(23)).toEqual(new Set([NODE_A]))
+    controller.beginSelection('marquee', 'replace', 23, { x: 250, y: -50 })
+    for (let index = 0; index < 20_000; index += 1) {
+      controller.updateSelection(23, { x: 250, y: -50 })
+    }
+    controller.updateSelection(23, { x: 550, y: 200 })
+    expect(controller.commitSelection(23)).toBe(true)
+    expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_B]))
 
-    controller.beginConnection(24, { nodeId: NODE_A, handle: 'right' }, { x: 0, y: 0 })
-    exercise(24, (index, exhausted) =>
-      controller.updateConnection(
-        24,
-        { x: index, y: index },
-        exhausted ? null : { nodeId: NODE_B, handle: 'left' },
-      ),
-    )
-    expect(controller.commitConnection(24)).toBeNull()
-    expect(gestureBudgets.size).toBe(5)
+    controller.beginSelection('lasso', 'replace', 24, { x: 250, y: -50 })
+    for (let index = 0; index < 20_000; index += 1) {
+      controller.updateSelection(24, { x: 250, y: -50 })
+    }
+    controller.updateSelection(24, { x: 550, y: -50 })
+    controller.updateSelection(24, { x: 550, y: 200 })
+    controller.updateSelection(24, { x: 250, y: 200 })
+    controller.updateSelection(24, { x: 250, y: -50 })
+    expect(controller.commitSelection(24)).toBe(true)
+    expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_B]))
+
+    const eraserController = contentController(STROKE_CONTENT)
+    eraserController.beginErasing(25, { x: 350, y: -10 })
+    for (let index = 0; index < 20_000; index += 1) {
+      eraserController.updateErasing(25, { x: 350, y: -10 })
+    }
+    eraserController.updateErasing(25, { x: 350, y: 30 })
+    expect(eraserController.commitErasing(25)).toEqual(new Set([NODE_B]))
+    eraserController.dispose()
+
     expect(performance.now() - startedAt).toBeLessThan(5_000)
     controller.dispose()
   }, 10_000)
 
   it('owns pan lifecycle and commits the resulting viewport once', () => {
-    const controller = createCanvasInteractionController({ x: 10, y: 20, zoom: 2 })
+    const controller = createCanvasInteractionController({
+      viewport: { x: 10, y: 20, zoom: 2 },
+    })
     const committed = vi.fn()
     controller.subscribeViewportCommit(committed)
     controller.beginPan(7, { x: 100, y: 80 })
@@ -372,9 +390,11 @@ describe('CanvasInteractionController pointer activities', () => {
 describe('CanvasInteractionController viewport', () => {
   it('normalizes viewport values and preserves a zoom center', () => {
     const controller = createCanvasInteractionController({
-      x: Number.NaN,
-      y: Number.POSITIVE_INFINITY,
-      zoom: 20,
+      viewport: {
+        x: Number.NaN,
+        y: Number.POSITIVE_INFINITY,
+        zoom: 20,
+      },
     })
     expect(controller.get().viewport).toEqual({ x: 0, y: 0, zoom: 4 })
 

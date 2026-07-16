@@ -8,7 +8,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from './document-contract'
-import type { CanvasSelection } from './interaction-controller'
+import type { CanvasSelection } from './interaction-types'
 import { canvasSelectionWithinWorkload } from './workload'
 
 export const CANVAS_REORDER_ACTIONS = [

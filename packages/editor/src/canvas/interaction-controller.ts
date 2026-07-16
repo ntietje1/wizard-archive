@@ -1,19 +1,28 @@
 import type { CanvasNodeId } from '../resources/domain-id'
+import type {
+  CanvasConnectionAnchor,
+  CanvasDrawPoint,
+  CanvasPoint,
+  CanvasResizeHandle,
+  CanvasSelection,
+  CanvasTool,
+  CanvasViewport,
+} from './interaction-types'
+import { DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport'
+import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
+import { createCanvasConnectionCandidateIndex } from './canvas-edge-geometry'
+import { createCanvasEraserCandidateIndex } from './canvas-stroke-geometry'
+import {
+  canvasSnapThreshold,
+  createCanvasSnapTargetIndex,
+  resolveCanvasDrag,
+} from './canvas-snap-geometry'
 import type { CanvasSnapGuide } from './canvas-snap-geometry'
+import { resolveCanvasResize } from './canvas-resize-geometry'
+import { canvasBoundsFromPoints, createCanvasSelectionCandidateIndex } from './selection-geometry'
+import type { CanvasDocumentContent } from './document-contract'
 import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from './workload'
-import type { CanvasCandidateWorkBudget } from './workload'
-
-export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
-
-export type CanvasPoint = Readonly<{ x: number; y: number }>
-
-export type CanvasViewport = CanvasPoint & Readonly<{ zoom: number }>
-
-export type CanvasSelection = Readonly<{
-  nodeIds: ReadonlySet<CanvasNodeId>
-  edgeIds: ReadonlySet<string>
-}>
 
 type CanvasSelectionKind = 'lasso' | 'marquee'
 type CanvasSelectionMode = 'add' | 'replace'
@@ -23,25 +32,6 @@ type CanvasDrawStyle = Readonly<{
   size: number
   opacity: number
 }>
-
-export type CanvasDrawPoint = readonly [x: number, y: number, pressure: number]
-
-export type CanvasConnectionHandle = 'bottom' | 'left' | 'right' | 'top'
-
-export type CanvasConnectionAnchor = Readonly<{
-  nodeId: CanvasNodeId
-  handle: CanvasConnectionHandle
-}>
-
-export type CanvasResizeHandle =
-  | 'top-left'
-  | 'top'
-  | 'top-right'
-  | 'right'
-  | 'bottom-right'
-  | 'bottom'
-  | 'bottom-left'
-  | 'left'
 
 type CanvasResizeCommit = Readonly<{
   initialBounds: CanvasBounds
@@ -66,6 +56,8 @@ type CanvasInteraction =
       pointerId: number
       mode: CanvasSelectionMode
       points: ReadonlyArray<CanvasPoint>
+      current: CanvasPoint
+      sampleDistance: number
       candidate: CanvasSelection | null
     }>
   | Readonly<{
@@ -80,6 +72,8 @@ type CanvasInteraction =
       type: 'drawing'
       pointerId: number
       rawPoints: ReadonlyArray<CanvasDrawPoint>
+      current: CanvasDrawPoint
+      sampleDistance: number
       constrain: boolean
       style: CanvasDrawStyle
     }>
@@ -96,7 +90,7 @@ type CanvasInteraction =
   | Readonly<{
       type: 'erasing'
       pointerId: number
-      points: ReadonlyArray<CanvasPoint>
+      current: CanvasPoint
       nodeIds: ReadonlySet<CanvasNodeId>
     }>
   | Readonly<{
@@ -116,14 +110,35 @@ type CanvasInteraction =
       guides: ReadonlyArray<CanvasSnapGuide>
     }>
 
+type CanvasGestureCandidates =
+  | Readonly<{
+      type: 'selecting'
+      index: ReturnType<typeof createCanvasSelectionCandidateIndex>
+    }>
+  | Readonly<{
+      type: 'dragging'
+      draggedBounds: ReadonlyArray<CanvasBounds>
+      index: ReturnType<typeof createCanvasSnapTargetIndex>
+    }>
+  | Readonly<{
+      type: 'erasing'
+      index: ReturnType<typeof createCanvasEraserCandidateIndex>
+    }>
+  | Readonly<{
+      type: 'connecting'
+      index: ReturnType<typeof createCanvasConnectionCandidateIndex>
+    }>
+  | Readonly<{
+      type: 'resizing'
+      index: ReturnType<typeof createCanvasSnapTargetIndex>
+    }>
+
 export type CanvasInteractionSnapshot = Readonly<{
   tool: CanvasTool
   viewport: CanvasViewport
   selection: CanvasSelection
   interaction: CanvasInteraction
 }>
-
-export const DEFAULT_CANVAS_VIEWPORT: CanvasViewport = Object.freeze({ x: 0, y: 0, zoom: 1 })
 
 const MIN_CANVAS_ZOOM = 0.1
 const MAX_CANVAS_ZOOM = 4
@@ -307,40 +322,48 @@ function reconcileResizing(
   return interaction
 }
 
-function appendBoundedPoint<TPoint>(
+function appendAdaptivePoint<TPoint>(
   points: ReadonlyArray<TPoint>,
   point: TPoint,
   limit: number,
-): ReadonlyArray<TPoint> {
-  if (points.length < limit) return [...points, point]
+  sampleDistance: number,
+  distance: (left: TPoint, right: TPoint) => number,
+): Readonly<{ points: ReadonlyArray<TPoint>; sampleDistance: number }> {
+  if (distance(points[points.length - 1]!, point) < sampleDistance) {
+    return { points, sampleDistance }
+  }
+  if (points.length < limit) return { points: [...points, point], sampleDistance }
   const resampled: Array<TPoint> = [points[0]!]
   for (let index = 2; index < points.length; index += 2) resampled.push(points[index]!)
-  if (resampled[resampled.length - 1] !== points[points.length - 1]) {
-    resampled.push(points[points.length - 1]!)
-  }
-  return [...resampled.slice(0, limit - 1), point]
+  return { points: [...resampled, point], sampleDistance: sampleDistance * 2 }
 }
 
 function appendDrawPoint(
   points: ReadonlyArray<CanvasDrawPoint>,
   point: CanvasDrawPoint,
-): ReadonlyArray<CanvasDrawPoint> {
-  const previous = points[points.length - 1]
-  if (previous && Math.hypot(point[0] - previous[0], point[1] - previous[1]) < 1) {
-    return [...points.slice(0, -1), point]
-  }
-  return appendBoundedPoint(points, point, CANVAS_WORKLOAD_LIMITS.pointsPerStroke)
+  sampleDistance: number,
+) {
+  return appendAdaptivePoint(
+    points,
+    point,
+    CANVAS_WORKLOAD_LIMITS.pointsPerStroke,
+    sampleDistance,
+    (left, right) => Math.hypot(right[0] - left[0], right[1] - left[1]),
+  )
 }
 
 function appendGesturePoint(
   points: ReadonlyArray<CanvasPoint>,
   point: CanvasPoint,
-): ReadonlyArray<CanvasPoint> {
-  const previous = points[points.length - 1]
-  if (previous && Math.hypot(point.x - previous.x, point.y - previous.y) < 1) {
-    return [...points.slice(0, -1), point]
-  }
-  return appendBoundedPoint(points, point, CANVAS_WORKLOAD_LIMITS.gesturePoints)
+  sampleDistance: number,
+) {
+  return appendAdaptivePoint(
+    points,
+    point,
+    CANVAS_WORKLOAD_LIMITS.gesturePoints,
+    sampleDistance,
+    (left, right) => Math.hypot(right.x - left.x, right.y - left.y),
+  )
 }
 
 export function getVisualCanvasSelection(snapshot: CanvasInteractionSnapshot): CanvasSelection {
@@ -367,9 +390,10 @@ export function getCanvasNodeInteractionPosition(
 export function getCanvasDrawingPoints(
   interaction: Extract<CanvasInteraction, { type: 'drawing' }>,
 ): ReadonlyArray<CanvasDrawPoint> {
-  if (!interaction.constrain || interaction.rawPoints.length < 2) return interaction.rawPoints
-  const start = interaction.rawPoints[0]
-  const end = interaction.rawPoints[interaction.rawPoints.length - 1]
+  const rawPoints = appendCurrentDrawPoint(interaction.rawPoints, interaction.current)
+  if (!interaction.constrain || rawPoints.length < 2) return rawPoints
+  const start = rawPoints[0]!
+  const end = rawPoints[rawPoints.length - 1]!
   const deltaX = end[0] - start[0]
   const deltaY = end[1] - start[1]
   return Math.abs(deltaX) >= Math.abs(deltaY)
@@ -377,44 +401,56 @@ export function getCanvasDrawingPoints(
     : [start, [start[0], end[1], end[2]]]
 }
 
-export function screenToCanvasPoint(
-  point: CanvasPoint,
-  viewport: CanvasViewport,
-  surfaceOrigin: CanvasPoint = { x: 0, y: 0 },
-): CanvasPoint {
-  return {
-    x: (point.x - surfaceOrigin.x - viewport.x) / viewport.zoom,
-    y: (point.y - surfaceOrigin.y - viewport.y) / viewport.zoom,
-  }
+function appendCurrentDrawPoint(
+  points: ReadonlyArray<CanvasDrawPoint>,
+  current: CanvasDrawPoint,
+): ReadonlyArray<CanvasDrawPoint> {
+  const last = points[points.length - 1]
+  return last && last[0] === current[0] && last[1] === current[1] ? points : [...points, current]
 }
 
-export function canvasToScreenPoint(
-  point: CanvasPoint,
-  viewport: CanvasViewport,
-  surfaceOrigin: CanvasPoint = { x: 0, y: 0 },
-): CanvasPoint {
+function lassoPoints(
+  points: ReadonlyArray<CanvasPoint>,
+  current: CanvasPoint,
+): ReadonlyArray<CanvasPoint> {
+  const last = points[points.length - 1]
+  return last && last.x === current.x && last.y === current.y ? points : [...points, current]
+}
+
+function squareSelectionPoint(origin: CanvasPoint, point: CanvasPoint): CanvasPoint {
+  const size = Math.max(Math.abs(point.x - origin.x), Math.abs(point.y - origin.y))
   return {
-    x: surfaceOrigin.x + viewport.x + point.x * viewport.zoom,
-    y: surfaceOrigin.y + viewport.y + point.y * viewport.zoom,
+    x: origin.x + (point.x < origin.x ? -size : size),
+    y: origin.y + (point.y < origin.y ? -size : size),
   }
 }
 
 export type CanvasInteractionController = CanvasInteractionControllerState
 
+const EMPTY_CANVAS_CONTENT: CanvasDocumentContent = Object.freeze({ nodes: [], edges: [] })
+
 export function createCanvasInteractionController(
-  viewport: CanvasViewport = DEFAULT_CANVAS_VIEWPORT,
+  options: Readonly<{
+    viewport?: CanvasViewport
+    readContent?: () => CanvasDocumentContent
+  }> = {},
 ): CanvasInteractionController {
-  return new CanvasInteractionControllerState(viewport)
+  return new CanvasInteractionControllerState(
+    options.viewport ?? DEFAULT_CANVAS_VIEWPORT,
+    options.readContent ?? (() => EMPTY_CANVAS_CONTENT),
+  )
 }
 
 class CanvasInteractionControllerState {
-  #candidateWork: CanvasCandidateWorkBudget | null = null
+  #candidates: CanvasGestureCandidates | null = null
   readonly #listeners = new Set<() => void>()
+  readonly #readContent: () => CanvasDocumentContent
   readonly #viewportCommitListeners = new Set<(viewport: CanvasViewport) => void>()
   #disposed = false
   #snapshot: CanvasInteractionSnapshot
 
-  constructor(viewport: CanvasViewport = DEFAULT_CANVAS_VIEWPORT) {
+  constructor(viewport: CanvasViewport, readContent: () => CanvasDocumentContent) {
+    this.#readContent = readContent
     this.#snapshot = {
       tool: 'select',
       viewport: normalizeViewport(viewport),
@@ -488,7 +524,10 @@ class CanvasInteractionControllerState {
     point: CanvasPoint,
   ): void {
     this.#assertActive()
-    this.#candidateWork = createCanvasCandidateWorkBudget()
+    this.#candidates = {
+      type: 'selecting',
+      index: createCanvasSelectionCandidateIndex(this.#readContent()),
+    }
     this.#publish({
       ...this.#snapshot,
       interaction:
@@ -502,7 +541,16 @@ class CanvasInteractionControllerState {
               current: point,
               candidate: null,
             }
-          : { type: 'selecting', kind, pointerId, mode, points: [point], candidate: null },
+          : {
+              type: 'selecting',
+              kind,
+              pointerId,
+              mode,
+              points: [point],
+              current: point,
+              sampleDistance: 1,
+              candidate: null,
+            },
     })
   }
 
@@ -518,7 +566,16 @@ class CanvasInteractionControllerState {
     ) {
       throw new Error('Canvas drag requires a bounded non-empty node selection')
     }
-    this.#candidateWork = createCanvasCandidateWorkBudget()
+    const content = this.#readContent()
+    const selectedNodeIds = new Set(initialPositions.keys())
+    this.#candidates = {
+      type: 'dragging',
+      draggedBounds: content.nodes.flatMap((node) => {
+        const position = initialPositions.get(node.id)
+        return position ? [canvasNodeBounds({ ...node, position })] : []
+      }),
+      index: createCanvasSnapTargetIndex(content.nodes, selectedNodeIds),
+    }
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -551,6 +608,8 @@ class CanvasInteractionControllerState {
         type: 'drawing',
         pointerId,
         rawPoints: [drawPoint(point, pressure)],
+        current: drawPoint(point, pressure),
+        sampleDistance: 1,
         constrain: false,
         style: { ...style },
       },
@@ -559,13 +618,16 @@ class CanvasInteractionControllerState {
 
   beginErasing(pointerId: number, point: CanvasPoint): void {
     this.#assertActive()
-    this.#candidateWork = createCanvasCandidateWorkBudget()
+    this.#candidates = {
+      type: 'erasing',
+      index: createCanvasEraserCandidateIndex(this.#readContent().nodes),
+    }
     this.#publish({
       ...this.#snapshot,
       interaction: {
         type: 'erasing',
         pointerId,
-        points: [point],
+        current: point,
         nodeIds: new Set(),
       },
     })
@@ -573,7 +635,10 @@ class CanvasInteractionControllerState {
 
   beginConnection(pointerId: number, source: CanvasConnectionAnchor, point: CanvasPoint): void {
     this.#assertActive()
-    this.#candidateWork = createCanvasCandidateWorkBudget()
+    this.#candidates = {
+      type: 'connecting',
+      index: createCanvasConnectionCandidateIndex(this.#readContent().nodes),
+    }
     this.#publish({
       ...this.#snapshot,
       interaction: { type: 'connecting', pointerId, source, current: point, target: null },
@@ -590,7 +655,10 @@ class CanvasInteractionControllerState {
     if (nodeBounds.size === 0 || nodeBounds.size > CANVAS_WORKLOAD_LIMITS.selectedElements) {
       throw new TypeError('Canvas resize requires a bounded non-empty node selection')
     }
-    this.#candidateWork = createCanvasCandidateWorkBudget()
+    this.#candidates = {
+      type: 'resizing',
+      index: createCanvasSnapTargetIndex(this.#readContent().nodes, new Set(nodeBounds.keys())),
+    }
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -605,17 +673,54 @@ class CanvasInteractionControllerState {
     })
   }
 
-  updateResize(
-    pointerId: number,
-    bounds: CanvasBounds,
-    guides: ReadonlyArray<CanvasSnapGuide> = [],
-  ): void {
+  updateResize(pointerId: number, point: CanvasPoint, square = false, snap = false): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'resizing' || interaction.pointerId !== pointerId) return
+    const candidates = this.#candidates
+    if (
+      interaction.type !== 'resizing' ||
+      interaction.pointerId !== pointerId ||
+      candidates?.type !== 'resizing'
+    ) {
+      return
+    }
+    const candidateWork = createCanvasCandidateWorkBudget()
+    const unsnapped = resolveCanvasResize({
+      handle: interaction.handle,
+      initialBounds: interaction.initialBounds,
+      point,
+      initialNodeBounds: interaction.initialNodeBounds,
+      targetBounds: [],
+      square,
+      snap: false,
+      zoom: this.#snapshot.viewport.zoom,
+      candidateWork,
+    })
+    const targetBounds = snap
+      ? candidates.index.near(
+          unsnapped.bounds,
+          canvasSnapThreshold(this.#snapshot.viewport.zoom),
+          candidateWork,
+        ).targets
+      : []
+    const resolved = resolveCanvasResize({
+      handle: interaction.handle,
+      initialBounds: interaction.initialBounds,
+      point,
+      initialNodeBounds: interaction.initialNodeBounds,
+      targetBounds,
+      square,
+      snap,
+      zoom: this.#snapshot.viewport.zoom,
+      candidateWork,
+    })
     this.#publish({
       ...this.#snapshot,
-      interaction: { ...interaction, bounds: { ...bounds }, guides: [...guides] },
+      interaction: {
+        ...interaction,
+        bounds: { ...resolved.bounds },
+        guides: [...resolved.guides],
+      },
     })
   }
 
@@ -632,14 +737,24 @@ class CanvasInteractionControllerState {
     }
   }
 
-  updateConnection(
-    pointerId: number,
-    point: CanvasPoint,
-    target: CanvasConnectionAnchor | null,
-  ): void {
+  updateConnection(pointerId: number, point: CanvasPoint): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'connecting' || interaction.pointerId !== pointerId) return
+    const candidates = this.#candidates
+    if (
+      interaction.type !== 'connecting' ||
+      interaction.pointerId !== pointerId ||
+      candidates?.type !== 'connecting'
+    ) {
+      return
+    }
+    const result = candidates.index.find(
+      interaction.source.nodeId,
+      point,
+      20 / this.#snapshot.viewport.zoom,
+      createCanvasCandidateWorkBudget(),
+    )
+    const target = result.exhausted ? null : result.target
     this.#publish({ ...this.#snapshot, interaction: { ...interaction, current: point, target } })
   }
 
@@ -653,16 +768,30 @@ class CanvasInteractionControllerState {
     return interaction.target ? { source: interaction.source, target: interaction.target } : null
   }
 
-  updateErasing(pointerId: number, point: CanvasPoint, nodeIds: ReadonlySet<CanvasNodeId>): void {
+  updateErasing(pointerId: number, point: CanvasPoint): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'erasing' || interaction.pointerId !== pointerId) return
+    const candidates = this.#candidates
+    if (
+      interaction.type !== 'erasing' ||
+      interaction.pointerId !== pointerId ||
+      candidates?.type !== 'erasing'
+    ) {
+      return
+    }
+    const result = candidates.index.erase(
+      [interaction.current, point],
+      interaction.nodeIds,
+      createCanvasCandidateWorkBudget(),
+    )
     this.#publish({
       ...this.#snapshot,
       interaction: {
         ...interaction,
-        points: appendGesturePoint(interaction.points, point),
-        nodeIds: new Set(Array.from(nodeIds).slice(0, CANVAS_WORKLOAD_LIMITS.selectedElements)),
+        current: point,
+        nodeIds: new Set(
+          Array.from(result.nodeIds).slice(0, CANVAS_WORKLOAD_LIMITS.selectedElements),
+        ),
       },
     })
   }
@@ -679,11 +808,15 @@ class CanvasInteractionControllerState {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
     if (interaction.type !== 'drawing' || interaction.pointerId !== pointerId) return
+    const current = drawPoint(point, pressure)
+    const sampled = appendDrawPoint(interaction.rawPoints, current, interaction.sampleDistance)
     this.#publish({
       ...this.#snapshot,
       interaction: {
         ...interaction,
-        rawPoints: appendDrawPoint(interaction.rawPoints, drawPoint(point, pressure)),
+        rawPoints: sampled.points,
+        current,
+        sampleDistance: sampled.sampleDistance,
         constrain,
       },
     })
@@ -700,14 +833,47 @@ class CanvasInteractionControllerState {
     return points.length >= 2 ? { points, style: interaction.style } : null
   }
 
-  updateDrag(
-    pointerId: number,
-    delta: CanvasPoint,
-    guides: ReadonlyArray<CanvasSnapGuide> = [],
-  ): void {
+  updateDrag(pointerId: number, point: CanvasPoint, constrain = false, snap = false): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'dragging' || interaction.pointerId !== pointerId) return
+    const candidates = this.#candidates
+    if (
+      interaction.type !== 'dragging' ||
+      interaction.pointerId !== pointerId ||
+      candidates?.type !== 'dragging'
+    ) {
+      return
+    }
+    const candidateWork = createCanvasCandidateWorkBudget()
+    const unconstrainedDelta = {
+      x: point.x - interaction.anchor.x,
+      y: point.y - interaction.anchor.y,
+    }
+    const translated = canvasBoundsUnion(
+      candidates.draggedBounds.map((bounds) => ({
+        ...bounds,
+        x: bounds.x + unconstrainedDelta.x,
+        y: bounds.y + unconstrainedDelta.y,
+      })),
+    )
+    const targetBounds =
+      snap && !constrain && translated
+        ? candidates.index.near(
+            translated,
+            canvasSnapThreshold(this.#snapshot.viewport.zoom),
+            candidateWork,
+          ).targets
+        : []
+    const resolved = resolveCanvasDrag({
+      delta: unconstrainedDelta,
+      draggedBounds: candidates.draggedBounds,
+      targetBounds,
+      constrain,
+      snap,
+      zoom: this.#snapshot.viewport.zoom,
+      candidateWork,
+    })
+    const { delta, guides } = resolved
     if (
       delta.x === interaction.delta.x &&
       delta.y === interaction.delta.y &&
@@ -785,21 +951,48 @@ class CanvasInteractionControllerState {
     this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
   }
 
-  updateSelection(pointerId: number, point: CanvasPoint, candidate: CanvasSelection | null): void {
+  updateSelection(pointerId: number, point: CanvasPoint, square = false): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'selecting' || interaction.pointerId !== pointerId) return
-    const nextCandidate = candidate ? cloneSelection(candidate) : null
+    const candidates = this.#candidates
+    if (
+      interaction.type !== 'selecting' ||
+      interaction.pointerId !== pointerId ||
+      candidates?.type !== 'selecting'
+    ) {
+      return
+    }
+    const budget = createCanvasCandidateWorkBudget()
+    if (interaction.kind === 'marquee') {
+      const current = square ? squareSelectionPoint(interaction.origin, point) : point
+      const bounds = canvasBoundsFromPoints(interaction.origin, current)
+      const distance = Math.hypot(bounds.width, bounds.height) * this.#snapshot.viewport.zoom
+      const result =
+        distance <= 1
+          ? null
+          : candidates.index.rectangle(bounds, this.#snapshot.viewport.zoom, budget)
+      this.#publish({
+        ...this.#snapshot,
+        interaction: {
+          ...interaction,
+          current,
+          candidate: result && !result.exhausted ? cloneSelection(result.selection) : null,
+        },
+      })
+      return
+    }
+    const sampled = appendGesturePoint(interaction.points, point, interaction.sampleDistance)
+    const polygon = lassoPoints(sampled.points, point)
+    const result = polygon.length < 3 ? null : candidates.index.polygon(polygon, budget)
     this.#publish({
       ...this.#snapshot,
-      interaction:
-        interaction.kind === 'marquee'
-          ? { ...interaction, current: point, candidate: nextCandidate }
-          : {
-              ...interaction,
-              points: appendGesturePoint(interaction.points, point),
-              candidate: nextCandidate,
-            },
+      interaction: {
+        ...interaction,
+        points: sampled.points,
+        current: point,
+        sampleDistance: sampled.sampleDistance,
+        candidate: result && !result.exhausted ? cloneSelection(result.selection) : null,
+      },
     })
   }
 
@@ -824,22 +1017,6 @@ class CanvasInteractionControllerState {
     this.#assertActive()
     if (this.#snapshot.interaction.type === 'idle') return
     this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
-  }
-
-  withCandidateWork<T>(
-    pointerId: number,
-    resolve: (budget: CanvasCandidateWorkBudget) => T,
-  ): T | null {
-    this.#assertActive()
-    const interaction = this.#snapshot.interaction
-    if (
-      !('pointerId' in interaction) ||
-      interaction.pointerId !== pointerId ||
-      !this.#candidateWork
-    ) {
-      return null
-    }
-    return resolve(this.#candidateWork)
   }
 
   reconcileDocument(nodeIds: ReadonlySet<CanvasNodeId>, edgeIds: ReadonlySet<string>): void {
@@ -896,13 +1073,13 @@ class CanvasInteractionControllerState {
   dispose(): void {
     if (this.#disposed) return
     this.#disposed = true
-    this.#candidateWork = null
+    this.#candidates = null
     this.#listeners.clear()
     this.#viewportCommitListeners.clear()
   }
 
   #publish(snapshot: CanvasInteractionSnapshot): void {
-    if (!interactionUsesCandidateWork(snapshot.interaction)) this.#candidateWork = null
+    if (this.#candidates?.type !== snapshot.interaction.type) this.#candidates = null
     this.#snapshot = snapshot
     for (const listener of this.#listeners) listener()
   }
@@ -914,16 +1091,6 @@ class CanvasInteractionControllerState {
   #assertActive(): void {
     if (this.#disposed) throw new Error('CanvasInteractionController is disposed')
   }
-}
-
-function interactionUsesCandidateWork(interaction: CanvasInteraction): boolean {
-  return (
-    interaction.type === 'selecting' ||
-    interaction.type === 'dragging' ||
-    interaction.type === 'erasing' ||
-    interaction.type === 'connecting' ||
-    interaction.type === 'resizing'
-  )
 }
 
 function drawPoint(point: CanvasPoint, pressure: number): CanvasDrawPoint {

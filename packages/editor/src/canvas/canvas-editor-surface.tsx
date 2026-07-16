@@ -4,30 +4,19 @@ import type { CanvasDocumentController } from './document-controller'
 import { captureCanvasSelection, materializeCanvasPaste } from './canvas-clipboard'
 import type { CanvasClipboardEntry } from './canvas-clipboard'
 import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-contract'
-import { screenToCanvasPoint } from './interaction-controller'
-import type {
-  CanvasInteractionController,
-  CanvasPoint,
-  CanvasSelection,
-  CanvasTool,
-} from './interaction-controller'
+import { screenToCanvasPoint } from './canvas-viewport'
+import type { CanvasInteractionController } from './interaction-controller'
+import type { CanvasPoint, CanvasSelection, CanvasTool } from './interaction-types'
 import { CanvasScene } from './canvas-scene'
 import { CanvasContextMenu } from './canvas-context-menu'
 import type { CanvasContextMenuRequest } from './canvas-context-menu'
 import { CanvasSelectionActions } from './canvas-selection-actions'
 import { CanvasSelectionProperties } from './canvas-selection-properties'
 import { CanvasToolbar } from './canvas-toolbar'
-import { findCanvasConnectionTarget } from './canvas-edge-geometry'
-import { projectCanvasResizeNodeBounds, resolveCanvasResize } from './canvas-resize-geometry'
-import { canvasSnapTargetBounds } from './canvas-snap-geometry'
-import { canvasStrokeBounds, findCanvasStrokesIntersectingTrail } from './canvas-stroke-geometry'
+import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
+import { canvasStrokeBounds } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
-import {
-  canvasBoundsFromPoints,
-  selectCanvasContentInPolygon,
-  selectCanvasContentInRectangle,
-} from './selection-geometry'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
 
@@ -259,43 +248,37 @@ export function CanvasEditorSurface({
           interactionController.updatePan(event.pointerId, point)
           if (canEdit && (event.buttons & 1) === 1) {
             const canvasPoint = screenToCanvasPoint(point, interactionController.get().viewport)
-            interactionController.updateDrawing(
+            updateCanvasEditGesture(
+              interactionController,
               event.pointerId,
               canvasPoint,
               event.pressure,
               event.shiftKey,
-            )
-            updateErasing(event.pointerId, canvasPoint, content, interactionController)
-            updateConnection(event.pointerId, canvasPoint, content, interactionController)
-            updateResize(
-              event.pointerId,
-              canvasPoint,
-              content,
-              interactionController,
-              event.shiftKey,
               event.metaKey || event.ctrlKey,
             )
           }
-          updateAreaSelection(
+          interactionController.updateSelection(
             event.pointerId,
             screenToCanvasPoint(point, interactionController.get().viewport),
-            content,
-            interactionController,
             event.shiftKey,
           )
         }}
         onPointerUp={(event) => {
           const snapshot = interactionController.get()
+          const point = localPoint(event, event.currentTarget)
+          const canvasPoint = screenToCanvasPoint(point, snapshot.viewport)
+          interactionController.updatePan(event.pointerId, point)
           if (canEdit) {
-            updateResize(
-              event.pointerId,
-              screenToCanvasPoint(localPoint(event, event.currentTarget), snapshot.viewport),
-              content,
+            updateCanvasEditGesture(
               interactionController,
+              event.pointerId,
+              canvasPoint,
+              event.pressure,
               event.shiftKey,
               event.metaKey || event.ctrlKey,
             )
           }
+          interactionController.updateSelection(event.pointerId, canvasPoint, event.shiftKey)
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
@@ -451,6 +434,20 @@ function beginCanvasSurfaceInteraction(
   }
 }
 
+function updateCanvasEditGesture(
+  controller: CanvasInteractionController,
+  pointerId: number,
+  point: CanvasPoint,
+  pressure: number,
+  square: boolean,
+  snap: boolean,
+) {
+  controller.updateDrawing(pointerId, point, pressure, square)
+  controller.updateErasing(pointerId, point)
+  controller.updateConnection(pointerId, point)
+  controller.updateResize(pointerId, point, square, snap)
+}
+
 function useCanvasDocumentContent(controller: CanvasDocumentController): CanvasDocumentContent {
   const [content, setContent] = useState(() => controller.read())
   useEffect(() => {
@@ -504,53 +501,6 @@ function handleWheel(event: WheelEvent<HTMLElement>, controller: CanvasInteracti
   )
 }
 
-function updateAreaSelection(
-  pointerId: number,
-  point: CanvasPoint,
-  content: CanvasDocumentContent,
-  controller: CanvasInteractionController,
-  square: boolean,
-) {
-  const snapshot = controller.get()
-  const gesture = snapshot.interaction
-  if (gesture.type !== 'selecting' || gesture.pointerId !== pointerId) return
-  if (gesture.kind === 'marquee') {
-    const current = square ? squareSelectionPoint(gesture.origin, point) : point
-    const bounds = canvasBoundsFromPoints(gesture.origin, current)
-    const distance = Math.hypot(bounds.width, bounds.height) * snapshot.viewport.zoom
-    if (distance <= 1) {
-      controller.updateSelection(pointerId, current, null)
-      return
-    }
-    const resolved = controller.withCandidateWork(pointerId, (budget) => ({
-      candidate: selectCanvasContentInRectangle(content, bounds, snapshot.viewport.zoom, budget),
-      exhausted: budget.exhausted,
-    }))
-    if (!resolved) return
-    controller.updateSelection(pointerId, current, resolved.exhausted ? null : resolved.candidate)
-    return
-  }
-  const points = [...gesture.points, point]
-  if (points.length < 3) {
-    controller.updateSelection(pointerId, point, null)
-    return
-  }
-  const resolved = controller.withCandidateWork(pointerId, (budget) => ({
-    candidate: selectCanvasContentInPolygon(content, points, budget),
-    exhausted: budget.exhausted,
-  }))
-  if (!resolved) return
-  controller.updateSelection(pointerId, point, resolved.exhausted ? null : resolved.candidate)
-}
-
-function squareSelectionPoint(origin: CanvasPoint, point: CanvasPoint): CanvasPoint {
-  const size = Math.max(Math.abs(point.x - origin.x), Math.abs(point.y - origin.y))
-  return {
-    x: origin.x + (point.x < origin.x ? -size : size),
-    y: origin.y + (point.y < origin.y ? -size : size),
-  }
-}
-
 function commitAreaSelection(pointerId: number, controller: CanvasInteractionController) {
   const gesture = controller.get().interaction
   if (gesture.type !== 'selecting' || gesture.pointerId !== pointerId) return
@@ -572,34 +522,6 @@ function canvasToolCursor(tool: CanvasTool): string {
     return 'cursor-crosshair'
   }
   return 'cursor-default'
-}
-
-function updateResize(
-  pointerId: number,
-  point: CanvasPoint,
-  content: CanvasDocumentContent,
-  controller: CanvasInteractionController,
-  square: boolean,
-  snap: boolean,
-) {
-  const resizing = controller.get().interaction
-  if (resizing.type !== 'resizing' || resizing.pointerId !== pointerId) return
-  const selectedIds = new Set(resizing.initialNodeBounds.keys())
-  const resolved = controller.withCandidateWork(pointerId, (candidateWork) =>
-    resolveCanvasResize({
-      handle: resizing.handle,
-      initialBounds: resizing.initialBounds,
-      point,
-      initialNodeBounds: resizing.initialNodeBounds,
-      targetBounds: snap ? canvasSnapTargetBounds(content.nodes, selectedIds, candidateWork) : [],
-      square,
-      snap,
-      zoom: controller.get().viewport.zoom,
-      candidateWork,
-    }),
-  )
-  if (!resolved) return
-  controller.updateResize(pointerId, resolved.bounds, resolved.guides)
 }
 
 function commitResize(
@@ -634,28 +556,6 @@ function commitResize(
   return true
 }
 
-function updateConnection(
-  pointerId: number,
-  point: CanvasPoint,
-  content: CanvasDocumentContent,
-  controller: CanvasInteractionController,
-) {
-  const snapshot = controller.get()
-  const connection = snapshot.interaction
-  if (connection.type !== 'connecting' || connection.pointerId !== pointerId) return
-  const resolved = controller.withCandidateWork(pointerId, (budget) => ({
-    target: findCanvasConnectionTarget(
-      content.nodes,
-      connection.source.nodeId,
-      point,
-      20 / snapshot.viewport.zoom,
-      budget,
-    ),
-  }))
-  if (!resolved) return
-  controller.updateConnection(pointerId, point, resolved.target)
-}
-
 function commitConnection(
   pointerId: number,
   interactionController: CanvasInteractionController,
@@ -683,23 +583,6 @@ function commitConnection(
   })
   interactionController.setSelection({ nodeIds: new Set(), edgeIds: new Set([id]) })
   return true
-}
-
-function updateErasing(
-  pointerId: number,
-  point: CanvasPoint,
-  content: CanvasDocumentContent,
-  controller: CanvasInteractionController,
-) {
-  const interaction = controller.get().interaction
-  if (interaction.type !== 'erasing' || interaction.pointerId !== pointerId) return
-  const previous = interaction.points[interaction.points.length - 1]
-  const trail = previous ? [previous, point] : [point]
-  const nodeIds = controller.withCandidateWork(pointerId, (budget) =>
-    findCanvasStrokesIntersectingTrail(content.nodes, trail, interaction.nodeIds, budget),
-  )
-  if (!nodeIds) return
-  controller.updateErasing(pointerId, point, nodeIds)
 }
 
 function commitErasing(

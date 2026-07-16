@@ -1,6 +1,6 @@
 import type { CanvasDocumentNode } from './document-contract'
-import { canvasToScreenPoint } from './interaction-controller'
-import type { CanvasViewport } from './interaction-controller'
+import { canvasToScreenPoint } from './canvas-viewport'
+import type { CanvasViewport } from './interaction-types'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
 const DEFAULT_EMBED_NODE_SIZE = { width: 240, height: 160 }

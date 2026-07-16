@@ -1,7 +1,7 @@
 import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasDocumentChange } from './document-controller'
 import type { CanvasDocumentContent, CanvasDocumentNode } from './document-contract'
-import type { CanvasSelection } from './interaction-controller'
+import type { CanvasSelection } from './interaction-types'
 
 export const CANVAS_ARRANGE_ACTIONS = [
   { id: 'alignLeft', label: 'Align left', minimumNodes: 2 },

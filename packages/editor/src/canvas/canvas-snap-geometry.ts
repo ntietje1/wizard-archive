@@ -1,7 +1,7 @@
 import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentNode } from './document-contract'
-import type { CanvasPoint } from './interaction-controller'
+import type { CanvasPoint } from './interaction-types'
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { CanvasCandidateWorkBudget } from './workload'
 
@@ -14,41 +14,93 @@ export type CanvasSnapGuide = Readonly<{
   end: number
 }>
 
-export function canvasSnapTargetBounds(
+type CanvasSnapAxisEntry = Readonly<{
+  coordinate: number
+  index: number
+}>
+
+type CanvasSnapTargetQuery = Readonly<{
+  targets: ReadonlyArray<CanvasBounds>
+  inspected: number
+}>
+
+export function createCanvasSnapTargetIndex(
   nodes: ReadonlyArray<CanvasDocumentNode>,
   excludedNodeIds: ReadonlySet<CanvasNodeId>,
-  candidateWork: CanvasCandidateWorkBudget,
-): ReadonlyArray<CanvasBounds> {
-  const bounds: Array<CanvasBounds> = []
-  for (const node of nodes) {
-    if (!candidateWork.consume()) break
-    if (!node.hidden && node.type !== 'stroke' && !excludedNodeIds.has(node.id)) {
-      bounds.push(canvasNodeBounds(node))
-    }
+) {
+  const bounds = nodes.flatMap((node) =>
+    node.hidden || node.type === 'stroke' || excludedNodeIds.has(node.id)
+      ? []
+      : [canvasNodeBounds(node)],
+  )
+  const x = snapAxisEntries(bounds, 'x')
+  const y = snapAxisEntries(bounds, 'y')
+  return {
+    near(
+      queryBounds: CanvasBounds,
+      threshold: number,
+      budget: CanvasCandidateWorkBudget,
+    ): CanvasSnapTargetQuery {
+      const indexes = new Set<number>()
+      let inspected = 0
+      for (const [axis, entries] of [
+        ['x', x],
+        ['y', y],
+      ] as const) {
+        const size = axis === 'x' ? queryBounds.width : queryBounds.height
+        for (const coordinate of [
+          queryBounds[axis],
+          queryBounds[axis] + size / 2,
+          queryBounds[axis] + size,
+        ]) {
+          let index = lowerBoundAxis(entries, coordinate - threshold)
+          while (entries[index] && entries[index]!.coordinate <= coordinate + threshold) {
+            if (!budget.consume()) return { targets: [], inspected }
+            inspected += 1
+            indexes.add(entries[index]!.index)
+            index += 1
+          }
+        }
+      }
+      return {
+        targets: Array.from(indexes)
+          .sort((left, right) => left - right)
+          .map((index) => bounds[index]!),
+        inspected,
+      }
+    },
   }
-  return bounds
 }
 
-export function canvasDragSnapBounds(
-  nodes: ReadonlyArray<CanvasDocumentNode>,
-  initialPositions: ReadonlyMap<CanvasNodeId, CanvasPoint>,
-  candidateWork: CanvasCandidateWorkBudget,
-): Readonly<{
-  draggedBounds: ReadonlyArray<CanvasBounds>
-  targetBounds: ReadonlyArray<CanvasBounds>
-}> {
-  const draggedBounds: Array<CanvasBounds> = []
-  const targetBounds: Array<CanvasBounds> = []
-  for (const node of nodes) {
-    if (!candidateWork.consume()) break
-    const position = initialPositions.get(node.id)
-    if (position) {
-      draggedBounds.push(canvasNodeBounds({ ...node, position }))
-    } else if (!node.hidden && node.type !== 'stroke') {
-      targetBounds.push(canvasNodeBounds(node))
+function snapAxisEntries(
+  bounds: ReadonlyArray<CanvasBounds>,
+  axis: 'x' | 'y',
+): ReadonlyArray<CanvasSnapAxisEntry> {
+  const size = axis === 'x' ? 'width' : 'height'
+  const entries = new Map<number, number>()
+  bounds.forEach((candidate, index) => {
+    for (const coordinate of [
+      candidate[axis],
+      candidate[axis] + candidate[size] / 2,
+      candidate[axis] + candidate[size],
+    ]) {
+      if (!entries.has(coordinate)) entries.set(coordinate, index)
     }
+  })
+  return Array.from(entries, ([coordinate, index]) => ({ coordinate, index })).sort(
+    (left, right) => left.coordinate - right.coordinate || left.index - right.index,
+  )
+}
+
+function lowerBoundAxis(entries: ReadonlyArray<CanvasSnapAxisEntry>, coordinate: number): number {
+  let low = 0
+  let high = entries.length
+  while (low < high) {
+    const middle = (low + high) >>> 1
+    if (entries[middle]!.coordinate < coordinate) low = middle + 1
+    else high = middle
   }
-  return { draggedBounds, targetBounds }
+  return low
 }
 
 export function resolveCanvasDrag({

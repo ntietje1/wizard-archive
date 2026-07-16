@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { fitCanvasContent } from '../canvas-layout'
-import { canvasToScreenPoint } from '../interaction-controller'
+import { canvasToScreenPoint } from '../canvas-viewport'
 import { createCanvasTextDocument } from '../text/model'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 

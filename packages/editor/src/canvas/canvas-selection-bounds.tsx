@@ -4,8 +4,8 @@ import type { CanvasDocumentNode } from './document-contract'
 import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
-  CanvasResizeHandle,
 } from './interaction-controller'
+import type { CanvasResizeHandle } from './interaction-types'
 
 const CANVAS_RESIZE_HANDLES: ReadonlyArray<CanvasResizeHandle> = [
   'top-left',
