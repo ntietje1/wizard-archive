@@ -21,6 +21,7 @@ import { CanvasInteractionController, screenToCanvasPoint } from './interaction-
 import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
 import { CanvasSelectionActions } from './canvas-selection-actions'
+import { CanvasSelectionProperties } from './canvas-selection-properties'
 import { findCanvasConnectionTarget } from './canvas-edge-geometry'
 import { fitCanvasContent } from './canvas-layout'
 import { projectCanvasResizeNodeBounds, resolveCanvasResize } from './canvas-resize-geometry'
@@ -165,6 +166,12 @@ export function CanvasEditor({
         surface={surface}
       />
       <CanvasSelectionActions
+        canEdit={canEdit}
+        content={content}
+        documentController={documentController}
+        interaction={interaction}
+      />
+      <CanvasSelectionProperties
         canEdit={canEdit}
         content={content}
         documentController={documentController}

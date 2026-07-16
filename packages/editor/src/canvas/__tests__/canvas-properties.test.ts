@@ -1,0 +1,106 @@
+import { describe, expect, it } from 'vite-plus/test'
+import { createCanvasPropertyChange, resolveCanvasSharedValue } from '../canvas-properties'
+import type { CanvasDocumentContent } from '../document-contract'
+import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+
+const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
+const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
+const STROKE = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-333333333333')
+
+const CONTENT: CanvasDocumentContent = {
+  nodes: [
+    {
+      id: NODE_A,
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: { borderWidth: 3 },
+    },
+    {
+      id: NODE_B,
+      type: 'embed',
+      position: { x: 200, y: 0 },
+      data: { borderWidth: 7 },
+    },
+    {
+      id: STROKE,
+      type: 'stroke',
+      position: { x: 0, y: 100 },
+      data: {
+        points: [
+          [0, 100, 0.5],
+          [100, 100, 0.5],
+        ],
+        color: '#000000',
+        size: 4,
+        opacity: 50,
+        bounds: { x: 0, y: 100, width: 100, height: 1 },
+      },
+    },
+  ],
+  edges: [
+    {
+      id: 'edge-a-b',
+      source: NODE_A,
+      target: NODE_B,
+      type: 'straight',
+      style: { stroke: '#000000', strokeWidth: 4, opacity: 0.5 },
+    },
+  ],
+}
+
+describe('canvas properties', () => {
+  it('represents unavailable, shared, and mixed selection values explicitly', () => {
+    expect(resolveCanvasSharedValue([])).toEqual({ state: 'unavailable' })
+    expect(resolveCanvasSharedValue([3, 3])).toEqual({ state: 'shared', value: 3 })
+    expect(resolveCanvasSharedValue([3, 7])).toEqual({ state: 'mixed' })
+  })
+
+  it('fans a surface update across selected surface nodes in one replacement', () => {
+    expect(
+      createCanvasPropertyChange(
+        CONTENT,
+        { nodeIds: new Set([NODE_A, NODE_B, STROKE]), edgeIds: new Set() },
+        { property: 'borderWidth', value: 5 },
+      ),
+    ).toEqual({
+      type: 'replace',
+      nodes: [
+        { ...CONTENT.nodes[0], data: { borderWidth: 5 } },
+        { ...CONTENT.nodes[1], data: { borderWidth: 5 } },
+      ],
+      edges: [],
+    })
+  })
+
+  it('fans line properties across strokes and edges with their canonical units', () => {
+    const selection = { nodeIds: new Set([STROKE]), edgeIds: new Set(['edge-a-b']) }
+    expect(
+      createCanvasPropertyChange(CONTENT, selection, { property: 'lineWidth', value: 7 }),
+    ).toEqual({
+      type: 'replace',
+      nodes: [{ ...CONTENT.nodes[2], data: { ...CONTENT.nodes[2]!.data, size: 7 } }],
+      edges: [{ ...CONTENT.edges[0], style: { ...CONTENT.edges[0]!.style, strokeWidth: 7 } }],
+    })
+    expect(
+      createCanvasPropertyChange(CONTENT, selection, { property: 'lineOpacity', value: 80 }),
+    ).toEqual({
+      type: 'replace',
+      nodes: [{ ...CONTENT.nodes[2], data: { ...CONTENT.nodes[2]!.data, opacity: 80 } }],
+      edges: [{ ...CONTENT.edges[0], style: { ...CONTENT.edges[0]!.style, opacity: 0.8 } }],
+    })
+  })
+
+  it('changes edge type and omits effective no-ops', () => {
+    const selection = { nodeIds: new Set<typeof NODE_A>(), edgeIds: new Set(['edge-a-b']) }
+    expect(
+      createCanvasPropertyChange(CONTENT, selection, { property: 'edgeType', value: 'step' }),
+    ).toEqual({
+      type: 'replace',
+      nodes: [],
+      edges: [{ ...CONTENT.edges[0], type: 'step' }],
+    })
+    expect(
+      createCanvasPropertyChange(CONTENT, selection, { property: 'edgeType', value: 'straight' }),
+    ).toBeNull()
+  })
+})

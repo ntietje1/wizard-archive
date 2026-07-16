@@ -522,6 +522,72 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('shows explicit mixed properties and fans out one canonical update', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 50,
+          data: { borderWidth: 3 },
+        },
+        {
+          id: NODE_B,
+          type: 'text',
+          position: { x: 200, y: 0 },
+          width: 100,
+          height: 50,
+          data: { borderWidth: 7 },
+        },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Property board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    const nodes = screen.getAllByTestId('canvas-node')
+    installPointerCapture(surface)
+    nodes.forEach(installPointerCapture)
+    fireEvent.pointerDown(nodes[0], { button: 0, clientX: 20, clientY: 20, pointerId: 21 })
+    fireEvent.pointerUp(nodes[0], { clientX: 20, clientY: 20, pointerId: 21 })
+    fireEvent.pointerDown(nodes[1], {
+      button: 0,
+      clientX: 220,
+      clientY: 20,
+      ctrlKey: true,
+      pointerId: 22,
+    })
+
+    const borderWidth = screen.getByRole('spinbutton', { name: 'Border width' })
+    expect(borderWidth).toHaveAttribute('placeholder', '--')
+    fireEvent.change(borderWidth, { target: { value: '5' } })
+    fireEvent.blur(borderWidth)
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      { data: { borderWidth: 5 } },
+      { data: { borderWidth: 5 } },
+    ])
+    expect(nodes[0].firstElementChild).toHaveStyle({ borderWidth: '5px' })
+    expect(nodes[1].firstElementChild).toHaveStyle({ borderWidth: '5px' })
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Fill color' }), {
+      target: { value: 'var(--bg-blue)' },
+    })
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      { data: { backgroundColor: 'var(--bg-blue)', borderWidth: 5 } },
+      { data: { backgroundColor: 'var(--bg-blue)', borderWidth: 5 } },
+    ])
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      { data: { borderWidth: 5 } },
+      { data: { borderWidth: 5 } },
+    ])
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders moved stroke coordinates with a screen-space hit target', async () => {
     const session = await createSession({
       nodes: [
