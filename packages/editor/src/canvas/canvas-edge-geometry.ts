@@ -6,7 +6,6 @@ import type {
   CanvasPoint,
 } from './interaction-types'
 import type { CanvasNodeId } from '../resources/domain-id'
-import type { CanvasCandidateWorkBudget } from './workload'
 import { createCanvasBoundsIndex } from './bounds-index'
 import type { CanvasBounds } from './canvas-bounds'
 
@@ -19,12 +18,6 @@ export const CANVAS_CONNECTION_HANDLES: ReadonlyArray<CanvasConnectionHandle> = 
   'bottom',
   'left',
 ]
-
-type CanvasConnectionTargetQuery = Readonly<{
-  target: CanvasConnectionAnchor | null
-  exhausted: boolean
-  visited: number
-}>
 
 export function createCanvasConnectionCandidateIndex(nodes: ReadonlyArray<CanvasDocumentNode>) {
   const candidates = nodes.flatMap((node) =>
@@ -46,23 +39,23 @@ export function createCanvasConnectionCandidateIndex(nodes: ReadonlyArray<Canvas
       sourceNodeId: CanvasNodeId,
       point: CanvasPoint,
       radius: number,
-      budget: CanvasCandidateWorkBudget,
-    ): CanvasConnectionTargetQuery {
-      const query = index.query(
-        { x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2 },
-        budget,
-      )
+    ): CanvasConnectionAnchor | null {
+      const nearby = index.query({
+        x: point.x - radius,
+        y: point.y - radius,
+        width: radius * 2,
+        height: radius * 2,
+      })
       let target: CanvasConnectionAnchor | null = null
       let closestDistance = radius
-      for (const candidate of query.values) {
-        if (!budget.consume()) return { target: null, exhausted: true, visited: query.visited }
+      for (const candidate of nearby) {
         if (candidate.anchor.nodeId === sourceNodeId) continue
         const distance = Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y)
         if (distance >= closestDistance) continue
         target = candidate.anchor
         closestDistance = distance
       }
-      return { target, exhausted: budget.exhausted, visited: query.visited }
+      return target
     },
   }
 }

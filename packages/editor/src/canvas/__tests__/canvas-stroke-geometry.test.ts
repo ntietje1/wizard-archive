@@ -4,8 +4,8 @@ import {
   canvasStrokeLocalPoints,
   createCanvasEraserCandidateIndex,
 } from '../canvas-stroke-geometry'
-import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
-import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
+import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 const HIT = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const MISS = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -50,8 +50,7 @@ describe('canvas stroke eraser geometry', () => {
           { x: 40, y: 40 },
         ],
         new Set(),
-        createCanvasCandidateWorkBudget(),
-      ).nodeIds,
+      ),
     ).toEqual(new Set([HIT]))
     expect(
       index.erase(
@@ -60,8 +59,7 @@ describe('canvas stroke eraser geometry', () => {
           { x: 40, y: 140 },
         ],
         new Set([HIT]),
-        createCanvasCandidateWorkBudget(),
-      ).nodeIds,
+      ),
     ).toEqual(new Set([HIT, MISS]))
   })
 
@@ -75,22 +73,18 @@ describe('canvas stroke eraser geometry', () => {
     ])
   })
 
-  it('keeps only previously proven erasures when candidate work becomes uncertain', () => {
-    const budget = createCanvasCandidateWorkBudget()
-    let consumed = 0
-    while (budget.consume()) consumed += 1
-
-    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerQuery)
-    expect(
-      createCanvasEraserCandidateIndex([stroke(HIT, 10), stroke(MISS, 10)]).erase(
-        [
-          { x: 40, y: 0 },
-          { x: 40, y: 40 },
-        ],
-        new Set([HIT]),
-        budget,
-      ).nodeIds,
-    ).toEqual(new Set([HIT]))
-    expect(budget.exhausted).toBe(true)
+  it('erases across the maximum supported stroke set without refusing late candidates', () => {
+    const nodes = Array.from({ length: CANVAS_WORKLOAD_LIMITS.nodes }, (_, index) => ({
+      ...stroke(generateDomainId(DOMAIN_ID_KIND.canvasNode), 10),
+      position: { x: index * 80, y: 10 },
+    }))
+    const trail = Array.from({ length: CANVAS_WORKLOAD_LIMITS.gesturePoints }, (_, index) => ({
+      x: index * 80 + 40,
+      y: index % 2 === 0 ? 0 : 20,
+    }))
+    const startedAt = performance.now()
+    const result = createCanvasEraserCandidateIndex(nodes).erase(trail, new Set())
+    expect(result).toEqual(new Set(nodes.map((node) => node.id)))
+    expect(performance.now() - startedAt).toBeLessThan(1_000)
   })
 })

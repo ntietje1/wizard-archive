@@ -3,15 +3,8 @@ import { canvasNodeSize } from './canvas-layout'
 import type { CanvasDrawPoint, CanvasPoint } from './interaction-types'
 import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
-import type { CanvasCandidateWorkBudget } from './workload'
 import { canvasNodeBounds } from './canvas-bounds'
 import { createCanvasBoundsIndex } from './bounds-index'
-
-type CanvasEraserQuery = Readonly<{
-  nodeIds: ReadonlySet<CanvasNodeId>
-  exhausted: boolean
-  visited: number
-}>
 
 export function createCanvasEraserCandidateIndex(nodes: ReadonlyArray<CanvasDocumentNode>) {
   const index = createCanvasBoundsIndex(
@@ -25,25 +18,21 @@ export function createCanvasEraserCandidateIndex(nodes: ReadonlyArray<CanvasDocu
     erase(
       trail: ReadonlyArray<CanvasPoint>,
       alreadyMarked: ReadonlySet<CanvasNodeId>,
-      budget: CanvasCandidateWorkBudget,
-    ): CanvasEraserQuery {
+    ): ReadonlySet<CanvasNodeId> {
       const marked = new Set(alreadyMarked)
-      if (trail.length < 2) return { nodeIds: marked, exhausted: false, visited: 0 }
+      if (trail.length < 2) return marked
       const trailBounds = canvasStrokeBounds(
         trail.map(({ x, y }) => [x, y, 0] as const),
         0,
       )
-      const query = index.query(trailBounds, budget)
-      for (const node of query.values) {
+      const query = index.query(trailBounds)
+      for (const node of query) {
         if (marked.has(node.id)) continue
-        if (canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node), budget)) {
+        if (canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node))) {
           marked.add(node.id)
         }
-        if (budget.exhausted) {
-          return { nodeIds: alreadyMarked, exhausted: true, visited: query.visited }
-        }
       }
-      return { nodeIds: marked, exhausted: false, visited: query.visited }
+      return marked
     },
   }
 }

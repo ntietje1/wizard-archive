@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { dragPointer, visibleBox } from './helpers/editor-canvas-helpers'
 
 test.describe('canvas performance smoke', () => {
   test.setTimeout(60_000)
@@ -44,5 +45,54 @@ test.describe('canvas performance smoke', () => {
 
     await editor.getByRole('button', { name: 'Fit view' }).click()
     await expect(nodes).toHaveCount(512)
+
+    const fittedBounds = await visibleBox(surface)
+    const geometryStartedAt = Date.now()
+    await editor.getByRole('button', { name: 'Lasso select' }).click()
+    const inset = 8
+    const lasso = [
+      { x: fittedBounds.x + inset, y: fittedBounds.y + fittedBounds.height - inset },
+      { x: fittedBounds.x + inset, y: fittedBounds.y + inset },
+      { x: fittedBounds.x + fittedBounds.width - inset, y: fittedBounds.y + inset },
+      {
+        x: fittedBounds.x + fittedBounds.width - inset,
+        y: fittedBounds.y + fittedBounds.height - inset,
+      },
+      { x: fittedBounds.x + inset, y: fittedBounds.y + fittedBounds.height - inset },
+    ]
+    await page.mouse.move(lasso[0]!.x, lasso[0]!.y)
+    await page.mouse.down()
+    await page.mouse.move(lasso[1]!.x, lasso[1]!.y)
+    await page.mouse.move(lasso[2]!.x, lasso[2]!.y)
+    await page.mouse.move(lasso[3]!.x, lasso[3]!.y)
+    await page.mouse.move(lasso[4]!.x, lasso[4]!.y)
+    await page.mouse.up()
+    await editor.getByRole('button', { name: 'Pointer' }).click()
+    const selection = editor.getByTestId('canvas-selection-resize-wrapper')
+    await expect(selection).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await dragPointer(
+      page,
+      { x: fittedBounds.x + inset, y: fittedBounds.y + fittedBounds.height - inset },
+      { x: fittedBounds.x + fittedBounds.width - inset, y: fittedBounds.y + inset },
+      4,
+    )
+    await expect(selection).toBeVisible()
+    const resize = editor.getByRole('button', { name: 'Resize bottom right' })
+    const resizeBounds = await visibleBox(resize)
+    await page.keyboard.down('Control')
+    await dragPointer(
+      page,
+      { x: resizeBounds.x + resizeBounds.width / 2, y: resizeBounds.y + resizeBounds.height / 2 },
+      {
+        x: resizeBounds.x + resizeBounds.width / 2 + 16,
+        y: resizeBounds.y + resizeBounds.height / 2 + 16,
+      },
+      4,
+    )
+    await page.keyboard.up('Control')
+    await expect(selection).toBeVisible()
+    expect(Date.now() - geometryStartedAt).toBeLessThan(5_000)
   })
 })

@@ -5,8 +5,8 @@ import {
   createCanvasConnectionCandidateIndex,
 } from '../canvas-edge-geometry'
 import type { CanvasDocumentNode } from '../document-contract'
-import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
-import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
+import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -51,24 +51,27 @@ describe('canvas edge geometry', () => {
 
   it('snaps to the nearest non-source node handle within the canvas-space radius', () => {
     const index = createCanvasConnectionCandidateIndex(NODES)
-    expect(
-      index.find(NODE_A, { x: 302, y: 80 }, 20, createCanvasCandidateWorkBudget()).target,
-    ).toEqual({ nodeId: NODE_B, handle: 'left' })
-    expect(
-      index.find(NODE_A, { x: 250, y: 80 }, 20, createCanvasCandidateWorkBudget()).target,
-    ).toBeNull()
+    expect(index.find(NODE_A, { x: 302, y: 80 }, 20)).toEqual({
+      nodeId: NODE_B,
+      handle: 'left',
+    })
+    expect(index.find(NODE_A, { x: 250, y: 80 }, 20)).toBeNull()
   })
 
-  it('refuses an uncertain connection target after the gesture budget is exhausted', () => {
-    const budget = createCanvasCandidateWorkBudget()
-    let consumed = 0
-    while (budget.consume()) consumed += 1
-
-    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerQuery)
+  it('finds a late target across the maximum supported node set', () => {
+    const nodes = Array.from({ length: CANVAS_WORKLOAD_LIMITS.nodes }, (_, index) => ({
+      id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+      type: 'text' as const,
+      position: { x: index * 200, y: 0 },
+      data: {},
+    }))
+    const target = nodes.at(-1)!
     expect(
-      createCanvasConnectionCandidateIndex(NODES).find(NODE_A, { x: 302, y: 80 }, 20, budget)
-        .target,
-    ).toBeNull()
-    expect(budget.exhausted).toBe(true)
+      createCanvasConnectionCandidateIndex(nodes).find(
+        nodes[0]!.id,
+        { x: target.position.x, y: 40 },
+        20,
+      ),
+    ).toEqual({ nodeId: target.id, handle: 'left' })
   })
 })

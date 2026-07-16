@@ -3,7 +3,6 @@ import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentNode } from './document-contract'
 import type { CanvasPoint } from './interaction-types'
 import type { CanvasNodeId } from '../resources/domain-id'
-import type { CanvasCandidateWorkBudget } from './workload'
 
 const CANVAS_SNAP_THRESHOLD_PX = 8
 
@@ -19,11 +18,6 @@ type CanvasSnapAxisEntry = Readonly<{
   index: number
 }>
 
-type CanvasSnapTargetQuery = Readonly<{
-  targets: ReadonlyArray<CanvasBounds>
-  inspected: number
-}>
-
 export function createCanvasSnapTargetIndex(
   nodes: ReadonlyArray<CanvasDocumentNode>,
   excludedNodeIds: ReadonlySet<CanvasNodeId>,
@@ -36,13 +30,8 @@ export function createCanvasSnapTargetIndex(
   const x = snapAxisEntries(bounds, 'x')
   const y = snapAxisEntries(bounds, 'y')
   return {
-    near(
-      queryBounds: CanvasBounds,
-      threshold: number,
-      budget: CanvasCandidateWorkBudget,
-    ): CanvasSnapTargetQuery {
+    near(queryBounds: CanvasBounds, threshold: number): ReadonlyArray<CanvasBounds> {
       const indexes = new Set<number>()
-      let inspected = 0
       for (const [axis, entries] of [
         ['x', x],
         ['y', y],
@@ -55,19 +44,14 @@ export function createCanvasSnapTargetIndex(
         ]) {
           let index = lowerBoundAxis(entries, coordinate - threshold)
           while (entries[index] && entries[index]!.coordinate <= coordinate + threshold) {
-            if (!budget.consume()) return { targets: [], inspected }
-            inspected += 1
             indexes.add(entries[index]!.index)
             index += 1
           }
         }
       }
-      return {
-        targets: Array.from(indexes)
-          .sort((left, right) => left - right)
-          .map((index) => bounds[index]!),
-        inspected,
-      }
+      return Array.from(indexes)
+        .sort((left, right) => left - right)
+        .map((index) => bounds[index]!)
     },
   }
 }
@@ -110,7 +94,6 @@ export function resolveCanvasDrag({
   constrain,
   snap,
   zoom,
-  candidateWork,
 }: {
   delta: CanvasPoint
   draggedBounds: ReadonlyArray<CanvasBounds>
@@ -118,10 +101,8 @@ export function resolveCanvasDrag({
   constrain: boolean
   snap: boolean
   zoom: number
-  candidateWork: CanvasCandidateWorkBudget
 }): Readonly<{ delta: CanvasPoint; guides: ReadonlyArray<CanvasSnapGuide> }> {
   const constrained = constrainCanvasDrag(delta, constrain)
-  if (candidateWork.exhausted) return { delta: constrained, guides: [] }
   if (!snap || constrain || draggedBounds.length === 0 || targetBounds.length === 0) {
     return { delta: constrained, guides: [] }
   }
@@ -135,14 +116,11 @@ export function resolveCanvasDrag({
   const vertical = bestSnapCandidate(
     snapCandidatesForTargets('x', dragged, targetBounds),
     threshold,
-    candidateWork,
   )
   const horizontal = bestSnapCandidate(
     snapCandidatesForTargets('y', dragged, targetBounds),
     threshold,
-    candidateWork,
   )
-  if (candidateWork.exhausted) return { delta: constrained, guides: [] }
   return {
     delta: {
       x: constrained.x + (vertical ? vertical.target - vertical.dragged : 0),
@@ -174,12 +152,10 @@ export type CanvasSnapCandidate = Readonly<{
 export function bestSnapCandidate<TCandidate extends CanvasSnapCandidate>(
   candidates: Iterable<TCandidate>,
   threshold: number,
-  budget: CanvasCandidateWorkBudget,
 ): TCandidate | null {
   let best: TCandidate | null = null
   let bestDistance = threshold + 1
   for (const candidate of candidates) {
-    if (!budget.consume()) break
     const distance = Math.abs(candidate.target - candidate.dragged)
     if (distance <= threshold && distance < bestDistance) {
       best = candidate

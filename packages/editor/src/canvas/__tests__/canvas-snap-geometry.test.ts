@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { resolveCanvasDrag } from '../canvas-snap-geometry'
-import { createCanvasCandidateWorkBudget } from '../workload'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 describe('canvas snap geometry', () => {
   it('snaps dragged edges and centers with a zoom-correct screen threshold', () => {
@@ -12,7 +12,6 @@ describe('canvas snap geometry', () => {
         constrain: false,
         snap: true,
         zoom: 2,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }),
     ).toEqual({
       delta: { x: 94, y: 50 },
@@ -27,7 +26,6 @@ describe('canvas snap geometry', () => {
         constrain: false,
         snap: true,
         zoom: 2,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }).delta,
     ).toEqual({ x: 100, y: 50 })
   })
@@ -41,16 +39,15 @@ describe('canvas snap geometry', () => {
         constrain: true,
         snap: true,
         zoom: 1,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }),
     ).toEqual({ delta: { x: 20, y: 0 }, guides: [] })
   })
 
-  it('resolves adversarial target sets within one deterministic candidate budget', () => {
+  it('snaps against the maximum supported target set without refusing late work', () => {
     const options = {
       delta: { x: 96, y: 46 },
       draggedBounds: [{ x: 0, y: 0, width: 100, height: 50 }],
-      targetBounds: Array.from({ length: 20_000 }, (_, index) => ({
+      targetBounds: Array.from({ length: CANVAS_WORKLOAD_LIMITS.nodes - 1 }, (_, index) => ({
         x: 200 + index,
         y: 100 + index,
         width: 100,
@@ -61,10 +58,12 @@ describe('canvas snap geometry', () => {
       zoom: 2,
     }
 
-    const resolve = () =>
-      resolveCanvasDrag({ ...options, candidateWork: createCanvasCandidateWorkBudget() })
+    const resolve = () => resolveCanvasDrag(options)
+    const startedAt = performance.now()
     const first = resolve()
     expect(resolve()).toEqual(first)
-    expect(first).toEqual({ delta: { x: 96, y: 46 }, guides: [] })
+    expect(first.delta).toEqual({ x: 100, y: 50 })
+    expect(first.guides).toHaveLength(2)
+    expect(performance.now() - startedAt).toBeLessThan(1_000)
   })
 })

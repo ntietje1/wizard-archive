@@ -12,7 +12,6 @@ export const CANVAS_WORKLOAD_LIMITS = Object.freeze({
   pointsPerStroke: 2048,
   selectedElements: 128,
   gesturePoints: 512,
-  candidateWorkPerQuery: 12_288,
 })
 
 type CanvasWorkloadContent = Readonly<{
@@ -102,36 +101,4 @@ export function canvasSelectionWithinWorkload(selection: {
   edgeIds: ReadonlySet<unknown>
 }): boolean {
   return selection.nodeIds.size + selection.edgeIds.size <= CANVAS_WORKLOAD_LIMITS.selectedElements
-}
-
-export interface CanvasCandidateWorkBudget {
-  readonly exhausted: boolean
-  readonly remaining: number
-  consume(): boolean
-}
-
-export function createCanvasCandidateWorkBudget(): CanvasCandidateWorkBudget {
-  return new CandidateWorkBudget()
-}
-
-class CandidateWorkBudget implements CanvasCandidateWorkBudget {
-  #exhausted = false
-  #remaining: number = CANVAS_WORKLOAD_LIMITS.candidateWorkPerQuery
-
-  get exhausted(): boolean {
-    return this.#exhausted
-  }
-
-  get remaining(): number {
-    return this.#remaining
-  }
-
-  consume(): boolean {
-    if (this.#remaining === 0) {
-      this.#exhausted = true
-      return false
-    }
-    this.#remaining -= 1
-    return true
-  }
 }

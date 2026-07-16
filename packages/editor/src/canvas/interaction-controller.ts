@@ -22,7 +22,7 @@ import type { CanvasSnapGuide } from './canvas-snap-geometry'
 import { resolveCanvasResize } from './canvas-resize-geometry'
 import { canvasBoundsFromPoints, createCanvasSelectionCandidateIndex } from './selection-geometry'
 import type { CanvasDocumentContent } from './document-contract'
-import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from './workload'
+import { CANVAS_WORKLOAD_LIMITS } from './workload'
 
 type CanvasSelectionKind = 'lasso' | 'marquee'
 type CanvasSelectionMode = 'add' | 'replace'
@@ -684,7 +684,6 @@ class CanvasInteractionControllerState {
     ) {
       return
     }
-    const candidateWork = createCanvasCandidateWorkBudget()
     const unsnapped = resolveCanvasResize({
       handle: interaction.handle,
       initialBounds: interaction.initialBounds,
@@ -694,14 +693,9 @@ class CanvasInteractionControllerState {
       square,
       snap: false,
       zoom: this.#snapshot.viewport.zoom,
-      candidateWork,
     })
     const targetBounds = snap
-      ? candidates.index.near(
-          unsnapped.bounds,
-          canvasSnapThreshold(this.#snapshot.viewport.zoom),
-          candidateWork,
-        ).targets
+      ? candidates.index.near(unsnapped.bounds, canvasSnapThreshold(this.#snapshot.viewport.zoom))
       : []
     const resolved = resolveCanvasResize({
       handle: interaction.handle,
@@ -712,7 +706,6 @@ class CanvasInteractionControllerState {
       square,
       snap,
       zoom: this.#snapshot.viewport.zoom,
-      candidateWork,
     })
     this.#publish({
       ...this.#snapshot,
@@ -748,14 +741,15 @@ class CanvasInteractionControllerState {
     ) {
       return
     }
-    const result = candidates.index.find(
+    const target = candidates.index.find(
       interaction.source.nodeId,
       point,
       20 / this.#snapshot.viewport.zoom,
-      createCanvasCandidateWorkBudget(),
     )
-    const target = result.exhausted ? null : result.target
-    this.#publish({ ...this.#snapshot, interaction: { ...interaction, current: point, target } })
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { ...interaction, current: point, target },
+    })
   }
 
   commitConnection(
@@ -779,19 +773,13 @@ class CanvasInteractionControllerState {
     ) {
       return
     }
-    const result = candidates.index.erase(
-      [interaction.current, point],
-      interaction.nodeIds,
-      createCanvasCandidateWorkBudget(),
-    )
+    const nodeIds = candidates.index.erase([interaction.current, point], interaction.nodeIds)
     this.#publish({
       ...this.#snapshot,
       interaction: {
         ...interaction,
         current: point,
-        nodeIds: new Set(
-          Array.from(result.nodeIds).slice(0, CANVAS_WORKLOAD_LIMITS.selectedElements),
-        ),
+        nodeIds: new Set(Array.from(nodeIds).slice(0, CANVAS_WORKLOAD_LIMITS.selectedElements)),
       },
     })
   }
@@ -844,7 +832,6 @@ class CanvasInteractionControllerState {
     ) {
       return
     }
-    const candidateWork = createCanvasCandidateWorkBudget()
     const unconstrainedDelta = {
       x: point.x - interaction.anchor.x,
       y: point.y - interaction.anchor.y,
@@ -858,11 +845,7 @@ class CanvasInteractionControllerState {
     )
     const targetBounds =
       snap && !constrain && translated
-        ? candidates.index.near(
-            translated,
-            canvasSnapThreshold(this.#snapshot.viewport.zoom),
-            candidateWork,
-          ).targets
+        ? candidates.index.near(translated, canvasSnapThreshold(this.#snapshot.viewport.zoom))
         : []
     const resolved = resolveCanvasDrag({
       delta: unconstrainedDelta,
@@ -871,7 +854,6 @@ class CanvasInteractionControllerState {
       constrain,
       snap,
       zoom: this.#snapshot.viewport.zoom,
-      candidateWork,
     })
     const { delta, guides } = resolved
     if (
@@ -962,28 +944,25 @@ class CanvasInteractionControllerState {
     ) {
       return
     }
-    const budget = createCanvasCandidateWorkBudget()
     if (interaction.kind === 'marquee') {
       const current = square ? squareSelectionPoint(interaction.origin, point) : point
       const bounds = canvasBoundsFromPoints(interaction.origin, current)
       const distance = Math.hypot(bounds.width, bounds.height) * this.#snapshot.viewport.zoom
       const result =
-        distance <= 1
-          ? null
-          : candidates.index.rectangle(bounds, this.#snapshot.viewport.zoom, budget)
+        distance <= 1 ? null : candidates.index.rectangle(bounds, this.#snapshot.viewport.zoom)
       this.#publish({
         ...this.#snapshot,
         interaction: {
           ...interaction,
           current,
-          candidate: result && !result.exhausted ? cloneSelection(result.selection) : null,
+          candidate: result ? cloneSelection(result) : null,
         },
       })
       return
     }
     const sampled = appendGesturePoint(interaction.points, point, interaction.sampleDistance)
     const polygon = lassoPoints(sampled.points, point)
-    const result = polygon.length < 3 ? null : candidates.index.polygon(polygon, budget)
+    const result = polygon.length < 3 ? null : candidates.index.polygon(polygon)
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -991,7 +970,7 @@ class CanvasInteractionControllerState {
         points: sampled.points,
         current: point,
         sampleDistance: sampled.sampleDistance,
-        candidate: result && !result.exhausted ? cloneSelection(result.selection) : null,
+        candidate: result ? cloneSelection(result) : null,
       },
     })
   }

@@ -1,12 +1,6 @@
 import type { CanvasBounds } from './canvas-bounds'
-import type { CanvasCandidateWorkBudget } from './workload'
 
 type CanvasBoundsEntry<T> = Readonly<{ bounds: CanvasBounds; value: T }>
-
-type CanvasBoundsQuery<T> = Readonly<{
-  values: ReadonlyArray<T>
-  visited: number
-}>
 
 type CanvasBoundsTree<T> =
   | Readonly<{ bounds: CanvasBounds; entry: CanvasBoundsEntry<T>; left?: never; right?: never }>
@@ -20,19 +14,12 @@ type CanvasBoundsTree<T> =
 export function createCanvasBoundsIndex<T>(entries: ReadonlyArray<CanvasBoundsEntry<T>>) {
   const root = buildBoundsTree([...entries], 0)
   return {
-    query(
-      bounds: CanvasBounds,
-      budget: CanvasCandidateWorkBudget,
-      limit = Number.POSITIVE_INFINITY,
-    ): CanvasBoundsQuery<T> {
-      if (!root || limit <= 0) return { values: [], visited: 0 }
+    query(bounds: CanvasBounds, limit = Number.POSITIVE_INFINITY): ReadonlyArray<T> {
+      if (!root || limit <= 0) return []
       const values: Array<T> = []
       const stack = [root]
-      let visited = 0
       while (stack.length > 0 && values.length < limit) {
-        if (!budget.consume()) break
         const node = stack.pop()!
-        visited += 1
         if (!boundsIntersect(node.bounds, bounds)) continue
         if (node.entry) {
           values.push(node.entry.value)
@@ -40,7 +27,7 @@ export function createCanvasBoundsIndex<T>(entries: ReadonlyArray<CanvasBoundsEn
         }
         stack.push(node.right, node.left)
       }
-      return { values, visited }
+      return values
     },
   }
 }

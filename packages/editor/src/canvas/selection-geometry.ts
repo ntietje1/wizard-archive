@@ -7,7 +7,6 @@ import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasPoint, CanvasSelection } from './interaction-types'
 import type { CanvasNodeId } from '../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS } from './workload'
-import type { CanvasCandidateWorkBudget } from './workload'
 import { createCanvasBoundsIndex } from './bounds-index'
 
 const STROKE_SELECTION_PADDING_PX = 12
@@ -20,12 +19,6 @@ type CanvasSelectionNodeCandidate = Readonly<{
 type CanvasSelectionEdgeCandidate = Readonly<{
   id: string
   path: ReadonlyArray<CanvasPoint>
-}>
-
-type CanvasSelectionQuery = Readonly<{
-  selection: CanvasSelection
-  exhausted: boolean
-  visited: number
 }>
 
 export function createCanvasSelectionCandidateIndex(content: CanvasDocumentContent) {
@@ -53,68 +46,43 @@ export function createCanvasSelectionCandidateIndex(content: CanvasDocumentConte
     queryBounds: CanvasBounds,
     nodeMatches: (candidate: CanvasSelectionNodeCandidate) => boolean,
     edgeMatches: (candidate: CanvasSelectionEdgeCandidate) => boolean,
-    budget: CanvasCandidateWorkBudget,
-  ): CanvasSelectionQuery => {
-    const nodeQuery = nodeIndex.query(queryBounds, budget)
+  ): CanvasSelection => {
+    const nodeCandidates = nodeIndex.query(queryBounds)
     const nodeIds = new Set<CanvasNodeId>()
-    for (const candidate of nodeQuery.values) {
+    for (const candidate of nodeCandidates) {
       if (nodeMatches(candidate)) nodeIds.add(candidate.node.id)
-      if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements || budget.exhausted) break
+      if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) break
     }
-    if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements || budget.exhausted) {
-      return {
-        selection: { nodeIds, edgeIds: new Set() },
-        exhausted: budget.exhausted,
-        visited: nodeQuery.visited,
-      }
+    if (nodeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) {
+      return { nodeIds, edgeIds: new Set() }
     }
-    const edgeQuery = edgeIndex.query(queryBounds, budget)
+    const edgeCandidates = edgeIndex.query(queryBounds)
     const edgeIds = new Set<string>()
-    for (const candidate of edgeQuery.values) {
+    for (const candidate of edgeCandidates) {
       if (edgeMatches(candidate)) edgeIds.add(candidate.id)
-      if (
-        nodeIds.size + edgeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements ||
-        budget.exhausted
-      ) {
-        break
-      }
+      if (nodeIds.size + edgeIds.size === CANVAS_WORKLOAD_LIMITS.selectedElements) break
     }
-    return {
-      selection: { nodeIds, edgeIds },
-      exhausted: budget.exhausted,
-      visited: nodeQuery.visited + edgeQuery.visited,
-    }
+    return { nodeIds, edgeIds }
   }
   return {
-    rectangle(
-      bounds: CanvasBounds,
-      zoom: number,
-      budget: CanvasCandidateWorkBudget,
-    ): CanvasSelectionQuery {
+    rectangle(bounds: CanvasBounds, zoom: number): CanvasSelection {
       const queryBounds = expandBounds(
         bounds,
         Math.max(strokePadding, STROKE_SELECTION_PADDING_PX / zoom),
       )
       return select(
         queryBounds,
-        (candidate) => nodeIntersectsRectangle(candidate.node, bounds, zoom, budget),
-        (candidate) => polylineIntersectsRectangle(candidate.path, bounds, budget),
-        budget,
+        (candidate) => nodeIntersectsRectangle(candidate.node, bounds, zoom),
+        (candidate) => polylineIntersectsRectangle(candidate.path, bounds),
       )
     },
-    polygon(
-      polygon: ReadonlyArray<CanvasPoint>,
-      budget: CanvasCandidateWorkBudget,
-    ): CanvasSelectionQuery {
-      if (polygon.length < 3) {
-        return { selection: emptySelection(), exhausted: false, visited: 0 }
-      }
+    polygon(polygon: ReadonlyArray<CanvasPoint>): CanvasSelection {
+      if (polygon.length < 3) return emptySelection()
       const queryBounds = expandBounds(pointsBounds(polygon), strokePadding)
       return select(
         queryBounds,
-        (candidate) => nodeIntersectsPolygon(candidate.node, polygon, budget),
-        (candidate) => polylineIntersectsPolygon(candidate.path, polygon, budget),
-        budget,
+        (candidate) => nodeIntersectsPolygon(candidate.node, polygon),
+        (candidate) => polylineIntersectsPolygon(candidate.path, polygon),
       )
     },
   }
@@ -133,25 +101,22 @@ function nodeIntersectsRectangle(
   node: CanvasDocumentNode,
   bounds: CanvasBounds,
   zoom: number,
-  budget: CanvasCandidateWorkBudget,
 ): boolean {
   if (node.type !== 'stroke') return rectanglesIntersect(bounds, nodeBounds(node))
   const padding = Math.max(node.data.size / 2, STROKE_SELECTION_PADDING_PX / zoom)
   return polylineIntersectsRectangle(
     canvasStrokeDocumentPoints(node),
     expandBounds(bounds, padding),
-    budget,
   )
 }
 
 function nodeIntersectsPolygon(
   node: CanvasDocumentNode,
   polygon: ReadonlyArray<CanvasPoint>,
-  budget: CanvasCandidateWorkBudget,
 ): boolean {
   return node.type === 'stroke'
-    ? polylineIntersectsPolygon(canvasStrokeDocumentPoints(node), polygon, budget)
-    : polygonIntersectsRectangle(polygon, nodeBounds(node), budget)
+    ? polylineIntersectsPolygon(canvasStrokeDocumentPoints(node), polygon)
+    : polygonIntersectsRectangle(polygon, nodeBounds(node))
 }
 
 function nodeBounds(node: CanvasDocumentNode): CanvasBounds {
@@ -193,44 +158,35 @@ function pointInRectangle(point: CanvasPoint, bounds: CanvasBounds): boolean {
 function polylineIntersectsRectangle(
   points: ReadonlyArray<CanvasPoint>,
   bounds: CanvasBounds,
-  budget: CanvasCandidateWorkBudget,
 ): boolean {
-  if (anyPointInRectangle(points, bounds, budget)) return true
+  if (anyPointInRectangle(points, bounds)) return true
   const corners = rectangleCorners(bounds)
-  return canvasPolylinesIntersect(points, [...corners, corners[0]], budget)
+  return canvasPolylinesIntersect(points, [...corners, corners[0]])
 }
 
 function polygonIntersectsRectangle(
   polygon: ReadonlyArray<CanvasPoint>,
   bounds: CanvasBounds,
-  budget: CanvasCandidateWorkBudget,
 ): boolean {
   const corners = rectangleCorners(bounds)
   return (
-    anyPointInPolygon(corners, polygon, budget) ||
-    anyPointInRectangle(polygon, bounds, budget) ||
-    canvasPolylinesIntersect([...polygon, polygon[0]], [...corners, corners[0]], budget)
+    anyPointInPolygon(corners, polygon) ||
+    anyPointInRectangle(polygon, bounds) ||
+    canvasPolylinesIntersect([...polygon, polygon[0]], [...corners, corners[0]])
   )
 }
 
 function polylineIntersectsPolygon(
   points: ReadonlyArray<CanvasPoint>,
   polygon: ReadonlyArray<CanvasPoint>,
-  budget: CanvasCandidateWorkBudget,
 ): boolean {
   return (
-    anyPointInPolygon(points, polygon, budget) ||
-    canvasPolylinesIntersect(points, [...polygon, polygon[0]], budget)
+    anyPointInPolygon(points, polygon) || canvasPolylinesIntersect(points, [...polygon, polygon[0]])
   )
 }
 
-function anyPointInRectangle(
-  points: ReadonlyArray<CanvasPoint>,
-  bounds: CanvasBounds,
-  budget: CanvasCandidateWorkBudget,
-): boolean {
+function anyPointInRectangle(points: ReadonlyArray<CanvasPoint>, bounds: CanvasBounds): boolean {
   for (const point of points) {
-    if (!budget.consume()) return false
     if (pointInRectangle(point, bounds)) return true
   }
   return false
@@ -239,10 +195,9 @@ function anyPointInRectangle(
 function anyPointInPolygon(
   points: ReadonlyArray<CanvasPoint>,
   polygon: ReadonlyArray<CanvasPoint>,
-  budget: CanvasCandidateWorkBudget,
 ): boolean {
   for (const point of points) {
-    if (pointInPolygon(point, polygon, budget)) return true
+    if (pointInPolygon(point, polygon)) return true
   }
   return false
 }
@@ -258,14 +213,9 @@ function rectangleCorners(
   ]
 }
 
-function pointInPolygon(
-  point: CanvasPoint,
-  polygon: ReadonlyArray<CanvasPoint>,
-  budget: CanvasCandidateWorkBudget,
-): boolean {
+function pointInPolygon(point: CanvasPoint, polygon: ReadonlyArray<CanvasPoint>): boolean {
   let inside = false
   for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
-    if (!budget.consume()) return false
     const currentPoint = polygon[index]
     const previousPoint = polygon[previous]
     if (

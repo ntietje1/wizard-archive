@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { projectCanvasResizeNodeBounds, resolveCanvasResize } from '../canvas-resize-geometry'
-import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
-import { createCanvasCandidateWorkBudget } from '../workload'
+import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -22,7 +22,6 @@ describe('canvas resize geometry', () => {
       square: false,
       snap: false,
       zoom: 1,
-      candidateWork: createCanvasCandidateWorkBudget(),
     }).bounds
 
     expect(bounds).toEqual({ x: 0, y: 0, width: 960, height: 160 })
@@ -48,7 +47,6 @@ describe('canvas resize geometry', () => {
         square: false,
         snap: false,
         zoom: 1,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }).bounds,
     ).toEqual({ x: 240, y: 100, width: 40, height: 80 })
     expect(
@@ -61,7 +59,6 @@ describe('canvas resize geometry', () => {
         square: true,
         snap: false,
         zoom: 1,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }).bounds,
     ).toEqual({ x: 100, y: 100, width: 220, height: 220 })
   })
@@ -82,7 +79,6 @@ describe('canvas resize geometry', () => {
       resolveCanvasResize({
         ...options,
         snap: false,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }),
     ).toEqual({
       bounds: { x: 0, y: 0, width: 296, height: 126 },
@@ -92,7 +88,6 @@ describe('canvas resize geometry', () => {
       resolveCanvasResize({
         ...options,
         snap: true,
-        candidateWork: createCanvasCandidateWorkBudget(),
       }),
     ).toEqual({
       bounds: { x: 0, y: 0, width: 300, height: 130 },
@@ -103,31 +98,43 @@ describe('canvas resize geometry', () => {
     })
   })
 
-  it('resolves adversarial resize targets within one deterministic candidate budget', () => {
+  it('snaps against the maximum supported resize target set without refusing late work', () => {
     const initialBounds = { x: 0, y: 0, width: 180, height: 80 }
     const options = {
       handle: 'bottom-right' as const,
       initialBounds,
       point: { x: 296, y: 126 },
-      initialNodeBounds: new Map([[NODE_A, initialBounds]]),
-      targetBounds: Array.from({ length: 20_000 }, (_, index) => ({
-        x: 300 + index,
-        y: 130 + index,
-        width: 180,
-        height: 80,
-      })),
+      initialNodeBounds: new Map(
+        Array.from({ length: CANVAS_WORKLOAD_LIMITS.selectedElements }, () => [
+          generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          initialBounds,
+        ]),
+      ),
+      targetBounds: Array.from(
+        { length: CANVAS_WORKLOAD_LIMITS.nodes - CANVAS_WORKLOAD_LIMITS.selectedElements },
+        (_, index) => ({
+          x: 300 + index,
+          y: 130 + index,
+          width: 180,
+          height: 80,
+        }),
+      ),
       square: false,
       snap: true,
       zoom: 1,
     }
 
-    const resolve = () =>
-      resolveCanvasResize({ ...options, candidateWork: createCanvasCandidateWorkBudget() })
+    const resolve = () => resolveCanvasResize(options)
+    const startedAt = performance.now()
     const first = resolve()
     expect(resolve()).toEqual(first)
     expect(first).toEqual({
-      bounds: { x: 0, y: 0, width: 296, height: 126 },
-      guides: [],
+      bounds: { x: 0, y: 0, width: 300, height: 130 },
+      guides: [
+        { orientation: 'vertical', position: 300, start: 0, end: 210 },
+        { orientation: 'horizontal', position: 130, start: 0, end: 480 },
+      ],
     })
+    expect(performance.now() - startedAt).toBeLessThan(1_000)
   })
 })
