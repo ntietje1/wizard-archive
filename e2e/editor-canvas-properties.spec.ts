@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { openDemoCanvas } from './helpers/editor-canvas-helpers'
+import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
 import type { Locator } from '@playwright/test'
 
 test.describe('canvas properties and arrangement', () => {
@@ -98,7 +98,114 @@ test.describe('canvas properties and arrangement', () => {
     await expect(reopenedEdge).toHaveAttribute('stroke-width', '7')
     await expect(reopenedEdge).toHaveAttribute('stroke-opacity', '0.4')
   })
+
+  test('keeps a routed crossing edge rendered after both endpoint nodes are culled', async ({
+    page,
+  }) => {
+    const { edges, editor, nodes, surface, viewport } = await openDemoCanvas(page)
+    await editor.getByRole('button', { name: 'Edges' }).click()
+    const source = await visibleBox(nodes.first().getByTestId('canvas-node-handle-bottom'))
+    const target = await visibleBox(nodes.last().getByTestId('canvas-node-handle-bottom'))
+    await dragPointer(
+      page,
+      { x: source.x + source.width / 2, y: source.y + source.height / 2 },
+      { x: target.x + target.width / 2, y: target.y + target.height / 2 },
+    )
+    await expect(edges).toHaveCount(2)
+    const routedEdgeId = await edges.last().getAttribute('data-edge-id')
+    const path = parseCubicPath(await edges.last().locator('path').last().getAttribute('d'))
+
+    for (let index = 0; index < 12; index += 1) {
+      await editor.getByRole('button', { name: 'Zoom in' }).click()
+    }
+    await expect(viewport).toHaveAttribute('style', /scale\(4\)/)
+    const surfaceBox = await visibleBox(surface)
+    const midpoint = cubicMidpoint(path)
+    await editor.getByRole('button', { name: 'Hand' }).click()
+    await panViewportTo(page, surfaceBox, viewport, {
+      x: surfaceBox.width / 2 - midpoint.x * 4,
+      y: surfaceBox.height / 2 - midpoint.y * 4,
+    })
+
+    await expect(viewport).toHaveAttribute('data-rendered-node-count', '0')
+    const routedEdge = editor.locator(`[data-testid="canvas-edge"][data-edge-id="${routedEdgeId}"]`)
+    await expect(routedEdge).toHaveCount(1)
+    const edgeBox = await visibleBox(routedEdge.locator('path').last())
+    expect(rectanglesIntersect(surfaceBox, edgeBox)).toBe(true)
+  })
 })
+
+type CubicPath = Readonly<{
+  source: Readonly<{ x: number; y: number }>
+  sourceControl: Readonly<{ x: number; y: number }>
+  targetControl: Readonly<{ x: number; y: number }>
+  target: Readonly<{ x: number; y: number }>
+}>
+
+function parseCubicPath(value: string | null): CubicPath {
+  const coordinates = value?.match(/-?\d+(?:\.\d+)?/g)?.map(Number)
+  if (!coordinates || coordinates.length !== 8) throw new Error('Expected a cubic edge path')
+  return {
+    source: { x: coordinates[0]!, y: coordinates[1]! },
+    sourceControl: { x: coordinates[2]!, y: coordinates[3]! },
+    targetControl: { x: coordinates[4]!, y: coordinates[5]! },
+    target: { x: coordinates[6]!, y: coordinates[7]! },
+  }
+}
+
+function cubicMidpoint(path: CubicPath) {
+  return {
+    x:
+      path.source.x / 8 +
+      (path.sourceControl.x * 3) / 8 +
+      (path.targetControl.x * 3) / 8 +
+      path.target.x / 8,
+    y:
+      path.source.y / 8 +
+      (path.sourceControl.y * 3) / 8 +
+      (path.targetControl.y * 3) / 8 +
+      path.target.y / 8,
+  }
+}
+
+async function panViewportTo(
+  page: Parameters<typeof dragPointer>[0],
+  surface: Awaited<ReturnType<typeof visibleBox>>,
+  viewport: Locator,
+  target: Readonly<{ x: number; y: number }>,
+) {
+  for (let index = 0; index < 12; index += 1) {
+    const current = parseViewportTransform(await viewport.getAttribute('style'))
+    const delta = { x: target.x - current.x, y: target.y - current.y }
+    if (Math.abs(delta.x) < 1 && Math.abs(delta.y) < 1) return
+    const limit = Math.min(surface.width, surface.height) / 3
+    const step = {
+      x: Math.max(-limit, Math.min(limit, delta.x)),
+      y: Math.max(-limit, Math.min(limit, delta.y)),
+    }
+    const start = { x: surface.x + surface.width / 2, y: surface.y + surface.height / 2 }
+    await dragPointer(page, start, { x: start.x + step.x, y: start.y + step.y })
+  }
+  throw new Error('Canvas viewport did not reach the requested position')
+}
+
+function parseViewportTransform(value: string | null) {
+  const match = /translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)/.exec(value ?? '')
+  if (!match) throw new Error('Expected a canvas viewport transform')
+  return { x: Number(match[1]), y: Number(match[2]), zoom: Number(match[3]) }
+}
+
+function rectanglesIntersect(
+  left: Awaited<ReturnType<typeof visibleBox>>,
+  right: Awaited<ReturnType<typeof visibleBox>>,
+) {
+  return !(
+    left.x + left.width < right.x ||
+    right.x + right.width < left.x ||
+    left.y + left.height < right.y ||
+    right.y + right.height < left.y
+  )
+}
 
 async function nodeSurfaceStyle(node: Locator) {
   return node

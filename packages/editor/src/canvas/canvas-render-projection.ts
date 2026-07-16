@@ -1,6 +1,7 @@
 import type { CanvasDocumentEdge, CanvasDocumentNode } from './document-contract'
-import { canvasNodeSize } from './canvas-layout'
+import { canvasEdgeBounds } from './canvas-edge-geometry'
 import type { CanvasInteractionSnapshot } from './interaction-controller'
+import { canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasNodeId } from '../resources/domain-id'
 
@@ -27,11 +28,8 @@ export function projectCanvasRenderContent(
   )
   const nodeById = new Map(nodes.map((node) => [node.id, node]))
   const visibleEdges = edges.filter((edge) => {
-    const source = nodeById.get(edge.source)
-    const target = nodeById.get(edge.target)
-    return source && target
-      ? canvasBoundsIntersect(visibleBounds, canvasEdgeBounds(source, target))
-      : false
+    const bounds = canvasEdgeBounds(edge, nodeById)
+    return bounds ? canvasBoundsIntersect(visibleBounds, bounds) : false
   })
   return { nodes: visibleNodes, edges: visibleEdges }
 }
@@ -60,30 +58,6 @@ function retainedCanvasInteractionNodeIds(
     case 'panning':
     case 'selecting':
       return new Set()
-  }
-}
-
-function canvasNodeBounds(node: CanvasDocumentNode): CanvasBounds {
-  const size = canvasNodeSize(node)
-  return { x: node.position.x, y: node.position.y, width: size.width, height: size.height }
-}
-
-function canvasEdgeBounds(source: CanvasDocumentNode, target: CanvasDocumentNode): CanvasBounds {
-  const sourceSize = canvasNodeSize(source)
-  const targetSize = canvasNodeSize(target)
-  const sourceCenter = {
-    x: source.position.x + sourceSize.width / 2,
-    y: source.position.y + sourceSize.height / 2,
-  }
-  const targetCenter = {
-    x: target.position.x + targetSize.width / 2,
-    y: target.position.y + targetSize.height / 2,
-  }
-  return {
-    x: Math.min(sourceCenter.x, targetCenter.x),
-    y: Math.min(sourceCenter.y, targetCenter.y),
-    width: Math.abs(targetCenter.x - sourceCenter.x),
-    height: Math.abs(targetCenter.y - sourceCenter.y),
   }
 }
 

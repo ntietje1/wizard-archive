@@ -8,8 +8,10 @@ import type {
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { CanvasCandidateWorkBudget } from './workload'
 import { createCanvasBoundsIndex } from './bounds-index'
+import type { CanvasBounds } from './canvas-bounds'
 
 const BEZIER_SEGMENTS = 16
+export const CANVAS_EDGE_HIT_STROKE_WIDTH = 12
 
 export const CANVAS_CONNECTION_HANDLES: ReadonlyArray<CanvasConnectionHandle> = [
   'top',
@@ -90,6 +92,32 @@ export function canvasEdgePolyline(
   )
 }
 
+export function canvasEdgeBounds(
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<CanvasNodeId, CanvasDocumentNode>,
+): CanvasBounds | null {
+  const endpoints = edgeEndpoints(edge, nodesById)
+  if (!endpoints) return null
+  const points = edgeBoundsPoints(edge.type, endpoints)
+  const padding = Math.max(CANVAS_EDGE_HIT_STROKE_WIDTH, edge.style?.strokeWidth ?? 2) / 2
+  let left = Infinity
+  let top = Infinity
+  let right = -Infinity
+  let bottom = -Infinity
+  for (const point of points) {
+    left = Math.min(left, point.x)
+    top = Math.min(top, point.y)
+    right = Math.max(right, point.x)
+    bottom = Math.max(bottom, point.y)
+  }
+  return {
+    x: left - padding,
+    y: top - padding,
+    width: right - left + padding * 2,
+    height: bottom - top + padding * 2,
+  }
+}
+
 export function canvasConnectionPreviewPath(
   source: CanvasConnectionAnchor,
   current: CanvasPoint,
@@ -158,6 +186,18 @@ function canvasPathBetween(
   }
   const { sourceControl, targetControl } = bezierControls(source, target, handles)
   return `M ${source.x} ${source.y} C ${sourceControl.x} ${sourceControl.y}, ${targetControl.x} ${targetControl.y}, ${target.x} ${target.y}`
+}
+
+function edgeBoundsPoints(
+  type: CanvasEdgeType,
+  endpoints: NonNullable<ReturnType<typeof edgeEndpoints>>,
+): ReadonlyArray<CanvasPoint> {
+  if (type === 'straight') return [endpoints.source, endpoints.target]
+  if (type === 'step') {
+    return stepPoints(endpoints.source, endpoints.target, endpoints.handles.source)
+  }
+  const controls = bezierControls(endpoints.source, endpoints.target, endpoints.handles)
+  return [endpoints.source, controls.sourceControl, controls.targetControl, endpoints.target]
 }
 
 function stepPoints(

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { canvasEdgePath, createCanvasConnectionCandidateIndex } from '../canvas-edge-geometry'
+import {
+  canvasEdgeBounds,
+  canvasEdgePath,
+  createCanvasConnectionCandidateIndex,
+} from '../canvas-edge-geometry'
 import type { CanvasDocumentNode } from '../document-contract'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
@@ -26,6 +30,23 @@ describe('canvas edge geometry', () => {
         new Map(NODES.map((node) => [node.id, node])),
       ),
     ).toBe('M 180 40 L 300 80')
+  })
+
+  it('bounds routed geometry with its complete rendered stroke extent', () => {
+    expect(
+      canvasEdgeBounds(
+        {
+          id: 'edge-a-b',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'right',
+          targetHandle: 'left',
+          type: 'straight',
+          style: { strokeWidth: 20 },
+        },
+        new Map(NODES.map((node) => [node.id, node])),
+      ),
+    ).toEqual({ x: 170, y: 30, width: 140, height: 60 })
   })
 
   it('snaps to the nearest non-source node handle within the canvas-space radius', () => {

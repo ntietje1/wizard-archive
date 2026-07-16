@@ -8,6 +8,7 @@ import type {
 } from './document-contract'
 import {
   CANVAS_CONNECTION_HANDLES,
+  CANVAS_EDGE_HIT_STROKE_WIDTH,
   canvasConnectionPreviewPath,
   canvasEdgePath,
   canvasNodeHandlePoint,
@@ -501,7 +502,7 @@ function CanvasEdge({
         onSelect(event.metaKey || event.ctrlKey)
       }}
     >
-      <path d={path} fill="none" stroke="transparent" strokeWidth={12} />
+      <path d={path} fill="none" stroke="transparent" strokeWidth={CANVAS_EDGE_HIT_STROKE_WIDTH} />
       <path
         d={path}
         fill="none"
