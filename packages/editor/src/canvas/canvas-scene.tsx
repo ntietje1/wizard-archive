@@ -577,43 +577,53 @@ function CanvasConnectionOverlay({
 function CanvasSelectionOverlay({ interaction }: { interaction: CanvasInteractionSnapshot }) {
   const gesture = interaction.interaction
   if (gesture.type !== 'selecting') return null
-  const marqueeBounds =
-    gesture.kind === 'marquee' ? canvasBoundsFromPoints(gesture.origin, gesture.current) : null
-  if (marqueeBounds?.width === 0 && marqueeBounds.height === 0) return null
   const status = gesture.candidate ? selectionStatus(gesture.candidate) : null
-  return (
-    <>
-      {gesture.kind === 'marquee' ? (
+  if (gesture.kind === 'marquee') {
+    const bounds = canvasBoundsFromPoints(gesture.origin, gesture.current)
+    if (bounds.width === 0 && bounds.height === 0) return null
+    return (
+      <>
         <div
           className="pointer-events-none absolute border border-primary bg-primary/10"
           data-testid="canvas-marquee"
           style={{
-            ...marqueeBounds,
+            left: bounds.x,
+            top: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
             borderWidth: 1 / interaction.viewport.zoom,
           }}
         />
-      ) : (
-        <svg
-          className="pointer-events-none absolute left-0 top-0 overflow-visible"
-          data-testid="canvas-lasso"
-          width="1"
-          height="1"
-        >
-          <polygon
-            fill="var(--primary)"
-            fillOpacity={0.1}
-            points={gesture.points.map(({ x, y }) => `${x},${y}`).join(' ')}
-            stroke="var(--primary)"
-            strokeWidth={1 / interaction.viewport.zoom}
-          />
-        </svg>
-      )}
-      {status && (
-        <span className="sr-only" role="status">
-          {status}
-        </span>
-      )}
+        {status && <CanvasSelectionStatus status={status} />}
+      </>
+    )
+  }
+  return (
+    <>
+      <svg
+        className="pointer-events-none absolute left-0 top-0 overflow-visible"
+        data-testid="canvas-lasso"
+        width="1"
+        height="1"
+      >
+        <polygon
+          fill="var(--primary)"
+          fillOpacity={0.1}
+          points={gesture.points.map(({ x, y }) => `${x},${y}`).join(' ')}
+          stroke="var(--primary)"
+          strokeWidth={1 / interaction.viewport.zoom}
+        />
+      </svg>
+      {status && <CanvasSelectionStatus status={status} />}
     </>
+  )
+}
+
+function CanvasSelectionStatus({ status }: { status: string }) {
+  return (
+    <span className="sr-only" role="status">
+      {status}
+    </span>
   )
 }
 

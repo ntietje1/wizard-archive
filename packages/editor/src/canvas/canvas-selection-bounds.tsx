@@ -43,7 +43,10 @@ export function CanvasSelectionBounds({
       className="pointer-events-none absolute border border-primary bg-primary/5"
       data-testid="canvas-selection-resize-wrapper"
       style={{
-        ...bounds,
+        left: bounds.x,
+        top: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
         borderWidth: 1 / interaction.viewport.zoom,
         zIndex: 2_147_483_646,
       }}
