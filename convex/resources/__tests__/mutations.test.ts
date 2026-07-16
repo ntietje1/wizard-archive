@@ -24,11 +24,7 @@ import {
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import * as Y from 'yjs'
 import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
-import {
-  initialBinaryContentVersion,
-  initialJsonContentVersion,
-  jsonContentDigest,
-} from '../functions/contentVersion'
+import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
 import {
   storeCommittedTestUploadSession,
   storeUncommittedTestUploadSession,
@@ -45,10 +41,8 @@ import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resour
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
 import presenceTest from '@convex-dev/presence/test'
-import {
-  advanceVersion,
-  assertVersionStamp,
-} from '@wizard-archive/editor/resources/component-version'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import { projectMapContent } from '../functions/mapContent'
 
 type StoredResourceStructureCommand = FunctionArgs<
@@ -922,10 +916,7 @@ describe('resource structure commands', () => {
       if (!content?.image) throw new TypeError('Expected attached map content')
       const layers = [{ id: sharedLayerId, name: 'Shared layer', image: content.image }]
       const projected = projectMapContent({ image: content.image, layers }, [])
-      const version = advanceVersion(
-        assertVersionStamp(content.version),
-        await jsonContentDigest(projected),
-      )
+      const version = await advanceMapContentVersion(assertVersionStamp(content.version), projected)
       await ctx.db.patch('resourceMapContents', content._id, { layers, version })
       return version
     })

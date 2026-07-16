@@ -5,7 +5,6 @@ import {
   assertSha256Digest,
   assertVersionStamp,
   sha256Digest,
-  versionStampEquals,
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
@@ -28,6 +27,10 @@ import type {
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import { encodeWizardMapDocument } from '@wizard-archive/editor/resources/map-native-document'
+import {
+  mapImageAttachment,
+  reconcileMapSnapshot,
+} from '@wizard-archive/editor/resources/map-session-policy'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import { createLiveFixedContentResource } from './live-fixed-content-create'
@@ -95,7 +98,9 @@ export function createLiveMapSessionSource(
           const current = sessions.get(resourceId)
           if (current) store.set(resourceId, { status: 'ready', session: current })
         })
-      session.apply(content, version)
+      if (session.apply(content, version) === 'conflict') {
+        throw new TypeError('Conflicting map snapshot')
+      }
       sessions.set(resourceId, session)
       store.set(resourceId, { status: 'ready', session })
     } catch {
@@ -154,10 +159,17 @@ class LiveMapSession implements MapSession {
     return this.currentVersion
   }
 
-  apply(content: MapResourceContent, version: ReturnType<typeof assertVersionStamp>): void {
-    if (this.#disposed) return
-    this.currentContent = content
-    this.currentVersion = version
+  apply(
+    content: MapResourceContent,
+    version: ReturnType<typeof assertVersionStamp>,
+  ): ReturnType<typeof reconcileMapSnapshot> {
+    if (this.#disposed) return 'retain'
+    const decision = reconcileMapSnapshot(this.resourceId, this.currentVersion, content, version)
+    if (decision === 'apply') {
+      this.currentContent = content
+      this.currentVersion = version
+    }
+    return decision
   }
 
   async execute(command: MapContentCommand): Promise<MapContentMutationResult> {
@@ -177,9 +189,7 @@ class LiveMapSession implements MapSession {
         result = await this.backend.execute(args)
       }
       if (result.status !== 'completed') return result
-      this.apply(readMapContent(result.content), assertVersionStamp(result.version))
-      this.publish()
-      return { status: 'completed', content: this.currentContent, version: this.currentVersion }
+      return this.#complete(result.content, result.version)
     } catch {
       return { status: 'retryable', reason: 'response_lost' }
     }
@@ -187,19 +197,15 @@ class LiveMapSession implements MapSession {
 
   async loadImage(layerId: string | null): Promise<ContentExportResult> {
     if (this.#disposed) return { status: 'unavailable', reason: 'scope_unavailable' }
-    const expected = mapImage(this.currentContent, layerId)
+    const expected = mapImageAttachment(this.currentContent, layerId)
     if (!expected || expected.status !== 'attached') {
       return { status: 'integrity_error', issue: 'content_missing' }
     }
     const download = await this.backend.download(this.resourceId, layerId)
     if (download.status !== 'ready') return download
-    const version = assertVersionStamp(download.version)
+    assertVersionStamp(download.version)
     const image = readMapImage(download.image)
-    if (
-      image.status !== 'attached' ||
-      !versionStampEquals(version, this.currentVersion) ||
-      !sameMapImage(expected, image)
-    ) {
+    if (image.status !== 'attached' || !sameMapImage(expected, image)) {
       return { status: 'integrity_error', issue: 'version_mismatch' }
     }
     const response = await fetch(download.url)
@@ -242,13 +248,18 @@ class LiveMapSession implements MapSession {
         await this.backend.discard(sessionId).catch(() => undefined)
         return result
       }
-      this.apply(readMapContent(result.content), assertVersionStamp(result.version))
-      this.publish()
-      return { status: 'completed', content: this.currentContent, version: this.currentVersion }
+      return this.#complete(result.content, result.version)
     } catch {
       if (sessionId) await this.backend.discard(sessionId).catch(() => undefined)
       return { status: 'retryable', reason: 'response_lost' }
     }
+  }
+
+  #complete(content: RawMapContent, version: unknown): MapContentMutationResult {
+    const decision = this.apply(readMapContent(content), assertVersionStamp(version))
+    if (decision === 'conflict') return { status: 'rejected', reason: 'content_corrupt' }
+    if (decision === 'apply') this.publish()
+    return { status: 'completed', content: this.currentContent, version: this.currentVersion }
   }
 
   dispose(): void {
@@ -371,12 +382,6 @@ function readMapImage(image: RawMapImage | MapImageAttachment): MapImageAttachme
         digest: assertSha256Digest(image.digest),
         mediaType: image.mediaType,
       }
-}
-
-function mapImage(content: MapResourceContent, layerId: string | null) {
-  return layerId === null
-    ? content.image
-    : content.layers.find((layer) => layer.id === layerId)?.image
 }
 
 function sameMapImage(left: MapImageAttachment, right: MapImageAttachment): boolean {

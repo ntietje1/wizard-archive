@@ -348,6 +348,13 @@ describe('createInMemoryEditorRuntime', () => {
     const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
     const pinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
     const version = initialVersion(await sha256Digest(new Uint8Array([2])))
+    const mapBytes = new Uint8Array([1, 3, 5, 7])
+    const mapImage = {
+      status: 'attached' as const,
+      byteSize: mapBytes.byteLength,
+      digest: await sha256Digest(mapBytes),
+      mediaType: 'image/png',
+    }
     const noteBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const note = noteBlocksToYDoc(
       [
@@ -396,9 +403,10 @@ describe('createInMemoryEditorRuntime', () => {
         maps: [
           {
             resourceId: mapId,
+            images: [{ layerId: null, bytes: mapBytes }],
             version,
             content: {
-              image: { status: 'unattached' },
+              image: mapImage,
               layers: [],
               pins: [
                 {
@@ -482,6 +490,11 @@ describe('createInMemoryEditorRuntime', () => {
     })
     if (copiedMap.status !== 'ready') throw new Error('Expected copied map content')
     expect(copiedMap.session.content.pins[0]!.id).not.toBe(pinId)
+    const copiedMapImage = await copiedMap.session.loadImage(null)
+    expect(copiedMapImage).toMatchObject({ status: 'ready', mediaType: 'image/png' })
+    expect(copiedMapImage.status === 'ready' ? Array.from(copiedMapImage.bytes) : null).toEqual(
+      Array.from(mapBytes),
+    )
     core.dispose()
 
     function resource(

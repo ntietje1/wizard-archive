@@ -5,25 +5,27 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import { isMapPosition } from '@wizard-archive/editor/resources/content-session-contract'
+import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
+import type {
+  MapContentCommand,
+  MapResourceContent,
+} from '@wizard-archive/editor/resources/content-session-contract'
 import {
-  parseAuthoredDestination,
-  serializeAuthoredDestination,
-} from '@wizard-archive/editor/resources/authored-destination'
-import {
-  advanceVersion,
   assertVersionStamp,
   versionStampEquals,
 } from '@wizard-archive/editor/resources/component-version'
+import {
+  advanceMapContentVersion,
+  transitionMapContent,
+} from '@wizard-archive/editor/resources/map-session-policy'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc } from '../../_generated/dataModel'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { jsonContentDigest } from './contentVersion'
 import { findCanonicalResource } from './findCanonicalResource'
-import { loadValidMapContentRows, projectMapContent } from './mapContent'
+import type { projectMapContent } from './mapContent'
+import { loadValidMapContentRows } from './mapContent'
 
-const MAX_MAP_PINS = 500
-const MAX_MAP_PINS_PER_COMMAND = 100
 const MAX_RECENT_MAP_OPERATIONS = 32
 
 export type StoredMapContentCommand =
@@ -60,11 +62,6 @@ type MapPinWrite =
   | Readonly<{ type: 'patch'; id: Doc<'resourceMapPins'>['_id']; values: Partial<MapPinValue> }>
   | Readonly<{ type: 'delete'; id: Doc<'resourceMapPins'>['_id'] }>
 
-type MapCommandPlan = Readonly<{
-  pins: ReadonlyArray<MapPinValue>
-  writes: ReadonlyArray<MapPinWrite>
-}>
-
 export async function executeMapContentCommand(
   ctx: CampaignMutationCtx,
   args: Readonly<{
@@ -87,18 +84,26 @@ export async function executeMapContentCommand(
   if (!versionStampEquals(currentVersion, assertVersionStamp(args.expectedVersion))) {
     return rejected('version_conflict')
   }
-  const plan = await planMapCommand(
-    ctx,
-    ctx.resourceScope.campaignId,
-    resourceId,
-    content.layers.map((layer) => layer.id),
-    pins,
-    args.command,
-  )
-  if ('status' in plan) return plan
-  const advanced = await advanceMapCommand(content, plan.pins, currentVersion)
+  const command = readMapContentCommand(args.command)
+  if (!command) return rejected('invalid_command')
+  const transition = transitionMapContent(resourceId, currentProjection, command)
+  if (transition.status === 'rejected') return rejected(transition.reason)
+  if (
+    command.type === 'createPins' &&
+    !(await mapTargetsExist(
+      ctx,
+      ctx.resourceScope.campaignId,
+      command.pins.map((pin) => pin.destination),
+    ))
+  ) {
+    return rejected('target_missing')
+  }
+  const advanced = await advanceMapCommand(transition.content, currentVersion)
   if (!advanced.completed) return advanced.result
-  await applyMapPinWrites(ctx, plan.writes)
+  await applyMapPinWrites(
+    ctx,
+    mapPinWrites(ctx.resourceScope.campaignId, resourceId, pins, command),
+  )
   await ctx.db.patch('resourceMapContents', content._id, {
     recentOperations: [
       ...content.recentOperations,
@@ -106,7 +111,15 @@ export async function executeMapContentCommand(
     ].slice(-MAX_RECENT_MAP_OPERATIONS),
     version: advanced.version,
   })
-  return { status: 'completed' as const, content: advanced.projected, version: advanced.version }
+  return {
+    status: 'completed' as const,
+    content: {
+      image: transition.content.image,
+      layers: transition.content.layers.map((layer) => ({ ...layer })),
+      pins: transition.content.pins.map((pin) => ({ ...pin })),
+    },
+    version: advanced.version,
+  }
 }
 
 async function loadMapCommandState(ctx: CampaignMutationCtx, resourceId: ResourceId) {
@@ -147,16 +160,13 @@ function replayMapCommand(
 }
 
 async function advanceMapCommand(
-  content: Doc<'resourceMapContents'>,
-  pins: ReadonlyArray<MapPinValue>,
+  content: MapResourceContent,
   currentVersion: ReturnType<typeof assertVersionStamp>,
 ) {
   try {
-    const projected = projectMapContent(content, pins)
     return {
       completed: true as const,
-      projected,
-      version: advanceVersion(currentVersion, await jsonContentDigest(projected)),
+      version: await advanceMapContentVersion(currentVersion, content),
     }
   } catch (error) {
     return {
@@ -166,152 +176,89 @@ async function advanceMapCommand(
   }
 }
 
-async function planMapCommand(
-  ctx: CampaignMutationCtx,
+function readMapContentCommand(command: StoredMapContentCommand): MapContentCommand | null {
+  try {
+    switch (command.type) {
+      case 'createPins': {
+        const pins = command.pins.map((pin) => {
+          const destination = parseAuthoredDestination(pin.destination)
+          if (!destination) throw new TypeError('Invalid map destination')
+          return {
+            ...pin,
+            id: assertDomainId(DOMAIN_ID_KIND.mapPin, pin.id),
+            destination,
+          }
+        })
+        return { type: 'createPins', pins }
+      }
+      case 'movePin':
+        return {
+          ...command,
+          pinId: assertDomainId(DOMAIN_ID_KIND.mapPin, command.pinId),
+        }
+      case 'setPinVisibility':
+        return {
+          ...command,
+          pinId: assertDomainId(DOMAIN_ID_KIND.mapPin, command.pinId),
+        }
+      case 'removePin':
+        return {
+          ...command,
+          pinId: assertDomainId(DOMAIN_ID_KIND.mapPin, command.pinId),
+        }
+    }
+  } catch {
+    return null
+  }
+}
+
+function mapPinWrites(
   campaignId: CampaignId,
   resourceId: ResourceId,
-  layerIds: ReadonlyArray<string>,
   pins: ReadonlyArray<Doc<'resourceMapPins'>>,
-  command: StoredMapContentCommand,
-): Promise<MapCommandPlan | ReturnType<typeof rejected>> {
+  command: MapContentCommand,
+): ReadonlyArray<MapPinWrite> {
   switch (command.type) {
     case 'createPins':
-      return await planMapPinCreations(ctx, campaignId, resourceId, layerIds, pins, command.pins)
-    case 'movePin':
-      return planMapPinMove(pins, command.pinId, command)
-    case 'setPinVisibility':
-      return planMapPinVisibility(pins, command.pinId, command.visible)
-    case 'removePin':
-      return planMapPinRemoval(pins, command.pinId)
-  }
-}
-
-async function planMapPinCreations(
-  ctx: CampaignMutationCtx,
-  campaignId: CampaignId,
-  resourceId: ResourceId,
-  layerIds: ReadonlyArray<string>,
-  pins: ReadonlyArray<Doc<'resourceMapPins'>>,
-  requested: Extract<StoredMapContentCommand, { type: 'createPins' }>['pins'],
-): Promise<MapCommandPlan | ReturnType<typeof rejected>> {
-  if (
-    requested.length === 0 ||
-    requested.length > MAX_MAP_PINS_PER_COMMAND ||
-    pins.length + requested.length > MAX_MAP_PINS
-  ) {
-    return rejected('invalid_command')
-  }
-  const layers = new Set(layerIds)
-  const ids = new Set(pins.map((pin) => pin.mapPinUuid))
-  const destinations = new Set(pins.map((pin) => serializeStoredDestination(pin.destination)))
-  const additions: Array<MapPinValue> = []
-  for (const candidate of requested) {
-    const pin = readNewMapPin(candidate, campaignId, resourceId)
-    if (
-      !pin ||
-      ids.has(pin.mapPinUuid) ||
-      destinations.has(serializeStoredDestination(pin.destination)) ||
-      (pin.layerId !== null && !layers.has(pin.layerId)) ||
-      (pin.destination.kind === 'internal' && pin.destination.target.resourceId === resourceId)
-    ) {
-      return rejected('invalid_command')
+      return command.pins.map((pin) => ({
+        type: 'insert',
+        pin: {
+          campaignUuid: campaignId,
+          mapResourceUuid: resourceId,
+          mapPinUuid: pin.id,
+          destination: pin.destination,
+          layerId: pin.layerId,
+          visible: true,
+          x: pin.x,
+          y: pin.y,
+        },
+      }))
+    case 'movePin': {
+      const pin = pins.find((candidate) => candidate.mapPinUuid === command.pinId)!
+      return [{ type: 'patch', id: pin._id, values: { x: command.x, y: command.y } }]
     }
-    ids.add(pin.mapPinUuid)
-    destinations.add(serializeStoredDestination(pin.destination))
-    additions.push(pin)
-  }
-  if (
-    !(await mapTargetsExist(
-      ctx,
-      campaignId,
-      additions.map((pin) => pin.destination),
-    ))
-  ) {
-    return rejected('target_missing')
-  }
-  return {
-    pins: [...pins, ...additions],
-    writes: additions.map((pin) => ({ type: 'insert' as const, pin })),
-  }
-}
-
-function planMapPinMove(
-  pins: ReadonlyArray<Doc<'resourceMapPins'>>,
-  pinIdValue: string,
-  position: { x: number; y: number },
-): MapCommandPlan | ReturnType<typeof rejected> {
-  if (!isMapPosition(position)) return rejected('invalid_command')
-  return planMapPinPatch(pins, pinIdValue, { x: position.x, y: position.y })
-}
-
-function planMapPinVisibility(
-  pins: ReadonlyArray<Doc<'resourceMapPins'>>,
-  pinIdValue: string,
-  visible: boolean,
-): MapCommandPlan | ReturnType<typeof rejected> {
-  return planMapPinPatch(pins, pinIdValue, { visible })
-}
-
-function planMapPinPatch(
-  pins: ReadonlyArray<Doc<'resourceMapPins'>>,
-  pinIdValue: string,
-  values: Partial<Pick<MapPinValue, 'visible' | 'x' | 'y'>>,
-): MapCommandPlan | ReturnType<typeof rejected> {
-  const pinId = assertDomainId(DOMAIN_ID_KIND.mapPin, pinIdValue)
-  const pin = pins.find((candidate) => candidate.mapPinUuid === pinId)
-  if (!pin) return rejected('pin_missing')
-  return {
-    pins: pins.map((candidate) =>
-      candidate._id === pin._id ? { ...candidate, ...values } : candidate,
-    ),
-    writes: [{ type: 'patch', id: pin._id, values }],
-  }
-}
-
-function planMapPinRemoval(
-  pins: ReadonlyArray<Doc<'resourceMapPins'>>,
-  pinIdValue: string,
-): MapCommandPlan | ReturnType<typeof rejected> {
-  const pinId = assertDomainId(DOMAIN_ID_KIND.mapPin, pinIdValue)
-  const pin = pins.find((candidate) => candidate.mapPinUuid === pinId)
-  return pin
-    ? {
-        pins: pins.filter((candidate) => candidate._id !== pin._id),
-        writes: [{ type: 'delete', id: pin._id }],
-      }
-    : rejected('pin_missing')
-}
-
-function readNewMapPin(
-  candidate: Extract<StoredMapContentCommand, { type: 'createPins' }>['pins'][number],
-  campaignId: CampaignId,
-  resourceId: ResourceId,
-): MapPinValue | null {
-  const destination = parseAuthoredDestination(candidate.destination)
-  if (!destination || !isMapPosition(candidate)) return null
-  return {
-    campaignUuid: campaignId,
-    mapResourceUuid: resourceId,
-    mapPinUuid: assertDomainId(DOMAIN_ID_KIND.mapPin, candidate.id),
-    destination,
-    layerId: candidate.layerId,
-    visible: true,
-    x: candidate.x,
-    y: candidate.y,
+    case 'setPinVisibility': {
+      const pin = pins.find((candidate) => candidate.mapPinUuid === command.pinId)!
+      return [{ type: 'patch', id: pin._id, values: { visible: command.visible } }]
+    }
+    case 'removePin': {
+      const pin = pins.find((candidate) => candidate.mapPinUuid === command.pinId)!
+      return [{ type: 'delete', id: pin._id }]
+    }
   }
 }
 
 async function mapTargetsExist(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
-  values: ReadonlyArray<unknown>,
+  values: ReadonlyArray<
+    Extract<MapContentCommand, { type: 'createPins' }>['pins'][number]['destination']
+  >,
 ): Promise<boolean> {
-  const destinations = values.map(parseAuthoredDestination)
-  if (destinations.some((destination) => destination === null)) return false
   const resourceIds = Array.from(
     new Set(
-      destinations.flatMap((destination) =>
-        destination?.kind === 'internal' ? [destination.target.resourceId] : [],
+      values.flatMap((destination) =>
+        destination.kind === 'internal' ? [destination.target.resourceId] : [],
       ),
     ),
   )
@@ -321,12 +268,6 @@ async function mapTargetsExist(
   return resources.every(
     (resource) => resource?.campaignUuid === campaignId && resource.lifecycle === 'active',
   )
-}
-
-function serializeStoredDestination(value: unknown): string {
-  const destination = parseAuthoredDestination(value)
-  if (!destination) throw new TypeError('Invalid authored destination')
-  return serializeAuthoredDestination(destination)
 }
 
 async function applyMapPinWrites(

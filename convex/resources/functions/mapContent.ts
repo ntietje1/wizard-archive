@@ -12,6 +12,7 @@ import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/c
 import { isMapPosition } from '@wizard-archive/editor/resources/content-session-contract'
 import type { MapImageAttachment } from '@wizard-archive/editor/resources/content-session-contract'
 import { assertSha256Digest } from '@wizard-archive/editor/resources/component-version'
+import { initialMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import {
   parseAuthoredDestination,
   remapAuthoredDestination,
@@ -19,7 +20,6 @@ import {
 } from '@wizard-archive/editor/resources/authored-destination'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import type { Doc } from '../../_generated/dataModel'
-import { initialJsonContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { findCanonicalResource } from './findCanonicalResource'
 import { prepareAssetCopies } from './assetContent'
@@ -52,7 +52,7 @@ export async function createMapContent(
     image: null,
     layers: [],
     recentOperations: [],
-    version: await initialJsonContentVersion(EMPTY_MAP_CONTENT),
+    version: await initialMapContentVersion(EMPTY_MAP_CONTENT),
   })
 }
 
@@ -227,9 +227,7 @@ export async function prepareMapContentCopy(
             visible,
           })),
         }
-        const version = await initialJsonContentVersion(
-          projectMapContent(copiedContent, copiedPins),
-        )
+        const version = await initialMapContentVersion(projectMapContent(copiedContent, copiedPins))
         return async () => {
           await ctx.db.insert('resourceMapContents', {
             campaignUuid: campaignId,

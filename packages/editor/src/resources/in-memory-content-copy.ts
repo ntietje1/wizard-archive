@@ -31,6 +31,8 @@ import type { CanvasNodeId, MapPinId, ResourceId } from './domain-id'
 import { initialNoteContentVersion } from './resource-content-version'
 import type { ResourceKind } from './resource-record'
 import { createInMemoryNoteSession } from './in-memory-note-session'
+import { copyMapImageBytes, initialMapContentVersion } from './map-session-policy'
+import type { MapImageBytes } from './map-session-policy'
 
 interface ContentStore<TState> {
   get(resourceId: ResourceId): TState
@@ -51,7 +53,13 @@ type ContentStores = Readonly<{
     ): void
   }
   maps: ContentStore<MapSessionState> & {
-    setReady(resourceId: ResourceId, content: MapResourceContent, version: VersionStamp): void
+    readImages(resourceId: ResourceId): ReadonlyArray<MapImageBytes>
+    setReady(
+      resourceId: ResourceId,
+      content: MapResourceContent,
+      version: VersionStamp,
+      images: ReadonlyArray<MapImageBytes>,
+    ): void
   }
   canvases: ContentStore<CanvasSessionState> & {
     setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void
@@ -70,7 +78,8 @@ type PreparedContent =
   | Readonly<{
       kind: 'map'
       destinationId: ResourceId
-      source: Extract<MapSessionState, { status: 'ready' }>
+      content: MapResourceContent
+      images: ReadonlyArray<MapImageBytes>
       pinIds: ReadonlyMap<MapPinId, MapPinId>
     }>
   | Readonly<{
@@ -152,7 +161,13 @@ function prepareContentCopy(
             },
           })
         }
-        entries.push({ kind, destinationId, source, pinIds })
+        entries.push({
+          kind,
+          destinationId,
+          content: copyMapContent(source.session.content),
+          images: stores.maps.readImages(sourceId),
+          pinIds,
+        })
         break
       }
       case 'canvas': {
@@ -231,20 +246,21 @@ async function finalizeContentCopy(
       }
     case 'map': {
       const content = {
-        image: entry.source.session.content.image,
-        layers: entry.source.session.content.layers.map((layer) => ({ ...layer })),
-        pins: entry.source.session.content.pins.map((pin) => ({
+        image: entry.content.image,
+        layers: entry.content.layers.map((layer) => ({ ...layer })),
+        pins: entry.content.pins.map((pin) => ({
           ...pin,
           id: entry.pinIds.get(pin.id)!,
           destination: remapMapDestination(pin.destination, targetMap),
         })),
       }
-      const version = initialVersion(
-        await sha256Digest(new TextEncoder().encode(JSON.stringify(content))),
-      )
+      const [version, images] = await Promise.all([
+        initialMapContentVersion(content),
+        copyMapImageBytes(content, entry.images),
+      ])
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.maps.setReady(entry.destinationId, content, version)
+        stores.maps.setReady(entry.destinationId, content, version, images)
       }
     }
     case 'canvas': {
@@ -262,6 +278,14 @@ async function finalizeContentCopy(
         stores.canvases.setReady(entry.destinationId, content, version)
       }
     }
+  }
+}
+
+function copyMapContent(content: MapResourceContent): MapResourceContent {
+  return {
+    image: { ...content.image },
+    layers: content.layers.map((layer) => ({ ...layer, image: { ...layer.image } })),
+    pins: content.pins.map((pin) => ({ ...pin })),
   }
 }
 

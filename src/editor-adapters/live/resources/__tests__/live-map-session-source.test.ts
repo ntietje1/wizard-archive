@@ -8,6 +8,7 @@ import { testDomainId } from '../../../../../shared/test/domain-id'
 import { createLiveMapSessionSource } from '../live-map-session-source'
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadMapContent>
+type ImageDownload = FunctionReturnType<typeof api.resources.queries.loadMapImage>
 
 describe('LiveMapSessionSource', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -130,7 +131,16 @@ describe('LiveMapSessionSource', () => {
       digest: 'a'.repeat(64),
     }
     const nextVersion = { ...version, revision: 2, digest: 'b'.repeat(64) }
+    const pinVersion = { ...version, revision: 3, digest: 'c'.repeat(64) }
     let apply: (snapshot: Snapshot) => void = () => undefined
+    const download = vi.fn<() => Promise<ImageDownload>>(() =>
+      Promise.resolve({
+        status: 'ready',
+        image: originalImage,
+        url: 'https://map.test',
+        version,
+      }),
+    )
     const replace = vi
       .fn()
       .mockRejectedValueOnce(new Error('response lost'))
@@ -145,14 +155,7 @@ describe('LiveMapSessionSource', () => {
       {
         create: vi.fn(),
         discard,
-        download: vi.fn(() =>
-          Promise.resolve({
-            status: 'ready' as const,
-            image: originalImage,
-            url: 'https://map.test',
-            version,
-          }),
-        ),
+        download,
         execute: vi.fn(),
         load: vi.fn(),
         refresh: vi.fn(),
@@ -174,9 +177,10 @@ describe('LiveMapSessionSource', () => {
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new TypeError('Expected a ready map session')
     const session = ready.session
+    let fetchedBytes = original
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.resolve(new Response(original))),
+      vi.fn(() => Promise.resolve(new Response(fetchedBytes))),
     )
 
     await expect(session.loadImage(null)).resolves.toEqual({
@@ -201,6 +205,54 @@ describe('LiveMapSessionSource', () => {
     expect(discard).not.toHaveBeenCalled()
     const updated = source.get(resourceId)
     expect(updated.status === 'ready' && updated.session).toBe(session)
+    apply({
+      status: 'ready',
+      content: { image: originalImage, layers: [], pins: [] },
+      version,
+    })
+    expect(session.version).toEqual(nextVersion)
+
+    let resolveDownload!: (result: ImageDownload) => void
+    download.mockImplementationOnce(() => new Promise((resolve) => (resolveDownload = resolve)))
+    fetchedBytes = replacement
+    const imageLoad = session.loadImage(null)
+    apply({
+      status: 'ready',
+      content: {
+        image: replacementImage,
+        layers: [],
+        pins: [
+          {
+            id: testDomainId('mapPin', 'pin-only-update'),
+            destination: {
+              kind: 'internal',
+              target: {
+                kind: 'resource',
+                resourceId: testDomainId('resource', 'pin-only-target'),
+              },
+            },
+            layerId: null,
+            visible: true,
+            x: 10,
+            y: 20,
+          },
+        ],
+      },
+      version: pinVersion,
+    })
+    resolveDownload({
+      status: 'ready',
+      image: replacementImage,
+      url: 'https://map.test/replacement',
+      version: nextVersion,
+    })
+    await expect(imageLoad).resolves.toEqual({
+      status: 'ready',
+      bytes: replacement,
+      extension: 'png',
+      mediaType: 'image/png',
+    })
+    expect(session.version).toEqual(pinVersion)
 
     source.dispose()
     await expect(

@@ -134,6 +134,10 @@
       "types": "./dist/resources/map-native-document.d.mts",
       "default": "./dist/resources/map-native-document.mjs"
     },
+    "./resources/map-session-policy": {
+      "types": "./dist/resources/map-session-policy.d.mts",
+      "default": "./dist/resources/map-session-policy.mjs"
+    },
     "./resources/content-version": {
       "types": "./dist/resources/resource-content-version.d.mts",
       "default": "./dist/resources/resource-content-version.mjs"

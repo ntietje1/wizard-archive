@@ -1,11 +1,11 @@
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
-  advanceVersion,
   assertSha256Digest,
   assertVersionStamp,
   versionStampEquals,
 } from '@wizard-archive/editor/resources/component-version'
+import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import type { Infer } from 'convex/values'
 import type { CampaignInternalMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -19,7 +19,6 @@ import {
   queueAssetRetirements,
 } from './assetContent'
 import type { ResourceUploadClaim } from './assetContent'
-import { jsonContentDigest } from './contentVersion'
 import { loadValidMapContentRows, projectMapContent } from './mapContent'
 
 type MapContentMutationResult = Infer<typeof mapContentMutationResultValidator>
@@ -177,7 +176,7 @@ async function projectMapImageReplacement(
       nextContent,
       ownership,
       projected,
-      version: advanceVersion(currentVersion, await jsonContentDigest(projected)),
+      version: await advanceMapContentVersion(currentVersion, projected),
     }
   } catch (error) {
     return rejected(error instanceof RangeError ? 'version_exhausted' : 'content_corrupt')
