@@ -1,18 +1,26 @@
 import { useState, useSyncExternalStore } from 'react'
+import type { ReactNode } from 'react'
 import { CanvasEditorSurface } from './canvas-editor-surface'
 import { createCanvasDocumentController } from './document-controller'
 import { createCanvasInteractionController } from './interaction-controller'
-import type { CanvasPreviewSource, CanvasSession } from '../resources/content-session-contract'
+import type { CanvasSession } from '../resources/content-session-contract'
+import type { CanvasDocumentNode } from './document-contract'
 import type { ResourceId } from '../resources/domain-id'
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
-  previews: CanvasPreviewSource
+  renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   session: CanvasSession
   title: string
 }>
+
+export type CanvasEmbedRenderer = (props: {
+  editing: boolean
+  node: Extract<CanvasDocumentNode, { type: 'embed' }>
+  onEdit: () => void
+}) => ReactNode
 
 type CanvasEditorRuntime = Readonly<{
   documentController: ReturnType<typeof createCanvasDocumentController>
@@ -31,7 +39,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
       documentController={runtime.documentController}
       interactionController={runtime.interactionController}
       interactionRenderStore={runtime.interactionRenderStore}
-      previews={props.previews}
+      renderEmbed={props.renderEmbed}
       resourceId={props.resourceId}
       title={props.title}
     />

@@ -36,13 +36,10 @@ import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import type { CanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
-import type {
-  CanvasPreviewSource,
-  ContentCollaboration,
-} from '../resources/content-session-contract'
+import type { ContentCollaboration } from '../resources/content-session-contract'
 import { CanvasCollaborationCursors } from './canvas-collaboration-cursors'
 import { CanvasNodeVisual } from './canvas-node-visual'
-import { CanvasEmbedPreview } from './canvas-embed-preview'
+import type { CanvasEmbedRenderer } from './canvas-editor'
 import { projectCanvasRenderContent } from './canvas-render-projection'
 import type { CanvasSurfaceSize } from './canvas-render-projection'
 
@@ -54,7 +51,7 @@ export function CanvasScene({
   interaction,
   interactionController,
   onOpenContextMenu,
-  previews,
+  renderEmbed,
   surface,
   surfaceSize,
 }: {
@@ -65,7 +62,7 @@ export function CanvasScene({
   interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
-  previews: CanvasPreviewSource
+  renderEmbed: CanvasEmbedRenderer
   surface: RefObject<HTMLElement | null>
   surfaceSize: CanvasSurfaceSize
 }) {
@@ -126,7 +123,7 @@ export function CanvasScene({
           interactionController={interactionController}
           node={node}
           onOpenContextMenu={onOpenContextMenu}
-          previews={previews}
+          renderEmbed={renderEmbed}
           selected={visualSelection.nodeIds.has(node.id)}
           surface={surface}
         />
@@ -183,7 +180,7 @@ function CanvasNode({
   interactionController,
   node,
   onOpenContextMenu,
-  previews,
+  renderEmbed,
   selected,
   surface,
 }: {
@@ -194,7 +191,7 @@ function CanvasNode({
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
-  previews: CanvasPreviewSource
+  renderEmbed: CanvasEmbedRenderer
   selected: boolean
   surface: RefObject<HTMLElement | null>
 }) {
@@ -267,7 +264,13 @@ function CanvasNode({
       <CanvasNodeVisual
         editing={editing}
         embed={
-          node.type === 'embed' ? <CanvasEmbedPreview node={node} previews={previews} /> : undefined
+          node.type === 'embed'
+            ? renderEmbed({
+                editing,
+                node,
+                onEdit: () => interactionController.editNode(node.id),
+              })
+            : undefined
         }
         node={node}
         selected={selected}

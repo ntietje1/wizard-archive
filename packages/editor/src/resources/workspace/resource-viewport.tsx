@@ -27,10 +27,11 @@ import {
   resourceKindIcon,
   resourcePresentationKey,
 } from './resource-presentation'
-import { NoteEditor } from '../../notes/note-editor'
+import { NoteSessionEditor } from '../../notes/note-session-editor'
 import { CanvasEditor } from '../../canvas/canvas-editor'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasPreviewSource } from '../content-session-contract'
+import { CanvasResourceEmbed } from './canvas-resource-embed'
 import { FileViewer } from '../../files/file-viewer'
 import { MapViewer } from '../../maps/map-viewer'
 
@@ -168,7 +169,18 @@ function CanvasViewport({
     <CanvasEditor
       key={`${resource.id}:${state.session.document.guid}`}
       canEdit={canEdit}
-      previews={runtime.content.canvases.previews}
+      renderEmbed={({ editing, node, onEdit }) => (
+        <CanvasResourceEmbed
+          canEdit={canEdit}
+          canvases={runtime.content.canvases.previews}
+          editing={editing}
+          index={runtime.resources.index}
+          loader={runtime.resources.loader}
+          node={node}
+          notes={runtime.content.notes}
+          onEdit={onEdit}
+        />
+      )}
       resourceId={resource.id}
       session={state.session}
       title={resource.title}
@@ -187,35 +199,11 @@ function NoteViewport({
 }) {
   const source = runtime.content.notes
   const state = useContentSnapshot(source, resource.id)
-  if (state.status === 'initializing') {
-    return canEdit ? (
-      <NoteEditor
-        document={state.local}
-        label={`${resource.title} note editor`}
-        mode="edit"
-        persistence="initializing"
-      />
-    ) : (
-      <NoteEditor document={state.local} label={`${resource.title} note editor`} mode="view" />
-    )
+  if (state.status !== 'initializing' && state.status !== 'ready') {
+    return <ContentState resource={resource} state={state} />
   }
-  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
-  return canEdit ? (
-    <NoteEditor
-      collaboration={state.session.collaboration}
-      document={state.session.document}
-      label={`${resource.title} note editor`}
-      mode="edit"
-      persistence="ready"
-      onFlush={state.session.flush}
-    />
-  ) : (
-    <NoteEditor
-      collaboration={state.session.collaboration}
-      document={state.session.document}
-      label={`${resource.title} note editor`}
-      mode="view"
-    />
+  return (
+    <NoteSessionEditor canEdit={canEdit} label={`${resource.title} note editor`} state={state} />
   )
 }
 

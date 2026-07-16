@@ -65,7 +65,7 @@ test.describe('canvas keyboard and clipboard', () => {
     await page.mouse.click(bounds.x + bounds.width - 120, bounds.y + bounds.height - 160)
     await expect(nodes).toHaveCount(5)
     await nodes.last().dblclick()
-    const textEditor = editor.getByRole('textbox', { name: 'Canvas text' })
+    const textEditor = nodes.last().getByRole('textbox', { name: 'Canvas text' })
     await expect(textEditor).toBeVisible()
     await textEditor.fill('Keyboard edit target')
     await textEditor.press('Delete')

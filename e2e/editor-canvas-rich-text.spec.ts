@@ -18,8 +18,10 @@ test.describe('canvas rich text', () => {
     await expect(nodes).toHaveCount(3)
 
     await nodes.last().dblclick()
-    const editor = canvas.getByRole('textbox', { name: 'Canvas text' })
+    const editor = nodes.last().getByRole('textbox', { name: 'Canvas text' })
     await expect(editor).toBeVisible()
+    const editorElement = await editor.elementHandle()
+    if (!editorElement) throw new Error('Canvas text editor is not mounted')
     await editor.fill('Rich toolbar text')
     await editor.press('Control+A')
 
@@ -34,13 +36,19 @@ test.describe('canvas rich text', () => {
     await page.getByRole('menuitemcheckbox', { name: 'Red' }).first().click()
 
     await editor.press('Escape')
+    expect(
+      await editorElement.evaluate((element) => ({
+        connected: element.isConnected,
+        editable: element.getAttribute('contenteditable'),
+      })),
+    ).toEqual({ connected: true, editable: 'false' })
     const formattedText = nodes.last().getByText('Rich toolbar text', { exact: true })
     await expect(
       nodes.last().getByRole('heading', { level: 2, name: 'Rich toolbar text' }),
     ).toBeVisible()
     await expect(formattedText).toHaveCSS('color', 'rgb(224, 62, 62)')
     await expect(formattedText).toHaveCSS('font-style', 'italic')
-    await expect(formattedText).toHaveCSS('font-weight', '700')
+    expect(await formattedText.evaluate((element) => element.closest('strong') !== null)).toBe(true)
 
     await page.getByRole('button', { name: 'Moonwell Docks' }).click()
     await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
@@ -53,7 +61,7 @@ test.describe('canvas rich text', () => {
     ).toBeVisible()
 
     await reopenedNode.dblclick()
-    const reopenedEditor = reopenedCanvas.getByRole('textbox', { name: 'Canvas text' })
+    const reopenedEditor = reopenedNode.getByRole('textbox', { name: 'Canvas text' })
     await reopenedEditor.getByRole('heading', { level: 2, name: 'Rich toolbar text' }).click()
     await reopenedEditor.press('Control+A')
     await expect(page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()

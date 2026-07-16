@@ -42,7 +42,7 @@ export function renderRichTextColorStyle(value: string | undefined) {
   return { contentDOM: element, dom: element }
 }
 
-export function resolveRichTextColor(
+function resolveRichTextColor(
   value: string | undefined,
   surface: 'background' | 'text',
 ): string | undefined {

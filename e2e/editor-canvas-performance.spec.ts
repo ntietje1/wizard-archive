@@ -14,11 +14,11 @@ test.describe('canvas performance smoke', () => {
     await editor.focus()
 
     const startedAt = Date.now()
-    for (let index = 0; index < 7; index += 1) {
+    for (let index = 0; index < 9; index += 1) {
       await page.keyboard.press('Control+a')
       await page.keyboard.press('Control+d')
     }
-    await expect(nodes).toHaveCount(256)
+    await expect(nodes).toHaveCount(512)
     await page.keyboard.press('Escape')
 
     await editor.getByRole('button', { name: 'Zoom in' }).click()
@@ -43,6 +43,6 @@ test.describe('canvas performance smoke', () => {
     await expect(nodes).toHaveCount(0)
 
     await editor.getByRole('button', { name: 'Fit view' }).click()
-    await expect(nodes).toHaveCount(256)
+    await expect(nodes).toHaveCount(512)
   })
 })

@@ -20,10 +20,8 @@ import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
-import type {
-  CanvasPreviewSource,
-  ContentCollaboration,
-} from '../resources/content-session-contract'
+import type { ContentCollaboration } from '../resources/content-session-contract'
+import type { CanvasEmbedRenderer } from './canvas-editor'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
 import { useCanvasSurface } from './use-canvas-surface'
 
@@ -45,7 +43,7 @@ type CanvasEditorSurfaceProps = Readonly<{
   documentController: CanvasDocumentController
   interactionController: CanvasInteractionController
   interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
-  previews: CanvasPreviewSource
+  renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   title: string
 }>
@@ -56,7 +54,7 @@ export function CanvasEditorSurface({
   documentController,
   interactionController,
   interactionRenderStore,
-  previews,
+  renderEmbed,
   resourceId,
   title,
 }: CanvasEditorSurfaceProps) {
@@ -322,7 +320,7 @@ export function CanvasEditorSurface({
           interaction={interaction}
           interactionController={interactionController}
           onOpenContextMenu={openSelectionContextMenu}
-          previews={previews}
+          renderEmbed={renderEmbed}
           surface={surface}
           surfaceSize={surfaceSize}
         />

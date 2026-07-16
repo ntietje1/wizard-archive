@@ -11,19 +11,13 @@ import { initialVersion, sha256Digest } from '../../resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createInMemoryCanvasSession } from '../../resources/in-memory-canvas-session'
 import { createCanvasTextDocument } from '../text/model'
-import type { CanvasPreviewSource } from '../../resources/content-session-contract'
 
 const RESOURCE_ID = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-444444444444')
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
 const STROKE = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-333333333333')
-const unavailablePreviews = {
-  get: () => ({ status: 'unavailable', reason: 'capability_not_supported' }) as const,
-  subscribe: () => () => {},
-} satisfies CanvasPreviewSource
-
-function CanvasEditor(props: Omit<ComponentProps<typeof ProductionCanvasEditor>, 'previews'>) {
-  return <ProductionCanvasEditor {...props} previews={unavailablePreviews} />
+function CanvasEditor(props: Omit<ComponentProps<typeof ProductionCanvasEditor>, 'renderEmbed'>) {
+  return <ProductionCanvasEditor {...props} renderEmbed={() => null} />
 }
 
 async function createSession(content: CanvasDocumentContent = { nodes: [], edges: [] }) {
@@ -102,6 +96,7 @@ describe('CanvasEditor', () => {
       edges: [],
     })
     externalController.dispose()
+    expect(await screen.findByText('Canonical canvas text')).toBeVisible()
     fireEvent.keyDown(editor, { key: 'Escape' })
     expect(screen.getByText('Canonical canvas text')).toBeVisible()
 
@@ -379,6 +374,7 @@ describe('CanvasEditor', () => {
       edges: [],
     })
     externalController.dispose()
+    await screen.findByText('Must persist')
     view.rerender(renderEditor(false))
     const beforeUndo = readCanvasDocumentContent(session.document)
     expect(beforeUndo.nodes).toHaveLength(initial.nodes.length + 1)

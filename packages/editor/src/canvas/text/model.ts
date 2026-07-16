@@ -29,7 +29,24 @@ const documentSchema: z.ZodType<CanvasTextDocument> = zod
 export function parseCanvasTextDocument(value: unknown): CanvasTextDocument | null {
   if (!canvasTextWithinWorkload(value)) return null
   const result = documentSchema.safeParse(value)
-  return result.success ? result.data : null
+  return result.success ? minimizeCanvasTextDocument(result.data) : null
+}
+
+function minimizeCanvasTextDocument(document: CanvasTextDocument): CanvasTextDocument {
+  const minimizeBlock = (block: CanvasTextBlock): CanvasTextBlock => ({
+    ...block,
+    ...(block.content
+      ? {
+          content: block.content.map((content) =>
+            content.styles && Object.keys(content.styles).length === 0
+              ? { type: content.type, text: content.text }
+              : content,
+          ),
+        }
+      : {}),
+    ...(block.children ? { children: block.children.map(minimizeBlock) } : {}),
+  })
+  return document.map(minimizeBlock)
 }
 
 export function createCanvasTextDocument(text: string): CanvasTextDocument {

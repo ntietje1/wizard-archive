@@ -1,7 +1,7 @@
 import { FormattingToolbarController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { useEffect, useRef } from 'react'
-import type { KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 import { CanvasFormattingToolbar } from './canvas-formatting-toolbar'
 import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
 import { createCanvasTextDocument, parseCanvasTextDocument } from './text/model'
@@ -12,19 +12,25 @@ import './canvas-text-editor.css'
 
 export function CanvasTextEditor({
   content,
+  editing,
   onChange,
   onFinish,
+  selected,
+  style,
 }: {
   content: CanvasTextDocument | undefined
+  editing: boolean
   onChange: (content: CanvasTextDocument) => void
   onFinish: () => void
+  selected: boolean
+  style: CSSProperties
 }) {
   const initialContent = normalizeCanvasTextContent(content)
   const editor = useCreateBlockNote(
     {
       schema: canvasTextEditorSchema,
       initialContent,
-      autofocus: 'end',
+      autofocus: false,
       domAttributes: { editor: { 'aria-label': 'Canvas text' } },
       disableExtensions: ['uniqueID'],
       extensions: [createBlockNoteUuidV7Extension(true)],
@@ -33,13 +39,22 @@ export function CanvasTextEditor({
     [],
   )
   const contentKey = JSON.stringify(content ?? [])
-  const publishedContentKey = useRef(contentKey)
+  const sourceContentKey = useRef(contentKey)
+  const publishedContentKey = useRef<string | null>(null)
+  if (publishedContentKey.current === null) {
+    publishedContentKey.current = canvasEditorDocumentKey(editor)
+  }
+
+  useLayoutEffect(() => {
+    if (contentKey === sourceContentKey.current) return
+    sourceContentKey.current = contentKey
+    editor.replaceBlocks(editor.document, normalizeCanvasTextContent(content))
+    publishedContentKey.current = canvasEditorDocumentKey(editor)
+  }, [content, contentKey, editor])
 
   useEffect(() => {
-    if (contentKey === publishedContentKey.current) return
-    publishedContentKey.current = contentKey
-    editor.replaceBlocks(editor.document, normalizeCanvasTextContent(content))
-  }, [content, contentKey, editor])
+    if (editing) editor.focus()
+  }, [editing, editor])
 
   const persist = () => {
     const parsed = parseCanvasTextDocument(structuredClone(editor.document))
@@ -47,28 +62,35 @@ export function CanvasTextEditor({
     const nextKey = JSON.stringify(parsed)
     if (nextKey === publishedContentKey.current) return
     publishedContentKey.current = nextKey
+    sourceContentKey.current = nextKey
     onChange(parsed)
   }
 
   return (
     <div
-      className="canvas-text-editor nowheel nopan size-full overflow-auto rounded-md border bg-card text-sm outline-none ring-2 ring-ring"
-      onKeyDownCapture={(event) => finishCanvasTextEditing(event, onFinish)}
-      onPointerDown={(event) => event.stopPropagation()}
+      className={`canvas-text-editor size-full overflow-auto rounded-md border bg-card text-sm outline-none ${editing ? 'nowheel nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
+      style={style}
+      onKeyDownCapture={editing ? (event) => finishCanvasTextEditing(event, onFinish) : undefined}
+      onPointerDown={editing ? (event) => event.stopPropagation() : undefined}
     >
       <BlockNoteView
         className="min-h-full bg-transparent"
+        editable={editing}
         editor={editor}
         formattingToolbar={false}
         linkToolbar={false}
         sideMenu={false}
         slashMenu={false}
-        onChange={persist}
+        onChange={editing ? persist : undefined}
       >
-        <FormattingToolbarController formattingToolbar={CanvasFormattingToolbar} />
+        {editing && <FormattingToolbarController formattingToolbar={CanvasFormattingToolbar} />}
       </BlockNoteView>
     </div>
   )
+}
+
+function canvasEditorDocumentKey(editor: { document: unknown }): string {
+  return JSON.stringify(parseCanvasTextDocument(structuredClone(editor.document)) ?? [])
 }
 
 function normalizeCanvasTextContent(

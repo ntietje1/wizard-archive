@@ -3,7 +3,6 @@ import type { CanvasDocumentNode } from './document-contract'
 import { canvasNodeSize } from './canvas-layout'
 import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { CanvasTextEditor } from './canvas-text-editor'
-import { CanvasTextPreview } from './canvas-text-preview'
 import type { CanvasTextDocument } from './text/model'
 import { canvasEmbedLabel } from './canvas-embed-label'
 
@@ -62,21 +61,25 @@ export function CanvasNodeVisual({
   if (node.type === 'embed') {
     return (
       <div
-        className="flex size-full items-center justify-center overflow-hidden rounded-md border bg-card text-center text-sm shadow-sm"
+        className="relative size-full overflow-hidden rounded-md border bg-card text-sm shadow-sm"
         style={sharedStyle}
       >
-        {embed ?? canvasEmbedLabel(node)}
+        {embed ?? (
+          <span className="flex size-full items-center justify-center p-3 text-center">
+            {canvasEmbedLabel(node)}
+          </span>
+        )}
       </div>
     )
   }
-  if (editing) {
-    return (
-      <CanvasTextEditor
-        content={node.data.content}
-        onChange={onSaveContent}
-        onFinish={onFinishEditing}
-      />
-    )
-  }
-  return <CanvasTextPreview content={node.data.content} selected={selected} style={sharedStyle} />
+  return (
+    <CanvasTextEditor
+      content={node.data.content}
+      editing={editing}
+      onChange={onSaveContent}
+      onFinish={onFinishEditing}
+      selected={selected}
+      style={sharedStyle}
+    />
+  )
 }

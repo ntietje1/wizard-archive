@@ -35,6 +35,10 @@ test.describe('readonly canvas', () => {
     await expect(editor.getByRole('button', { name: 'Pointer' })).not.toBeVisible()
     await expect(editor.getByRole('button', { name: 'Text' })).not.toBeVisible()
     await expect(editor.getByRole('button', { name: 'Zoom in' })).toBeVisible()
+    await expect(editor.getByRole('textbox', { name: 'Canvas text' })).toHaveAttribute(
+      'contenteditable',
+      'false',
+    )
 
     const firstNode = nodes.first()
     const before = await firstNode.getAttribute('style')
@@ -45,7 +49,10 @@ test.describe('readonly canvas', () => {
     await expect(firstNode).toHaveAttribute('style', before ?? '')
 
     await firstNode.dblclick({ position: { x: 20, y: 20 } })
-    await expect(editor.getByRole('textbox', { name: 'Canvas text' })).not.toBeVisible()
+    await expect(editor.getByRole('textbox', { name: 'Canvas text' })).toHaveAttribute(
+      'contenteditable',
+      'false',
+    )
     await editor.focus()
     await page.keyboard.press('Delete')
     await expect(nodes).toHaveCount(2)
