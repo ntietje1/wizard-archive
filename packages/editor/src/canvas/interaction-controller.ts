@@ -1,6 +1,6 @@
 import type { CanvasNodeId } from '../resources/domain-id'
 
-export type CanvasTool = 'draw' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
+export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
 
 export type CanvasPoint = Readonly<{ x: number; y: number }>
 
@@ -21,6 +21,13 @@ export type CanvasDrawStyle = Readonly<{
 }>
 
 export type CanvasDrawPoint = readonly [x: number, y: number, pressure: number]
+
+export type CanvasConnectionHandle = 'bottom' | 'left' | 'right' | 'top'
+
+export type CanvasConnectionAnchor = Readonly<{
+  nodeId: CanvasNodeId
+  handle: CanvasConnectionHandle
+}>
 
 export type CanvasInteraction =
   | Readonly<{ type: 'idle' }>
@@ -70,6 +77,13 @@ export type CanvasInteraction =
       pointerId: number
       points: ReadonlyArray<CanvasPoint>
       nodeIds: ReadonlySet<CanvasNodeId>
+    }>
+  | Readonly<{
+      type: 'connecting'
+      pointerId: number
+      source: CanvasConnectionAnchor
+      current: CanvasPoint
+      target: CanvasConnectionAnchor | null
     }>
 
 export type CanvasInteractionSnapshot = Readonly<{
@@ -151,35 +165,66 @@ function reconcileInteraction(
   edgeIds: ReadonlySet<string>,
 ): CanvasInteraction {
   switch (interaction.type) {
-    case 'selecting': {
-      if (interaction.candidate === null) return interaction
-      const candidate = filterSelection(interaction.candidate, nodeIds, edgeIds)
-      return selectionsEqual(candidate, interaction.candidate)
-        ? interaction
-        : { ...interaction, candidate }
-    }
-    case 'dragging': {
-      const initialPositions = new Map(
-        Array.from(interaction.initialPositions).filter(([id]) => nodeIds.has(id)),
-      )
-      if (initialPositions.size === 0) return { type: 'idle' }
-      return initialPositions.size === interaction.initialPositions.size
-        ? interaction
-        : { ...interaction, initialPositions }
-    }
+    case 'selecting':
+      return reconcileSelecting(interaction, nodeIds, edgeIds)
+    case 'dragging':
+      return reconcileDragging(interaction, nodeIds)
     case 'editing':
       return nodeIds.has(interaction.nodeId) ? interaction : { type: 'idle' }
-    case 'erasing': {
-      const markedNodeIds = new Set(Array.from(interaction.nodeIds).filter((id) => nodeIds.has(id)))
-      return markedNodeIds.size === interaction.nodeIds.size
-        ? interaction
-        : { ...interaction, nodeIds: markedNodeIds }
-    }
+    case 'connecting':
+      return reconcileConnecting(interaction, nodeIds)
+    case 'erasing':
+      return reconcileErasing(interaction, nodeIds)
     case 'drawing':
     case 'idle':
     case 'panning':
       return interaction
   }
+}
+
+function reconcileSelecting(
+  interaction: Extract<CanvasInteraction, { type: 'selecting' }>,
+  nodeIds: ReadonlySet<CanvasNodeId>,
+  edgeIds: ReadonlySet<string>,
+): CanvasInteraction {
+  if (interaction.candidate === null) return interaction
+  const candidate = filterSelection(interaction.candidate, nodeIds, edgeIds)
+  return selectionsEqual(candidate, interaction.candidate)
+    ? interaction
+    : { ...interaction, candidate }
+}
+
+function reconcileDragging(
+  interaction: Extract<CanvasInteraction, { type: 'dragging' }>,
+  nodeIds: ReadonlySet<CanvasNodeId>,
+): CanvasInteraction {
+  const initialPositions = new Map(
+    Array.from(interaction.initialPositions).filter(([id]) => nodeIds.has(id)),
+  )
+  if (initialPositions.size === 0) return { type: 'idle' }
+  return initialPositions.size === interaction.initialPositions.size
+    ? interaction
+    : { ...interaction, initialPositions }
+}
+
+function reconcileConnecting(
+  interaction: Extract<CanvasInteraction, { type: 'connecting' }>,
+  nodeIds: ReadonlySet<CanvasNodeId>,
+): CanvasInteraction {
+  if (!nodeIds.has(interaction.source.nodeId)) return { type: 'idle' }
+  return interaction.target && !nodeIds.has(interaction.target.nodeId)
+    ? { ...interaction, target: null }
+    : interaction
+}
+
+function reconcileErasing(
+  interaction: Extract<CanvasInteraction, { type: 'erasing' }>,
+  nodeIds: ReadonlySet<CanvasNodeId>,
+): CanvasInteraction {
+  const markedNodeIds = new Set(Array.from(interaction.nodeIds).filter((id) => nodeIds.has(id)))
+  return markedNodeIds.size === interaction.nodeIds.size
+    ? interaction
+    : { ...interaction, nodeIds: markedNodeIds }
 }
 
 export function getVisualCanvasSelection(snapshot: CanvasInteractionSnapshot): CanvasSelection {
@@ -390,6 +435,35 @@ export class CanvasInteractionController {
         nodeIds: new Set(),
       },
     })
+  }
+
+  beginConnection(pointerId: number, source: CanvasConnectionAnchor, point: CanvasPoint): void {
+    this.#assertActive()
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { type: 'connecting', pointerId, source, current: point, target: null },
+    })
+  }
+
+  updateConnection(
+    pointerId: number,
+    point: CanvasPoint,
+    target: CanvasConnectionAnchor | null,
+  ): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'connecting' || interaction.pointerId !== pointerId) return
+    this.#publish({ ...this.#snapshot, interaction: { ...interaction, current: point, target } })
+  }
+
+  commitConnection(
+    pointerId: number,
+  ): Readonly<{ source: CanvasConnectionAnchor; target: CanvasConnectionAnchor }> | null {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'connecting' || interaction.pointerId !== pointerId) return null
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+    return interaction.target ? { source: interaction.source, target: interaction.target } : null
   }
 
   updateErasing(pointerId: number, point: CanvasPoint, nodeIds: ReadonlySet<CanvasNodeId>): void {

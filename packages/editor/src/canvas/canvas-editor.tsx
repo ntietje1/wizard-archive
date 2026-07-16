@@ -1,5 +1,6 @@
 import {
   Eraser,
+  GitBranch,
   Hand,
   LassoSelect,
   Maximize,
@@ -19,6 +20,7 @@ import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-c
 import { CanvasInteractionController, screenToCanvasPoint } from './interaction-controller'
 import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
+import { findCanvasConnectionTarget } from './canvas-edge-geometry'
 import { fitCanvasContent } from './canvas-layout'
 import { canvasStrokeBounds, findCanvasStrokesIntersectingTrail } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
@@ -40,6 +42,7 @@ const TOOL_BUTTONS: ReadonlyArray<Readonly<{ tool: CanvasTool; label: string; ic
     { tool: 'lasso', label: 'Lasso select', icon: LassoSelect },
     { tool: 'draw', label: 'Draw', icon: Pencil },
     { tool: 'eraser', label: 'Eraser', icon: Eraser },
+    { tool: 'edge', label: 'Edges', icon: GitBranch },
     { tool: 'text', label: 'Text', icon: Type },
     { tool: 'hand', label: 'Hand', icon: Hand },
   ]
@@ -220,6 +223,7 @@ export function CanvasEditor({
               event.shiftKey,
             )
             updateErasing(event.pointerId, canvasPoint, content, interactionController)
+            updateConnection(event.pointerId, canvasPoint, content, interactionController)
           }
           updateAreaSelection(
             event.pointerId,
@@ -233,6 +237,7 @@ export function CanvasEditor({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
+          if (commitConnection(event.pointerId, interactionController, documentController)) return
           if (commitErasing(event.pointerId, interactionController, documentController)) return
           if (commitDrawing(event.pointerId, interactionController, documentController)) return
           if (interactionController.commitPan(event.pointerId)) return
@@ -465,8 +470,60 @@ function commitAreaSelection(pointerId: number, controller: CanvasInteractionCon
 function canvasToolCursor(tool: CanvasTool): string {
   if (tool === 'hand') return 'cursor-grab'
   if (tool === 'eraser') return 'cursor-cell'
-  if (tool === 'draw' || tool === 'lasso' || tool === 'text') return 'cursor-crosshair'
+  if (tool === 'draw' || tool === 'edge' || tool === 'lasso' || tool === 'text') {
+    return 'cursor-crosshair'
+  }
   return 'cursor-default'
+}
+
+function updateConnection(
+  pointerId: number,
+  point: CanvasPoint,
+  content: CanvasDocumentContent,
+  controller: CanvasInteractionController,
+) {
+  const snapshot = controller.get()
+  const connection = snapshot.interaction
+  if (connection.type !== 'connecting' || connection.pointerId !== pointerId) return
+  controller.updateConnection(
+    pointerId,
+    point,
+    findCanvasConnectionTarget(
+      content.nodes,
+      connection.source.nodeId,
+      point,
+      20 / snapshot.viewport.zoom,
+    ),
+  )
+}
+
+function commitConnection(
+  pointerId: number,
+  interactionController: CanvasInteractionController,
+  documentController: CanvasDocumentController,
+): boolean {
+  const interaction = interactionController.get().interaction
+  const connecting = interaction.type === 'connecting' && interaction.pointerId === pointerId
+  if (!connecting) return false
+  const connection = interactionController.commitConnection(pointerId)
+  if (!connection) return true
+  const id = `e-${connection.source.nodeId}-${connection.target.nodeId}-${crypto.randomUUID()}`
+  documentController.apply({
+    type: 'insert',
+    nodes: [],
+    edges: [
+      {
+        id,
+        source: connection.source.nodeId,
+        target: connection.target.nodeId,
+        sourceHandle: connection.source.handle,
+        targetHandle: connection.target.handle,
+        type: 'bezier',
+      },
+    ],
+  })
+  interactionController.setSelection({ nodeIds: new Set(), edgeIds: new Set([id]) })
+  return true
 }
 
 function updateErasing(

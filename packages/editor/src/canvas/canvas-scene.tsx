@@ -1,11 +1,16 @@
-import type { PointerEvent, RefObject } from 'react'
+import type { CSSProperties, PointerEvent, RefObject } from 'react'
 import type { CanvasDocumentController } from './document-controller'
 import type {
   CanvasDocumentContent,
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from './document-contract'
-import { canvasEdgePath } from './canvas-edge-geometry'
+import {
+  CANVAS_CONNECTION_HANDLES,
+  canvasConnectionPreviewPath,
+  canvasEdgePath,
+  canvasNodeHandlePoint,
+} from './canvas-edge-geometry'
 import {
   getCanvasNodeInteractionPosition,
   getCanvasDrawingPoints,
@@ -15,6 +20,7 @@ import {
 import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
+  CanvasConnectionHandle,
   CanvasPoint,
   CanvasSelection,
   CanvasViewport,
@@ -74,6 +80,7 @@ export function CanvasScene({
           />
         ))}
       </svg>
+      <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
       <CanvasDrawingOverlay interaction={interaction} />
       <CanvasSelectionOverlay interaction={interaction} />
       {content.nodes.map((node) => (
@@ -166,8 +173,73 @@ function CanvasNode({
         onFinishEditing={() => interactionController.finishEditing()}
         onSaveText={(text) => saveTextNode(documentController, node.id, text)}
       />
+      {canEdit && interaction.tool === 'edge' && (
+        <CanvasNodeConnectionHandles
+          interaction={interaction}
+          interactionController={interactionController}
+          node={node}
+          surface={surface}
+        />
+      )}
     </div>
   )
+}
+
+function CanvasNodeConnectionHandles({
+  interaction,
+  interactionController,
+  node,
+  surface,
+}: {
+  interaction: CanvasInteractionSnapshot
+  interactionController: CanvasInteractionController
+  node: CanvasDocumentNode
+  surface: RefObject<HTMLElement | null>
+}) {
+  const connection = interaction.interaction
+  return CANVAS_CONNECTION_HANDLES.map((handle) => {
+    const snapped =
+      connection.type === 'connecting' &&
+      connection.target?.nodeId === node.id &&
+      connection.target.handle === handle
+    return (
+      <button
+        key={handle}
+        type="button"
+        aria-label={`Connect from ${handle}`}
+        className="pointer-events-auto absolute z-20 size-4 rounded-full border border-border bg-background shadow-sm data-[snap-target=true]:border-primary data-[snap-target=true]:bg-primary"
+        data-canvas-node-handle="true"
+        data-handle-position={handle}
+        data-snap-target={snapped}
+        data-testid={`canvas-node-handle-${handle}`}
+        style={connectionHandleStyle(handle)}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return
+          event.preventDefault()
+          event.stopPropagation()
+          surface.current?.setPointerCapture(event.pointerId)
+          interactionController.beginConnection(
+            event.pointerId,
+            { nodeId: node.id, handle },
+            canvasNodeHandlePoint(node, handle),
+          )
+        }}
+      />
+    )
+  })
+}
+
+function connectionHandleStyle(handle: CanvasConnectionHandle): CSSProperties {
+  switch (handle) {
+    case 'top':
+      return { left: '50%', top: 0, transform: 'translate(-50%, -50%)' }
+    case 'right':
+      return { right: 0, top: '50%', transform: 'translate(50%, -50%)' }
+    case 'bottom':
+      return { bottom: 0, left: '50%', transform: 'translate(-50%, 50%)' }
+    case 'left':
+      return { left: 0, top: '50%', transform: 'translate(-50%, -50%)' }
+  }
 }
 
 function beginNodeDrag({
@@ -427,6 +499,41 @@ function CanvasDrawingOverlay({ interaction }: { interaction: CanvasInteractionS
         strokeLinejoin="round"
         strokeOpacity={drawing.style.opacity / 100}
         strokeWidth={drawing.style.size}
+      />
+    </svg>
+  )
+}
+
+function CanvasConnectionOverlay({
+  interaction,
+  nodeById,
+}: {
+  interaction: CanvasInteractionSnapshot
+  nodeById: ReadonlyMap<CanvasNodeId, CanvasDocumentNode>
+}) {
+  const connection = interaction.interaction
+  if (connection.type !== 'connecting') return null
+  const path = canvasConnectionPreviewPath(
+    connection.source,
+    connection.current,
+    connection.target,
+    nodeById,
+  )
+  if (!path) return null
+  return (
+    <svg
+      className="pointer-events-none absolute left-0 top-0 overflow-visible"
+      data-snap-target={connection.target !== null}
+      data-testid="canvas-connection-preview"
+      width="1"
+      height="1"
+    >
+      <path
+        d={path}
+        fill="none"
+        stroke="var(--primary)"
+        strokeLinecap="round"
+        strokeWidth={2 / interaction.viewport.zoom}
       />
     </svg>
   )

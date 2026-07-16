@@ -181,6 +181,29 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
+  it('keeps an edge draft local and commits only a valid canonical node-handle pair', () => {
+    const controller = new CanvasInteractionController()
+    controller.beginConnection(9, { nodeId: NODE_A, handle: 'right' }, { x: 10, y: 20 })
+    controller.updateConnection(9, { x: 100, y: 20 }, { nodeId: NODE_B, handle: 'left' })
+    expect(controller.get().interaction).toMatchObject({
+      type: 'connecting',
+      source: { nodeId: NODE_A, handle: 'right' },
+      target: { nodeId: NODE_B, handle: 'left' },
+    })
+
+    controller.reconcileDocument(new Set([NODE_A]), new Set())
+    expect(controller.commitConnection(9)).toBeNull()
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
+
+    controller.beginConnection(10, { nodeId: NODE_A, handle: 'bottom' }, { x: 10, y: 20 })
+    controller.updateConnection(10, { x: 100, y: 20 }, { nodeId: NODE_B, handle: 'top' })
+    expect(controller.commitConnection(10)).toEqual({
+      source: { nodeId: NODE_A, handle: 'bottom' },
+      target: { nodeId: NODE_B, handle: 'top' },
+    })
+    controller.dispose()
+  })
+
   it('previews a multi-node drag and commits only a non-zero delta', () => {
     const controller = new CanvasInteractionController()
     controller.beginDrag(

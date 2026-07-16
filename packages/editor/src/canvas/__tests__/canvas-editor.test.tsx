@@ -208,6 +208,53 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('previews and commits one handle-authored edge through the canonical document path', async () => {
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Edges board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
+    fireEvent.click(screen.getByRole('button', { name: 'Edges' }))
+
+    const sourceHandle = screen.getAllByTestId('canvas-node-handle-right')[0]
+    fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 12 })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 300,
+      clientY: 80,
+      pointerId: 12,
+    })
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveAttribute(
+      'data-snap-target',
+      'true',
+    )
+    expect(readCanvasDocumentContent(session.document).edges).toHaveLength(0)
+
+    fireEvent.pointerUp(surface, { clientX: 300, clientY: 80, pointerId: 12 })
+    const [edge] = readCanvasDocumentContent(session.document).edges
+    expect(edge).toMatchObject({
+      source: NODE_A,
+      target: NODE_B,
+      sourceHandle: 'right',
+      targetHandle: 'left',
+      type: 'bezier',
+    })
+    expect(screen.queryByTestId('canvas-connection-preview')).not.toBeInTheDocument()
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document).edges).toHaveLength(0)
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders moved stroke coordinates with a screen-space hit target', async () => {
     const session = await createSession({
       nodes: [
