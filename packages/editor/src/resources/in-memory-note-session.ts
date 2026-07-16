@@ -7,7 +7,6 @@ import type { VersionStamp } from './component-version'
 export function createInMemoryNoteSession(
   document: Y.Doc,
   initialVersion: VersionStamp,
-  readonly: boolean,
   changed: (session: NoteSession) => void = () => {},
 ): NoteSession {
   let version = initialVersion
@@ -32,7 +31,6 @@ export function createInMemoryNoteSession(
     },
     awareness: { status: 'unavailable' },
     collaboration,
-    readonly,
     async flush(): Promise<NoteSessionSaveResult> {
       if (disposed) return { status: 'rejected', reason: 'scope_unavailable' }
       if (dirty) {

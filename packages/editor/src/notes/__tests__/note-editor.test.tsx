@@ -29,14 +29,7 @@ describe('NoteEditor', () => {
       NOTE_YJS_FRAGMENT,
     )
 
-    const { unmount } = render(
-      <NoteEditor
-        document={document}
-        editable={false}
-        label="Readonly note"
-        onFlush={vi.fn(() => Promise.resolve())}
-      />,
-    )
+    const { unmount } = render(<NoteEditor document={document} label="Readonly note" mode="view" />)
 
     expect(await screen.findByRole('textbox', { name: 'Readonly note' })).toHaveTextContent(
       'Canonical headingCanonical body',
@@ -46,6 +39,58 @@ describe('NoteEditor', () => {
       'false',
     )
     unmount()
+  })
+
+  it('renders remote document updates in view mode', async () => {
+    const document = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    render(
+      <>
+        <NoteEditor document={document} label="Live viewer" mode="view" />
+        <NoteEditor
+          document={document}
+          label="Remote editor"
+          mode="edit"
+          persistence="initializing"
+        />
+      </>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Value' }))
+
+    expect(await screen.findByRole('textbox', { name: 'Live viewer' })).toHaveTextContent('Value0')
+  })
+
+  it('switches presentation mode without recreating the editor or document', async () => {
+    const document = noteBlocksToYDoc(
+      [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'One canonical document' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const flush = vi.fn(() => Promise.resolve())
+    const createEditor = vi.spyOn(BlockNoteEditor, 'create')
+    const view = render(
+      <NoteEditor
+        document={document}
+        label="Mode-switching note"
+        mode="edit"
+        persistence="ready"
+        onFlush={flush}
+      />,
+    )
+    const editor = await screen.findByRole('textbox', { name: 'Mode-switching note' })
+    const creationCount = createEditor.mock.calls.length
+
+    view.rerender(<NoteEditor document={document} label="Mode-switching note" mode="view" />)
+
+    expect(editor).toHaveAttribute('contenteditable', 'false')
+    expect(editor).toHaveTextContent('One canonical document')
+    expect(createEditor).toHaveBeenCalledTimes(creationCount)
+    expect(flush).toHaveBeenCalledOnce()
+    createEditor.mockRestore()
   })
 
   it('edits UUID-backed value labels and formulas in the canonical document', async () => {
@@ -63,8 +108,9 @@ describe('NoteEditor', () => {
     render(
       <NoteEditor
         document={document}
-        editable
         label="Editable note"
+        mode="edit"
+        persistence="ready"
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -106,8 +152,9 @@ describe('NoteEditor', () => {
     render(
       <NoteEditor
         document={document}
-        editable
         label="Value insertion note"
+        mode="edit"
+        persistence="ready"
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -129,8 +176,9 @@ describe('NoteEditor', () => {
     render(
       <NoteEditor
         document={document}
-        editable
         label="Block identity note"
+        mode="edit"
+        persistence="ready"
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -160,8 +208,9 @@ describe('NoteEditor', () => {
     render(
       <NoteEditor
         document={document}
-        editable
         label="History note"
+        mode="edit"
+        persistence="ready"
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -199,8 +248,9 @@ describe('NoteEditor', () => {
     render(
       <NoteEditor
         document={document}
-        editable
         label="Drop-protected note"
+        mode="edit"
+        persistence="ready"
         onFlush={() => Promise.resolve()}
       />,
     )

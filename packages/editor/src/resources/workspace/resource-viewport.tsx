@@ -116,23 +116,33 @@ function NoteViewport({
   const source = runtime.content.notes
   const state = useContentSnapshot(source, resource.id)
   if (state.status === 'initializing') {
-    return (
+    return canEdit ? (
       <NoteEditor
         document={state.local}
-        editable={canEdit}
         label={`${resource.title} note editor`}
-        onFlush={() => Promise.resolve()}
+        mode="edit"
+        persistence="initializing"
       />
+    ) : (
+      <NoteEditor document={state.local} label={`${resource.title} note editor`} mode="view" />
     )
   }
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
-  return (
+  return canEdit ? (
     <NoteEditor
       collaboration={state.session.collaboration}
       document={state.session.document}
-      editable={canEdit && !state.session.readonly}
       label={`${resource.title} note editor`}
-      onFlush={() => state.session.flush()}
+      mode="edit"
+      persistence="ready"
+      onFlush={state.session.flush}
+    />
+  ) : (
+    <NoteEditor
+      collaboration={state.session.collaboration}
+      document={state.session.document}
+      label={`${resource.title} note editor`}
+      mode="view"
     />
   )
 }

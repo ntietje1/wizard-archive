@@ -97,7 +97,6 @@ class InMemoryNoteSessionSource
     ready: ReadonlyArray<ReadyContent<Y.Doc>>,
     private readonly campaignId: CampaignId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
-    private readonly readonly: boolean,
   ) {
     super({ status: 'loading' })
     for (const entry of ready) {
@@ -166,7 +165,7 @@ class InMemoryNoteSessionSource
   setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void {
     const previous = this.#sessions.get(resourceId)
     if (previous && previous.document !== document) previous.dispose()
-    const session = createInMemoryNoteSession(document, version, this.readonly, (next) => {
+    const session = createInMemoryNoteSession(document, version, (next) => {
       this.set(resourceId, { status: 'ready', session: next })
     })
     this.#sessions.set(resourceId, session)
@@ -429,11 +428,8 @@ export function createInMemoryEditorRuntime({
       retryable: false,
       reason: 'transport_unavailable',
     })
-  const notes = new InMemoryNoteSessionSource(
-    content.notes ?? [],
-    scope.campaignId,
-    (envelope) => executeStructure(envelope),
-    !canEdit,
+  const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
+    executeStructure(envelope),
   )
   const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),

@@ -210,7 +210,7 @@ async function finalizeContentCopy(
         } else {
           stores.notes.set(entry.destinationId, {
             status: 'ready',
-            session: createInMemoryNoteSession(content, version, false),
+            session: createInMemoryNoteSession(content, version),
           })
         }
       }

@@ -39,44 +39,24 @@ const noteEditorSchema = BlockNoteSchema.create({
   styleSpecs: noteStyleSpecs,
 })
 
-export function NoteEditor({
-  collaboration,
-  document,
-  editable,
-  label,
-  onFlush,
-}: {
+type NoteEditorProps = {
   collaboration?: NoteCollaboration
   document: Y.Doc
-  editable: boolean
   label: string
-  onFlush: () => Promise<unknown>
-}) {
-  return (
-    <NoteDocumentEditor
-      key={document.guid}
-      collaboration={collaboration}
-      document={document}
-      editable={editable}
-      label={label}
-      onFlush={onFlush}
-    />
-  )
+} & (
+  | { mode: 'view' }
+  | { mode: 'edit'; persistence: 'initializing' }
+  | { mode: 'edit'; persistence: 'ready'; onFlush: () => Promise<unknown> }
+)
+
+export function NoteEditor(props: NoteEditorProps) {
+  return <NoteDocumentEditor key={props.document.guid} {...props} />
 }
 
-function NoteDocumentEditor({
-  collaboration,
-  document,
-  editable,
-  label,
-  onFlush,
-}: {
-  collaboration?: NoteCollaboration
-  document: Y.Doc
-  editable: boolean
-  label: string
-  onFlush: () => Promise<unknown>
-}) {
+function NoteDocumentEditor(props: NoteEditorProps) {
+  const { collaboration, document, label } = props
+  const editable = props.mode === 'edit'
+  const flush = props.mode === 'edit' && props.persistence === 'ready' ? props.onFlush : null
   const editor = useCreateBlockNote(
     {
       schema: noteEditorSchema,
@@ -112,19 +92,23 @@ function NoteDocumentEditor({
     )
   }
 
-  useEffect(
-    () => () => {
-      void onFlush()
-    },
-    [onFlush],
-  )
+  useEffect(() => {
+    if (!flush) return
+    return () => {
+      void flush()
+    }
+  }, [flush])
 
   return (
     <div
       className="resource-note-editor min-h-0 flex-1 overflow-auto"
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) void onFlush()
-      }}
+      onBlurCapture={
+        flush
+          ? (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) void flush()
+            }
+          : undefined
+      }
       onDropCapture={(event) => {
         if (!editable || !isExternalFileDrop(event.dataTransfer)) return
         event.preventDefault()
@@ -144,7 +128,7 @@ function NoteDocumentEditor({
           className="min-h-full"
           editable={editable}
           editor={editor}
-          formattingToolbar
+          formattingToolbar={editable}
           linkToolbar={false}
           sideMenu={editable}
           slashMenu={false}

@@ -90,7 +90,6 @@ function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
 }
 
 class LiveNoteSession implements NoteSession {
-  readonly readonly = false
   readonly #liveAwareness: ReturnType<typeof createLiveNoteAwareness>
   readonly #outbox: NoteUpdateOutbox
   #version
@@ -157,7 +156,7 @@ class LiveNoteSession implements NoteSession {
     return 'applied'
   }
 
-  flush(): Promise<NoteSessionSaveResult> {
+  readonly flush = (): Promise<NoteSessionSaveResult> => {
     const awareness = this.#liveAwareness.flush()
     const document = this.#flushDocument()
     return Promise.all([awareness, document]).then(([, result]) => result)

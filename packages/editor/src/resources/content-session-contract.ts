@@ -72,8 +72,7 @@ export interface NoteSession {
   readonly version: VersionStamp
   readonly awareness: SessionAwareness
   readonly collaboration: NoteCollaboration
-  readonly readonly: boolean
-  flush(): Promise<NoteSessionSaveResult>
+  readonly flush: () => Promise<NoteSessionSaveResult>
   dispose(): void
 }
 
