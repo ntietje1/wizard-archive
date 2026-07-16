@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createTestContext } from '../../_test/setup.helper'
 import {
   addPlayerToCampaign,
   createCampaignWithDm,
+  createSession,
   createUserProfile,
 } from '../../_test/factories.helper'
 import { setupUser, testAuthIdentity, testAuthIdentityForKey } from '../../_test/identities.helper'
@@ -10,8 +11,15 @@ import { expectNotAuthenticated } from '../../_test/assertions.helper'
 import { onCreateUser } from '../functions/onCreateUser'
 import { onDeleteUser } from '../functions/onDeleteUser'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
-import { api } from '../../_generated/api'
+import { api, internal } from '../../_generated/api'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { Id } from '../../_generated/dataModel'
+
+afterEach(() => vi.useRealTimers())
+
+async function finishScheduledWork(t: ReturnType<typeof createTestContext>) {
+  await t.finishAllScheduledFunctions(vi.runAllTimers)
+}
 
 async function getProfileByAuthUserId(t: ReturnType<typeof createTestContext>, authUserId: string) {
   return await t.run(async (ctx) => {
@@ -192,10 +200,12 @@ describe('onDeleteUser', () => {
   const t = createTestContext()
 
   it("retires a DM campaign and removes the deleted user's membership", async () => {
+    vi.useFakeTimers()
     const dm = await setupUser(t)
     const player = await setupUser(t)
     const { campaignId } = await createCampaignWithDm(t, dm.profile)
     const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
+    for (let index = 0; index < 33; index += 1) await createSession(t, campaignId)
 
     await t.run(async (ctx) => {
       await onDeleteUser(ctx, {
@@ -204,16 +214,17 @@ describe('onDeleteUser', () => {
       })
     })
 
+    await finishScheduledWork(t)
+
     await t.run(async (ctx) => {
-      expect(await ctx.db.get('campaigns', campaignId)).toMatchObject({ status: 'Deleted' })
-      expect(await ctx.db.get('campaignMembers', playerMemberId)).toMatchObject({
-        status: 'Accepted',
-      })
+      expect(await ctx.db.get('campaigns', campaignId)).toBeNull()
+      expect(await ctx.db.get('campaignMembers', playerMemberId)).toBeNull()
       expect(await ctx.db.get('userProfiles', dm.profile._id)).toBeNull()
     })
   })
 
   it('removes a player membership without retiring the campaign', async () => {
+    vi.useFakeTimers()
     const dm = await setupUser(t)
     const player = await setupUser(t)
     const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
@@ -226,17 +237,18 @@ describe('onDeleteUser', () => {
       })
     })
 
+    await finishScheduledWork(t)
+
     await t.run(async (ctx) => {
       expect(await ctx.db.get('campaigns', campaignId)).toMatchObject({ status: 'Active' })
       expect(await ctx.db.get('campaignMembers', dmMemberId)).toMatchObject({ status: 'Accepted' })
-      expect(await ctx.db.get('campaignMembers', playerMemberId)).toMatchObject({
-        status: 'Removed',
-      })
+      expect(await ctx.db.get('campaignMembers', playerMemberId)).toBeNull()
       expect(await ctx.db.get('userProfiles', player.profile._id)).toBeNull()
     })
   })
 
   it('retains resource-owned assets and deletes unowned uploads', async () => {
+    vi.useFakeTimers()
     const user = await setupUser(t)
     const owner = await setupUser(t)
     const { campaignDomainId } = await createCampaignWithDm(t, owner.profile)
@@ -265,11 +277,108 @@ describe('onDeleteUser', () => {
       })
     })
 
+    await finishScheduledWork(t)
+
     await t.run(async (ctx) => {
-      expect(await ctx.db.get('fileStorage', owned.sessionId)).not.toBeNull()
+      expect(await ctx.db.get('fileStorage', owned.sessionId)).toMatchObject({ userId: null })
       expect(await ctx.storage.get(owned.storageId)).not.toBeNull()
       expect(await ctx.db.get('fileStorage', unowned.sessionId)).toBeNull()
       expect(await ctx.storage.get(unowned.storageId)).toBeNull()
     })
+  })
+
+  it('resumes bounded cleanup across more than one batch', async () => {
+    vi.useFakeTimers()
+    const bounded = createTestContext(true)
+    const user = await setupUser(bounded)
+    const owner = await setupUser(bounded)
+    const campaignIds: Array<Id<'campaigns'>> = []
+
+    for (let index = 0; index < 33; index += 1) {
+      const { campaignId } = await createCampaignWithDm(bounded, owner.profile)
+      campaignIds.push(campaignId)
+      await addPlayerToCampaign(bounded, campaignId, user.profile)
+      await storeCommittedTestUploadSession(
+        bounded,
+        user.profile._id,
+        new Blob([String(index)]),
+        `${index}.txt`,
+      )
+    }
+    await bounded.run(async (ctx) => {
+      for (let index = 0; index < 33; index += 1) {
+        await ctx.db.insert('userPreferences', { userId: user.profile._id, theme: null })
+        await ctx.db.insert('workspacePreferences', {
+          campaignUuid: generateDomainId(DOMAIN_ID_KIND.campaign),
+          userId: user.profile._id,
+          revision: 0,
+          value: {
+            mode: 'editor',
+            sort: { by: 'title', direction: 'ascending' },
+            panels: {
+              left: { size: 288, visible: true },
+              right: { size: 280, visible: false },
+            },
+          },
+        })
+      }
+      await onDeleteUser(ctx, {
+        _id: user.profile.authUserId,
+        _creationTime: Date.now(),
+      })
+    })
+
+    await finishScheduledWork(bounded)
+
+    await bounded.run(async (ctx) => {
+      expect(await ctx.db.get('userProfiles', user.profile._id)).toBeNull()
+      expect(
+        await ctx.db
+          .query('campaignMembers')
+          .withIndex('by_user', (query) => query.eq('userId', user.profile._id))
+          .collect(),
+      ).toHaveLength(0)
+      expect(
+        await ctx.db
+          .query('fileStorage')
+          .withIndex('by_user_storage', (query) => query.eq('userId', user.profile._id))
+          .collect(),
+      ).toHaveLength(0)
+      for (const campaignId of campaignIds) {
+        expect(await ctx.db.get('campaigns', campaignId)).toMatchObject({ status: 'Active' })
+      }
+    })
+  })
+
+  it('ignores duplicate and stale deletion work', async () => {
+    vi.useFakeTimers()
+    const user = await setupUser(t)
+
+    await t.run(async (ctx) => {
+      const authUser = {
+        _id: user.profile.authUserId,
+        _creationTime: Date.now(),
+      }
+      await onDeleteUser(ctx, authUser)
+      await onDeleteUser(ctx, authUser)
+    })
+    await t.mutation(internal.auth.internalMutations.processUserDeletion, {
+      profileId: user.profile._id,
+      stage: 'preferences',
+    })
+    await t.mutation(internal.auth.internalMutations.processUserDeletion, {
+      profileId: user.profile._id,
+      stage: 'preferences',
+    })
+
+    await finishScheduledWork(t)
+
+    expect(await getProfileByAuthUserId(t, user.profile.authUserId)).toBeNull()
+    await expect(
+      t.mutation(internal.auth.internalMutations.processUserDeletion, {
+        profileId: user.profile._id,
+        stage: 'profile',
+      }),
+    ).resolves.toBeNull()
   })
 })

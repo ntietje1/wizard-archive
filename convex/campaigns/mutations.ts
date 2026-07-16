@@ -68,7 +68,7 @@ export const deleteCampaign = dmMutation({
   returns: campaignIdValidator,
   handler: async (ctx): Promise<CampaignId> => {
     const campaignId = ctx.resourceScope.campaignId
-    await beginCampaignDeletion(ctx, ctx.campaign._id, campaignId)
+    await beginCampaignDeletion(ctx, ctx.campaign)
     return campaignId
   },
 })

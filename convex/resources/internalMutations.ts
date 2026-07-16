@@ -115,7 +115,6 @@ export const claimAssetCopy = internalMutation({
     v.object({
       status: v.literal('ready'),
       storageId: v.id('_storage'),
-      userId: v.id('userProfiles'),
       originalFileName: v.nullable(v.string()),
     }),
   ),
@@ -145,7 +144,6 @@ export const claimAssetCopy = internalMutation({
     return {
       status: 'ready' as const,
       storageId: source.storageId,
-      userId: source.userId,
       originalFileName: source.originalFileName,
     }
   },
@@ -155,7 +153,6 @@ export const completeAssetCopy = internalMutation({
   args: {
     intentId: v.id('resourceAssetCopyIntents'),
     storageId: v.id('_storage'),
-    userId: v.id('userProfiles'),
     originalFileName: v.nullable(v.string()),
   },
   returns: v.union(
@@ -194,7 +191,7 @@ export const completeAssetCopy = internalMutation({
       await ctx.db.insert('fileStorage', {
         assetUuid: intent.destinationAssetUuid,
         storageId: args.storageId,
-        userId: args.userId,
+        userId: null,
         status: 'committed',
         originalFileName: args.originalFileName,
       })

@@ -2,6 +2,7 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import type { Validator } from 'convex/values'
 import type { UserProfileId } from '@wizard-archive/editor/resources/domain-id'
+import { literals } from 'convex-helpers/validators'
 
 export const userProfileIdValidator = v.string() as Validator<UserProfileId>
 
@@ -10,6 +11,14 @@ const profileImageValidator = v.nullable(
     v.object({ type: v.literal('external'), url: v.string() }),
     v.object({ type: v.literal('storage'), storageId: v.id('_storage') }),
   ),
+)
+
+export const userDeletionStageValidator = literals(
+  'preferences',
+  'workspacePreferences',
+  'uploads',
+  'memberships',
+  'profile',
 )
 
 const userProfileTableFields = {
@@ -21,6 +30,7 @@ const userProfileTableFields = {
   name: v.nullable(v.string()),
   profileImage: profileImageValidator,
   twoFactorEnabled: v.nullable(v.boolean()),
+  deletionStage: v.optional(userDeletionStageValidator),
 }
 
 // does not include commonTableFields because profile needs to exist before tracking these

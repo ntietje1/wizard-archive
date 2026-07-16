@@ -26,7 +26,6 @@ export const processAssetCopy = internalAction({
       const result = await ctx.runMutation(internal.resources.internalMutations.completeAssetCopy, {
         intentId,
         storageId: destinationStorageId,
-        userId: claim.userId,
         originalFileName: claim.originalFileName,
       })
       if (result.status !== 'completed' || !result.keepStorage) {

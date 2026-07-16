@@ -7,12 +7,12 @@ import { assetIdValidator } from '../resources/validators'
 export const fileStorageStatusValidator = literals('pending', 'uncommitted', 'committed')
 
 const fileStorageCommonFields = {
-  userId: v.id('userProfiles'),
   originalFileName: v.nullable(v.string()),
 }
 
 const pendingFileStorageFields = {
   ...fileStorageCommonFields,
+  userId: v.id('userProfiles'),
   status: v.literal('pending'),
   assetUuid: v.null(),
   storageId: v.null(),
@@ -20,6 +20,7 @@ const pendingFileStorageFields = {
 
 const uncommittedFileStorageFields = {
   ...fileStorageCommonFields,
+  userId: v.id('userProfiles'),
   status: v.literal('uncommitted'),
   assetUuid: assetIdValidator,
   storageId: v.id('_storage'),
@@ -27,6 +28,7 @@ const uncommittedFileStorageFields = {
 
 const committedFileStorageFields = {
   ...fileStorageCommonFields,
+  userId: v.nullable(v.id('userProfiles')),
   status: v.literal('committed'),
   assetUuid: assetIdValidator,
   storageId: v.id('_storage'),
