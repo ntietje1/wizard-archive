@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { Awareness } from 'y-protocols/awareness'
+import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { ResourceNavigation } from '../editor-runtime-contract'
@@ -34,6 +36,72 @@ describe('ResourceShell', () => {
       screen.queryByRole('button', { name: `Move ${resource.title} to trash` }),
     ).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Note' })).not.toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('renders the canonical note session in view mode without persistence triggers', async () => {
+    const { core, resource } = await shellRuntime(false)
+    const summary = { ...authorizedResourceSummaryFromRecord(resource), kind: 'note' as const }
+    const document = noteBlocksToYDoc(
+      [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Shared viewer document' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const awareness = new Awareness(document)
+    const flush = vi.fn(() =>
+      Promise.resolve({ status: 'completed' as const, version: resource.metadataVersion }),
+    )
+    const noteState = {
+      status: 'ready' as const,
+      session: {
+        document,
+        version: resource.metadataVersion,
+        awareness: { status: 'unavailable' as const },
+        collaboration: {
+          provider: { awareness },
+          user: { name: 'Player', color: '#5e6ad2' },
+        },
+        flush,
+        dispose: vi.fn(),
+      },
+    }
+    const runtime = {
+      ...core.runtime,
+      content: {
+        ...core.runtime.content,
+        notes: {
+          ...core.runtime.content.notes,
+          get: () => noteState,
+          subscribe: core.runtime.content.notes.subscribe.bind(core.runtime.content.notes),
+        },
+      },
+    }
+    const view = render(
+      <ResourceViewport
+        actions={createWorkspaceActions(runtime, vi.fn())}
+        canEdit={false}
+        resource={summary}
+        runtime={runtime}
+        selection={EMPTY_WORKSPACE_SELECTION}
+        snapshot={runtime.resources.index.getSnapshot()}
+        sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
+        onOpenContextMenu={vi.fn()}
+        onSelectionChange={vi.fn()}
+      />,
+    )
+
+    const editor = await screen.findByRole('textbox', { name: `${resource.title} note editor` })
+    expect(editor).toHaveTextContent('Shared viewer document')
+    fireEvent.blur(editor, { relatedTarget: null })
+    view.unmount()
+    expect(flush).not.toHaveBeenCalled()
+
+    awareness.destroy()
+    document.destroy()
     core.dispose()
   })
 

@@ -53,7 +53,13 @@ type LiveNoteContentBackend = LiveNoteAwarenessBackend &
     save(args: SaveNoteContentArgs): Promise<SaveNoteContentResult>
   }>
 
-type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
+type LocalCreate = {
+  operationId: OperationId
+  doc: Y.Doc
+  initialUpdate: Uint8Array
+  pendingUpdate: Uint8Array | null
+  stop(): void
+}
 type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
 const REMOTE_NOTE_UPDATE = Symbol('remote-note-update')
 const NOTE_SAVE_DELAY_MS = 250
@@ -110,15 +116,17 @@ class LiveNoteSession implements NoteSession {
     user: NoteCollaborationUser,
     private readonly changed: () => void,
     private readonly failed: (result: RejectedNoteSave) => void,
+    initialPendingUpdate: Uint8Array | null = null,
   ) {
     this.#version = version
     this.#outbox = createNoteUpdateOutbox(campaignId, resourceId, memberId)
     const recovered = this.#outbox.load()
     if (recovered) {
       Y.applyUpdate(document, recovered, REMOTE_NOTE_UPDATE)
-      this.#pendingUpdate = recovered
-      this.#unacknowledgedUpdate = recovered
     }
+    this.#pendingUpdate = mergeOptionalUpdates(recovered, initialPendingUpdate)
+    this.#unacknowledgedUpdate = this.#pendingUpdate
+    if (this.#unacknowledgedUpdate) this.#outbox.replace(this.#unacknowledgedUpdate)
     document.on('update', this.#onUpdate)
     this.#liveAwareness = createLiveNoteAwareness(
       document,
@@ -128,7 +136,7 @@ class LiveNoteSession implements NoteSession {
       backend,
       changed,
     )
-    if (recovered) this.#scheduleSave()
+    if (this.#pendingUpdate) this.#scheduleSave()
   }
 
   get version() {
@@ -344,16 +352,15 @@ class LiveNoteSessionSource implements NoteSessionSource {
     local: Y.Doc,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
     if (envelope.campaignId !== this.campaignId) return invalidCreateDelivery()
-    const existing = this.#creates.get(envelope.command.resourceId)
+    const resourceId = envelope.command.resourceId
+    const existing = this.#creates.get(resourceId)
     if (existing && (existing.operationId !== envelope.operationId || existing.doc !== local)) {
       return invalidCreateDelivery()
     }
 
-    this.#creates.set(envelope.command.resourceId, {
-      operationId: envelope.operationId,
-      doc: local,
-    })
-    this.#setState(envelope.command.resourceId, {
+    const create = existing ?? this.#beginCreate(envelope.operationId, local)
+    this.#creates.set(resourceId, create)
+    this.#setState(resourceId, {
       status: 'initializing',
       operationId: envelope.operationId,
       local,
@@ -368,26 +375,24 @@ class LiveNoteSessionSource implements NoteSessionSource {
             command: toLiveStructureMutationCommand(
               normalizeResourceStructureCommand(envelope.command),
             ),
-            update: toArrayBuffer(Y.encodeStateAsUpdate(local)),
+            update: toArrayBuffer(create.initialUpdate),
           }),
         ),
         this.campaignId,
         envelope.operationId,
-        envelope.command.resourceId,
+        resourceId,
       )
       if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
         recording.abandon()
-        this.#removeLocal(envelope.command.resourceId)
+        this.#removeLocal(resourceId)
         return delivery
       }
-      await this.backend.refresh(envelope.command.resourceId, envelope.command.parentId)
+      await this.backend.refresh(resourceId, envelope.command.parentId)
       recording.completed(delivery.result.receipt)
-      this.#creates.delete(envelope.command.resourceId)
-      this.#setReady(
-        envelope.command.resourceId,
-        local,
-        await initialNoteContentVersion(Y.encodeStateAsUpdate(local)),
-      )
+      const version = await initialNoteContentVersion(create.initialUpdate)
+      create.stop()
+      this.#creates.delete(resourceId)
+      this.#setReady(resourceId, local, version, create.pendingUpdate)
       return delivery
     } catch {
       return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
@@ -397,7 +402,10 @@ class LiveNoteSessionSource implements NoteSessionSource {
   dispose(): void {
     this.#store.dispose()
     for (const session of this.#sessions.values()) session.dispose()
-    for (const create of this.#creates.values()) create.doc.destroy()
+    for (const create of this.#creates.values()) {
+      create.stop()
+      create.doc.destroy()
+    }
     this.#sessions.clear()
     this.#creates.clear()
   }
@@ -433,12 +441,18 @@ class LiveNoteSessionSource implements NoteSessionSource {
   }
 
   #removeLocal(resourceId: ResourceId): void {
+    this.#creates.get(resourceId)?.stop()
     this.#creates.delete(resourceId)
     this.#clearSession(resourceId)
     this.#setState(resourceId, { status: 'loading' })
   }
 
-  #setReady(resourceId: ResourceId, document: Y.Doc, version: NoteSession['version']): void {
+  #setReady(
+    resourceId: ResourceId,
+    document: Y.Doc,
+    version: NoteSession['version'],
+    pendingUpdate: Uint8Array | null = null,
+  ): void {
     this.#clearSession(resourceId)
     const session = new LiveNoteSession(
       document,
@@ -457,6 +471,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
         this.#sessions.delete(resourceId)
         this.#setState(resourceId, failedNoteState(result))
       },
+      pendingUpdate,
     )
     this.#sessions.set(resourceId, session)
     this.#setState(resourceId, { status: 'ready', session })
@@ -470,6 +485,21 @@ class LiveNoteSessionSource implements NoteSessionSource {
   #setState(resourceId: ResourceId, state: NoteSessionState): void {
     this.#store.set(resourceId, state)
   }
+
+  #beginCreate(operationId: OperationId, doc: Y.Doc): LocalCreate {
+    const create: LocalCreate = {
+      operationId,
+      doc,
+      initialUpdate: Y.encodeStateAsUpdate(doc),
+      pendingUpdate: null,
+      stop: () => doc.off('update', onUpdate),
+    }
+    const onUpdate = (update: Uint8Array) => {
+      create.pendingUpdate = mergeOptionalUpdates(create.pendingUpdate, update)
+    }
+    doc.on('update', onUpdate)
+    return create
+  }
 }
 
 export function createLiveNoteContentSource(
@@ -480,4 +510,13 @@ export function createLiveNoteContentSource(
   beginCreate: () => ResourceHistoryRecording,
 ) {
   return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreate)
+}
+
+function mergeOptionalUpdates(
+  first: Uint8Array | null,
+  second: Uint8Array | null,
+): Uint8Array | null {
+  if (!first) return second ? Uint8Array.from(second) : null
+  if (!second) return Uint8Array.from(first)
+  return Y.mergeUpdates([first, second])
 }

@@ -89,14 +89,13 @@ function backend() {
     versions.set(id, version)
     return { status: 'completed', resourceId: id, update: canonicalUpdate, version }
   }
-  const create: LiveNoteContentBackend['create'] = ({ operationId, command }) => {
+  const create: LiveNoteContentBackend['create'] = async ({ operationId, command, update }) => {
     if (command.type !== 'create') throw new Error('Expected create command')
-    return Promise.resolve(
-      completed(
-        assertDomainId(DOMAIN_ID_KIND.resource, command.resourceId),
-        assertDomainId(DOMAIN_ID_KIND.operation, operationId),
-      ),
-    )
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, command.resourceId)
+    const initialUpdate = new Uint8Array(update)
+    updates.set(resourceId, [initialUpdate])
+    versions.set(resourceId, await initialNoteContentVersion(initialUpdate))
+    return completed(resourceId, assertDomainId(DOMAIN_ID_KIND.operation, operationId))
   }
   const load: LiveNoteContentBackend['load'] = () =>
     Promise.resolve({ status: 'integrity_error', issue: 'content_missing' })
@@ -199,14 +198,21 @@ describe('LiveNoteContentSource', () => {
     text.insert(text.length, ' and after')
 
     await source.create(createEnvelope(resourceId, operationId), local)
-    expect(source.get(resourceId)).toEqual(
+    const ready = source.get(resourceId)
+    expect(ready).toEqual(
       expect.objectContaining({
         status: 'ready',
         session: expect.objectContaining({ document: local }),
       }),
     )
+    if (ready.status !== 'ready') throw new Error('Expected ready note')
+    await ready.session.flush()
+    expect(provider.create.mock.calls[1]![0].update).toEqual(
+      provider.create.mock.calls[0]![0].update,
+    )
     const rebound = new Y.Doc()
-    Y.applyUpdate(rebound, new Uint8Array(provider.create.mock.calls[1]![0].update))
+    Y.applyUpdate(rebound, new Uint8Array(provider.create.mock.calls[0]![0].update))
+    Y.applyUpdate(rebound, new Uint8Array(provider.save.mock.calls[0]![0].update))
     expect(
       decodeNoteYjsUpdatesToBlocks(
         [{ update: Y.encodeStateAsUpdate(rebound) }],
@@ -217,6 +223,61 @@ describe('LiveNoteContentSource', () => {
           : [],
       ),
     ).toContain('before retry and after')
+    rebound.destroy()
+  })
+
+  it('persists edits made while the atomic create is in flight', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    let completeCreate: ((result: ReturnType<typeof completed>) => void) | undefined
+    const provider = backend()
+    provider.create.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          completeCreate = resolve
+        }),
+    )
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const local = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'before create' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+
+    const creation = source.create(createEnvelope(resourceId, operationId), local)
+    expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId, local })
+    const text = noteTextType(local)
+    text.insert(text.length, ' and during create')
+    completeCreate?.(completed(resourceId, operationId))
+    await creation
+
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready note')
+    await ready.session.flush()
+    const rebound = new Y.Doc()
+    Y.applyUpdate(rebound, new Uint8Array(provider.create.mock.calls[0]![0].update))
+    Y.applyUpdate(rebound, new Uint8Array(provider.save.mock.calls[0]![0].update))
+    expect(
+      decodeNoteYjsUpdatesToBlocks(
+        [{ update: Y.encodeStateAsUpdate(rebound) }],
+        NOTE_YJS_FRAGMENT,
+      ).flatMap((block) =>
+        Array.isArray(block.content)
+          ? block.content.flatMap((inline) => (inline.type === 'text' ? [inline.text] : []))
+          : [],
+      ),
+    ).toContain('before create and during create')
     rebound.destroy()
   })
 
