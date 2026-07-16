@@ -97,6 +97,9 @@ importers:
       motion:
         specifier: ^12.24.12
         version: 12.24.12(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      mp4box:
+        specifier: ^2.4.1
+        version: 2.4.1
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -109,6 +112,9 @@ importers:
       react-dom:
         specifier: ^19.1.1
         version: 19.1.1(react@19.1.1)
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -206,9 +212,6 @@ importers:
       react-doctor:
         specifier: ^0.2.3
         version: 0.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(oxlint-tsgolint@0.24.0)
-      sharp:
-        specifier: ^0.34.5
-        version: 0.34.5
       tailwindcss:
         specifier: ^4.1.12
         version: 4.1.12
@@ -4938,6 +4941,10 @@ packages:
         optional: true
       react-dom:
         optional: true
+
+  mp4box@2.4.1:
+    resolution: {integrity: sha512-0HGX7nXoDIX6FKLVl4a3wtYjBlwqsN3xuQC3GXzNtKp98FXUOhDSq623azsz8DG5ptd9ZXcXodDkgbdMZOjWvw==}
+    engines: {node: '>=20.8.1'}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -10627,6 +10634,8 @@ snapshots:
     optionalDependencies:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
+
+  mp4box@2.4.1: {}
 
   mrmime@2.0.1: {}
 

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
@@ -749,10 +751,11 @@ describe('resource structure commands', () => {
       if (!content) throw new TypeError('Expected map content')
       return content.version
     })
+    const originalBytes = testPng(1, 1)
     const original = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([Uint8Array.from(testPng(1, 1)).buffer], { type: 'image/png' }),
+      new Blob([Uint8Array.from(originalBytes).buffer], { type: 'image/png' }),
       'map.png',
     )
     const originalArgs = {
@@ -768,7 +771,9 @@ describe('resource structure commands', () => {
     )
     expect(attached).toMatchObject({
       status: 'completed',
-      content: { image: { status: 'attached', byteSize: 45, mediaType: 'image/png' } },
+      content: {
+        image: { status: 'attached', byteSize: originalBytes.byteLength, mediaType: 'image/png' },
+      },
       version: { revision: 2 },
     })
     await expect(
@@ -804,10 +809,11 @@ describe('resource structure commands', () => {
       ).resolves.toEqual([expect.objectContaining({ campaignUuid, resourceUuid: resourceId })])
     })
 
+    const replacementBytes = testPng(2, 3)
     const replacement = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([Uint8Array.from(testPng(2, 3)).buffer], { type: 'image/png' }),
+      new Blob([Uint8Array.from(replacementBytes).buffer], { type: 'image/png' }),
       'replacement.png',
     )
     const replaced = await asDm(campaign).action(api.resources.actions.replaceMapImage, {
@@ -824,7 +830,11 @@ describe('resource structure commands', () => {
           .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
           .unique(),
       ).resolves.toMatchObject({
-        image: { assetUuid: replacement.assetId, byteSize: 45, mediaType: 'image/png' },
+        image: {
+          assetUuid: replacement.assetId,
+          byteSize: replacementBytes.byteLength,
+          mediaType: 'image/png',
+        },
         version: { revision: 3 },
       })
       await expect(
@@ -865,7 +875,11 @@ describe('resource structure commands', () => {
       }),
     ).resolves.toMatchObject({
       status: 'ready',
-      image: { status: 'attached', byteSize: 45, mediaType: 'image/png' },
+      image: {
+        status: 'attached',
+        byteSize: replacementBytes.byteLength,
+        mediaType: 'image/png',
+      },
       version: { revision: 3 },
       url: expect.any(String),
     })
@@ -2775,15 +2789,19 @@ describe('resource structure commands', () => {
 })
 
 function testPng(width: number, height: number): Uint8Array {
-  const bytes = new Uint8Array(45)
-  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-  new DataView(bytes.buffer).setUint32(8, 13)
-  bytes.set(new TextEncoder().encode('IHDR'), 12)
-  new DataView(bytes.buffer).setUint32(16, width)
-  new DataView(bytes.buffer).setUint32(20, height)
-  bytes.set(new TextEncoder().encode('IEND'), 37)
-  return bytes
+  const encoded = TEST_PNGS[`${width}x${height}` as keyof typeof TEST_PNGS]
+  if (!encoded) throw new Error(`Missing ${width}x${height} PNG fixture`)
+  return Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
 }
+
+const TEST_PNGS = {
+  '1x1':
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADUlEQVR4nGMQYGD4DwABRAEQxIHbdwAAAABJRU5ErkJggg==',
+  '2x3':
+    'iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVR4nGNwYGD4D8IMGAwAXlMHe5y9UukAAAAASUVORK5CYII=',
+  '4x4':
+    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEklEQVR4nGNoYGD4j4wZSBcAACJpF/G0gtPTAAAAAElFTkSuQmCC',
+} as const
 
 function noteTextType(document: Y.Doc): Y.XmlText {
   const group = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)

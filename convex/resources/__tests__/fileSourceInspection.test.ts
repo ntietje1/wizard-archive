@@ -1,28 +1,73 @@
+// @vitest-environment node
+
+import sharp from 'sharp'
 import { PDFDocument } from 'pdf-lib'
+import { createFile, DataStream, Endianness } from 'mp4box'
 import { describe, expect, it } from 'vite-plus/test'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import { inspectFileSource } from '../functions/fileSourceInspection'
 
 describe('file source inspection', () => {
   it.each([
-    ['png', png(640, 480), 'image.png'],
-    ['jpeg', jpeg(320, 200), 'image.jpg'],
-    ['webp', webp(800, 600), 'image.webp'],
-  ] as const)('provides bounded decode evidence for %s images', async (format, bytes, fileName) => {
-    const inspection = await inspectFileSource(bytes, format)
-    expect(classifyFileResourceSource({ bytes, fileName, inspection })).toMatchObject({
-      classification: 'viewable_image',
-      detectedFormat: format,
-      viewerUnavailableReason: null,
+    ['png', 640, 480, 'image.png'],
+    ['jpeg', 320, 200, 'image.jpg'],
+    ['webp', 800, 600, 'image.webp'],
+  ] as const)(
+    'provides bounded decode evidence for %s images',
+    async (format, width, height, fileName) => {
+      const bytes = await image(format, width, height)
+      const inspection = await inspectFileSource(bytes, format)
+      expect(classifyFileResourceSource({ bytes, fileName, inspection })).toMatchObject({
+        classification: 'viewable_image',
+        detectedFormat: format,
+        viewerUnavailableReason: null,
+      })
+    },
+  )
+
+  it('counts animated frames and total decoded pixels through the maintained decoder', async () => {
+    await expect(inspectFileSource(animatedGif(), 'gif')).resolves.toEqual({
+      image: {
+        status: 'valid',
+        format: 'gif',
+        width: 1,
+        height: 1,
+        frameCount: 2,
+        totalDecodedPixels: 2,
+        canonicalOrientation: true,
+      },
     })
   })
 
   it('lets the canonical classifier enforce decoded image limits', async () => {
-    const bytes = png(16_385, 1)
+    const bytes = await image('png', 16_385, 1)
     const inspection = await inspectFileSource(bytes, 'png')
     expect(classifyFileResourceSource({ bytes, fileName: 'large.png', inspection })).toMatchObject({
       classification: 'inert_file',
       viewerUnavailableReason: 'limit_exceeded',
+    })
+  })
+
+  it('keeps orientation-sensitive JPEGs inert', async () => {
+    const bytes = new Uint8Array(
+      await imagePipeline(32, 16).withMetadata({ orientation: 6 }).jpeg().toBuffer(),
+    )
+    const inspection = await inspectFileSource(bytes, 'jpeg')
+    expect(inspection).toMatchObject({
+      image: { status: 'valid', canonicalOrientation: false },
+    })
+    expect(
+      classifyFileResourceSource({ bytes, fileName: 'rotated.jpg', inspection }),
+    ).toMatchObject({
+      classification: 'inert_file',
+      viewerUnavailableReason: 'unsupported_format',
+    })
+  })
+
+  it('classifies malformed image input as inert', async () => {
+    const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    await expect(inspectFileSource(bytes, 'png')).resolves.toEqual({
+      image: { status: 'unavailable', reason: 'malformed' },
     })
   })
 
@@ -49,100 +94,93 @@ describe('file source inspection', () => {
     })
   })
 
-  it('distinguishes MP4 audio and video handlers and rejects an untyped container', async () => {
-    const video = mp4('vide')
-    const audio = mp4('soun')
-    const unknown = mp4('meta')
+  it('keeps encrypted and malformed PDFs inert', async () => {
+    const document = await PDFDocument.create()
+    document.addPage()
+    const bytes = await document.save()
 
-    await expect(inspectFileSource(video, 'mp4')).resolves.toEqual({
+    await expect(inspectFileSource(encryptedPdf(), 'pdf')).resolves.toEqual({
+      pdf: { status: 'unavailable', reason: 'encrypted' },
+    })
+    await expect(inspectFileSource(bytes.subarray(0, 12), 'pdf')).resolves.toEqual({
+      pdf: { status: 'unavailable', reason: 'malformed' },
+    })
+  })
+
+  it('distinguishes MP4 audio and video tracks and rejects untyped or encrypted containers', async () => {
+    await expect(inspectFileSource(mp4('video'), 'mp4')).resolves.toEqual({
       isoBmff: { status: 'valid', media: 'video' },
     })
-    await expect(inspectFileSource(audio, 'mp4')).resolves.toEqual({
+    await expect(inspectFileSource(mp4('audio'), 'mp4')).resolves.toEqual({
       isoBmff: { status: 'valid', media: 'audio' },
     })
-    await expect(inspectFileSource(unknown, 'mp4')).resolves.toEqual({
+    await expect(inspectFileSource(mp4('unknown'), 'mp4')).resolves.toEqual({
+      isoBmff: { status: 'unavailable', reason: 'malformed' },
+    })
+    await expect(inspectFileSource(mp4('encrypted-video'), 'mp4')).resolves.toEqual({
       isoBmff: { status: 'unavailable', reason: 'malformed' },
     })
   })
 })
 
-function png(width: number, height: number): Uint8Array {
-  const bytes = new Uint8Array(45)
-  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-  writeUint32(bytes, 8, 13)
-  writeAscii(bytes, 12, 'IHDR')
-  writeUint32(bytes, 16, width)
-  writeUint32(bytes, 20, height)
-  writeAscii(bytes, 37, 'IEND')
-  return bytes
+type ImageFormat = 'jpeg' | 'png' | 'webp'
+
+async function image(format: ImageFormat, width: number, height: number): Promise<Uint8Array> {
+  const pipeline = imagePipeline(width, height)
+  const encoded =
+    format === 'png'
+      ? await pipeline.png().toBuffer()
+      : format === 'jpeg'
+        ? await pipeline.jpeg().toBuffer()
+        : await pipeline.webp().toBuffer()
+  return new Uint8Array(encoded)
 }
 
-function jpeg(width: number, height: number): Uint8Array {
-  return Uint8Array.from([
-    0xff,
-    0xd8,
-    0xff,
-    0xc0,
-    0x00,
-    0x0b,
-    0x08,
-    (height >> 8) & 0xff,
-    height & 0xff,
-    (width >> 8) & 0xff,
-    width & 0xff,
-    0x01,
-    0x01,
-    0x11,
-    0x00,
-    0xff,
-    0xd9,
-  ])
+function imagePipeline(width: number, height: number) {
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 4,
+      background: { r: 32, g: 64, b: 96, alpha: 1 },
+    },
+  })
 }
 
-function webp(width: number, height: number): Uint8Array {
-  const bytes = new Uint8Array(30)
-  writeAscii(bytes, 0, 'RIFF')
-  writeUint32LittleEndian(bytes, 4, 22)
-  writeAscii(bytes, 8, 'WEBP')
-  writeAscii(bytes, 12, 'VP8X')
-  writeUint32LittleEndian(bytes, 16, 10)
-  writeUint24LittleEndian(bytes, 24, width - 1)
-  writeUint24LittleEndian(bytes, 27, height - 1)
-  return bytes
+function animatedGif(): Uint8Array {
+  const header = [
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0, 0x80, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff,
+  ]
+  const frame = [0x21, 0xf9, 4, 0, 0, 0, 0, 0, 0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 0x44, 1, 0]
+  return Uint8Array.from([...header, ...frame, ...frame, 0x3b])
 }
 
-function mp4(handler: string): Uint8Array {
-  const bytes = new Uint8Array(32)
-  writeUint32(bytes, 0, 16)
-  writeAscii(bytes, 4, 'ftyp')
-  writeAscii(bytes, 8, 'isom')
-  writeAscii(bytes, 12, 'hdlr')
-  writeAscii(bytes, 24, handler)
-  return bytes
+function encryptedPdf(): Uint8Array {
+  return Uint8Array.from(Buffer.from(ENCRYPTED_PDF_BASE64, 'base64'))
 }
 
-function writeAscii(bytes: Uint8Array, offset: number, value: string): void {
-  for (let index = 0; index < value.length; index += 1) {
-    bytes[offset + index] = value.charCodeAt(index)
+const ENCRYPTED_PDF_BASE64 =
+  'JVBERi0xLjMKJeLjz9MKMSAwIG9iago8PAovUHJvZHVjZXIgPGJiMGJkNmIxM2I+Cj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovQ291bnQgMQovS2lkcyBbIDQgMCBSIF0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9UeXBlIC9QYWdlCi9SZXNvdXJjZXMgPDwKPj4KL01lZGlhQm94IFsgMC4wIDAuMCA3MiA3MiBdCi9QYXJlbnQgMiAwIFIKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1YgMgovUiAzCi9MZW5ndGggMTI4Ci9QIDQyOTQ5NjcyOTIKL0ZpbHRlciAvU3RhbmRhcmQKL08gPGE4MTdjMDMyMWNlYjkyYzA0NzA5MjA3NjEwNDYyZGY1YmViMDMyY2MwYWE0OGE2NzBmOWFlZjUzNzU5NjM3ZDY+Ci9VIDw4ZTg0Y2Y0NDY0YmE2MmY1ZDRlM2NmODRlZGJhNmE5MTI4YmY0ZTVlNGU3NThhNDE2NDAwNGU1NmZmZmEwMTA4Pgo+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNTkgMDAwMDAgbiAKMDAwMDAwMDExOCAwMDAwMCBuIAowMDAwMDAwMTY3IDAwMDAwIG4gCjAwMDAwMDAyNTkgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA2Ci9Sb290IDMgMCBSCi9JbmZvIDEgMCBSCi9JRCBbIDw2NDY2NjM2MTY2MzUzNDMyMzczOTMwMzMzMjMwMzY2NDY0MzEzMTM0MzQzMTY0MzA2MjM1NjI2MTM5MzYzMTYyPiA8NjQ2NjM2MTY2MzUzNDMyMzczOTMwMzMzMjMwMzY2NDY0MzEzMTM0MzQzMTY0MzA2MjM1NjI2MTM5MzYzMTYyPiBdCi9FbmNyeXB0IDUgMCBSCj4+CnN0YXJ0eHJlZgo0NzQKJSVFT0YK'
+
+type Mp4Fixture = 'audio' | 'encrypted-video' | 'unknown' | 'video'
+
+function mp4(fixture: Mp4Fixture): Uint8Array {
+  const file = createFile()
+  switch (fixture) {
+    case 'audio':
+      file.addTrack({ type: 'mp4a', hdlr: 'soun', samplerate: 44_100 * 65_536 })
+      break
+    case 'encrypted-video':
+      file.addTrack({ type: 'encv', hdlr: 'vide', width: 320, height: 200 })
+      break
+    case 'video':
+      file.addTrack({ type: 'avc1', hdlr: 'vide', width: 320, height: 200 })
+      break
+    case 'unknown':
+      file.init()
   }
-}
-
-function writeUint24LittleEndian(bytes: Uint8Array, offset: number, value: number): void {
-  bytes[offset] = value & 0xff
-  bytes[offset + 1] = (value >> 8) & 0xff
-  bytes[offset + 2] = (value >> 16) & 0xff
-}
-
-function writeUint32(bytes: Uint8Array, offset: number, value: number): void {
-  bytes[offset] = (value >>> 24) & 0xff
-  bytes[offset + 1] = (value >>> 16) & 0xff
-  bytes[offset + 2] = (value >>> 8) & 0xff
-  bytes[offset + 3] = value & 0xff
-}
-
-function writeUint32LittleEndian(bytes: Uint8Array, offset: number, value: number): void {
-  bytes[offset] = value & 0xff
-  bytes[offset + 1] = (value >>> 8) & 0xff
-  bytes[offset + 2] = (value >>> 16) & 0xff
-  bytes[offset + 3] = (value >>> 24) & 0xff
+  const stream = new DataStream()
+  stream.endianness = Endianness.BIG_ENDIAN
+  file.write(stream)
+  return new Uint8Array(stream.buffer)
 }
