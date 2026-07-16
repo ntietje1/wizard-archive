@@ -22,6 +22,7 @@ import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './inter
 import { CanvasScene } from './canvas-scene'
 import { findCanvasConnectionTarget } from './canvas-edge-geometry'
 import { fitCanvasContent } from './canvas-layout'
+import { projectCanvasResizeNodeBounds, resolveCanvasResizeBounds } from './canvas-resize-geometry'
 import { canvasStrokeBounds, findCanvasStrokesIntersectingTrail } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
@@ -224,6 +225,7 @@ export function CanvasEditor({
             )
             updateErasing(event.pointerId, canvasPoint, content, interactionController)
             updateConnection(event.pointerId, canvasPoint, content, interactionController)
+            updateResize(event.pointerId, canvasPoint, interactionController, event.shiftKey)
           }
           updateAreaSelection(
             event.pointerId,
@@ -237,6 +239,7 @@ export function CanvasEditor({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
+          if (commitResize(event.pointerId, interactionController, documentController)) return
           if (commitConnection(event.pointerId, interactionController, documentController)) return
           if (commitErasing(event.pointerId, interactionController, documentController)) return
           if (commitDrawing(event.pointerId, interactionController, documentController)) return
@@ -474,6 +477,57 @@ function canvasToolCursor(tool: CanvasTool): string {
     return 'cursor-crosshair'
   }
   return 'cursor-default'
+}
+
+function updateResize(
+  pointerId: number,
+  point: CanvasPoint,
+  controller: CanvasInteractionController,
+  square: boolean,
+) {
+  const resizing = controller.get().interaction
+  if (resizing.type !== 'resizing' || resizing.pointerId !== pointerId) return
+  controller.updateResize(
+    pointerId,
+    resolveCanvasResizeBounds(
+      resizing.handle,
+      resizing.initialBounds,
+      point,
+      resizing.initialNodeBounds,
+      square,
+    ),
+  )
+}
+
+function commitResize(
+  pointerId: number,
+  interactionController: CanvasInteractionController,
+  documentController: CanvasDocumentController,
+): boolean {
+  const interaction = interactionController.get().interaction
+  if (interaction.type !== 'resizing' || interaction.pointerId !== pointerId) return false
+  const resize = interactionController.commitResize(pointerId)
+  if (!resize) return true
+  const projected = projectCanvasResizeNodeBounds(
+    resize.initialBounds,
+    resize.bounds,
+    resize.initialNodeBounds,
+  )
+  const nodes = documentController.read().nodes.flatMap((node) => {
+    const bounds = projected.get(node.id)
+    return bounds
+      ? [
+          {
+            ...node,
+            position: { x: bounds.x, y: bounds.y },
+            width: bounds.width,
+            height: bounds.height,
+          },
+        ]
+      : []
+  })
+  documentController.apply({ type: 'replace', nodes, edges: [] })
+  return true
 }
 
 function updateConnection(

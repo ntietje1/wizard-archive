@@ -204,6 +204,25 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
+  it('keeps one canonical multi-node resize preview and commits its transform once', () => {
+    const controller = new CanvasInteractionController()
+    const initialBounds = { x: 0, y: 0, width: 480, height: 80 }
+    const initialNodeBounds = new Map([
+      [NODE_A, { x: 0, y: 0, width: 180, height: 80 }],
+      [NODE_B, { x: 300, y: 0, width: 180, height: 80 }],
+    ])
+    controller.beginResize(11, 'bottom-right', initialBounds, initialNodeBounds)
+    controller.updateResize(11, { x: 0, y: 0, width: 960, height: 160 })
+
+    expect(controller.commitResize(11)).toEqual({
+      initialBounds,
+      bounds: { x: 0, y: 0, width: 960, height: 160 },
+      initialNodeBounds,
+    })
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
+    controller.dispose()
+  })
+
   it('previews a multi-node drag and commits only a non-zero delta', () => {
     const controller = new CanvasInteractionController()
     controller.beginDrag(

@@ -255,6 +255,83 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('previews and commits a screen-space multi-node resize as one document change', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 180,
+          height: 80,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'embed',
+          position: { x: 300, y: 0 },
+          width: 180,
+          height: 80,
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Resize board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    const nodes = screen.getAllByTestId('canvas-node')
+    installPointerCapture(surface)
+    nodes.forEach(installPointerCapture)
+
+    fireEvent.pointerDown(nodes[0], { button: 0, clientX: 20, clientY: 20, pointerId: 13 })
+    fireEvent.pointerUp(nodes[0], { clientX: 20, clientY: 20, pointerId: 13 })
+    fireEvent.pointerDown(nodes[1], {
+      button: 0,
+      clientX: 320,
+      clientY: 20,
+      ctrlKey: true,
+      pointerId: 14,
+    })
+
+    expect(screen.getByTestId('canvas-selection-resize-wrapper')).toHaveStyle({
+      width: '480px',
+      height: '80px',
+    })
+    expect(screen.getAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
+    fireEvent.pointerDown(screen.getByTestId('canvas-selection-resize-zone-bottom-right'), {
+      button: 0,
+      clientX: 480,
+      clientY: 80,
+      pointerId: 15,
+    })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 960,
+      clientY: 160,
+      pointerId: 15,
+    })
+    expect(screen.getAllByTestId('canvas-node')[0]).toHaveStyle({ width: '360px', height: '160px' })
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      width: 180,
+      height: 80,
+    })
+
+    fireEvent.pointerUp(surface, { clientX: 960, clientY: 160, pointerId: 15 })
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      { position: { x: 0, y: 0 }, width: 360, height: 160 },
+      { position: { x: 600, y: 0 }, width: 360, height: 160 },
+    ])
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      { position: { x: 0, y: 0 }, width: 180, height: 80 },
+      { position: { x: 300, y: 0 }, width: 180, height: 80 },
+    ])
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders moved stroke coordinates with a screen-space hit target', async () => {
     const session = await createSession({
       nodes: [

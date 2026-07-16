@@ -1,12 +1,11 @@
 import { canvasEdgePolyline } from './canvas-edge-geometry'
+import type { CanvasBounds } from './canvas-bounds'
 import { canvasNodeSize } from './canvas-layout'
 import { canvasStrokeDocumentPoints } from './canvas-stroke-geometry'
 import type { CanvasDocumentContent, CanvasDocumentNode } from './document-contract'
 import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasPoint, CanvasSelection } from './interaction-controller'
 import type { CanvasNodeId } from '../resources/domain-id'
-
-type CanvasBounds = CanvasPoint & Readonly<{ width: number; height: number }>
 
 const STROKE_SELECTION_PADDING_PX = 12
 

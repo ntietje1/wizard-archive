@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { CanvasDocumentNode } from '../document-contract'
-import { findCanvasStrokesIntersectingTrail } from '../canvas-stroke-geometry'
+import {
+  canvasStrokeLocalPoints,
+  findCanvasStrokesIntersectingTrail,
+} from '../canvas-stroke-geometry'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
 const HIT = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -54,5 +57,15 @@ describe('canvas stroke eraser geometry', () => {
         new Set([HIT]),
       ),
     ).toEqual(new Set([HIT, MISS]))
+  })
+
+  it('scales authored stroke points with resized document bounds', () => {
+    const resized = { ...stroke(HIT, 10), width: 180, height: 8 }
+    expect(resized.type).toBe('stroke')
+    if (resized.type !== 'stroke') throw new Error('Expected stroke node')
+    expect(canvasStrokeLocalPoints(resized)).toEqual([
+      { x: 0, y: 0 },
+      { x: 180, y: 0 },
+    ])
   })
 })

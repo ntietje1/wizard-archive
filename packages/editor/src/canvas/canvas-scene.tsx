@@ -1,4 +1,5 @@
 import type { CSSProperties, PointerEvent, RefObject } from 'react'
+import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentController } from './document-controller'
 import type {
   CanvasDocumentContent,
@@ -26,6 +27,8 @@ import type {
   CanvasViewport,
 } from './interaction-controller'
 import { canvasNodeSize } from './canvas-layout'
+import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
+import { CanvasSelectionBounds } from './canvas-selection-bounds'
 import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import { canvasTextDocumentPlainText, createCanvasTextDocument } from './text/model'
@@ -46,14 +49,12 @@ export function CanvasScene({
   interactionController: CanvasInteractionController
   surface: RefObject<HTMLElement | null>
 }) {
+  const resizedNodeBounds = canvasResizedNodeBounds(interaction)
+  const visualNodes = content.nodes.map((node) =>
+    canvasVisualNode(node, interaction, resizedNodeBounds),
+  )
   const nodeById = new Map<CanvasNodeId, CanvasDocumentNode>(
-    content.nodes.map((node) => [
-      node.id,
-      {
-        ...node,
-        position: getCanvasNodeInteractionPosition(interaction, node.id, node.position),
-      },
-    ]),
+    visualNodes.map((node) => [node.id, node]),
   )
   const visualSelection = getVisualCanvasSelection(interaction)
   return (
@@ -83,7 +84,7 @@ export function CanvasScene({
       <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
       <CanvasDrawingOverlay interaction={interaction} />
       <CanvasSelectionOverlay interaction={interaction} />
-      {content.nodes.map((node) => (
+      {visualNodes.map((node) => (
         <CanvasNode
           key={node.id}
           canEdit={canEdit}
@@ -96,8 +97,48 @@ export function CanvasScene({
           surface={surface}
         />
       ))}
+      <CanvasSelectionBounds
+        canEdit={canEdit}
+        interaction={interaction}
+        interactionController={interactionController}
+        nodes={visualNodes}
+        surface={surface}
+      />
     </div>
   )
+}
+
+function canvasResizedNodeBounds(
+  interaction: CanvasInteractionSnapshot,
+): ReadonlyMap<CanvasNodeId, CanvasBounds> {
+  const resizing = interaction.interaction
+  return resizing.type === 'resizing'
+    ? projectCanvasResizeNodeBounds(
+        resizing.initialBounds,
+        resizing.bounds,
+        resizing.initialNodeBounds,
+      )
+    : new Map()
+}
+
+function canvasVisualNode(
+  node: CanvasDocumentNode,
+  interaction: CanvasInteractionSnapshot,
+  resizedNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
+): CanvasDocumentNode {
+  const resized = resizedNodeBounds.get(node.id)
+  if (resized) {
+    return {
+      ...node,
+      position: { x: resized.x, y: resized.y },
+      width: resized.width,
+      height: resized.height,
+    }
+  }
+  return {
+    ...node,
+    position: getCanvasNodeInteractionPosition(interaction, node.id, node.position),
+  }
 }
 
 function CanvasNode({
@@ -120,7 +161,7 @@ function CanvasNode({
   surface: RefObject<HTMLElement | null>
 }) {
   if (node.hidden) return null
-  const position = getCanvasNodeInteractionPosition(interaction, node.id, node.position)
+  const position = node.position
   const editing =
     interaction.interaction.type === 'editing' && interaction.interaction.nodeId === node.id
   const erasing =
@@ -361,14 +402,12 @@ function CanvasNodeContent({
   zoom: number
 }) {
   if (node.type === 'stroke') {
+    const size = canvasNodeSize(node)
     const points = canvasStrokeLocalPoints(node)
       .map(({ x, y }) => `${x},${y}`)
       .join(' ')
     return (
-      <svg
-        className="size-full overflow-visible"
-        viewBox={`0 0 ${node.data.bounds.width} ${node.data.bounds.height}`}
-      >
+      <svg className="size-full overflow-visible" viewBox={`0 0 ${size.width} ${size.height}`}>
         <polyline
           data-testid="canvas-stroke-hit-target"
           fill="none"

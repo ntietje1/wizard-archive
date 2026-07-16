@@ -1,4 +1,5 @@
 import type { CanvasDocumentNode, CanvasStrokeDocumentNode } from './document-contract'
+import { canvasNodeSize } from './canvas-layout'
 import type { CanvasDrawPoint, CanvasPoint } from './interaction-controller'
 import { canvasPolylinesIntersect } from './polyline-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
@@ -46,9 +47,12 @@ export function canvasStrokeBounds(points: ReadonlyArray<CanvasDrawPoint>, size:
 export function canvasStrokeLocalPoints(
   node: CanvasStrokeDocumentNode,
 ): ReadonlyArray<CanvasPoint> {
+  const size = canvasNodeSize(node)
+  const scaleX = node.data.bounds.width > 0 ? size.width / node.data.bounds.width : 1
+  const scaleY = node.data.bounds.height > 0 ? size.height / node.data.bounds.height : 1
   return node.data.points.map(([x, y]) => ({
-    x: x - node.data.bounds.x,
-    y: y - node.data.bounds.y,
+    x: (x - node.data.bounds.x) * scaleX,
+    y: (y - node.data.bounds.y) * scaleY,
   }))
 }
 

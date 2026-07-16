@@ -1,4 +1,5 @@
 import type { CanvasNodeId } from '../resources/domain-id'
+import type { CanvasBounds } from './canvas-bounds'
 
 export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
 
@@ -27,6 +28,22 @@ export type CanvasConnectionHandle = 'bottom' | 'left' | 'right' | 'top'
 export type CanvasConnectionAnchor = Readonly<{
   nodeId: CanvasNodeId
   handle: CanvasConnectionHandle
+}>
+
+export type CanvasResizeHandle =
+  | 'top-left'
+  | 'top'
+  | 'top-right'
+  | 'right'
+  | 'bottom-right'
+  | 'bottom'
+  | 'bottom-left'
+  | 'left'
+
+export type CanvasResizeCommit = Readonly<{
+  initialBounds: CanvasBounds
+  bounds: CanvasBounds
+  initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
 }>
 
 export type CanvasInteraction =
@@ -85,6 +102,14 @@ export type CanvasInteraction =
       current: CanvasPoint
       target: CanvasConnectionAnchor | null
     }>
+  | Readonly<{
+      type: 'resizing'
+      pointerId: number
+      handle: CanvasResizeHandle
+      initialBounds: CanvasBounds
+      bounds: CanvasBounds
+      initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
+    }>
 
 export type CanvasInteractionSnapshot = Readonly<{
   tool: CanvasTool
@@ -120,6 +145,15 @@ function setsEqual<T>(left: ReadonlySet<T>, right: ReadonlySet<T>): boolean {
 
 function selectionsEqual(left: CanvasSelection, right: CanvasSelection): boolean {
   return setsEqual(left.nodeIds, right.nodeIds) && setsEqual(left.edgeIds, right.edgeIds)
+}
+
+function boundsEqual(left: CanvasBounds, right: CanvasBounds): boolean {
+  return (
+    left.x === right.x &&
+    left.y === right.y &&
+    left.width === right.width &&
+    left.height === right.height
+  )
 }
 
 function normalizeViewport(viewport: CanvasViewport): CanvasViewport {
@@ -175,6 +209,8 @@ function reconcileInteraction(
       return reconcileConnecting(interaction, nodeIds)
     case 'erasing':
       return reconcileErasing(interaction, nodeIds)
+    case 'resizing':
+      return reconcileResizing(interaction, nodeIds)
     case 'drawing':
     case 'idle':
     case 'panning':
@@ -225,6 +261,16 @@ function reconcileErasing(
   return markedNodeIds.size === interaction.nodeIds.size
     ? interaction
     : { ...interaction, nodeIds: markedNodeIds }
+}
+
+function reconcileResizing(
+  interaction: Extract<CanvasInteraction, { type: 'resizing' }>,
+  nodeIds: ReadonlySet<CanvasNodeId>,
+): CanvasInteraction {
+  for (const nodeId of interaction.initialNodeBounds.keys()) {
+    if (!nodeIds.has(nodeId)) return { type: 'idle' }
+  }
+  return interaction
 }
 
 export function getVisualCanvasSelection(snapshot: CanvasInteractionSnapshot): CanvasSelection {
@@ -443,6 +489,47 @@ export class CanvasInteractionController {
       ...this.#snapshot,
       interaction: { type: 'connecting', pointerId, source, current: point, target: null },
     })
+  }
+
+  beginResize(
+    pointerId: number,
+    handle: CanvasResizeHandle,
+    bounds: CanvasBounds,
+    nodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
+  ): void {
+    this.#assertActive()
+    if (nodeBounds.size === 0) throw new TypeError('Canvas resize requires at least one node')
+    this.#publish({
+      ...this.#snapshot,
+      interaction: {
+        type: 'resizing',
+        pointerId,
+        handle,
+        initialBounds: { ...bounds },
+        bounds: { ...bounds },
+        initialNodeBounds: new Map(nodeBounds),
+      },
+    })
+  }
+
+  updateResize(pointerId: number, bounds: CanvasBounds): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'resizing' || interaction.pointerId !== pointerId) return
+    this.#publish({ ...this.#snapshot, interaction: { ...interaction, bounds: { ...bounds } } })
+  }
+
+  commitResize(pointerId: number): CanvasResizeCommit | null {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'resizing' || interaction.pointerId !== pointerId) return null
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+    if (boundsEqual(interaction.bounds, interaction.initialBounds)) return null
+    return {
+      initialBounds: interaction.initialBounds,
+      bounds: interaction.bounds,
+      initialNodeBounds: interaction.initialNodeBounds,
+    }
   }
 
   updateConnection(
