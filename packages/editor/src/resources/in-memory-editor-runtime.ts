@@ -853,7 +853,7 @@ export function createInMemoryEditorRuntime({
   const bookmarks = createInMemoryBookmarks(scope.campaignId, (resourceId) =>
     catalogResources().some((resource) => resource.id === resourceId),
   )
-  const search = createInMemoryWorkspaceSearch(catalogResources, resources.subscribeCatalog, notes)
+  const search = createInMemoryWorkspaceSearch(catalogResources, notes)
 
   return {
     runtime: {

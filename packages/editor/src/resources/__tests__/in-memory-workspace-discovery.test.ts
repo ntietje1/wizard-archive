@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import type { NoteSessionState, NoteSessionSource } from '../content-session-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import { createInMemoryWorkspaceSearch } from '../in-memory-workspace-discovery'
@@ -9,7 +9,7 @@ import { createInMemoryNoteSession } from '../in-memory-note-session'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 
 describe('in-memory workspace search', () => {
-  it('maintains note search documents instead of decoding content per query', async () => {
+  it('scans current note state on demand without document subscriptions', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -21,21 +21,13 @@ describe('in-memory workspace search', () => {
     const session = createInMemoryNoteSession(document, version)
     let state: NoteSessionState = { status: 'ready', session }
     let getCount = 0
-    let resourceListener: (() => void) | undefined
-    const noteListeners = new Set<() => void>()
-    const setState = (next: NoteSessionState) => {
-      state = next
-      for (const listener of noteListeners) listener()
-    }
+    const subscribe = vi.fn(() => () => undefined)
     const notes: NoteSessionSource = {
       get: () => {
         getCount += 1
         return state
       },
-      subscribe: (_resourceId, listener) => {
-        noteListeners.add(listener)
-        return () => noteListeners.delete(listener)
-      },
+      subscribe,
       export: () => ({ status: 'unavailable', reason: 'capability_not_supported' }),
       create: () =>
         Promise.resolve({ status: 'not_committed', retryable: false, reason: 'invalid_response' }),
@@ -56,18 +48,9 @@ describe('in-memory workspace search', () => {
         updated: { at: 1, by: actorId },
       },
     ]
-    const search = createInMemoryWorkspaceSearch(
-      () => resources,
-      (listener) => {
-        resourceListener = listener
-        return () => {
-          resourceListener = undefined
-        }
-      },
-      notes,
-    )
+    const search = createInMemoryWorkspaceSearch(() => resources, notes)
 
-    expect(getCount).toBe(1)
+    expect(getCount).toBe(0)
     await expect(search.gateway.search('citadel')).resolves.toMatchObject({
       status: 'complete',
       results: [{ resourceId }],
@@ -76,27 +59,25 @@ describe('in-memory workspace search', () => {
       status: 'complete',
       results: [{ resourceId }],
     })
-    expect(getCount).toBe(1)
+    expect(getCount).toBe(2)
 
     const replacementDocument = noteBlocksToYDoc(
       [{ type: 'paragraph', content: [{ type: 'text', text: 'Sunken archive' }] }],
       NOTE_YJS_FRAGMENT,
     )
     const replacementSession = createInMemoryNoteSession(replacementDocument, version)
-    setState({ status: 'ready', session: replacementSession })
-    expect(getCount).toBe(2)
+    state = { status: 'ready', session: replacementSession }
     await expect(search.gateway.search('archive')).resolves.toMatchObject({
       status: 'complete',
       results: [{ resourceId }],
     })
 
     resources = [{ ...resources[0]!, title: canonicalizeResourceTitle('Renamed notes') }]
-    resourceListener?.()
     await expect(search.gateway.search('renamed')).resolves.toMatchObject({
       status: 'complete',
       results: [{ resourceId }],
     })
-    expect(getCount).toBe(2)
+    expect(getCount).toBe(4)
 
     resources = [
       {
@@ -104,25 +85,65 @@ describe('in-memory workspace search', () => {
         lifecycle: { state: 'trashed', at: 2, by: actorId },
       },
     ]
-    resourceListener?.()
     await expect(search.gateway.search('archive')).resolves.toEqual({
       status: 'complete',
       results: [],
     })
-    expect(noteListeners.size).toBe(0)
+    expect(getCount).toBe(4)
 
     resources = [{ ...resources[0]!, lifecycle: { state: 'active' } }]
-    resourceListener?.()
     await expect(search.gateway.search('archive')).resolves.toMatchObject({
       status: 'complete',
       results: [{ resourceId }],
     })
-    expect(getCount).toBe(3)
-    expect(noteListeners.size).toBe(1)
+    expect(getCount).toBe(5)
+    expect(subscribe).not.toHaveBeenCalled()
 
     search.dispose()
-    expect(noteListeners.size).toBe(0)
     session.dispose()
     replacementSession.dispose()
+  })
+
+  it('uses shared bounded ranking for duplicate, Unicode, and broad title matches', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const version = initialVersion(await sha256Digest(new TextEncoder().encode('resource')))
+    const resources: ReadonlyArray<ResourceRecord> = Array.from({ length: 512 }, (_, index) => ({
+      id: generateDomainId(DOMAIN_ID_KIND.resource),
+      campaignId,
+      parentId: null,
+      kind: 'file' as const,
+      title: canonicalizeResourceTitle(index < 2 ? 'Résumé archive' : `Archive ${index}`),
+      icon: null,
+      color: null,
+      lifecycle: { state: 'active' as const },
+      metadataVersion: version,
+      created: { at: 1, by: actorId },
+      updated: { at: 1, by: actorId },
+    }))
+    const get = vi.fn((): NoteSessionState => ({ status: 'loading' }))
+    const subscribe = vi.fn(() => () => undefined)
+    const notes: NoteSessionSource = {
+      get,
+      subscribe,
+      export: () => ({ status: 'unavailable', reason: 'capability_not_supported' }),
+      create: () =>
+        Promise.resolve({ status: 'not_committed', retryable: false, reason: 'invalid_response' }),
+      dispose: () => undefined,
+    }
+    const search = createInMemoryWorkspaceSearch(() => resources, notes)
+
+    const startedAt = performance.now()
+    const broad = await search.gateway.search('archive')
+    expect(performance.now() - startedAt).toBeLessThan(1_000)
+    expect(broad.status).toBe('complete')
+    expect(broad.results).toHaveLength(50)
+    await expect(search.gateway.search('rés')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ match: { type: 'title' } }, { match: { type: 'title' } }],
+    })
+    expect(get).not.toHaveBeenCalled()
+    expect(subscribe).not.toHaveBeenCalled()
+    search.dispose()
   })
 })
