@@ -112,7 +112,7 @@ function CanvasViewport({
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
   return (
     <CanvasEditor
-      key={resource.id}
+      key={`${resource.id}:${state.session.document.guid}`}
       canEdit={canEdit}
       resourceId={resource.id}
       session={state.session}

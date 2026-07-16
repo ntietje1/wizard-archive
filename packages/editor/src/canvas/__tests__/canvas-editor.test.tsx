@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
+import { StrictMode } from 'react'
 import * as Y from 'yjs'
 import { CanvasEditor } from '../canvas-editor'
 import { createCanvasDocumentDoc, readCanvasDocumentContent } from '../document-contract'
@@ -21,6 +22,25 @@ async function createSession(content: CanvasDocumentContent = { nodes: [], edges
 }
 
 describe('CanvasEditor', () => {
+  it('owns a fresh controller runtime for each committed StrictMode effect lifetime', async () => {
+    const session = await createSession({
+      nodes: [{ id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+    })
+    const view = render(
+      <StrictMode>
+        <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Strict board" />
+      </StrictMode>,
+    )
+
+    expect(
+      await screen.findByRole('application', { name: 'Strict board canvas editor' }),
+    ).toBeVisible()
+    expect(screen.getByTestId('canvas-node')).toBeVisible()
+    view.unmount()
+    session.dispose()
+  })
+
   it('creates, edits, deletes, and restores text through canonical controllers', async () => {
     const session = await createSession()
     const view = render(
@@ -72,6 +92,66 @@ describe('CanvasEditor', () => {
     expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fit view' })).toBeVisible()
+    view.unmount()
+    session.dispose()
+  })
+
+  it('restores select-all, tool, copy, cut, paste, and duplicate shortcuts', async () => {
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+      ],
+      edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Clipboard board" />,
+    )
+    const shell = screen.getByTestId('canvas-editor-shell')
+
+    fireEvent.keyDown(shell, { key: '4' })
+    expect(screen.getByRole('button', { name: 'Draw' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.keyDown(shell, { key: '7' })
+    expect(screen.getByRole('button', { name: 'Edges' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.keyDown(shell, { key: '6' })
+    expect(screen.getByRole('button', { name: 'Text' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.keyDown(shell, { key: '1' })
+    expect(screen.getByRole('button', { name: 'Pointer' })).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.keyDown(shell, { key: 'a', ctrlKey: true })
+    fireEvent.keyDown(shell, { key: 'c', ctrlKey: true })
+    fireEvent.keyDown(shell, { key: 'v', ctrlKey: true })
+    expect(readCanvasDocumentContent(session.document)).toMatchObject({
+      nodes: [{ id: NODE_A }, { id: NODE_B }, {}, {}],
+      edges: [{ id: 'edge-a-b' }, {}],
+    })
+
+    fireEvent.keyDown(shell, { key: 'x', ctrlKey: true })
+    expect(readCanvasDocumentContent(session.document)).toMatchObject({
+      nodes: [{ id: NODE_A }, { id: NODE_B }],
+      edges: [{ id: 'edge-a-b' }],
+    })
+    fireEvent.keyDown(shell, { key: 'v', ctrlKey: true })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(4)
+
+    fireEvent.keyDown(shell, { key: 'd', ctrlKey: true })
+    const duplicated = readCanvasDocumentContent(session.document)
+    expect(duplicated.nodes).toHaveLength(6)
+    expect(duplicated.edges).toHaveLength(3)
+    expect(new Set(duplicated.nodes.map((node) => node.id)).size).toBe(6)
+
+    fireEvent.keyDown(shell, { key: 'z', ctrlKey: true, repeat: true })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(6)
+    fireEvent.keyDown(shell, { key: 'z', ctrlKey: true })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(4)
+    fireEvent.keyDown(shell, { key: 'y', ctrlKey: true })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(6)
+
+    fireEvent.keyDown(shell, { key: 'a', ctrlKey: true })
+    fireEvent.keyDown(screen.getByRole('spinbutton', { name: 'Border width' }), {
+      key: 'Backspace',
+    })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(6)
     view.unmount()
     session.dispose()
   })
