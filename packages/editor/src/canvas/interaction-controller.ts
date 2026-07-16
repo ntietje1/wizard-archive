@@ -1,0 +1,321 @@
+import type { CanvasNodeId } from '../resources/domain-id'
+
+export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
+
+export type CanvasPoint = Readonly<{ x: number; y: number }>
+
+export type CanvasViewport = CanvasPoint & Readonly<{ zoom: number }>
+
+export type CanvasSelection = Readonly<{
+  nodeIds: ReadonlySet<CanvasNodeId>
+  edgeIds: ReadonlySet<string>
+}>
+
+export type CanvasSelectionKind = 'lasso' | 'marquee'
+export type CanvasSelectionMode = 'add' | 'replace'
+
+export type CanvasInteraction =
+  | Readonly<{ type: 'idle' }>
+  | Readonly<{
+      type: 'selecting'
+      kind: CanvasSelectionKind
+      mode: CanvasSelectionMode
+      candidate: CanvasSelection | null
+    }>
+
+export type CanvasInteractionSnapshot = Readonly<{
+  tool: CanvasTool
+  viewport: CanvasViewport
+  selection: CanvasSelection
+  interaction: CanvasInteraction
+}>
+
+export const DEFAULT_CANVAS_VIEWPORT: CanvasViewport = Object.freeze({ x: 0, y: 0, zoom: 1 })
+
+const MIN_CANVAS_ZOOM = 0.1
+const MAX_CANVAS_ZOOM = 4
+
+function emptySelection(): CanvasSelection {
+  return { nodeIds: new Set(), edgeIds: new Set() }
+}
+
+function cloneSelection(selection: CanvasSelection): CanvasSelection {
+  return {
+    nodeIds: new Set(selection.nodeIds),
+    edgeIds: new Set(selection.edgeIds),
+  }
+}
+
+function setsEqual<T>(left: ReadonlySet<T>, right: ReadonlySet<T>): boolean {
+  if (left === right) return true
+  if (left.size !== right.size) return false
+  for (const value of left) {
+    if (!right.has(value)) return false
+  }
+  return true
+}
+
+function selectionsEqual(left: CanvasSelection, right: CanvasSelection): boolean {
+  return setsEqual(left.nodeIds, right.nodeIds) && setsEqual(left.edgeIds, right.edgeIds)
+}
+
+function normalizeViewport(viewport: CanvasViewport): CanvasViewport {
+  return {
+    x: Number.isFinite(viewport.x) ? viewport.x : 0,
+    y: Number.isFinite(viewport.y) ? viewport.y : 0,
+    zoom: Math.min(
+      MAX_CANVAS_ZOOM,
+      Math.max(MIN_CANVAS_ZOOM, Number.isFinite(viewport.zoom) ? viewport.zoom : 1),
+    ),
+  }
+}
+
+function mergeSelection(current: CanvasSelection, incoming: CanvasSelection): CanvasSelection {
+  return {
+    nodeIds: new Set([...current.nodeIds, ...incoming.nodeIds]),
+    edgeIds: new Set([...current.edgeIds, ...incoming.edgeIds]),
+  }
+}
+
+function toggleSelectionId<T>(selected: ReadonlySet<T>, id: T, additive: boolean): ReadonlySet<T> {
+  if (!additive) return new Set([id])
+  const next = new Set(selected)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  return next
+}
+
+function filterSelection(
+  selection: CanvasSelection,
+  nodeIds: ReadonlySet<CanvasNodeId>,
+  edgeIds: ReadonlySet<string>,
+): CanvasSelection {
+  return {
+    nodeIds: new Set(Array.from(selection.nodeIds).filter((id) => nodeIds.has(id))),
+    edgeIds: new Set(Array.from(selection.edgeIds).filter((id) => edgeIds.has(id))),
+  }
+}
+
+export function getVisualCanvasSelection(snapshot: CanvasInteractionSnapshot): CanvasSelection {
+  const { interaction, selection } = snapshot
+  if (interaction.type === 'idle' || interaction.candidate === null) return selection
+  return interaction.mode === 'replace'
+    ? interaction.candidate
+    : mergeSelection(selection, interaction.candidate)
+}
+
+export function screenToCanvasPoint(
+  point: CanvasPoint,
+  viewport: CanvasViewport,
+  surfaceOrigin: CanvasPoint = { x: 0, y: 0 },
+): CanvasPoint {
+  return {
+    x: (point.x - surfaceOrigin.x - viewport.x) / viewport.zoom,
+    y: (point.y - surfaceOrigin.y - viewport.y) / viewport.zoom,
+  }
+}
+
+export function canvasToScreenPoint(
+  point: CanvasPoint,
+  viewport: CanvasViewport,
+  surfaceOrigin: CanvasPoint = { x: 0, y: 0 },
+): CanvasPoint {
+  return {
+    x: surfaceOrigin.x + viewport.x + point.x * viewport.zoom,
+    y: surfaceOrigin.y + viewport.y + point.y * viewport.zoom,
+  }
+}
+
+export class CanvasInteractionController {
+  readonly #listeners = new Set<() => void>()
+  readonly #viewportCommitListeners = new Set<(viewport: CanvasViewport) => void>()
+  #disposed = false
+  #snapshot: CanvasInteractionSnapshot
+
+  constructor(viewport: CanvasViewport = DEFAULT_CANVAS_VIEWPORT) {
+    this.#snapshot = {
+      tool: 'select',
+      viewport: normalizeViewport(viewport),
+      selection: emptySelection(),
+      interaction: { type: 'idle' },
+    }
+  }
+
+  get = (): CanvasInteractionSnapshot => {
+    this.#assertActive()
+    return this.#snapshot
+  }
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.#assertActive()
+    this.#listeners.add(listener)
+    return () => this.#listeners.delete(listener)
+  }
+
+  subscribeViewportCommit = (listener: (viewport: CanvasViewport) => void): (() => void) => {
+    this.#assertActive()
+    this.#viewportCommitListeners.add(listener)
+    return () => this.#viewportCommitListeners.delete(listener)
+  }
+
+  setTool(tool: CanvasTool): void {
+    this.#assertActive()
+    if (tool === this.#snapshot.tool) return
+    this.#publish({ ...this.#snapshot, tool, interaction: { type: 'idle' } })
+  }
+
+  setSelection(selection: CanvasSelection): void {
+    this.#assertActive()
+    const nextSelection = cloneSelection(selection)
+    if (
+      selectionsEqual(nextSelection, this.#snapshot.selection) &&
+      this.#snapshot.interaction.type === 'idle'
+    ) {
+      return
+    }
+    this.#publish({
+      ...this.#snapshot,
+      selection: nextSelection,
+      interaction: { type: 'idle' },
+    })
+  }
+
+  clearSelection(): void {
+    this.setSelection(emptySelection())
+  }
+
+  selectNode(nodeId: CanvasNodeId, additive: boolean): void {
+    this.setSelection({
+      nodeIds: toggleSelectionId(this.#snapshot.selection.nodeIds, nodeId, additive),
+      edgeIds: additive ? this.#snapshot.selection.edgeIds : new Set(),
+    })
+  }
+
+  selectEdge(edgeId: string, additive: boolean): void {
+    if (edgeId.trim().length === 0) throw new TypeError('Expected a non-empty canvas edge id')
+    this.setSelection({
+      nodeIds: additive ? this.#snapshot.selection.nodeIds : new Set(),
+      edgeIds: toggleSelectionId(this.#snapshot.selection.edgeIds, edgeId, additive),
+    })
+  }
+
+  beginSelection(kind: CanvasSelectionKind, mode: CanvasSelectionMode): void {
+    this.#assertActive()
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { type: 'selecting', kind, mode, candidate: null },
+    })
+  }
+
+  previewSelection(candidate: CanvasSelection): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'selecting') {
+      throw new Error('Selection preview requires an active canvas selection interaction')
+    }
+    const nextCandidate = cloneSelection(candidate)
+    if (interaction.candidate && selectionsEqual(interaction.candidate, nextCandidate)) return
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { ...interaction, candidate: nextCandidate },
+    })
+  }
+
+  commitSelection(): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'selecting') return
+    const selection = getVisualCanvasSelection(this.#snapshot)
+    this.#publish({
+      ...this.#snapshot,
+      selection: cloneSelection(selection),
+      interaction: { type: 'idle' },
+    })
+  }
+
+  cancelInteraction(): void {
+    this.#assertActive()
+    if (this.#snapshot.interaction.type === 'idle') return
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+  }
+
+  reconcileSelection(nodeIds: ReadonlySet<CanvasNodeId>, edgeIds: ReadonlySet<string>): void {
+    this.#assertActive()
+    const selection = filterSelection(this.#snapshot.selection, nodeIds, edgeIds)
+    const interaction = this.#snapshot.interaction
+    const candidate =
+      interaction.type === 'selecting' && interaction.candidate
+        ? filterSelection(interaction.candidate, nodeIds, edgeIds)
+        : null
+    const nextInteraction =
+      interaction.type === 'selecting' ? { ...interaction, candidate } : interaction
+    if (
+      selectionsEqual(selection, this.#snapshot.selection) &&
+      (interaction.type === 'idle' ||
+        (interaction.candidate === null && candidate === null) ||
+        (interaction.candidate !== null &&
+          candidate !== null &&
+          selectionsEqual(interaction.candidate, candidate)))
+    ) {
+      return
+    }
+    this.#publish({ ...this.#snapshot, selection, interaction: nextInteraction })
+  }
+
+  setViewport(viewport: CanvasViewport, commit = false): void {
+    this.#assertActive()
+    const nextViewport = normalizeViewport(viewport)
+    if (
+      nextViewport.x !== this.#snapshot.viewport.x ||
+      nextViewport.y !== this.#snapshot.viewport.y ||
+      nextViewport.zoom !== this.#snapshot.viewport.zoom
+    ) {
+      this.#publish({ ...this.#snapshot, viewport: nextViewport })
+    }
+    if (commit) this.#notifyViewportCommit(nextViewport)
+  }
+
+  panBy(delta: CanvasPoint, commit = false): void {
+    const { viewport } = this.#snapshot
+    this.setViewport({ ...viewport, x: viewport.x + delta.x, y: viewport.y + delta.y }, commit)
+  }
+
+  zoomTo(zoom: number, center: CanvasPoint = { x: 0, y: 0 }, commit = false): void {
+    const viewport = this.#snapshot.viewport
+    const nextZoom = normalizeViewport({ ...viewport, zoom }).zoom
+    const scale = nextZoom / viewport.zoom
+    this.setViewport(
+      {
+        x: center.x - (center.x - viewport.x) * scale,
+        y: center.y - (center.y - viewport.y) * scale,
+        zoom: nextZoom,
+      },
+      commit,
+    )
+  }
+
+  commitViewport(): void {
+    this.#assertActive()
+    this.#notifyViewportCommit(this.#snapshot.viewport)
+  }
+
+  dispose(): void {
+    if (this.#disposed) return
+    this.#disposed = true
+    this.#listeners.clear()
+    this.#viewportCommitListeners.clear()
+  }
+
+  #publish(snapshot: CanvasInteractionSnapshot): void {
+    this.#snapshot = snapshot
+    for (const listener of this.#listeners) listener()
+  }
+
+  #notifyViewportCommit(viewport: CanvasViewport): void {
+    for (const listener of this.#viewportCommitListeners) listener(viewport)
+  }
+
+  #assertActive(): void {
+    if (this.#disposed) throw new Error('CanvasInteractionController is disposed')
+  }
+}

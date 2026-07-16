@@ -25,6 +25,10 @@
       "types": "./dist/canvas/document-controller.d.mts",
       "default": "./dist/canvas/document-controller.mjs"
     },
+    "./canvas/interaction-controller": {
+      "types": "./dist/canvas/interaction-controller.d.mts",
+      "default": "./dist/canvas/interaction-controller.mjs"
+    },
     "./notes/document-contract": {
       "types": "./dist/notes/document/model.d.mts",
       "default": "./dist/notes/document/model.mjs"
@@ -177,6 +181,7 @@
     "backendSafeSubpaths": [
       "./canvas/document-contract",
       "./canvas/document-controller",
+      "./canvas/interaction-controller",
       "./canvas/native-document",
       "./notes/document-contract",
       "./notes/document-yjs",
