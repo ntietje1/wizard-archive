@@ -12,6 +12,8 @@ import type {
 import type { CampaignMutationCtx } from '../../functions'
 import { internal } from '../../_generated/api'
 
+type AssetRetirementCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
+
 export type PreparedAssetCopies = Readonly<{
   initializing: boolean
   remap(sourceAssetUuid: string | null): AssetId | null
@@ -103,4 +105,41 @@ export function mapAssetIds(content: {
   return [content.imageAssetUuid, ...content.layers.map((layer) => layer.imageAssetUuid)]
     .filter((assetUuid): assetUuid is string => assetUuid !== null)
     .map((assetUuid) => assertDomainId(DOMAIN_ID_KIND.asset, assetUuid))
+}
+
+export async function queueAssetRetirements(
+  ctx: AssetRetirementCtx,
+  retirementAssetUuids: ReadonlySet<AssetId>,
+): Promise<void> {
+  const createdAt = Date.now()
+  const assets = [...retirementAssetUuids]
+  const existing = await Promise.all(
+    assets.map((assetUuid) =>
+      ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
+        .unique(),
+    ),
+  )
+  const candidateIds = await Promise.all(
+    assets.map(
+      async (assetUuid, index) =>
+        existing[index]?._id ??
+        (await ctx.db.insert('resourceAssetRetirementCandidates', {
+          assetUuid,
+          status: 'pending',
+          attempts: 0,
+          lastAttemptAt: null,
+          lastError: null,
+          createdAt,
+        })),
+    ),
+  )
+  await Promise.all(
+    candidateIds.map((candidateId) =>
+      ctx.scheduler.runAfter(0, internal.resources.internalActions.processAssetRetirement, {
+        candidateId,
+      }),
+    ),
+  )
 }

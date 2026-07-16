@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
+import type { Id } from 'convex/_generated/dataModel'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { createLiveFileContentSource } from '../live-file-content-source'
@@ -15,7 +16,6 @@ describe('LiveFileContentSource', () => {
     const campaignId = testDomainId('campaign', 'download-campaign')
     const bytes = new TextEncoder().encode('exact file bytes')
     const metadata = {
-      assetId: testDomainId('asset', 'download-asset'),
       classification: 'inert_file' as const,
       byteSize: bytes.byteLength,
       detectedFormat: null,
@@ -27,7 +27,7 @@ describe('LiveFileContentSource', () => {
     const snapshot: Snapshot = {
       status: 'ready',
       kind: 'file',
-      content: metadata,
+      content: { ...metadata, attachment: 'attached' as const },
       version,
     }
     vi.stubGlobal(
@@ -44,6 +44,7 @@ describe('LiveFileContentSource', () => {
         download: () =>
           Promise.resolve({ status: 'ready', url: 'https://files.test/evidence', version }),
         refresh: vi.fn(),
+        replace: vi.fn(),
         upload: vi.fn(),
       },
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
@@ -64,7 +65,6 @@ describe('LiveFileContentSource', () => {
     const campaignId = testDomainId('campaign', 'corrupt-download-campaign')
     const expectedBytes = new TextEncoder().encode('expected bytes')
     const metadata = {
-      assetId: testDomainId('asset', 'corrupt-download-asset'),
       classification: 'inert_file' as const,
       byteSize: expectedBytes.byteLength,
       detectedFormat: null,
@@ -80,13 +80,20 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
-        load: () => Promise.resolve({ status: 'ready', kind: 'file', content: metadata, version }),
+        load: () =>
+          Promise.resolve({
+            status: 'ready',
+            kind: 'file',
+            content: { ...metadata, attachment: 'attached' as const },
+            version,
+          }),
         watch: vi.fn(() => () => undefined),
         create: vi.fn(),
         discard: vi.fn(),
         download: () =>
           Promise.resolve({ status: 'ready', url: 'https://files.test/tampered', version }),
         refresh: vi.fn(),
+        replace: vi.fn(),
         upload: vi.fn(),
       },
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
@@ -96,6 +103,115 @@ describe('LiveFileContentSource', () => {
       status: 'integrity_error',
       issue: 'content_corrupt',
     })
+    source.dispose()
+  })
+
+  it('uploads replacement bytes through one focused operation and reloads the content snapshot', async () => {
+    const resourceId = testDomainId('resource', 'replace-file')
+    const campaignId = testDomainId('campaign', 'replace-campaign')
+    const bytes = new TextEncoder().encode('replacement')
+    const metadata = {
+      classification: 'inert_file' as const,
+      byteSize: bytes.byteLength,
+      detectedFormat: null,
+      extension: 'txt',
+      mediaType: 'text/plain',
+      viewerUnavailableReason: 'unsupported_format' as const,
+    }
+    const version = await initialFileContentVersion(bytes, metadata)
+    const sessionId = 'replacement-session' as Id<'fileStorage'>
+    const load = vi.fn(() =>
+      Promise.resolve({
+        status: 'ready' as const,
+        kind: 'file' as const,
+        content: { ...metadata, attachment: 'attached' as const },
+        version,
+      }),
+    )
+    const replace = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('response lost'))
+      .mockResolvedValue({
+        status: 'completed' as const,
+        content: { ...metadata, attachment: 'attached' as const },
+        version,
+      })
+    const discard = vi.fn()
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load,
+        watch: vi.fn(() => () => undefined),
+        create: vi.fn(),
+        discard,
+        download: vi.fn(),
+        refresh: vi.fn(),
+        replace,
+        upload: vi.fn(() => Promise.resolve(sessionId)),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    await expect(
+      source.replace(resourceId, version, { bytes, fileName: 'replacement.txt' }),
+    ).resolves.toMatchObject({
+      status: 'completed',
+      content: { attachment: 'attached', byteSize: bytes.byteLength },
+    })
+    expect(replace).toHaveBeenCalledWith({
+      campaignId,
+      resourceId,
+      expectedVersion: version,
+      uploadSessionId: sessionId,
+    })
+    expect(replace).toHaveBeenCalledTimes(2)
+    expect(load).toHaveBeenCalledWith(resourceId)
+    expect(discard).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
+  it('discards an uncommitted upload before returning a retryable replacement outcome', async () => {
+    const resourceId = testDomainId('resource', 'replace-retry-file')
+    const campaignId = testDomainId('campaign', 'replace-retry-campaign')
+    const bytes = new TextEncoder().encode('replacement')
+    const metadata = {
+      classification: 'inert_file' as const,
+      byteSize: bytes.byteLength,
+      detectedFormat: null,
+      extension: 'txt',
+      mediaType: 'text/plain',
+      viewerUnavailableReason: 'unsupported_format' as const,
+    }
+    const version = await initialFileContentVersion(bytes, metadata)
+    const sessionId = 'replacement-retry-session' as Id<'fileStorage'>
+    const discard = vi.fn(() => Promise.resolve())
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load: vi.fn(),
+        watch: vi.fn(() => () => undefined),
+        create: vi.fn(),
+        discard,
+        download: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(() =>
+          Promise.resolve({
+            status: 'retryable' as const,
+            reason: 'content_initializing' as const,
+          }),
+        ),
+        upload: vi.fn(() => Promise.resolve(sessionId)),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    await expect(
+      source.replace(resourceId, version, { bytes, fileName: 'replacement.txt' }),
+    ).resolves.toEqual({
+      status: 'retryable',
+      reason: 'content_initializing',
+    })
+    expect(discard).toHaveBeenCalledWith(sessionId)
     source.dispose()
   })
 })

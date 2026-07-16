@@ -16,7 +16,7 @@ async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
     status: 'ready' as const,
     kind: 'file' as const,
     content: {
-      assetId: content.assetUuid,
+      attachment: content.assetUuid === null ? ('unattached' as const) : ('attached' as const),
       classification: content.classification,
       byteSize: content.byteSize,
       detectedFormat: content.detectedFormat,

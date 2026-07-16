@@ -13,6 +13,7 @@ import type { ResourceKind } from '../resource-record'
 import type { ResourceUndoHistory } from '../resource-undo-history'
 import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
+import { validateFileUpload } from '../../../../../shared/storage/validation'
 
 export type WorkspaceReport = (message: string, retry?: () => void) => void
 
@@ -121,6 +122,11 @@ async function createWorkspaceFile(
 ) {
   if (runtime.resources.structure.status !== 'available') {
     report('This workspace is read only')
+    return
+  }
+  const validation = validateFileUpload(file.type || null, file.size, file.name)
+  if (!validation.valid) {
+    report(validation.error)
     return
   }
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)

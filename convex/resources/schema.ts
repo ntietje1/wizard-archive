@@ -64,6 +64,35 @@ export const fileOwnedMetadataValidators = {
   viewerUnavailableReason: v.nullable(fileViewerUnavailableReasonValidator),
 }
 
+const fileResourceContentValidator = v.object({
+  attachment: literals('attached', 'unattached'),
+  ...fileOwnedMetadataValidators,
+})
+
+export const fileContentReplaceResultValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    content: fileResourceContentValidator,
+    version: versionStampValidator,
+  }),
+  v.object({
+    status: v.literal('retryable'),
+    reason: v.literal('content_initializing'),
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'content_corrupt',
+      'content_missing',
+      'invalid_file',
+      'resource_missing',
+      'unauthorized',
+      'version_conflict',
+      'version_exhausted',
+    ),
+  }),
+)
+
 export const resourceProjectionScopeValidator = v.object({
   campaignId: campaignIdValidator,
   actorId: campaignMemberIdValidator,
@@ -418,10 +447,7 @@ export const resourceContentSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
     kind: v.literal('file'),
-    content: v.object({
-      assetId: v.nullable(assetIdValidator),
-      ...fileOwnedMetadataValidators,
-    }),
+    content: fileResourceContentValidator,
     version: versionStampValidator,
   }),
   v.object({

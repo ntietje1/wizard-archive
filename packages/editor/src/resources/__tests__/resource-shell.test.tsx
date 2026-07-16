@@ -215,6 +215,31 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('rejects oversized files before reading or creating content', async () => {
+    const { core } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
+    const file = new File(['small'], 'oversized.txt', { type: 'text/plain' })
+    const arrayBuffer = vi.fn()
+    Object.defineProperties(file, {
+      arrayBuffer: { value: arrayBuffer },
+      size: { value: 100 * 1024 * 1024 + 1 },
+    })
+    fireEvent.change(screen.getByLabelText('Create resource: choose file'), {
+      target: { files: [file] },
+    })
+
+    expect(await screen.findByText('File must be less than 100MB')).toBeInTheDocument()
+    expect(arrayBuffer).not.toHaveBeenCalled()
+    core.dispose()
+  })
+
   it('creates resources inside folders from the folder context menu', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
     render(
@@ -775,7 +800,7 @@ describe('ResourceShell', () => {
       state = {
         status: 'ready',
         content: {
-          assetId: null,
+          attachment: 'unattached',
           byteSize: 0,
           classification: 'inert_file',
           detectedFormat: null,

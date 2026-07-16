@@ -89,8 +89,30 @@ export interface CanvasSession {
 
 export type FileResourceContent = FileOwnedMetadata &
   Readonly<{
-    assetId: AssetId | null
+    attachment: 'attached' | 'unattached'
   }>
+
+export type FileContentReplaceResult =
+  | Readonly<{
+      status: 'completed'
+      content: FileResourceContent
+      version: VersionStamp
+    }>
+  | Readonly<{
+      status: 'retryable'
+      reason: 'content_initializing' | 'response_lost'
+    }>
+  | Readonly<{
+      status: 'rejected'
+      reason:
+        | 'content_corrupt'
+        | 'content_missing'
+        | 'invalid_file'
+        | 'resource_missing'
+        | 'unauthorized'
+        | 'version_conflict'
+        | 'version_exhausted'
+    }>
 
 export type MapResourceContent = Readonly<{
   imageAssetId: AssetId | null
@@ -200,6 +222,11 @@ export interface FileContentSource {
     envelope: CommandEnvelope<CreateFileResourceCommand>,
     source: FileResourceSource,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
+  replace(
+    resourceId: ResourceId,
+    expectedVersion: VersionStamp,
+    source: FileResourceSource,
+  ): Promise<FileContentReplaceResult>
   dispose(): void
 }
 

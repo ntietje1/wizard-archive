@@ -2,7 +2,10 @@ import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
-import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import {
+  assertVersionStamp,
+  versionStampEquals,
+} from '@wizard-archive/editor/resources/component-version'
 import type {
   FileContentSource,
   FileResourceSource,
@@ -32,6 +35,8 @@ import {
 type CreateFileArgs = FunctionArgs<typeof api.resources.actions.createFileResource>
 type CreateFileResult = FunctionReturnType<typeof api.resources.actions.createFileResource>
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
+type ReplaceFileArgs = FunctionArgs<typeof api.resources.actions.replaceFileContent>
+type ReplaceFileResult = FunctionReturnType<typeof api.resources.actions.replaceFileContent>
 
 type LiveFileContentBackend = LiveResourceContentBackend &
   Readonly<{
@@ -39,6 +44,7 @@ type LiveFileContentBackend = LiveResourceContentBackend &
     download(resourceId: ResourceId): Promise<FileDownloadResult>
     discard(sessionId: Id<'fileStorage'>): Promise<void>
     refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
+    replace(args: ReplaceFileArgs): Promise<ReplaceFileResult>
     upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
   }>
 
@@ -79,9 +85,7 @@ export function createLiveFileContentSource(
       const expectedVersion = assertVersionStamp(download.version)
       const actualVersion = await initialFileContentVersion(bytes, state.content)
       if (
-        state.version.scheme !== expectedVersion.scheme ||
-        state.version.revision !== expectedVersion.revision ||
-        state.version.digest !== expectedVersion.digest ||
+        !versionStampEquals(state.version, expectedVersion) ||
         actualVersion.digest !== expectedVersion.digest
       ) {
         return { status: 'integrity_error', issue: 'content_corrupt' }
@@ -143,9 +147,42 @@ export function createLiveFileContentSource(
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
       }
     },
+    replace: async (resourceId, expectedVersion, source) => {
+      let sessionId: Id<'fileStorage'> | null = null
+      try {
+        sessionId = await backend.upload(source)
+        const args = {
+          campaignId,
+          resourceId,
+          expectedVersion,
+          uploadSessionId: sessionId,
+        }
+        let result: ReplaceFileResult
+        try {
+          result = await backend.replace(args)
+        } catch {
+          result = await backend.replace(args)
+        }
+        if (result.status === 'completed') {
+          await content.load(resourceId).catch(() => undefined)
+          return {
+            status: 'completed',
+            content: result.content,
+            version: assertVersionStamp(result.version),
+          }
+        }
+        await backend.discard(sessionId).catch(() => undefined)
+        return result
+      } catch {
+        if (sessionId) await backend.discard(sessionId).catch(() => undefined)
+        return { status: 'retryable', reason: 'response_lost' }
+      }
+    },
     dispose: () => {
       content.dispose()
-      for (const create of pending.values()) void backend.discard(create.sessionId)
+      for (const create of pending.values()) {
+        void backend.discard(create.sessionId).catch(() => undefined)
+      }
       pending.clear()
     },
   }

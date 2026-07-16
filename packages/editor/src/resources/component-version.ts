@@ -46,6 +46,12 @@ export function assertVersionStamp(value: unknown): VersionStamp {
   return value
 }
 
+export function versionStampEquals(left: VersionStamp, right: VersionStamp): boolean {
+  return (
+    left.scheme === right.scheme && left.revision === right.revision && left.digest === right.digest
+  )
+}
+
 export function compareVersionStamps(
   imported: VersionStamp,
   destination: VersionStamp,

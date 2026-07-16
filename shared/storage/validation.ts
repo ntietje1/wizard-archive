@@ -22,6 +22,8 @@ const MEDIA_EXTENSIONS = [
 ] as const
 const TEXT_EXTENSIONS = ['.txt', '.md'] as const
 
+export const FILE_UPLOAD_ACCEPT_PATTERN = [...MEDIA_EXTENSIONS, ...TEXT_EXTENSIONS].join(',')
+
 function isMediaFile(contentType: string | null, fileName?: string | null): boolean {
   const lowerType = contentType?.toLowerCase()
   if (

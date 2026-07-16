@@ -274,7 +274,7 @@ describe('createInMemoryEditorRuntime', () => {
     expect(core.runtime.content.files.get(resourceId)).toMatchObject({
       status: 'ready',
       content: {
-        assetId: null,
+        attachment: 'attached',
         byteSize: bytes.byteLength,
         extension: 'txt',
         classification: 'inert_file',
@@ -291,6 +291,25 @@ describe('createInMemoryEditorRuntime', () => {
     expect(exported.status === 'ready' ? Array.from(exported.bytes) : null).toEqual(
       Array.from(bytes),
     )
+    const created = core.runtime.content.files.get(resourceId)
+    if (created.status !== 'ready') throw new TypeError('Expected ready file content')
+    const replacementBytes = new TextEncoder().encode('replacement text')
+    await expect(
+      core.runtime.content.files.replace(resourceId, created.version, {
+        bytes: replacementBytes,
+        fileName: 'replacement.txt',
+      }),
+    ).resolves.toMatchObject({ status: 'completed', version: { revision: 2 } })
+    await expect(
+      core.runtime.content.files.replace(resourceId, created.version, {
+        bytes: replacementBytes,
+        fileName: 'replacement.txt',
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'version_conflict' })
+    const replacementExport = await core.runtime.content.files.export(resourceId)
+    expect(
+      replacementExport.status === 'ready' ? Array.from(replacementExport.bytes) : null,
+    ).toEqual(Array.from(replacementBytes))
     expect(core.runtime.resources.index.getSnapshot().lookup(resourceId).state).toBe('known')
     core.dispose()
   })

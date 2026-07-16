@@ -127,13 +127,7 @@ class LiveResourceContentSource {
       if (snapshot.kind === 'file') {
         this.#setState(resourceId, {
           status: 'ready',
-          content: {
-            ...snapshot.content,
-            assetId:
-              snapshot.content.assetId === null
-                ? null
-                : assertDomainId(DOMAIN_ID_KIND.asset, snapshot.content.assetId),
-          },
+          content: snapshot.content,
           version,
         })
         return

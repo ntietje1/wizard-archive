@@ -356,6 +356,131 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('replaces file content once, advances its version, and retires the previous asset', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const original = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['original'], { type: 'text/plain' }),
+      'evidence.txt',
+    )
+    await asDm(campaign).action(api.resources.actions.createFileResource, {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'file',
+        parentId: null,
+        title: 'Evidence',
+        icon: null,
+        color: null,
+      },
+      uploadSessionId: original.sessionId,
+    })
+    const expectedVersion = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected file content')
+      return content.version
+    })
+    const replacement = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['replacement'], { type: 'text/plain' }),
+      'replacement.txt',
+    )
+    const args = {
+      campaignId: campaignUuid,
+      resourceId,
+      expectedVersion,
+      uploadSessionId: replacement.sessionId,
+    }
+
+    const result = await asDm(campaign).action(api.resources.actions.replaceFileContent, args)
+    expect(result).toMatchObject({
+      status: 'completed',
+      content: { attachment: 'attached', byteSize: 11, extension: 'txt' },
+      version: { revision: 2 },
+    })
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, args),
+    ).resolves.toEqual(result)
+
+    const retirementCandidateId = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      expect(content).toMatchObject({
+        assetUuid: replacement.assetId,
+        byteSize: 11,
+        extension: 'txt',
+        version: { revision: 2 },
+      })
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).resolves.toMatchObject({ assetUuid: replacement.assetId })
+      const candidate = await ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+        .unique()
+      expect(candidate).toMatchObject({ status: 'pending' })
+      return candidate!._id
+    })
+
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: retirementCandidateId,
+    })
+    await t.run(async (ctx) => {
+      await expect(ctx.db.get('fileStorage', original.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(original.storageId)).resolves.toBeNull()
+    })
+  })
+
+  it('rejects a stale file replacement before committing its upload', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'file', null, 'File')
+    const currentVersion = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected file content')
+      return content.version
+    })
+    const staleVersion = { ...currentVersion, revision: currentVersion.revision + 1 }
+    const replacement = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['replacement'], { type: 'text/plain' }),
+      'replacement.txt',
+    )
+
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        expectedVersion: staleVersion,
+        uploadSessionId: replacement.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'version_conflict' })
+    await t.run(async (ctx) => {
+      await expect(ctx.db.get('fileStorage', replacement.sessionId)).resolves.toMatchObject({
+        status: 'uncommitted',
+      })
+    })
+  })
+
   it('rejects kind-owned creation through the generic structure mutation', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

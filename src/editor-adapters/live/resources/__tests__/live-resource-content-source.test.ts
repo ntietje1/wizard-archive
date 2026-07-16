@@ -89,7 +89,7 @@ describe('LiveResourceContentSource', () => {
     expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId })
 
     const content = {
-      assetId: null,
+      attachment: 'unattached' as const,
       classification: 'inert_file' as const,
       byteSize: 0,
       detectedFormat: null,

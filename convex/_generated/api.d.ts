@@ -52,7 +52,7 @@ import type * as functions from "../functions.js";
 import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
 import type * as resources_actions from "../resources/actions.js";
-import type * as resources_fileCreation from "../resources/fileCreation.js";
+import type * as resources_fileUpload from "../resources/fileUpload.js";
 import type * as resources_functions_ConvexResourceCatalog from "../resources/functions/ConvexResourceCatalog.js";
 import type * as resources_functions_assetContent from "../resources/functions/assetContent.js";
 import type * as resources_functions_assetContentState from "../resources/functions/assetContentState.js";
@@ -63,6 +63,7 @@ import type * as resources_functions_contentVersion from "../resources/functions
 import type * as resources_functions_executeBookmarkCommand from "../resources/functions/executeBookmarkCommand.js";
 import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
+import type * as resources_functions_fileSourceInspection from "../resources/functions/fileSourceInspection.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
 import type * as resources_functions_loadFileDownload from "../resources/functions/loadFileDownload.js";
 import type * as resources_functions_loadNoteContent from "../resources/functions/loadNoteContent.js";
@@ -174,7 +175,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   httpBridge: typeof httpBridge;
   "resources/actions": typeof resources_actions;
-  "resources/fileCreation": typeof resources_fileCreation;
+  "resources/fileUpload": typeof resources_fileUpload;
   "resources/functions/ConvexResourceCatalog": typeof resources_functions_ConvexResourceCatalog;
   "resources/functions/assetContent": typeof resources_functions_assetContent;
   "resources/functions/assetContentState": typeof resources_functions_assetContentState;
@@ -185,6 +186,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/executeBookmarkCommand": typeof resources_functions_executeBookmarkCommand;
   "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
   "resources/functions/fileContent": typeof resources_functions_fileContent;
+  "resources/functions/fileSourceInspection": typeof resources_functions_fileSourceInspection;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
   "resources/functions/loadFileDownload": typeof resources_functions_loadFileDownload;
   "resources/functions/loadNoteContent": typeof resources_functions_loadNoteContent;

@@ -7,8 +7,7 @@ import { loadCanvasContentDeletion } from './canvasContent'
 import { loadFileContentDeletion } from './fileContent'
 import { loadMapContentRows } from './mapContent'
 import { loadNoteContentDeletion } from './noteContent'
-import { fileAssetIds, mapAssetIds } from './assetContent'
-import { internal } from '../../_generated/api'
+import { fileAssetIds, mapAssetIds, queueAssetRetirements } from './assetContent'
 import { literals } from 'convex-helpers/validators'
 import { CAMPAIGN_DELETION_BATCH_SIZE } from '../../campaigns/constants'
 
@@ -170,43 +169,6 @@ export async function applyResourceDeletion(
 ): Promise<void> {
   await Promise.all(rowGroups(plan).flatMap((rows) => rows.map((row) => ctx.db.delete(row._id))))
   await queueAssetRetirements(ctx, plan.retirementAssetUuids)
-}
-
-async function queueAssetRetirements(
-  ctx: ResourceDeletionCtx,
-  retirementAssetUuids: ReadonlySet<AssetId>,
-) {
-  const createdAt = Date.now()
-  const assets = [...retirementAssetUuids]
-  const existing = await Promise.all(
-    assets.map((assetUuid) =>
-      ctx.db
-        .query('resourceAssetRetirementCandidates')
-        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
-        .unique(),
-    ),
-  )
-  const candidateIds = await Promise.all(
-    assets.map(
-      async (assetUuid, index) =>
-        existing[index]?._id ??
-        (await ctx.db.insert('resourceAssetRetirementCandidates', {
-          assetUuid,
-          status: 'pending',
-          attempts: 0,
-          lastAttemptAt: null,
-          lastError: null,
-          createdAt,
-        })),
-    ),
-  )
-  await Promise.all(
-    candidateIds.map((candidateId) =>
-      ctx.scheduler.runAfter(0, internal.resources.internalActions.processAssetRetirement, {
-        candidateId,
-      }),
-    ),
-  )
 }
 
 const CAMPAIGN_RESOURCE_DELETION_STAGES = [

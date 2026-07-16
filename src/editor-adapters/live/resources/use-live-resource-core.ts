@@ -155,6 +155,7 @@ function createScopedLiveResourceRuntime(
         await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
       },
       refresh,
+      replace: (args) => convex.action(api.resources.actions.replaceFileContent, args),
       upload: async (source) => {
         const { sessionId, uploadUrl } = await convex.mutation(
           api.storage.mutations.createUploadSession,

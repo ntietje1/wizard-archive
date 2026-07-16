@@ -239,7 +239,7 @@ describe('authorized resource projection', () => {
         status: 'ready',
         kind: 'file',
         content: {
-          assetId: expect.any(String),
+          attachment: 'attached',
           classification: 'inert_file',
           byteSize: 1,
           detectedFormat: null,

@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { internalQuery } from '../_generated/server'
-import { authenticate, checkCampaignMembership } from '../functions'
+import { authenticate, checkDmMembership } from '../functions'
 import { findCampaignRow } from '../campaigns/functions/campaignIdentity'
 
-export const prepareFileResourceCreation = internalQuery({
+export const prepareFileUpload = internalQuery({
   args: {
     campaignId: v.string(),
     uploadSessionId: v.id('fileStorage'),
@@ -19,7 +19,7 @@ export const prepareFileResourceCreation = internalQuery({
     const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId)
     const campaign = await findCampaignRow(ctx, campaignId)
     if (!campaign) throw new TypeError('Campaign is unavailable')
-    await checkCampaignMembership({ ...ctx, user }, campaign._id)
+    await checkDmMembership({ ...ctx, user }, campaign._id)
     const upload = await ctx.db.get('fileStorage', args.uploadSessionId)
     if (
       !upload ||

@@ -51,7 +51,7 @@ describe('FileViewer', () => {
       <FileViewer
         canEdit
         content={fileContent({
-          assetId: testDomainId('asset', 'viewer-image'),
+          attachment: 'attached',
           byteSize: bytes.byteLength,
           classification: 'viewable_image',
           detectedFormat: 'png',
@@ -83,7 +83,7 @@ describe('FileViewer', () => {
     render(
       <FileViewer
         canEdit={false}
-        content={fileContent({ assetId: null })}
+        content={fileContent({ attachment: 'unattached' })}
         resourceId={testDomainId('resource', 'viewer-empty')}
         source={fileSource(exportFile)}
         title="Empty"
@@ -110,7 +110,7 @@ describe('FileViewer', () => {
       <FileViewer
         canEdit
         content={fileContent({
-          assetId: testDomainId('asset', 'viewer-retry'),
+          attachment: 'attached',
           byteSize: bytes.byteLength,
           extension: 'txt',
           mediaType: 'text/plain',
@@ -125,26 +125,130 @@ describe('FileViewer', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(exportFile).toHaveBeenCalledTimes(2))
-    expect(await screen.findByRole('link', { name: 'Download file' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Download' })).toHaveAttribute(
       'download',
       'Notes.txt',
     )
   })
+
+  it('replaces an attached file through the focused content operation', async () => {
+    const bytes = new TextEncoder().encode('original')
+    const replacementBytes = new TextEncoder().encode('replacement')
+    const version = initialVersion(await sha256Digest(bytes))
+    const nextVersion = initialVersion(await sha256Digest(replacementBytes))
+    const replace = vi.fn<FileContentSource['replace']>(() =>
+      Promise.resolve({
+        status: 'completed',
+        content: fileContent({ attachment: 'attached', byteSize: replacementBytes.byteLength }),
+        version: nextVersion,
+      }),
+    )
+    const file = new File([replacementBytes], 'replacement.txt', { type: 'text/plain' })
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: () => Promise.resolve(replacementBytes.buffer),
+    })
+    render(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'attached', byteSize: bytes.byteLength })}
+        resourceId={testDomainId('resource', 'viewer-replace')}
+        source={fileSource(
+          () => ({ status: 'ready', bytes, extension: 'txt', mediaType: 'text/plain' }),
+          replace,
+        )}
+        title="Evidence"
+        version={version}
+      />,
+    )
+
+    fireEvent.change(await screen.findByLabelText('Choose file replacement'), {
+      target: { files: [file] },
+    })
+
+    await waitFor(() => expect(replace).toHaveBeenCalledOnce())
+    expect(replace).toHaveBeenCalledWith(
+      testDomainId('resource', 'viewer-replace'),
+      version,
+      expect.objectContaining({ fileName: 'replacement.txt' }),
+    )
+    expect(Array.from(replace.mock.calls[0]![2].bytes)).toEqual(Array.from(replacementBytes))
+  })
+
+  it('supports empty-file drops and retries the same candidate after an uncertain response', async () => {
+    const bytes = new TextEncoder().encode('replacement')
+    const version = initialVersion(await sha256Digest(new Uint8Array()))
+    const replace = vi
+      .fn<FileContentSource['replace']>()
+      .mockResolvedValueOnce({ status: 'retryable', reason: 'response_lost' })
+      .mockResolvedValueOnce({
+        status: 'completed',
+        content: fileContent({ attachment: 'attached', byteSize: bytes.byteLength }),
+        version: initialVersion(await sha256Digest(bytes)),
+      })
+    const file = new File([bytes], 'replacement.txt', { type: 'text/plain' })
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(bytes.buffer) })
+    render(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={testDomainId('resource', 'viewer-drop')}
+        source={fileSource(vi.fn(), replace)}
+        title="Empty"
+        version={version}
+      />,
+    )
+
+    fireEvent.drop(screen.getByLabelText('File content'), { dataTransfer: { files: [file] } })
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The file replacement could not be confirmed.',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(2))
+    expect(replace.mock.calls[1]![2]).toBe(replace.mock.calls[0]![2])
+  })
+
+  it('rejects unsupported replacements before reading or uploading them', async () => {
+    const replace = vi.fn<FileContentSource['replace']>()
+    const file = new File(['binary'], 'malware.exe', { type: 'application/octet-stream' })
+    const arrayBuffer = vi.fn()
+    Object.defineProperty(file, 'arrayBuffer', { value: arrayBuffer })
+    render(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={testDomainId('resource', 'viewer-invalid')}
+        source={fileSource(vi.fn(), replace)}
+        title="Empty"
+        version={initialVersion(await sha256Digest(new Uint8Array()))}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose file replacement'), {
+      target: { files: [file] },
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('Please upload a valid file type')
+    expect(arrayBuffer).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+  })
 })
 
-function fileSource(exportFile: FileContentSource['export']): FileContentSource {
+function fileSource(
+  exportFile: FileContentSource['export'],
+  replace: FileContentSource['replace'] = vi.fn(),
+): FileContentSource {
   return {
     create: vi.fn(),
     dispose: vi.fn(),
     export: exportFile,
     get: vi.fn(() => ({ status: 'loading' as const })),
+    replace,
     subscribe: vi.fn(() => () => undefined),
   }
 }
 
 function fileContent(overrides: Partial<FileResourceContent>): FileResourceContent {
   return {
-    assetId: testDomainId('asset', 'viewer-default'),
+    attachment: 'attached',
     byteSize: 0,
     classification: 'inert_file',
     detectedFormat: null,

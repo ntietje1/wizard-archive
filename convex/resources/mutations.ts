@@ -8,13 +8,18 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import {
+  advanceVersion,
+  assertSha256Digest,
+  assertVersionStamp,
+  versionStampEquals,
+} from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { FileOwnedMetadata } from '@wizard-archive/editor/resources/file-content-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignInternalMutation, campaignMutation, dmMutation } from '../functions'
-import type { CampaignMutationCtx } from '../functions'
+import type { CampaignInternalMutationCtx, CampaignMutationCtx } from '../functions'
 import type { Doc, Id } from '../_generated/dataModel'
 import {
   executeStructureCommand as executeStructureCommandFn,
@@ -22,6 +27,7 @@ import {
 } from './functions/executeStructureCommand'
 import {
   fileOwnedMetadataValidators,
+  fileContentReplaceResultValidator,
   resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
@@ -45,6 +51,8 @@ import { createNoteContent, prepareNoteContentCreation } from './functions/noteC
 import { createMapContent } from './functions/mapContent'
 import { createCanvasContent } from './functions/canvasContent'
 import { syncNoteSearchProjection } from './functions/resourceSearchProjection'
+import { authorizeResourceContent } from './functions/authorizeResourceContent'
+import { queueAssetRetirements } from './functions/assetContent'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -53,6 +61,8 @@ type StoredResourceCommandReceipt = Extract<
   { status: 'completed' }
 >['receipt']
 type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValidator>
+type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
+type StoredVersionStamp = Infer<typeof versionStampValidator>
 
 type FileCreationIdentity = Readonly<{
   campaignId: CampaignId
@@ -83,16 +93,27 @@ function existingFileContentMatches(
   )
 }
 
-function assertCommittedFileIdentity(
-  upload: Awaited<ReturnType<typeof commitUpload>>,
+function fileMetadataMatches(
+  content: Doc<'resourceFileContents'>,
   metadata: FileOwnedMetadata,
-  version: VersionStamp,
-): void {
-  if (
-    upload.assetId === null ||
-    upload.metadata.size !== metadata.byteSize ||
-    version.revision !== 1
-  ) {
+): boolean {
+  return (
+    content.byteSize === metadata.byteSize &&
+    content.classification === metadata.classification &&
+    content.detectedFormat === metadata.detectedFormat &&
+    content.extension === metadata.extension &&
+    content.mediaType === metadata.mediaType &&
+    content.viewerUnavailableReason === metadata.viewerUnavailableReason
+  )
+}
+
+type CommittedUpload = Awaited<ReturnType<typeof commitUpload>>
+
+function assertCommittedFileMetadata(
+  upload: CommittedUpload,
+  metadata: FileOwnedMetadata,
+): asserts upload is CommittedUpload & { assetId: AssetId } {
+  if (upload.assetId === null || upload.metadata.size !== metadata.byteSize) {
     throw new TypeError('Uploaded file metadata is inconsistent')
   }
 }
@@ -425,7 +446,8 @@ export const commitFileResourceCreation = campaignInternalMutation({
 
     const upload = await commitUpload(ctx, { sessionId: args.uploadSessionId })
     const version = assertVersionStamp(args.version)
-    assertCommittedFileIdentity(upload, args.metadata, version)
+    if (version.revision !== 1) throw new TypeError('Initial file version must be revision 1')
+    assertCommittedFileMetadata(upload, args.metadata)
     await Promise.all([
       ctx.db.insert('resourceFileContents', {
         campaignUuid: ctx.resourceScope.campaignId,
@@ -444,3 +466,167 @@ export const commitFileResourceCreation = campaignInternalMutation({
     return storedResult(result)
   },
 })
+
+export const commitFileContentReplacement = campaignInternalMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    expectedVersion: versionStampValidator,
+    uploadSessionId: v.id('fileStorage'),
+    metadata: v.object(fileOwnedMetadataValidators),
+    digest: v.string(),
+  },
+  returns: fileContentReplaceResultValidator,
+  handler: async (ctx, args): Promise<StoredFileContentReplaceResult> =>
+    await replaceFileContent(ctx, args),
+})
+
+type FileContentReplacementArgs = Readonly<{
+  resourceId: string
+  expectedVersion: StoredVersionStamp
+  uploadSessionId: Id<'fileStorage'>
+  metadata: FileOwnedMetadata
+  digest: string
+}>
+
+type PreparedFileContentReplacement = Readonly<{
+  status: 'prepared'
+  resourceId: ResourceId
+  content: Doc<'resourceFileContents'>
+  previousAssetId: AssetId | null
+  previousOwner: Doc<'resourceAssetOwners'> | null
+  version: VersionStamp
+}>
+
+async function replaceFileContent(
+  ctx: CampaignInternalMutationCtx,
+  args: FileContentReplacementArgs,
+): Promise<StoredFileContentReplaceResult> {
+  const prepared = await prepareFileContentReplacement(ctx, args)
+  if (prepared.status !== 'prepared') return prepared
+  return await commitPreparedFileContentReplacement(ctx, args, prepared)
+}
+
+async function prepareFileContentReplacement(
+  ctx: CampaignInternalMutationCtx,
+  args: FileContentReplacementArgs,
+): Promise<PreparedFileContentReplacement | StoredFileContentReplaceResult> {
+  const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'file')
+  if (authorization.status !== 'authorized') return rejectedFileReplacement('unauthorized')
+  const content = await ctx.db
+    .query('resourceFileContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+  if (!content) return rejectedFileReplacement('content_missing')
+  if (content.campaignUuid !== ctx.resourceScope.campaignId || content.state === 'failed') {
+    return rejectedFileReplacement('content_corrupt')
+  }
+  if (content.state === 'initializing') {
+    return { status: 'retryable', reason: 'content_initializing' }
+  }
+  const digest = assertSha256Digest(args.digest)
+  const replay = fileReplacementReplay(
+    content,
+    await ctx.db.get('fileStorage', args.uploadSessionId),
+    args.metadata,
+    digest,
+  )
+  if (replay) return replay
+  const version = fileReplacementVersion(content.version, args.expectedVersion, digest)
+  if ('status' in version) return version
+  const ownership = await loadFileReplacementOwnership(ctx, resourceId, content.assetUuid)
+  if (ownership === 'corrupt') return rejectedFileReplacement('content_corrupt')
+  return { status: 'prepared', resourceId, content, version, ...ownership }
+}
+
+function fileReplacementReplay(
+  content: Doc<'resourceFileContents'>,
+  upload: Doc<'fileStorage'> | null,
+  metadata: FileOwnedMetadata,
+  digest: string,
+): StoredFileContentReplaceResult | null {
+  const matches =
+    upload?.status === 'committed' &&
+    upload.assetUuid === content.assetUuid &&
+    content.version.digest === digest &&
+    fileMetadataMatches(content, metadata)
+  return matches
+    ? {
+        status: 'completed',
+        content: { attachment: 'attached', ...metadata },
+        version: content.version,
+      }
+    : null
+}
+
+function fileReplacementVersion(
+  currentValue: unknown,
+  expectedValue: unknown,
+  digest: ReturnType<typeof assertSha256Digest>,
+): VersionStamp | StoredFileContentReplaceResult {
+  const current = assertVersionStamp(currentValue)
+  const expected = assertVersionStamp(expectedValue)
+  if (!versionStampEquals(current, expected)) return rejectedFileReplacement('version_conflict')
+  if (current.revision === Number.MAX_SAFE_INTEGER && current.digest !== digest) {
+    return rejectedFileReplacement('version_exhausted')
+  }
+  return advanceVersion(current, digest)
+}
+
+async function loadFileReplacementOwnership(
+  ctx: CampaignInternalMutationCtx,
+  resourceId: ResourceId,
+  assetUuid: string | null,
+): Promise<
+  | 'corrupt'
+  | Readonly<{
+      previousAssetId: AssetId | null
+      previousOwner: Doc<'resourceAssetOwners'> | null
+    }>
+> {
+  if (assetUuid === null) return { previousAssetId: null, previousOwner: null }
+  const previousAssetId = assertDomainId(DOMAIN_ID_KIND.asset, assetUuid)
+  const previousOwner = await ctx.db
+    .query('resourceAssetOwners')
+    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', previousAssetId))
+    .unique()
+  return previousOwner?.campaignUuid === ctx.resourceScope.campaignId &&
+    previousOwner.resourceUuid === resourceId
+    ? { previousAssetId, previousOwner }
+    : 'corrupt'
+}
+
+async function commitPreparedFileContentReplacement(
+  ctx: CampaignInternalMutationCtx,
+  args: FileContentReplacementArgs,
+  prepared: PreparedFileContentReplacement,
+): Promise<StoredFileContentReplaceResult> {
+  const committed = await commitUpload(ctx, { sessionId: args.uploadSessionId })
+  assertCommittedFileMetadata(committed, args.metadata)
+  await ctx.db.patch('resourceFileContents', prepared.content._id, {
+    assetUuid: committed.assetId,
+    state: 'ready',
+    ...args.metadata,
+    version: prepared.version,
+  })
+  if (prepared.previousOwner) await ctx.db.delete(prepared.previousOwner._id)
+  await ctx.db.insert('resourceAssetOwners', {
+    campaignUuid: ctx.resourceScope.campaignId,
+    resourceUuid: prepared.resourceId,
+    assetUuid: committed.assetId,
+  })
+  if (prepared.previousAssetId) {
+    await queueAssetRetirements(ctx, new Set([prepared.previousAssetId]))
+  }
+  return {
+    status: 'completed',
+    content: { attachment: 'attached', ...args.metadata },
+    version: prepared.version,
+  }
+}
+
+function rejectedFileReplacement(
+  reason: Extract<StoredFileContentReplaceResult, { status: 'rejected' }>['reason'],
+): StoredFileContentReplaceResult {
+  return { status: 'rejected', reason }
+}

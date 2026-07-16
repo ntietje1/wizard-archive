@@ -1,9 +1,14 @@
 import * as Y from 'yjs'
 import { encodeWizardCanvasDocument } from '../canvas/native-document'
 import { noteDocumentToMarkdown } from '../notes/document/markdown'
-import { initialFileContentVersion, initialNoteContentVersion } from './resource-content-version'
-import { initialVersion, sha256Digest } from './component-version'
+import {
+  advanceFileContentVersion,
+  initialFileContentVersion,
+  initialNoteContentVersion,
+} from './resource-content-version'
+import { initialVersion, sha256Digest, versionStampEquals } from './component-version'
 import type { VersionStamp } from './component-version'
+import type { FileOwnedMetadata } from './file-content-contract'
 import type {
   CanvasSessionSource,
   CanvasSessionState,
@@ -16,6 +21,7 @@ import type {
   CreateNoteResourceCommand,
   FileContentSource,
   FileContentState,
+  FileContentReplaceResult,
   FileResourceSource,
   FileResourceContent,
   MapResourceContent,
@@ -250,11 +256,32 @@ class InMemoryFileContentSource
     }
     this.setReady(
       envelope.command.resourceId,
-      { ...metadata, assetId: null },
+      { ...metadata, attachment: 'attached' },
       await initialFileContentVersion(source.bytes, metadata),
       source.bytes,
     )
     return delivery
+  }
+
+  async replace(
+    resourceId: ResourceId,
+    expectedVersion: VersionStamp,
+    source: FileResourceSource,
+  ): Promise<FileContentReplaceResult> {
+    const current = this.get(resourceId)
+    if (current.status !== 'ready') return unavailableInMemoryFileReplacement(current)
+    if (!versionStampEquals(current.version, expectedVersion)) {
+      return { status: 'rejected', reason: 'version_conflict' }
+    }
+    const metadata = classifyFileResourceSource(source)
+    if (metadata.classification === 'rejected') {
+      return { status: 'rejected', reason: 'invalid_file' }
+    }
+    const version = await nextInMemoryFileVersion(current.version, source.bytes, metadata)
+    if ('status' in version) return version
+    const content = { ...metadata, attachment: 'attached' as const }
+    this.setReady(resourceId, content, version, source.bytes)
+    return { status: 'completed', content, version }
   }
 
   readBytes(resourceId: ResourceId): Uint8Array {
@@ -277,6 +304,43 @@ class InMemoryFileContentSource
   override dispose(): void {
     this.#bytes.clear()
     super.dispose()
+  }
+}
+
+function unavailableInMemoryFileReplacement(
+  state: Exclude<FileContentState, { status: 'ready' }>,
+): FileContentReplaceResult {
+  switch (state.status) {
+    case 'loading':
+    case 'initializing':
+      return { status: 'retryable', reason: 'content_initializing' }
+    case 'unavailable':
+      return {
+        status: 'rejected',
+        reason: state.reason === 'unauthorized' ? 'unauthorized' : 'resource_missing',
+      }
+    case 'integrity_error':
+      return {
+        status: 'rejected',
+        reason:
+          state.issue === 'content_missing' || state.issue === 'version_exhausted'
+            ? state.issue
+            : 'content_corrupt',
+      }
+  }
+}
+
+async function nextInMemoryFileVersion(
+  current: VersionStamp,
+  bytes: Uint8Array,
+  metadata: FileOwnedMetadata,
+): Promise<VersionStamp | FileContentReplaceResult> {
+  try {
+    return await advanceFileContentVersion(current, bytes, metadata)
+  } catch (error) {
+    return error instanceof RangeError
+      ? { status: 'rejected', reason: 'version_exhausted' }
+      : { status: 'rejected', reason: 'content_corrupt' }
   }
 }
 

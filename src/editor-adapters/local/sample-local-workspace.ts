@@ -130,7 +130,7 @@ export function createSampleLocalWorkspaceFixture({
           resourceId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
           bytes: SAMPLE_FILE_BYTES,
           content: {
-            assetId: null,
+            attachment: 'attached',
             byteSize: SAMPLE_FILE_BYTES.byteLength,
             classification: FILE_CLASSIFICATION.inert,
             detectedFormat: null,
