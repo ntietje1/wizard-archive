@@ -1,7 +1,9 @@
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignQueryCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { loadFileContentState } from './fileContent'
+import { loadCommittedAssetUrl } from './assetContent'
 
 export async function loadFileDownload(ctx: CampaignQueryCtx, resourceId: ResourceId) {
   const authorization = await authorizeResourceContent(ctx, resourceId, 'file')
@@ -15,14 +17,10 @@ export async function loadFileDownload(ctx: CampaignQueryCtx, resourceId: Resour
       ? { status: 'ready' as const, url: null, version: content.version }
       : { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
   }
-  const storage = await ctx.db
-    .query('fileStorage')
-    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', content.assetUuid))
-    .unique()
-  if (!storage || storage.status !== 'committed') {
-    return { status: 'integrity_error' as const, issue: 'content_missing' as const }
-  }
-  const url = await ctx.storage.getUrl(storage.storageId)
+  const url = await loadCommittedAssetUrl(
+    ctx,
+    assertDomainId(DOMAIN_ID_KIND.asset, content.assetUuid),
+  )
   return url
     ? { status: 'ready' as const, url, version: content.version }
     : { status: 'integrity_error' as const, issue: 'content_missing' as const }

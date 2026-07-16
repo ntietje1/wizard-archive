@@ -9,7 +9,11 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignInternalMutationCtx, CampaignMutationCtx } from '../../functions'
+import type {
+  CampaignInternalMutationCtx,
+  CampaignMutationCtx,
+  CampaignQueryCtx,
+} from '../../functions'
 import { internal } from '../../_generated/api'
 import type { Doc, Id } from '../../_generated/dataModel'
 import { commitUpload } from '../../storage/functions/commitUpload'
@@ -83,6 +87,29 @@ export async function commitResourceUploadClaim(
     assetUuid: claim.assetId,
   })
   return upload
+}
+
+export async function loadResourceAssetOwnership(
+  ctx: Pick<CampaignInternalMutationCtx, 'db'>,
+  campaignId: CampaignId,
+  resourceId: ResourceId,
+  assetUuid: string | null,
+): Promise<
+  | 'corrupt'
+  | Readonly<{
+      previousAssetId: AssetId | null
+      previousOwner: Doc<'resourceAssetOwners'> | null
+    }>
+> {
+  if (assetUuid === null) return { previousAssetId: null, previousOwner: null }
+  const previousAssetId = assertDomainId(DOMAIN_ID_KIND.asset, assetUuid)
+  const previousOwner = await ctx.db
+    .query('resourceAssetOwners')
+    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', previousAssetId))
+    .unique()
+  return previousOwner?.campaignUuid === campaignId && previousOwner.resourceUuid === resourceId
+    ? { previousAssetId, previousOwner }
+    : 'corrupt'
 }
 
 export type PreparedAssetCopies = Readonly<{
@@ -170,12 +197,26 @@ export function fileAssetIds(content: { assetUuid: string | null }): Array<Asset
 }
 
 export function mapAssetIds(content: {
-  imageAssetUuid: string | null
-  layers: ReadonlyArray<{ imageAssetUuid: string | null }>
+  image: { assetUuid: string } | null
+  layers: ReadonlyArray<{ image: { assetUuid: string } | null }>
 }): Array<AssetId> {
-  return [content.imageAssetUuid, ...content.layers.map((layer) => layer.imageAssetUuid)]
+  return [
+    content.image?.assetUuid ?? null,
+    ...content.layers.map((layer) => layer.image?.assetUuid ?? null),
+  ]
     .filter((assetUuid): assetUuid is string => assetUuid !== null)
     .map((assetUuid) => assertDomainId(DOMAIN_ID_KIND.asset, assetUuid))
+}
+
+export async function loadCommittedAssetUrl(
+  ctx: Pick<CampaignQueryCtx, 'db' | 'storage'>,
+  assetId: AssetId,
+): Promise<string | null> {
+  const storage = await ctx.db
+    .query('fileStorage')
+    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetId))
+    .unique()
+  return storage?.status === 'committed' ? await ctx.storage.getUrl(storage.storageId) : null
 }
 
 export async function queueAssetRetirements(

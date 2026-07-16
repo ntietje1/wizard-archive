@@ -1,9 +1,8 @@
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignQueryCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
-import { loadPendingAssetState } from './assetContentState'
 import { loadFileContentState } from './fileContent'
-import { loadMapContentRows } from './mapContent'
+import { loadMapContentState } from './mapContent'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 
 type ResourceContentKind = 'file' | 'map' | 'canvas'
@@ -29,39 +28,13 @@ async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
 }
 
 async function loadMapContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
-  const { content, pins } = await loadMapContentRows(ctx.db, resourceId)
-  if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
-  if (
-    content.campaignUuid !== ctx.resourceScope.campaignId ||
-    pins.length > 500 ||
-    pins.some(
-      (pin) => pin.campaignUuid !== content.campaignUuid || pin.mapResourceUuid !== resourceId,
-    )
-  ) {
-    return { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
-  }
-  const pending = await loadPendingAssetState(ctx, resourceId, content.state)
-  if (pending) return pending
+  const rows = await loadMapContentState(ctx, resourceId)
+  if (rows.status !== 'ready') return rows
   return {
     status: 'ready' as const,
     kind: 'map' as const,
-    content: {
-      imageAssetId: content.imageAssetUuid,
-      layers: content.layers.map((layer) => ({
-        id: layer.id,
-        imageAssetId: layer.imageAssetUuid,
-        name: layer.name,
-      })),
-      pins: pins.map((pin) => ({
-        id: pin.mapPinUuid,
-        destination: pin.destination,
-        layerId: pin.layerId,
-        x: pin.x,
-        y: pin.y,
-        visible: pin.visible,
-      })),
-    },
-    version: content.version,
+    content: rows.projected,
+    version: rows.content.version,
   }
 }
 

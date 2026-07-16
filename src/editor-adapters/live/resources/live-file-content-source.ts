@@ -63,7 +63,7 @@ export function createLiveFileContentSource(
   backend: LiveFileContentBackend,
   beginCreate: () => ResourceHistoryRecording,
 ): FileContentSource {
-  const content = createLiveResourceContentSource('file', backend)
+  const content = createLiveResourceContentSource(backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
   return {
     get: content.get,

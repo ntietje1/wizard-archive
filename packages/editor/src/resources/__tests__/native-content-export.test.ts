@@ -84,11 +84,15 @@ describe('native content exports', () => {
   })
 
   it('encodes one versioned wizardmap document', () => {
-    const bytes = encodeWizardMapDocument({ imageAssetId: null, layers: [], pins: [] })
+    const bytes = encodeWizardMapDocument({
+      image: { status: 'unattached' },
+      layers: [],
+      pins: [],
+    })
 
     expect(JSON.parse(new TextDecoder().decode(bytes))).toEqual({
       version: WIZARD_MAP_DOCUMENT_VERSION,
-      content: { imageAssetId: null, layers: [], pins: [] },
+      content: { image: { status: 'unattached' }, layers: [], pins: [] },
     })
   })
 

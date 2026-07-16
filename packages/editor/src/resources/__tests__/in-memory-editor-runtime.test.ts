@@ -232,7 +232,7 @@ describe('createInMemoryEditorRuntime', () => {
     expect(core.runtime.content.maps.get(mapId)).toMatchObject({
       status: 'ready',
       session: {
-        content: { imageAssetId: null, layers: [], pins: [] },
+        content: { image: { status: 'unattached' }, layers: [], pins: [] },
         version: { revision: 1 },
       },
     })
@@ -398,7 +398,7 @@ describe('createInMemoryEditorRuntime', () => {
             resourceId: mapId,
             version,
             content: {
-              imageAssetId: null,
+              image: { status: 'unattached' },
               layers: [],
               pins: [
                 {

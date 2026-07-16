@@ -1,34 +1,27 @@
-import { Download, File as FileIcon, Upload } from 'lucide-react'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import type { DragEvent, ReactNode } from 'react'
+import { Download, File as FileIcon } from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   FILE_UPLOAD_ACCEPT_PATTERN,
   validateFileUpload,
 } from '../../../../shared/storage/validation'
-import type {
-  ContentExportResult,
-  FileContentSource,
-  FileResourceContent,
-  FileResourceSource,
-} from '../resources/content-session-contract'
+import type { FileContentSource, FileResourceContent } from '../resources/content-session-contract'
 import type { VersionStamp } from '../resources/component-version'
 import type { ResourceId } from '../resources/domain-id'
 import { FILE_CLASSIFICATION } from '../resources/file-content-contract'
 import { ImageFileViewer } from './image-file-viewer'
 import { MediaFileViewer } from './media-file-viewer'
+import { useAssetReplacement } from '../resources/asset-replacement'
+import type { AssetReplacementController } from '../resources/asset-replacement'
+import { AssetReplacementButton } from '../resources/asset-replacement-button'
+import { beginContentObjectUrlLoad } from '../resources/content-object-url'
+import type { ContentObjectUrlState } from '../resources/content-object-url'
 
 const PdfFileViewer = lazy(() =>
   import('./pdf-file-viewer').then(({ PdfFileViewer: Viewer }) => ({ default: Viewer })),
 )
 
-type FileBytesState =
-  | { readonly status: 'loading' }
-  | { readonly status: 'failed' }
-  | Exclude<ContentExportResult, { status: 'ready' }>
-  | Readonly<{
-      status: 'ready'
-      url: string
-    }>
+type FileBytesState = ContentObjectUrlState
 
 export function FileViewer({
   canEdit,
@@ -154,111 +147,26 @@ function AttachedFileViewer({
   )
 }
 
-type FileReplacementController = Readonly<{
-  canRetry: boolean
-  dragActive: boolean
-  failed: boolean
-  message: string | null
-  pending: boolean
-  choose(file: File): void
-  onDragLeave(event: DragEvent<HTMLDivElement>): void
-  onDragOver(event: DragEvent<HTMLDivElement>): void
-  onDrop(event: DragEvent<HTMLDivElement>): void
-  retry(): void
-}>
-
-type FileReplacementState =
-  | { readonly status: 'idle' }
-  | { readonly status: 'reading' }
-  | { readonly status: 'uploading'; readonly source: FileResourceSource }
-  | { readonly status: 'retry'; readonly message: string; readonly source: FileResourceSource }
-  | { readonly status: 'failed'; readonly message: string }
+type FileReplacementController = AssetReplacementController
 
 function useFileReplacement(
   source: FileContentSource,
   resourceId: ResourceId,
   version: VersionStamp,
 ): FileReplacementController {
-  const [dragActive, setDragActive] = useState(false)
-  const [state, setState] = useState<FileReplacementState>({ status: 'idle' })
-
-  const attempt = async (candidate: FileResourceSource) => {
-    setState({ status: 'uploading', source: candidate })
-    try {
-      const result = await source.replace(resourceId, version, candidate)
-      if (result.status === 'completed') {
-        setState({ status: 'idle' })
-        return
-      }
-      if (result.status === 'retryable' || result.reason === 'version_conflict') {
-        setState({
-          status: 'retry',
-          message: fileReplacementMessage(result.reason),
-          source: candidate,
-        })
-        return
-      }
-      setState({ status: 'failed', message: fileReplacementMessage(result.reason) })
-    } catch {
-      setState({
-        status: 'retry',
-        message: 'The file replacement could not be confirmed.',
-        source: candidate,
-      })
-    }
-  }
-
-  const choose = (file: File) => {
-    const validation = validateFileUpload(file.type || null, file.size, file.name)
-    if (!validation.valid) {
-      setState({ status: 'failed', message: validation.error })
-      return
-    }
-    setState({ status: 'reading' })
-    void file.arrayBuffer().then(
-      (buffer) => attempt({ bytes: new Uint8Array(buffer), fileName: file.name }),
-      () => setState({ status: 'failed', message: 'The selected file could not be read.' }),
-    )
-  }
-
-  return {
-    canRetry: state.status === 'retry',
-    dragActive,
-    failed: state.status === 'failed' || state.status === 'retry',
-    message:
-      state.status === 'reading'
-        ? 'Reading file…'
-        : state.status === 'uploading'
-          ? 'Uploading replacement…'
-          : state.status === 'retry' || state.status === 'failed'
-            ? state.message
-            : null,
-    pending: state.status === 'reading' || state.status === 'uploading' || state.status === 'retry',
-    choose,
-    onDragLeave: (event) => {
-      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false)
+  return useAssetReplacement({
+    replace: async (candidate) => await source.replace(resourceId, version, candidate),
+    validate: (file) => {
+      const result = validateFileUpload(file.type || null, file.size, file.name)
+      return result.valid ? null : result.error
     },
-    onDragOver: (event) => {
-      event.preventDefault()
-      setDragActive(true)
-    },
-    onDrop: (event) => {
-      event.preventDefault()
-      setDragActive(false)
-      const file = event.dataTransfer.files[0]
-      if (
-        file &&
-        state.status !== 'reading' &&
-        state.status !== 'uploading' &&
-        state.status !== 'retry'
-      ) {
-        choose(file)
-      }
-    },
-    retry: () => {
-      if (state.status === 'retry') void attempt(state.source)
-    },
-  }
+    message: (result) => fileReplacementMessage(result.reason),
+    retryable: (result) => result.status === 'retryable' || result.reason === 'version_conflict',
+    readingMessage: 'Reading file…',
+    uploadingMessage: 'Uploading replacement…',
+    readFailureMessage: 'The selected file could not be read.',
+    responseLostMessage: 'The file replacement could not be confirmed.',
+  })
 }
 
 function FileReplacementControl({
@@ -268,30 +176,16 @@ function FileReplacementControl({
   compact?: boolean
   replacement: FileReplacementController
 }) {
-  const input = useRef<HTMLInputElement>(null)
   return (
     <div className={compact ? '' : 'mt-4 flex flex-col items-center gap-2'}>
-      <button
-        type="button"
-        className="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-sm hover:bg-muted disabled:opacity-50"
-        disabled={replacement.pending}
-        onClick={() => input.current?.click()}
-      >
-        <Upload className="size-4" aria-hidden="true" />
-        {replacement.pending ? 'Replacing…' : compact ? 'Replace' : 'Choose file'}
-      </button>
-      <input
-        ref={input}
+      <AssetReplacementButton
         accept={FILE_UPLOAD_ACCEPT_PATTERN}
-        aria-label="Choose file replacement"
-        className="sr-only"
-        disabled={replacement.pending}
-        type="file"
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0]
-          event.currentTarget.value = ''
-          if (file) replacement.choose(file)
-        }}
+        ariaLabel="Choose file replacement"
+        compact={compact}
+        compactLabel="Replace"
+        fullLabel="Choose file"
+        pendingLabel="Replacing…"
+        replacement={replacement}
       />
       {!compact && (
         <p className="text-xs text-muted-foreground">
@@ -393,32 +287,7 @@ function useFileBytes(source: FileContentSource, resourceId: ResourceId, version
   const [state, setState] = useState<FileBytesState>({ status: 'loading' })
 
   useEffect(() => {
-    let active = true
-    let objectUrl: string | null = null
-    setState({ status: 'loading' })
-    void Promise.resolve(source.export(resourceId)).then(
-      (result) => {
-        if (!active) return
-        if (result.status !== 'ready') {
-          setState(result)
-          return
-        }
-        objectUrl = URL.createObjectURL(
-          new Blob([Uint8Array.from(result.bytes)], { type: result.mediaType }),
-        )
-        setState({
-          status: 'ready',
-          url: objectUrl,
-        })
-      },
-      () => {
-        if (active) setState({ status: 'failed' })
-      },
-    )
-    return () => {
-      active = false
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
+    return beginContentObjectUrlLoad(() => source.export(resourceId), setState)
   }, [attempt, resourceId, source, version.digest, version.revision, version.scheme])
 
   return { retry: () => setAttempt((current) => current + 1), state }

@@ -32,6 +32,7 @@ import { CanvasEditor } from '../../canvas/canvas-editor'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasPreviewSource } from '../content-session-contract'
 import { FileViewer } from '../../files/file-viewer'
+import { MapViewer } from '../../maps/map-viewer'
 
 export function ResourceViewport({
   actions,
@@ -85,15 +86,47 @@ export function ResourceViewport({
       return <FileViewport canEdit={canEdit} resource={resource} runtime={runtime} />
     case 'map':
       return (
-        <ResourceContentViewport
+        <MapViewport
+          actions={actions}
           canEdit={canEdit}
           resource={resource}
-          source={runtime.content.maps}
+          runtime={runtime}
+          snapshot={snapshot}
         />
       )
     case 'canvas':
       return <CanvasViewport canEdit={canEdit} resource={resource} runtime={runtime} />
   }
+}
+
+function MapViewport({
+  actions,
+  canEdit,
+  resource,
+  runtime,
+  snapshot,
+}: {
+  actions: WorkspaceActions
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+  snapshot: WorkspaceResourceIndexSnapshot
+}) {
+  const state = useContentSnapshot(runtime.content.maps, resource.id)
+  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
+  return (
+    <MapViewer
+      canEdit={canEdit}
+      mapResourceId={resource.id}
+      openResource={actions.open}
+      resolveResource={(resourceId) => {
+        const knowledge = snapshot.lookup(resourceId)
+        return knowledge.state === 'known' ? knowledge.value : null
+      }}
+      session={state.session}
+      title={resource.title}
+    />
+  )
 }
 
 function FileViewport({
@@ -182,36 +215,6 @@ function NoteViewport({
       document={state.session.document}
       label={`${resource.title} note editor`}
       mode="view"
-    />
-  )
-}
-
-type ResourceContentState =
-  | ReturnType<EditorRuntime['content']['maps']['get']>
-  | ReturnType<EditorRuntime['content']['canvases']['get']>
-
-type ResourceContentSource = Readonly<{
-  get(resourceId: AuthorizedResourceSummary['id']): ResourceContentState
-  subscribe(resourceId: AuthorizedResourceSummary['id'], listener: () => void): () => void
-}>
-
-function ResourceContentViewport({
-  canEdit,
-  resource,
-  source,
-}: {
-  canEdit: boolean
-  resource: AuthorizedResourceSummary
-  source: ResourceContentSource
-}) {
-  const state = useContentSnapshot(source, resource.id)
-  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
-  return (
-    <div
-      aria-label={`${resourceKindLabel(resource.kind)} content`}
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
-      data-resource-kind={resource.kind}
-      data-workspace-mode={canEdit ? 'editor' : 'viewer'}
     />
   )
 }

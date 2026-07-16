@@ -5,6 +5,7 @@ import type { Doc } from '../_generated/dataModel'
 import { internalQuery } from '../_generated/server'
 import type { QueryCtx } from '../_generated/server'
 import { assetIdValidator, resourceIdValidator } from './validators'
+import { mapAssetIds } from './functions/assetContent'
 
 const MAX_DIAGNOSTIC_PAGE_SIZE = 100
 
@@ -173,8 +174,8 @@ async function ownerIsCurrent(ctx: QueryCtx, owner: Doc<'resourceAssetOwners'>):
   ])
   const referenced =
     file?.assetUuid === owner.assetUuid ||
-    map?.imageAssetUuid === owner.assetUuid ||
-    map?.layers.some((layer) => layer.imageAssetUuid === owner.assetUuid)
+    map?.image?.assetUuid === owner.assetUuid ||
+    map?.layers.some((layer) => layer.image?.assetUuid === owner.assetUuid)
   const ready = file?.state === 'ready' || map?.state === 'ready'
   return Boolean(referenced && (!ready || storage?.status === 'committed'))
 }
@@ -272,10 +273,7 @@ async function diagnoseDanglingMapAsset(ctx: QueryCtx, pagination: DiagnosticPag
   const page = await ctx.db.query('resourceMapContents').order('asc').paginate(pagination)
   const issues: Array<IntegrityIssue> = []
   for (const content of page.page) {
-    const assets = [
-      content.imageAssetUuid,
-      ...content.layers.map((layer) => layer.imageAssetUuid),
-    ].filter((assetUuid): assetUuid is NonNullable<typeof assetUuid> => assetUuid !== null)
+    const assets = mapAssetIds(content)
     const ownership = await Promise.all(
       assets.map(async (assetUuid) => ({
         assetUuid,

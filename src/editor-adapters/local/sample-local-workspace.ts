@@ -95,8 +95,8 @@ export function createSampleLocalWorkspaceFixture({
         {
           resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
           content: {
-            imageAssetId: null,
-            layers: [{ id: 'docks', imageAssetId: null, name: 'Moonwell Docks' }],
+            image: { status: 'unattached' },
+            layers: [{ id: 'docks', image: { status: 'unattached' }, name: 'Moonwell Docks' }],
             pins: [
               {
                 id: SAMPLE_MAP_PIN_IDS.market,

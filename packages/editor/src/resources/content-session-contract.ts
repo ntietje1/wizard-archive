@@ -1,8 +1,8 @@
 import type * as Y from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
 import type { AuthoredDestination } from './authored-destination-contract'
-import type { VersionStamp } from './component-version'
-import type { AssetId, CampaignMemberId, MapPinId, OperationId, ResourceId } from './domain-id'
+import type { Sha256Digest, VersionStamp } from './component-version'
+import type { CampaignMemberId, MapPinId, OperationId, ResourceId } from './domain-id'
 import type {
   CommandDelivery,
   CommandEnvelope,
@@ -114,12 +114,21 @@ export type FileContentReplaceResult =
         | 'version_exhausted'
     }>
 
+export type MapImageAttachment =
+  | Readonly<{ status: 'unattached' }>
+  | Readonly<{
+      status: 'attached'
+      byteSize: number
+      digest: Sha256Digest
+      mediaType: string
+    }>
+
 export type MapResourceContent = Readonly<{
-  imageAssetId: AssetId | null
+  image: MapImageAttachment
   layers: ReadonlyArray<
     Readonly<{
       id: string
-      imageAssetId: AssetId | null
+      image: MapImageAttachment
       name: string
     }>
   >
@@ -134,6 +143,74 @@ export type MapResourceContent = Readonly<{
     }>
   >
 }>
+
+export type MapContentMutationResult =
+  | Readonly<{
+      status: 'completed'
+      content: MapResourceContent
+      version: VersionStamp
+    }>
+  | Readonly<{
+      status: 'retryable'
+      reason: 'content_initializing' | 'response_lost'
+    }>
+  | Readonly<{
+      status: 'rejected'
+      reason:
+        | 'content_corrupt'
+        | 'content_missing'
+        | 'invalid_command'
+        | 'invalid_image'
+        | 'layer_missing'
+        | 'operation_id_reused'
+        | 'pin_missing'
+        | 'resource_missing'
+        | 'target_missing'
+        | 'unauthorized'
+        | 'version_conflict'
+        | 'version_exhausted'
+    }>
+
+export type MapContentCommand =
+  | Readonly<{
+      type: 'createPins'
+      pins: ReadonlyArray<
+        Readonly<{
+          id: MapPinId
+          destination: AuthoredDestination
+          layerId: string | null
+          x: number
+          y: number
+        }>
+      >
+    }>
+  | Readonly<{ type: 'movePin'; pinId: MapPinId; x: number; y: number }>
+  | Readonly<{ type: 'setPinVisibility'; pinId: MapPinId; visible: boolean }>
+  | Readonly<{ type: 'removePin'; pinId: MapPinId }>
+
+export function isMapPosition(position: { x: number; y: number }): boolean {
+  return (
+    Number.isFinite(position.x) &&
+    Number.isFinite(position.y) &&
+    position.x >= 0 &&
+    position.x <= 100 &&
+    position.y >= 0 &&
+    position.y <= 100
+  )
+}
+
+export interface MapSession {
+  readonly content: MapResourceContent
+  readonly version: VersionStamp
+  readonly awareness: SessionAwareness
+  execute(command: MapContentCommand): Promise<MapContentMutationResult>
+  loadImage(layerId: string | null): Promise<ContentExportResult>
+  replaceImage(
+    layerId: string | null,
+    source: FileResourceSource,
+  ): Promise<MapContentMutationResult>
+  dispose(): void
+}
 
 export type NoteSessionState =
   | ContentUnavailableState
@@ -155,11 +232,7 @@ export type MapSessionState =
   | ContentPendingState
   | {
       readonly status: 'ready'
-      readonly session: Readonly<{
-        content: MapResourceContent
-        version: VersionStamp
-        awareness: SessionAwareness
-      }>
+      readonly session: MapSession
     }
 
 export type CanvasSessionState =

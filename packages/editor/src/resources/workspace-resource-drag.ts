@@ -89,7 +89,7 @@ export async function finishWorkspaceResourceDrop(
   destinationParentId: ResourceId | null,
 ) {
   delete event.currentTarget.dataset.dropTarget
-  const drag = parseWorkspaceResourceDrag(event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
+  const drag = readWorkspaceResourceDrag(event.dataTransfer)
   if (!drag || (destinationParentId && drag.resourceIds.includes(destinationParentId))) return
   event.preventDefault()
   event.stopPropagation()
@@ -112,11 +112,22 @@ export async function finishWorkspaceTrashDrop(
   actions: WorkspaceActions,
 ) {
   delete event.currentTarget.dataset.dropTarget
-  const drag = parseWorkspaceResourceDrag(event.dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
+  const drag = readWorkspaceResourceDrag(event.dataTransfer)
   if (!drag || drag.lifecycle === 'trashed') return
   event.preventDefault()
   event.stopPropagation()
   await actions.changeLifecycle(drag.resourceIds, 'trash')
+}
+
+export function hasWorkspaceResourceDrag(dataTransfer: Pick<DataTransfer, 'types'>): boolean {
+  return Array.from(dataTransfer.types).includes(WORKSPACE_RESOURCE_DRAG_TYPE)
+}
+
+export function readWorkspaceResourceDrag(dataTransfer: Pick<DataTransfer, 'getData'>): Readonly<{
+  resourceIds: ReadonlyArray<ResourceId>
+  lifecycle: AuthorizedResourceSummary['lifecycle']
+}> | null {
+  return parseWorkspaceResourceDrag(dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
 }
 
 function parseWorkspaceResourceDrag(value: string): Readonly<{

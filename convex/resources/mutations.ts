@@ -28,6 +28,8 @@ import {
 import {
   fileOwnedMetadataValidators,
   fileContentReplaceResultValidator,
+  mapContentMutationResultValidator,
+  mapContentCommandValidator,
   resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
@@ -53,10 +55,13 @@ import { syncNoteSearchProjection } from './functions/resourceSearchProjection'
 import { authorizeResourceContent } from './functions/authorizeResourceContent'
 import {
   commitResourceUploadClaim,
+  loadResourceAssetOwnership,
   prepareResourceUploadClaim,
   queueAssetRetirements,
 } from './functions/assetContent'
 import type { ResourceUploadClaim } from './functions/assetContent'
+import { executeMapContentCommand as executeMapContentCommandFn } from './functions/executeMapContentCommand'
+import { replaceMapImage as replaceMapImageFn } from './functions/replaceMapImage'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -546,7 +551,12 @@ async function prepareFileContentReplacement(
   if (claim.status === 'claimed') return rejectedFileReplacement('invalid_file')
   const version = fileReplacementVersion(content.version, args.expectedVersion, digest)
   if ('status' in version) return version
-  const ownership = await loadFileReplacementOwnership(ctx, resourceId, content.assetUuid)
+  const ownership = await loadResourceAssetOwnership(
+    ctx,
+    ctx.resourceScope.campaignId,
+    resourceId,
+    content.assetUuid,
+  )
   if (ownership === 'corrupt') return rejectedFileReplacement('content_corrupt')
   return { status: 'prepared', resourceId, content, claim, version, ...ownership }
 }
@@ -586,28 +596,32 @@ function fileReplacementVersion(
   return advanceVersion(current, digest)
 }
 
-async function loadFileReplacementOwnership(
-  ctx: CampaignInternalMutationCtx,
-  resourceId: ResourceId,
-  assetUuid: string | null,
-): Promise<
-  | 'corrupt'
-  | Readonly<{
-      previousAssetId: AssetId | null
-      previousOwner: Doc<'resourceAssetOwners'> | null
-    }>
-> {
-  if (assetUuid === null) return { previousAssetId: null, previousOwner: null }
-  const previousAssetId = assertDomainId(DOMAIN_ID_KIND.asset, assetUuid)
-  const previousOwner = await ctx.db
-    .query('resourceAssetOwners')
-    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', previousAssetId))
-    .unique()
-  return previousOwner?.campaignUuid === ctx.resourceScope.campaignId &&
-    previousOwner.resourceUuid === resourceId
-    ? { previousAssetId, previousOwner }
-    : 'corrupt'
-}
+export const commitMapImageReplacement = campaignInternalMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    expectedVersion: versionStampValidator,
+    layerId: v.nullable(v.string()),
+    uploadSessionId: v.id('fileStorage'),
+    image: v.object({
+      byteSize: v.number(),
+      digest: v.string(),
+      mediaType: v.string(),
+    }),
+  },
+  returns: mapContentMutationResultValidator,
+  handler: async (ctx, args) => await replaceMapImageFn(ctx, args),
+})
+
+export const executeMapContentCommand = campaignMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    operationId: operationIdValidator,
+    expectedVersion: versionStampValidator,
+    command: mapContentCommandValidator,
+  },
+  returns: mapContentMutationResultValidator,
+  handler: async (ctx, args) => await executeMapContentCommandFn(ctx, args),
+})
 
 async function commitPreparedFileContentReplacement(
   ctx: CampaignInternalMutationCtx,

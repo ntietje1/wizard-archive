@@ -50,7 +50,9 @@ type ContentStores = Readonly<{
       bytes: Uint8Array,
     ): void
   }
-  maps: ContentStore<MapSessionState>
+  maps: ContentStore<MapSessionState> & {
+    setReady(resourceId: ResourceId, content: MapResourceContent, version: VersionStamp): void
+  }
   canvases: ContentStore<CanvasSessionState> & {
     setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void
   }
@@ -229,7 +231,7 @@ async function finalizeContentCopy(
       }
     case 'map': {
       const content = {
-        imageAssetId: entry.source.session.content.imageAssetId,
+        image: entry.source.session.content.image,
         layers: entry.source.session.content.layers.map((layer) => ({ ...layer })),
         pins: entry.source.session.content.pins.map((pin) => ({
           ...pin,
@@ -242,10 +244,7 @@ async function finalizeContentCopy(
       )
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.maps.set(entry.destinationId, {
-          status: 'ready',
-          session: { content, version, awareness: { status: 'unavailable' } },
-        })
+        stores.maps.setReady(entry.destinationId, content, version)
       }
     }
     case 'canvas': {

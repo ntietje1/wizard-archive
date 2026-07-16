@@ -7,10 +7,10 @@ export function encodeWizardMapDocument(content: MapResourceContent): Uint8Array
     JSON.stringify({
       version: WIZARD_MAP_DOCUMENT_VERSION,
       content: {
-        imageAssetId: content.imageAssetId,
+        image: content.image,
         layers: content.layers.map((layer) => ({
           id: layer.id,
-          imageAssetId: layer.imageAssetId,
+          image: layer.image,
           name: layer.name,
         })),
         pins: content.pins.map((pin) => ({

@@ -16,7 +16,7 @@ import {
 } from './live-resource-structure-gateway'
 import { createResourceUndoHistory } from '@wizard-archive/editor/resources/undo-history'
 import { createLiveNoteContentSource } from './live-note-content-source'
-import { createLiveMapSessionSource } from './live-resource-content-source'
+import { createLiveMapSessionSource } from './live-map-session-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
 import { createLiveCanvasSessionSource } from './live-canvas-session-source'
 import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
@@ -141,6 +141,28 @@ function createScopedLiveResourceRuntime(
       return subscribeToWatch(watch, apply)
     },
   })
+  const discardUpload = async (sessionId: Id<'fileStorage'>) => {
+    await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
+  }
+  const uploadFile = async (source: { bytes: Uint8Array; fileName: string }) => {
+    const { sessionId, uploadUrl } = await convex.mutation(
+      api.storage.mutations.createUploadSession,
+      {},
+    )
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: new Blob([Uint8Array.from(source.bytes).buffer]),
+    })
+    if (!response.ok) throw new Error('File upload failed')
+    const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+    await convex.mutation(api.storage.mutations.bindUpload, {
+      sessionId,
+      storageId,
+      originalFileName: source.fileName,
+    })
+    return sessionId
+  }
   const files = createLiveFileContentSource(
     currentScope.campaignId,
     {
@@ -151,30 +173,10 @@ function createScopedLiveResourceRuntime(
           campaignId: currentScope.campaignId,
           resourceId,
         }),
-      discard: async (sessionId) => {
-        await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
-      },
+      discard: discardUpload,
       refresh,
       replace: (args) => convex.action(api.resources.actions.replaceFileContent, args),
-      upload: async (source) => {
-        const { sessionId, uploadUrl } = await convex.mutation(
-          api.storage.mutations.createUploadSession,
-          {},
-        )
-        const response = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/octet-stream' },
-          body: new Blob([Uint8Array.from(source.bytes).buffer]),
-        })
-        if (!response.ok) throw new Error('File upload failed')
-        const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
-        await convex.mutation(api.storage.mutations.bindUpload, {
-          sessionId,
-          storageId,
-          originalFileName: source.fileName,
-        })
-        return sessionId
-      },
+      upload: uploadFile,
     },
     undo.begin,
   )
@@ -183,7 +185,17 @@ function createScopedLiveResourceRuntime(
     {
       ...contentBackend('map'),
       create: (args) => convex.mutation(api.resources.mutations.createMapResource, args),
+      discard: discardUpload,
+      download: (resourceId, layerId) =>
+        convex.query(api.resources.queries.loadMapImage, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+          layerId,
+        }),
+      execute: (args) => convex.mutation(api.resources.mutations.executeMapContentCommand, args),
       refresh,
+      replace: (args) => convex.action(api.resources.actions.replaceMapImage, args),
+      upload: uploadFile,
     },
     undo.begin,
   )

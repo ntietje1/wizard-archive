@@ -739,6 +739,249 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('replaces map images idempotently, advances the map version, and retires old assets', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'map', null, 'Map')
+    const initialVersion = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected map content')
+      return content.version
+    })
+    const original = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([Uint8Array.from(testPng(1, 1)).buffer], { type: 'image/png' }),
+      'map.png',
+    )
+    const originalArgs = {
+      campaignId: campaignUuid,
+      resourceId,
+      expectedVersion: initialVersion,
+      layerId: null,
+      uploadSessionId: original.sessionId,
+    }
+    const attached = await asDm(campaign).action(
+      api.resources.actions.replaceMapImage,
+      originalArgs,
+    )
+    expect(attached).toMatchObject({
+      status: 'completed',
+      content: { image: { status: 'attached', byteSize: 45, mediaType: 'image/png' } },
+      version: { revision: 2 },
+    })
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceMapImage, originalArgs),
+    ).resolves.toEqual(attached)
+    if (attached.status !== 'completed') throw new TypeError('Expected attached map image')
+
+    const otherMapId = await createResource(campaign, campaignUuid, 'map', null, 'Other map')
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceMapImage, {
+        campaignId: campaignUuid,
+        resourceId: otherMapId,
+        expectedVersion: await storedMapVersion(otherMapId),
+        layerId: null,
+        uploadSessionId: original.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_image' })
+    const fileId = await createResource(campaign, campaignUuid, 'file', null, 'File')
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+        expectedVersion: await storedFileVersion(fileId),
+        uploadSessionId: original.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_file' })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .take(2),
+      ).resolves.toEqual([expect.objectContaining({ campaignUuid, resourceUuid: resourceId })])
+    })
+
+    const replacement = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([Uint8Array.from(testPng(2, 3)).buffer], { type: 'image/png' }),
+      'replacement.png',
+    )
+    const replaced = await asDm(campaign).action(api.resources.actions.replaceMapImage, {
+      ...originalArgs,
+      expectedVersion: attached.version,
+      uploadSessionId: replacement.sessionId,
+    })
+    expect(replaced).toMatchObject({ status: 'completed', version: { revision: 3 } })
+
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceMapContents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).resolves.toMatchObject({
+        image: { assetUuid: replacement.assetId, byteSize: 45, mediaType: 'image/png' },
+        version: { revision: 3 },
+      })
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).resolves.toMatchObject({ assetUuid: replacement.assetId })
+      await expect(
+        ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .unique(),
+      ).resolves.toMatchObject({ status: 'pending' })
+    })
+    const stale = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([Uint8Array.from(testPng(4, 4)).buffer], { type: 'image/png' }),
+      'stale.png',
+    )
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceMapImage, {
+        ...originalArgs,
+        uploadSessionId: stale.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'version_conflict' })
+    await t.run(async (ctx) => {
+      await expect(ctx.db.get('fileStorage', stale.sessionId)).resolves.toMatchObject({
+        status: 'uncommitted',
+      })
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadMapImage, {
+        campaignId: campaignUuid,
+        resourceId,
+        layerId: null,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      image: { status: 'attached', byteSize: 45, mediaType: 'image/png' },
+      version: { revision: 3 },
+      url: expect.any(String),
+    })
+  })
+
+  it('executes one idempotent bounded map-pin command path', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const mapId = await createResource(campaign, campaignUuid, 'map', null, 'Map')
+    const targetId = await createResource(campaign, campaignUuid, 'note', null, 'Target')
+    const pinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const initialVersion = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', mapId))
+        .unique()
+      if (!content) throw new TypeError('Expected map content')
+      return content.version
+    })
+    const createArgs = {
+      campaignId: campaignUuid,
+      resourceId: mapId,
+      operationId,
+      expectedVersion: initialVersion,
+      command: {
+        type: 'createPins' as const,
+        pins: [
+          {
+            id: pinId,
+            destination: {
+              kind: 'internal' as const,
+              target: { kind: 'resource' as const, resourceId: targetId },
+            },
+            layerId: null,
+            x: 25,
+            y: 40,
+          },
+        ],
+      },
+    }
+    const created = await asDm(campaign).mutation(
+      api.resources.mutations.executeMapContentCommand,
+      createArgs,
+    )
+    expect(created).toMatchObject({
+      status: 'completed',
+      content: {
+        pins: [{ id: pinId, x: 25, y: 40, visible: true }],
+      },
+      version: { revision: 2 },
+    })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeMapContentCommand, createArgs),
+    ).resolves.toEqual(created)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeMapContentCommand, {
+        ...createArgs,
+        command: { type: 'removePin', pinId },
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+    if (created.status !== 'completed') throw new TypeError('Expected pin creation')
+
+    let version = created.version
+    for (let index = 0; index < 35; index += 1) {
+      const result = await asDm(campaign).mutation(
+        api.resources.mutations.executeMapContentCommand,
+        {
+          campaignId: campaignUuid,
+          resourceId: mapId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          expectedVersion: version,
+          command: { type: 'setPinVisibility', pinId, visible: index % 2 === 0 },
+        },
+      )
+      if (result.status !== 'completed') throw new TypeError('Expected visibility update')
+      version = result.version
+    }
+    const moved = await asDm(campaign).mutation(api.resources.mutations.executeMapContentCommand, {
+      campaignId: campaignUuid,
+      resourceId: mapId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      expectedVersion: version,
+      command: { type: 'movePin', pinId, x: 80, y: 90 },
+    })
+    expect(moved).toMatchObject({
+      status: 'completed',
+      content: { pins: [{ id: pinId, x: 80, y: 90 }] },
+    })
+    if (moved.status !== 'completed') throw new TypeError('Expected pin move')
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeMapContentCommand, {
+        campaignId: campaignUuid,
+        resourceId: mapId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        expectedVersion: moved.version,
+        command: { type: 'removePin', pinId },
+      }),
+    ).resolves.toMatchObject({ status: 'completed', content: { pins: [] } })
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', mapId))
+        .unique()
+      expect(content?.recentOperations).toHaveLength(32)
+      await expect(
+        ctx.db
+          .query('resourceMapPins')
+          .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', mapId))
+          .unique(),
+      ).resolves.toBeNull()
+    })
+  })
+
   it('rejects kind-owned creation through the generic structure mutation', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -1834,10 +2077,11 @@ describe('resource structure commands', () => {
         campaignUuid,
         resourceUuid: mapId,
         state: 'ready',
-        imageAssetUuid: null,
+        image: null,
         layers: [],
+        recentOperations: [],
         version: await initialJsonContentVersion({
-          imageAssetUuid: null,
+          image: null,
           layers: [],
           pins: [
             {
@@ -2494,6 +2738,17 @@ describe('resource structure commands', () => {
     })
   }
 
+  async function storedMapVersion(resourceId: ResourceId) {
+    return await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected map content')
+      return content.version
+    })
+  }
+
   function fileCreateCommand(resourceId: ResourceId, title: string) {
     return {
       type: 'create' as const,
@@ -2623,6 +2878,17 @@ describe('resource structure commands', () => {
     })
   }
 })
+
+function testPng(width: number, height: number): Uint8Array {
+  const bytes = new Uint8Array(45)
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  new DataView(bytes.buffer).setUint32(8, 13)
+  bytes.set(new TextEncoder().encode('IHDR'), 12)
+  new DataView(bytes.buffer).setUint32(16, width)
+  new DataView(bytes.buffer).setUint32(20, height)
+  bytes.set(new TextEncoder().encode('IEND'), 37)
+  return bytes
+}
 
 function noteTextType(document: Y.Doc): Y.XmlText {
   const group = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)

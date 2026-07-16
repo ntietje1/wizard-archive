@@ -259,7 +259,7 @@ describe('authorized resource projection', () => {
       expect.objectContaining({
         status: 'ready',
         kind: 'map',
-        content: { imageAssetId: null, layers: [], pins: [] },
+        content: { image: { status: 'unattached' }, layers: [], pins: [] },
       }),
     )
     await expect(

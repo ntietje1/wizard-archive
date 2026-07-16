@@ -12,10 +12,8 @@ import {
 import type { CanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import { testDomainId } from '../../../../../shared/test/domain-id'
-import {
-  createLiveMapSessionSource,
-  createLiveResourceContentSource,
-} from '../live-resource-content-source'
+import { createLiveResourceContentSource } from '../live-resource-content-source'
+import { createLiveMapSessionSource } from '../live-map-session-source'
 import { createLiveCanvasSessionSource } from '../live-canvas-session-source'
 import { createYjsUpdateOutbox } from '../yjs-update-outbox'
 
@@ -48,17 +46,29 @@ function applyCanvasContentUpdate(document: Y.Doc, content: CanvasDocumentConten
 describe('LiveResourceContentSource', () => {
   it('loads an unopened map once for native export without a subscription', async () => {
     const resourceId = testDomainId('resource', 'map-export')
+    const campaignId = testDomainId('campaign', 'map-export-campaign')
     const watch = vi.fn(() => () => undefined)
-    const source = createLiveResourceContentSource('map', {
-      load: () =>
-        Promise.resolve({
-          status: 'ready',
-          kind: 'map',
-          content: { imageAssetId: null, layers: [], pins: [] },
-          version,
-        }),
-      watch,
-    })
+    const source = createLiveMapSessionSource(
+      campaignId,
+      {
+        load: () =>
+          Promise.resolve({
+            status: 'ready',
+            kind: 'map',
+            content: { image: { status: 'unattached' }, layers: [], pins: [] },
+            version,
+          }),
+        watch,
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        execute: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload: vi.fn(),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
 
     await expect(source.export(resourceId)).resolves.toMatchObject({
       status: 'ready',
@@ -74,7 +84,7 @@ describe('LiveResourceContentSource', () => {
     let apply: (snapshot: Snapshot) => void = () => undefined
     const unsubscribe = vi.fn()
     const listener = vi.fn()
-    const source = createLiveResourceContentSource('file', {
+    const source = createLiveResourceContentSource({
       load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
       watch: (_resourceId, update) => {
         apply = update
@@ -673,7 +683,12 @@ describe('LiveResourceContentSource', () => {
               postconditions: [],
             },
           }),
+        discard: vi.fn(),
+        download: vi.fn(),
+        execute: vi.fn(),
         refresh,
+        replace: vi.fn(),
+        upload: vi.fn(),
       },
       () => recording,
     )

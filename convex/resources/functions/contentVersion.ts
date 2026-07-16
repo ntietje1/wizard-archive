@@ -41,7 +41,11 @@ export function contentMergeRejection(error: unknown): ContentMergeRejection {
 }
 
 export async function initialJsonContentVersion(value: unknown): Promise<VersionStamp> {
-  return initialVersion(await sha256Digest(textEncoder.encode(JSON.stringify(value))))
+  return initialVersion(await jsonContentDigest(value))
+}
+
+export async function jsonContentDigest(value: unknown) {
+  return await sha256Digest(textEncoder.encode(JSON.stringify(value)))
 }
 
 export async function initialBinaryContentVersion(value: ArrayBuffer): Promise<VersionStamp> {

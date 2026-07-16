@@ -4,6 +4,7 @@ import {
   fileContentDigest,
   initialFileContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
+import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import type { ResourceSourceInspection } from '@wizard-archive/editor/resources/source-classifier'
 import { action } from '../_generated/server'
@@ -12,6 +13,7 @@ import { internal } from '../_generated/api'
 import type { Id } from '../_generated/dataModel'
 import {
   fileContentReplaceResultValidator,
+  mapContentMutationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
   versionStampValidator,
@@ -119,6 +121,37 @@ export const replaceFileContent = action({
       uploadSessionId: args.uploadSessionId,
       metadata: upload.metadata,
       digest: await fileContentDigest(upload.bytes, upload.metadata),
+    })
+  },
+})
+
+type StoredMapContentMutationResult = Infer<typeof mapContentMutationResultValidator>
+
+export const replaceMapImage = action({
+  args: {
+    campaignId: v.string(),
+    resourceId: resourceIdValidator,
+    expectedVersion: versionStampValidator,
+    layerId: v.nullable(v.string()),
+    uploadSessionId: v.id('fileStorage'),
+  },
+  returns: mapContentMutationResultValidator,
+  handler: async (ctx, args): Promise<StoredMapContentMutationResult> => {
+    const upload = await loadInspectedFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    if (!upload || upload.metadata.classification !== 'viewable_image') {
+      return { status: 'rejected', reason: 'invalid_image' }
+    }
+    return await ctx.runMutation(internal.resources.mutations.commitMapImageReplacement, {
+      campaignId: upload.upload.campaignId,
+      resourceId: args.resourceId,
+      expectedVersion: args.expectedVersion,
+      layerId: args.layerId,
+      uploadSessionId: args.uploadSessionId,
+      image: {
+        byteSize: upload.bytes.byteLength,
+        digest: await sha256Digest(upload.bytes),
+        mediaType: upload.metadata.mediaType,
+      },
     })
   },
 })

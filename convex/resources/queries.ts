@@ -9,6 +9,7 @@ import {
 import {
   authorizedResourceSnapshotValidator,
   fileDownloadSnapshotValidator,
+  mapImageDownloadSnapshotValidator,
   noteContentSnapshotValidator,
   resourceAwarenessSnapshotValidator,
   resourceContentSnapshotValidator,
@@ -23,6 +24,7 @@ import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
 import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
+import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
@@ -142,6 +144,18 @@ export const loadFileDownload = campaignQuery({
   returns: fileDownloadSnapshotValidator,
   handler: async (ctx, args) => {
     return await loadFileDownloadFn(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId))
+  },
+})
+
+export const loadMapImage = campaignQuery({
+  args: { resourceId: resourceIdValidator, layerId: v.nullable(v.string()) },
+  returns: mapImageDownloadSnapshotValidator,
+  handler: async (ctx, args) => {
+    return await loadMapImageFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      args.layerId,
+    )
   },
 })
 

@@ -6,7 +6,12 @@ import {
   initialFileContentVersion,
   initialNoteContentVersion,
 } from './resource-content-version'
-import { initialVersion, sha256Digest, versionStampEquals } from './component-version'
+import {
+  advanceVersion,
+  initialVersion,
+  sha256Digest,
+  versionStampEquals,
+} from './component-version'
 import type { VersionStamp } from './component-version'
 import type { FileOwnedMetadata } from './file-content-contract'
 import type {
@@ -25,12 +30,15 @@ import type {
   FileResourceSource,
   FileResourceContent,
   MapResourceContent,
+  MapContentCommand,
+  MapSession,
   MapSessionSource,
   MapSessionState,
   NoteSessionSource,
   NoteSessionState,
   NoteSession,
 } from './content-session-contract'
+import { isMapPosition } from './content-session-contract'
 import type {
   CommandDelivery,
   CommandEnvelope,
@@ -38,7 +46,7 @@ import type {
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type { ResourceNavigation, EditorRuntime } from './editor-runtime-contract'
-import type { CampaignId, OperationId, ResourceId } from './domain-id'
+import type { CampaignId, MapPinId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
@@ -60,6 +68,7 @@ import {
 import { createInMemoryNoteSession } from './in-memory-note-session'
 import { createInMemoryCanvasSession } from './in-memory-canvas-session'
 import { encodeWizardMapDocument } from './map-native-document'
+import { serializeAuthoredDestination } from './authored-destination'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -389,19 +398,32 @@ class InMemoryMapSessionSource
   extends InMemoryOwnedSessionSource<MapSessionState>
   implements MapSessionSource
 {
+  readonly #sessions = new Map<ResourceId, InMemoryMapSession>()
+
   async create(
     envelope: CommandEnvelope<CreateMapResourceCommand>,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
     return await this.createContent(envelope, async () => {
-      const content: MapResourceContent = { imageAssetId: null, layers: [], pins: [] }
-      this.set(envelope.command.resourceId, {
-        status: 'ready',
-        session: localContentSession(
-          { content },
-          initialVersion(await sha256Digest(new TextEncoder().encode(JSON.stringify(content)))),
-        ),
-      })
+      const content: MapResourceContent = {
+        image: { status: 'unattached' },
+        layers: [],
+        pins: [],
+      }
+      this.setReady(
+        envelope.command.resourceId,
+        content,
+        initialVersion(await sha256Digest(new TextEncoder().encode(JSON.stringify(content)))),
+      )
     })
+  }
+
+  setReady(resourceId: ResourceId, content: MapResourceContent, version: VersionStamp): void {
+    this.#sessions.get(resourceId)?.dispose()
+    const session = new InMemoryMapSession(resourceId, content, version, () => {
+      this.set(resourceId, { status: 'ready', session })
+    })
+    this.#sessions.set(resourceId, session)
+    this.set(resourceId, { status: 'ready', session })
   }
 
   export(resourceId: ResourceId): ContentExportResult {
@@ -412,6 +434,217 @@ class InMemoryMapSessionSource
       'application/vnd.wizard-archive.map+json',
     )
   }
+
+  override dispose(): void {
+    for (const session of this.#sessions.values()) session.dispose()
+    this.#sessions.clear()
+    super.dispose()
+  }
+}
+
+class InMemoryMapSession implements MapSession {
+  readonly awareness = { status: 'unavailable' as const }
+  readonly #images = new Map<string, Uint8Array>()
+  #disposed = false
+
+  constructor(
+    private readonly resourceId: ResourceId,
+    private currentContent: MapResourceContent,
+    private currentVersion: VersionStamp,
+    private readonly publish: () => void,
+  ) {}
+
+  get content(): MapResourceContent {
+    return this.currentContent
+  }
+
+  get version(): VersionStamp {
+    return this.currentVersion
+  }
+
+  async execute(command: MapContentCommand) {
+    if (this.#disposed) return { status: 'rejected' as const, reason: 'resource_missing' as const }
+    let content: MapResourceContent
+    switch (command.type) {
+      case 'createPins': {
+        if (!validLocalPinCreations(this.resourceId, this.currentContent, command)) {
+          return { status: 'rejected' as const, reason: 'invalid_command' as const }
+        }
+        content = {
+          ...this.currentContent,
+          pins: [
+            ...this.currentContent.pins,
+            ...command.pins.map((pin) => ({ ...pin, visible: false })),
+          ],
+        }
+        break
+      }
+      case 'movePin': {
+        if (!isMapPosition(command) || !mapPin(this.currentContent, command.pinId)) {
+          return {
+            status: 'rejected' as const,
+            reason: isMapPosition(command)
+              ? ('pin_missing' as const)
+              : ('invalid_command' as const),
+          }
+        }
+        content = {
+          ...this.currentContent,
+          pins: this.currentContent.pins.map((pin) =>
+            pin.id === command.pinId ? { ...pin, x: command.x, y: command.y } : pin,
+          ),
+        }
+        break
+      }
+      case 'setPinVisibility': {
+        if (!mapPin(this.currentContent, command.pinId)) {
+          return { status: 'rejected' as const, reason: 'pin_missing' as const }
+        }
+        content = {
+          ...this.currentContent,
+          pins: this.currentContent.pins.map((pin) =>
+            pin.id === command.pinId ? { ...pin, visible: command.visible } : pin,
+          ),
+        }
+        break
+      }
+      case 'removePin': {
+        if (!mapPin(this.currentContent, command.pinId)) {
+          return { status: 'rejected' as const, reason: 'pin_missing' as const }
+        }
+        content = {
+          ...this.currentContent,
+          pins: this.currentContent.pins.filter((pin) => pin.id !== command.pinId),
+        }
+      }
+    }
+    const version = await this.#nextVersion(content)
+    if (!version) {
+      return { status: 'rejected' as const, reason: 'version_exhausted' as const }
+    }
+    this.currentContent = content
+    this.currentVersion = version
+    this.publish()
+    return { status: 'completed' as const, content, version }
+  }
+
+  async loadImage(layerId: string | null): Promise<ContentExportResult> {
+    const image = mapImageAttachment(this.currentContent, layerId)
+    if (!image || image.status === 'unattached') {
+      return { status: 'integrity_error', issue: 'content_missing' }
+    }
+    const bytes = this.#images.get(mapImageKey(layerId))
+    if (!bytes || bytes.byteLength !== image.byteSize) {
+      return { status: 'integrity_error', issue: 'content_corrupt' }
+    }
+    if ((await sha256Digest(bytes)) !== image.digest) {
+      return { status: 'integrity_error', issue: 'content_corrupt' }
+    }
+    return {
+      status: 'ready',
+      bytes: Uint8Array.from(bytes),
+      extension: image.mediaType.split('/')[1] ?? 'bin',
+      mediaType: image.mediaType,
+    }
+  }
+
+  async replaceImage(layerId: string | null, source: FileResourceSource) {
+    if (this.#disposed) return { status: 'rejected' as const, reason: 'resource_missing' as const }
+    if (layerId !== null && !this.currentContent.layers.some((layer) => layer.id === layerId)) {
+      return { status: 'rejected' as const, reason: 'layer_missing' as const }
+    }
+    const metadata = classifyFileResourceSource(source)
+    if (metadata.classification !== 'viewable_image') {
+      return { status: 'rejected' as const, reason: 'invalid_image' as const }
+    }
+    const attachment = {
+      status: 'attached' as const,
+      byteSize: source.bytes.byteLength,
+      digest: await sha256Digest(source.bytes),
+      mediaType: metadata.mediaType,
+    }
+    const content = replaceMapImageAttachment(this.currentContent, layerId, attachment)
+    const version = await this.#nextVersion(content)
+    if (!version) {
+      return { status: 'rejected' as const, reason: 'version_exhausted' as const }
+    }
+    this.#images.set(mapImageKey(layerId), Uint8Array.from(source.bytes))
+    this.currentContent = content
+    this.currentVersion = version
+    this.publish()
+    return { status: 'completed' as const, content, version }
+  }
+
+  async #nextVersion(content: MapResourceContent): Promise<VersionStamp | null> {
+    try {
+      return advanceVersion(
+        this.currentVersion,
+        await sha256Digest(new TextEncoder().encode(JSON.stringify(content))),
+      )
+    } catch {
+      return null
+    }
+  }
+
+  dispose(): void {
+    this.#disposed = true
+    this.#images.clear()
+  }
+}
+
+function validLocalPinCreations(
+  resourceId: ResourceId,
+  content: MapResourceContent,
+  command: Extract<MapContentCommand, { type: 'createPins' }>,
+): boolean {
+  if (command.pins.length === 0 || command.pins.length > 100) return false
+  const layerIds = new Set(content.layers.map((layer) => layer.id))
+  const pinIds = new Set(content.pins.map((pin) => pin.id))
+  const destinations = new Set(
+    content.pins.map((pin) => serializeAuthoredDestination(pin.destination)),
+  )
+  for (const pin of command.pins) {
+    const destination = serializeAuthoredDestination(pin.destination)
+    if (
+      pinIds.has(pin.id) ||
+      destinations.has(destination) ||
+      !isMapPosition(pin) ||
+      (pin.layerId !== null && !layerIds.has(pin.layerId)) ||
+      (pin.destination.kind === 'internal' && pin.destination.target.resourceId === resourceId)
+    ) {
+      return false
+    }
+    pinIds.add(pin.id)
+    destinations.add(destination)
+  }
+  return true
+}
+
+function mapPin(content: MapResourceContent, pinId: MapPinId) {
+  return content.pins.find((pin) => pin.id === pinId)
+}
+
+function mapImageKey(layerId: string | null): string {
+  return layerId ?? ''
+}
+
+function mapImageAttachment(content: MapResourceContent, layerId: string | null) {
+  return layerId === null
+    ? content.image
+    : content.layers.find((layer) => layer.id === layerId)?.image
+}
+
+function replaceMapImageAttachment(
+  content: MapResourceContent,
+  layerId: string | null,
+  image: MapResourceContent['image'],
+): MapResourceContent {
+  return layerId === null
+    ? { ...content, image }
+    : {
+        ...content,
+        layers: content.layers.map((layer) => (layer.id === layerId ? { ...layer, image } : layer)),
+      }
 }
 
 class InMemoryCanvasSessionSource
@@ -479,10 +712,6 @@ function nativeContentExport(
   mediaType: string,
 ): ContentExportResult {
   return { status: 'ready', bytes, extension, mediaType }
-}
-
-function localContentSession<T extends object>(content: T, version: VersionStamp) {
-  return { ...content, version, awareness: { status: 'unavailable' as const } }
 }
 
 function exportPendingState(
@@ -553,14 +782,7 @@ export function createInMemoryEditorRuntime({
     executeStructure(envelope),
   )
   for (const entry of content.maps ?? []) {
-    maps.set(entry.resourceId, {
-      status: 'ready',
-      session: {
-        content: entry.content,
-        version: entry.version,
-        awareness: { status: 'unavailable' },
-      },
-    })
+    maps.setReady(entry.resourceId, entry.content, entry.version)
   }
   const canvases = new InMemoryCanvasSessionSource(
     { status: 'loading' },

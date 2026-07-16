@@ -69,16 +69,109 @@ const fileResourceContentValidator = v.object({
   ...fileOwnedMetadataValidators,
 })
 
+const mapImageContentValidator = v.union(
+  v.object({ status: v.literal('unattached') }),
+  v.object({
+    status: v.literal('attached'),
+    byteSize: v.number(),
+    digest: v.string(),
+    mediaType: v.string(),
+  }),
+)
+
+const storedMapImageValidator = v.object({
+  assetUuid: assetIdValidator,
+  byteSize: v.number(),
+  digest: v.string(),
+  mediaType: v.string(),
+})
+
+const mapResourceContentValidator = v.object({
+  image: mapImageContentValidator,
+  layers: v.array(
+    v.object({
+      id: v.string(),
+      image: mapImageContentValidator,
+      name: v.string(),
+    }),
+  ),
+  pins: v.array(
+    v.object({
+      id: mapPinIdValidator,
+      destination: authoredDestinationValidator,
+      layerId: v.nullable(v.string()),
+      x: v.number(),
+      y: v.number(),
+      visible: v.boolean(),
+    }),
+  ),
+})
+
+const contentInitializingMutationResultValidator = v.object({
+  status: v.literal('retryable'),
+  reason: v.literal('content_initializing'),
+})
+
+export const mapContentMutationResultValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    content: mapResourceContentValidator,
+    version: versionStampValidator,
+  }),
+  contentInitializingMutationResultValidator,
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'content_corrupt',
+      'content_missing',
+      'invalid_command',
+      'invalid_image',
+      'layer_missing',
+      'operation_id_reused',
+      'pin_missing',
+      'resource_missing',
+      'target_missing',
+      'unauthorized',
+      'version_conflict',
+      'version_exhausted',
+    ),
+  }),
+)
+
+export const mapContentCommandValidator = v.union(
+  v.object({
+    type: v.literal('createPins'),
+    pins: v.array(
+      v.object({
+        id: mapPinIdValidator,
+        destination: authoredDestinationValidator,
+        layerId: v.nullable(v.string()),
+        x: v.number(),
+        y: v.number(),
+      }),
+    ),
+  }),
+  v.object({
+    type: v.literal('movePin'),
+    pinId: mapPinIdValidator,
+    x: v.number(),
+    y: v.number(),
+  }),
+  v.object({
+    type: v.literal('setPinVisibility'),
+    pinId: mapPinIdValidator,
+    visible: v.boolean(),
+  }),
+  v.object({ type: v.literal('removePin'), pinId: mapPinIdValidator }),
+)
+
 export const fileContentReplaceResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
     content: fileResourceContentValidator,
     version: versionStampValidator,
   }),
-  v.object({
-    status: v.literal('retryable'),
-    reason: v.literal('content_initializing'),
-  }),
+  contentInitializingMutationResultValidator,
   v.object({
     status: v.literal('rejected'),
     reason: literals(
@@ -394,6 +487,18 @@ const contentIntegritySnapshotValidator = v.object({
   ),
 })
 
+export const mapImageDownloadSnapshotValidator = v.union(
+  v.object({ status: v.literal('loading') }),
+  v.object({
+    status: v.literal('ready'),
+    image: mapImageContentValidator,
+    url: v.string(),
+    version: versionStampValidator,
+  }),
+  contentUnavailableSnapshotValidator,
+  contentIntegritySnapshotValidator,
+)
+
 export const noteContentSnapshotValidator = v.union(
   v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({ status: v.literal('ready'), update: v.bytes(), version: versionStampValidator }),
@@ -453,26 +558,7 @@ export const resourceContentSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
     kind: v.literal('map'),
-    content: v.object({
-      imageAssetId: v.nullable(assetIdValidator),
-      layers: v.array(
-        v.object({
-          id: v.string(),
-          imageAssetId: v.nullable(assetIdValidator),
-          name: v.string(),
-        }),
-      ),
-      pins: v.array(
-        v.object({
-          id: mapPinIdValidator,
-          destination: authoredDestinationValidator,
-          layerId: v.nullable(v.string()),
-          x: v.number(),
-          y: v.number(),
-          visible: v.boolean(),
-        }),
-      ),
-    }),
+    content: mapResourceContentValidator,
     version: versionStampValidator,
   }),
   v.object({
@@ -629,12 +715,19 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,
     state: literals('initializing', 'ready', 'failed'),
-    imageAssetUuid: v.nullable(assetIdValidator),
+    image: v.nullable(storedMapImageValidator),
     layers: v.array(
       v.object({
         id: v.string(),
-        imageAssetUuid: v.nullable(assetIdValidator),
+        image: v.nullable(storedMapImageValidator),
         name: v.string(),
+      }),
+    ),
+    recentOperations: v.array(
+      v.object({
+        operationUuid: operationIdValidator,
+        actorUuid: campaignMemberIdValidator,
+        fingerprint: v.string(),
       }),
     ),
     version: versionStampValidator,
