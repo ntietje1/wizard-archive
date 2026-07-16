@@ -159,36 +159,33 @@ class LiveYjsDocumentSession {
 
   async #runDrain(): Promise<ContentSessionSaveResult> {
     try {
-      return await this.#drain()
+      while (this.#pendingUpdate !== null) {
+        const update = this.#pendingUpdate
+        this.#pendingUpdate = null
+        const result = await this.#persist(update)
+        if (result.status === 'rejected') {
+          this.#pendingUpdate = mergeOptionalYjsUpdates(update, this.#pendingUpdate)
+          this.#fail(result)
+          return result
+        }
+        if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
+          return this.#terminal!
+        }
+        const remaining = this.#pendingUpdate
+        const stored = remaining === null ? this.#outbox.clear() : this.#outbox.replace(remaining)
+        if (stored.status === 'unavailable') {
+          const unavailable = { status: 'rejected', reason: 'scope_unavailable' } as const
+          this.#fail(unavailable)
+          return unavailable
+        }
+        await Promise.resolve()
+      }
+      return { status: 'completed', version: this.#version }
     } finally {
       this.#drainPromise = null
       if (this.#lifecycle === 'closing') this.#destroy()
       else if (this.#pendingUpdate !== null && !this.#terminal) this.#scheduleSave()
     }
-  }
-
-  async #drain(): Promise<ContentSessionSaveResult> {
-    while (this.#pendingUpdate !== null) {
-      const update = this.#pendingUpdate
-      this.#pendingUpdate = null
-      const result = await this.#persist(update)
-      if (result.status === 'rejected') {
-        this.#pendingUpdate = mergeOptionalYjsUpdates(update, this.#pendingUpdate)
-        this.#fail(result)
-        return result
-      }
-      if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
-        return this.#terminal!
-      }
-      const remaining = this.#pendingUpdate
-      const stored = remaining === null ? this.#outbox.clear() : this.#outbox.replace(remaining)
-      if (stored.status === 'unavailable') {
-        const unavailable = { status: 'rejected', reason: 'scope_unavailable' } as const
-        this.#fail(unavailable)
-        return unavailable
-      }
-    }
-    return { status: 'completed', version: this.#version }
   }
 
   async #persist(update: Uint8Array): Promise<PersistedYjsUpdate> {

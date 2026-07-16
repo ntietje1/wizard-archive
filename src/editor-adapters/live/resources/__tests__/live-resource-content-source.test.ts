@@ -424,6 +424,113 @@ describe('LiveResourceContentSource', () => {
     }
   })
 
+  it('keeps a canvas drain and disposal open through final outbox settlement', async () => {
+    sessionStorage.clear()
+    const campaignId = testDomainId('campaign', 'canvas-settlement-campaign')
+    const memberId = testDomainId('campaignMember', 'canvas-settlement-member')
+    const resourceId = testDomainId('resource', 'canvas-settlement-resource')
+    const firstNodeId = testDomainId('canvasNode', 'canvas-settlement-first-node')
+    const finalNodeId = testDomainId('canvasNode', 'canvas-settlement-final-node')
+    const initialDocument = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const initialUpdate = Y.encodeStateAsUpdate(initialDocument).buffer as ArrayBuffer
+    initialDocument.destroy()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    let releaseFinalSave: (() => void) | undefined
+    let saveAttempt = 0
+    const save = vi.fn(async ({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+      saveAttempt += 1
+      if (saveAttempt === 2) {
+        await new Promise<void>((resolve) => {
+          releaseFinalSave = resolve
+        })
+      }
+      return {
+        status: 'completed',
+        resourceId,
+        update,
+        version: assertVersionStamp({
+          ...version,
+          revision: version.revision + saveAttempt,
+          digest: String(saveAttempt).repeat(64),
+        }),
+      }
+    })
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      memberId,
+      {
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, update) => {
+          apply = update
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+    source.subscribe(resourceId, () => {})
+    apply({ status: 'ready', kind: 'canvas', update: initialUpdate, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready canvas')
+    let destroyed = false
+    ready.session.document.on('destroy', () => {
+      destroyed = true
+    })
+    const removeItem = sessionStorage.removeItem.bind(sessionStorage)
+    let queueSettlingUpdate = true
+    let outboxKey: string | null = null
+    const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
+      removeItem(key)
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v1:')) {
+        return
+      }
+      outboxKey = key
+      queueSettlingUpdate = false
+      queueMicrotask(() =>
+        applyCanvasContentUpdate(ready.session.document, {
+          nodes: [{ id: finalNodeId, type: 'text', position: { x: 30, y: 40 }, data: {} }],
+          edges: [],
+        }),
+      )
+    })
+
+    try {
+      applyCanvasContentUpdate(ready.session.document, {
+        nodes: [{ id: firstNodeId, type: 'text', position: { x: 10, y: 20 }, data: {} }],
+        edges: [],
+      })
+      let drainSettled = false
+      const drain = ready.session.flush().finally(() => {
+        drainSettled = true
+      })
+      await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+      expect(readCanvasDocumentContent(ready.session.document).nodes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: firstNodeId }),
+          expect.objectContaining({ id: finalNodeId }),
+        ]),
+      )
+      source.dispose()
+      await Promise.resolve()
+      expect(drainSettled).toBe(false)
+      expect(destroyed).toBe(false)
+      releaseFinalSave?.()
+      const result = await drain
+      const finalSave = await save.mock.results[1]?.value
+      expect(finalSave?.status).toBe('completed')
+      if (finalSave?.status !== 'completed') throw new Error('Expected final save')
+      expect(result).toEqual({ status: 'completed', version: finalSave.version })
+      await vi.waitFor(() => expect(destroyed).toBe(true))
+      expect(outboxKey).not.toBeNull()
+      expect(sessionStorage.getItem(outboxKey!)).toBeNull()
+    } finally {
+      removeItemSpy.mockRestore()
+      source.dispose()
+    }
+  })
+
   it('reports canvas outbox storage denial as scope unavailability', () => {
     sessionStorage.clear()
     const campaignId = testDomainId('campaign', 'canvas-storage-campaign')

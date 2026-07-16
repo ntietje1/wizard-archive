@@ -541,9 +541,21 @@ describe('LiveNoteContentSource', () => {
     persisted.destroy()
   })
 
-  it('schedules an update queued after the final outbox clear', async () => {
+  it('keeps the original drain open for an update queued during final outbox settlement', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
+    const persist = provider.save.getMockImplementation()!
+    let releaseFinalSave: (() => void) | undefined
+    let saveAttempt = 0
+    provider.save.mockImplementation(async (args) => {
+      saveAttempt += 1
+      if (saveAttempt === 2) {
+        await new Promise<void>((resolve) => {
+          releaseFinalSave = resolve
+        })
+      }
+      return await persist(args)
+    })
     const source = createLiveNoteContentSource(
       campaignId,
       memberId,
@@ -557,25 +569,47 @@ describe('LiveNoteContentSource', () => {
     provider.emit(resourceId, { status: 'ready', update: initial, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
+    let destroyed = false
+    ready.session.document.on('destroy', () => {
+      destroyed = true
+    })
     const removeItem = sessionStorage.removeItem.bind(sessionStorage)
     let queueSettlingUpdate = true
+    let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
       if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v1:')) {
         return
       }
+      outboxKey = key
       queueSettlingUpdate = false
       queueMicrotask(() => ready.session.document.getMap('drain').set('settled', true))
     })
 
     try {
       ready.session.document.getMap('drain').set('initial', true)
-      await expect(ready.session.flush()).resolves.toMatchObject({ status: 'completed' })
+      let drainSettled = false
+      const drain = ready.session.flush().finally(() => {
+        drainSettled = true
+      })
       await vi.waitFor(() => expect(provider.save).toHaveBeenCalledTimes(2))
       expect(ready.session.document.getMap('drain').toJSON()).toEqual({
         initial: true,
         settled: true,
       })
+      source.dispose()
+      await Promise.resolve()
+      expect(drainSettled).toBe(false)
+      expect(destroyed).toBe(false)
+      releaseFinalSave?.()
+      const result = await drain
+      const finalSave = await provider.save.mock.results[1]?.value
+      expect(finalSave?.status).toBe('completed')
+      if (finalSave?.status !== 'completed') throw new Error('Expected final save')
+      expect(result).toEqual({ status: 'completed', version: finalSave.version })
+      await vi.waitFor(() => expect(destroyed).toBe(true))
+      expect(outboxKey).not.toBeNull()
+      expect(sessionStorage.getItem(outboxKey!)).toBeNull()
     } finally {
       removeItemSpy.mockRestore()
       source.dispose()
