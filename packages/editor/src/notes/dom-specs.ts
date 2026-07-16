@@ -1,6 +1,8 @@
-import { COLORS_DEFAULT, defaultProps } from '@blocknote/core'
 import { createCustomInlineContentSpecs } from './document/schema-factory'
-import { createNoteStyleSpecs } from './document/style-specs'
+import {
+  createCommonRichTextStyleSpecs,
+  renderRichTextColorStyle,
+} from '../rich-text/blocknote/common-schema'
 import {
   getValueInlineText,
   parseValueInlineExternalElement,
@@ -23,19 +25,9 @@ export const noteInlineContentSpecs = createCustomInlineContentSpecs({
   },
 })
 
-export const noteStyleSpecs = createNoteStyleSpecs({
-  textColor: {
-    parse: (element) =>
-      element.tagName === 'SPAN' && element.style.color ? element.style.color : undefined,
-    render: renderTextColor,
-    toExternalHTML: renderTextColor,
-  },
+export const noteStyleSpecs = createCommonRichTextStyleSpecs({
+  parse: (element) =>
+    element.tagName === 'SPAN' && element.style.color ? element.style.color : undefined,
+  render: renderRichTextColorStyle,
+  toExternalHTML: renderRichTextColorStyle,
 })
-
-function renderTextColor(value: string | undefined) {
-  const element = document.createElement('span')
-  if (value && value !== defaultProps.textColor.default) {
-    element.style.color = COLORS_DEFAULT[value]?.text ?? value
-  }
-  return { contentDOM: element, dom: element }
-}

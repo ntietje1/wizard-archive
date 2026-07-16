@@ -155,7 +155,7 @@ describe('canonical note document', () => {
         ],
         NOTE_YJS_FRAGMENT,
       ),
-    ).toThrow('Duplicate note block identity')
+    ).toThrow('Duplicate rich-text block identity')
     expect(() =>
       noteBlocksToYDoc(
         [
@@ -167,7 +167,7 @@ describe('canonical note document', () => {
         ],
         NOTE_YJS_FRAGMENT,
       ),
-    ).toThrow('Duplicate note block identity')
+    ).toThrow('Duplicate rich-text block identity')
 
     const valueId = generateUuidV7()
     expect(() =>

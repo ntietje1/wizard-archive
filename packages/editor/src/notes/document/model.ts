@@ -4,46 +4,25 @@ import { noteValuePropsSchema } from '../values/schema'
 import { parseSerializedAuthoredDestination } from '../../resources/authored-destination'
 import { isUuidV7 } from '../../resources/domain-id'
 import type { NoteBlockId } from '../../resources/domain-id'
+import {
+  COMMON_RICH_TEXT_BLOCK_TYPES,
+  createCommonRichTextBlockContentSchemas,
+  createRichTextBlockSchema,
+  defaultRichTextPropsSchema,
+  enforceUniqueRichTextBlockIdentities,
+  richTextTextSchema,
+} from '../../rich-text/blocknote/common-model'
+import type { CommonRichTextBlockContent } from '../../rich-text/blocknote/common-model'
 
-export const NOTE_BLOCK_REGISTRY = [
-  { type: 'paragraph', props: 'defaultText', content: 'inline' },
-  { type: 'heading', props: 'heading', content: 'inline' },
-  { type: 'bulletListItem', props: 'defaultText', content: 'inline' },
-  { type: 'numberedListItem', props: 'numberedListItem', content: 'inline' },
-  { type: 'checkListItem', props: 'checkListItem', content: 'inline' },
-  { type: 'toggleListItem', props: 'defaultText', content: 'inline' },
-  { type: 'quote', props: 'defaultText', content: 'inline' },
-  { type: 'codeBlock', props: 'codeBlock', content: 'inline' },
-  { type: 'divider', props: 'empty', content: 'inline' },
-  { type: 'embed', props: 'embed', content: 'none' },
-  { type: 'table', props: 'table', content: 'table' },
+export const NOTE_BLOCK_TYPE_VALUES = [
+  ...COMMON_RICH_TEXT_BLOCK_TYPES,
+  'toggleListItem',
+  'divider',
+  'embed',
+  'table',
 ] as const
 
-export const NOTE_BLOCK_TYPE_VALUES = NOTE_BLOCK_REGISTRY.map((entry) => entry.type) as [
-  (typeof NOTE_BLOCK_REGISTRY)[0]['type'],
-  (typeof NOTE_BLOCK_REGISTRY)[1]['type'],
-  ...Array<(typeof NOTE_BLOCK_REGISTRY)[number]['type']>,
-]
-
-export type NoteBlockType = (typeof NOTE_BLOCK_REGISTRY)[number]['type']
-
-const stylesSchema = zod
-  .strictObject({
-    bold: zod.boolean().optional(),
-    italic: zod.boolean().optional(),
-    underline: zod.boolean().optional(),
-    strike: zod.boolean().optional(),
-    code: zod.boolean().optional(),
-    textColor: zod.string().optional(),
-    backgroundColor: zod.string().optional(),
-  })
-  .optional()
-
-const styledTextSchema = zod.strictObject({
-  type: zod.literal('text'),
-  text: zod.string(),
-  styles: stylesSchema,
-})
+export type NoteBlockType = (typeof NOTE_BLOCK_TYPE_VALUES)[number]
 
 const valueInlineContentSchema = zod.strictObject({
   type: zod.literal('value'),
@@ -51,7 +30,7 @@ const valueInlineContentSchema = zod.strictObject({
 })
 
 const inlineContentSchema = zod.discriminatedUnion('type', [
-  styledTextSchema,
+  richTextTextSchema,
   valueInlineContentSchema,
 ])
 
@@ -81,55 +60,13 @@ const tableContentSchema = zod.strictObject({
   ),
 })
 
-const textAlignmentSchema = zod.enum(['left', 'center', 'right', 'justify']).optional()
-
-const defaultProps = {
-  textColor: zod.string().optional(),
-  backgroundColor: zod.string().optional(),
-  textAlignment: textAlignmentSchema,
-}
-
-const paragraphPropsSchema = zod.strictObject({ ...defaultProps })
-
-export const headingPropsSchema = zod.strictObject({
-  level: zod.union([
-    zod.literal(1),
-    zod.literal(2),
-    zod.literal(3),
-    zod.literal(4),
-    zod.literal(5),
-    zod.literal(6),
-  ]),
-  isToggleable: zod.boolean().optional(),
-  ...defaultProps,
-})
-
-const bulletListItemPropsSchema = paragraphPropsSchema
-
-const numberedListItemPropsSchema = zod.strictObject({
-  start: zod.number().optional(),
-  ...defaultProps,
-})
-
-const checkListItemPropsSchema = zod.strictObject({
-  checked: zod.boolean().optional(),
-  ...defaultProps,
-})
-
-const toggleListItemPropsSchema = paragraphPropsSchema
-
-const quotePropsSchema = paragraphPropsSchema
-
-const codeBlockPropsSchema = zod.strictObject({
-  language: zod.string().optional(),
-})
-
-const dividerPropsSchema = zod.strictObject({})
+const commonBlockContentSchemas = createCommonRichTextBlockContentSchemas(inlineContentSchema)
+const inlineContent = zod.array(inlineContentSchema).optional()
 
 const embedSharedPropsSchema = {
   destination: zod.string().refine((value) => parseSerializedAuthoredDestination(value) !== null),
   backgroundColor: zod.string().optional(),
-  textAlignment: textAlignmentSchema,
+  textAlignment: zod.enum(['left', 'center', 'right', 'justify']).optional(),
   previewWidth: zod.number().positive().optional(),
   previewHeight: zod.number().positive().optional(),
   previewAspectRatio: zod.number().positive().optional(),
@@ -141,70 +78,15 @@ const tablePropsSchema = zod.strictObject({
   textColor: zod.string().optional(),
 })
 
-const blockPropSchemas = {
-  defaultText: paragraphPropsSchema,
-  heading: headingPropsSchema,
-  numberedListItem: numberedListItemPropsSchema,
-  checkListItem: checkListItemPropsSchema,
-  codeBlock: codeBlockPropsSchema,
-  empty: dividerPropsSchema,
-  embed: embedPropsSchema,
-  table: tablePropsSchema,
-} as const
-
-const inlineContent = zod.array(inlineContentSchema).optional()
-
-const paragraphBlockContentSchema = zod.strictObject({
-  type: zod.literal('paragraph'),
-  props: paragraphPropsSchema,
-  content: inlineContent,
-})
-
-const headingBlockContentSchema = zod.strictObject({
-  type: zod.literal('heading'),
-  props: headingPropsSchema,
-  content: inlineContent,
-})
-
-const bulletListItemBlockContentSchema = zod.strictObject({
-  type: zod.literal('bulletListItem'),
-  props: bulletListItemPropsSchema,
-  content: inlineContent,
-})
-
-const numberedListItemBlockContentSchema = zod.strictObject({
-  type: zod.literal('numberedListItem'),
-  props: numberedListItemPropsSchema,
-  content: inlineContent,
-})
-
-const checkListItemBlockContentSchema = zod.strictObject({
-  type: zod.literal('checkListItem'),
-  props: checkListItemPropsSchema,
-  content: inlineContent,
-})
-
 const toggleListItemBlockContentSchema = zod.strictObject({
   type: zod.literal('toggleListItem'),
-  props: toggleListItemPropsSchema,
-  content: inlineContent,
-})
-
-const quoteBlockContentSchema = zod.strictObject({
-  type: zod.literal('quote'),
-  props: quotePropsSchema,
-  content: inlineContent,
-})
-
-const codeBlockBlockContentSchema = zod.strictObject({
-  type: zod.literal('codeBlock'),
-  props: codeBlockPropsSchema,
+  props: defaultRichTextPropsSchema,
   content: inlineContent,
 })
 
 const dividerBlockContentSchema = zod.strictObject({
   type: zod.literal('divider'),
-  props: dividerPropsSchema,
+  props: zod.strictObject({}),
   content: inlineContent,
 })
 
@@ -220,39 +102,29 @@ const tableBlockContentSchema = zod.strictObject({
   content: tableContentSchema.optional(),
 })
 
-const blockContentSchemasByType = {
-  paragraph: paragraphBlockContentSchema,
-  heading: headingBlockContentSchema,
-  bulletListItem: bulletListItemBlockContentSchema,
-  numberedListItem: numberedListItemBlockContentSchema,
-  checkListItem: checkListItemBlockContentSchema,
-  toggleListItem: toggleListItemBlockContentSchema,
-  quote: quoteBlockContentSchema,
-  codeBlock: codeBlockBlockContentSchema,
-  divider: dividerBlockContentSchema,
-  embed: embedBlockContentSchema,
-  table: tableBlockContentSchema,
-} satisfies Record<NoteBlockType, z.ZodObject>
-
-type NoteBlockContentSchema = (typeof blockContentSchemasByType)[NoteBlockType]
-
-const allFlatBlockContentSchemas = NOTE_BLOCK_REGISTRY.map((entry) => {
-  const schema = blockContentSchemasByType[entry.type]
-  const propSchema = blockPropSchemas[entry.props]
-  if (schema.shape.props !== propSchema) {
-    throw new Error(`Block registry prop kind mismatch for ${entry.type}`)
-  }
-  return schema
-}) as unknown as [
-  typeof paragraphBlockContentSchema,
-  typeof headingBlockContentSchema,
-  ...Array<NoteBlockContentSchema>,
-]
-
-export const noteBlockContentSchema = zod.discriminatedUnion('type', allFlatBlockContentSchemas)
-
-export type NoteBlockContent = z.infer<typeof noteBlockContentSchema>
 type InlineContentItem = z.infer<typeof inlineContentSchema>
+const allFlatBlockContentSchemas = [
+  ...commonBlockContentSchemas,
+  toggleListItemBlockContentSchema,
+  dividerBlockContentSchema,
+  embedBlockContentSchema,
+  tableBlockContentSchema,
+] as const
+
+type NoteExtensionBlockContent = z.infer<
+  | typeof toggleListItemBlockContentSchema
+  | typeof dividerBlockContentSchema
+  | typeof embedBlockContentSchema
+  | typeof tableBlockContentSchema
+>
+export type NoteBlockContent =
+  | CommonRichTextBlockContent<InlineContentItem>
+  | NoteExtensionBlockContent
+export const noteBlockContentSchema = zod.discriminatedUnion(
+  'type',
+  allFlatBlockContentSchemas,
+) as z.ZodType<NoteBlockContent>
+
 export type InlineContent = Array<InlineContentItem>
 export type TableContent = z.infer<typeof tableContentSchema>
 export type NoteBlock = z.infer<typeof noteBlockSchema>
@@ -268,30 +140,15 @@ type NoteBlockNode = NoteBlockContent & {
   children?: Array<NoteBlockNode>
 }
 
-let noteBlockNodeSchema: z.ZodType<NoteBlockNode> | null = null
-
-export const noteBlockSchema: z.ZodType<NoteBlockNode> = zod.lazy(() => {
-  noteBlockNodeSchema ??= createNoteBlockNodeSchema()
-  return noteBlockNodeSchema
-})
-
-function createNoteBlockNodeSchema(): z.ZodType<NoteBlockNode> {
-  const options = noteBlockContentSchema.options.map(
-    (opt: (typeof noteBlockContentSchema.options)[number]) =>
-      opt.extend({ id: noteBlockIdSchema, children: zod.array(noteBlockSchema).optional() }),
-  )
-  if (options.length < 2) {
-    throw new Error(`noteBlockSchema requires at least 2 block types, got ${options.length}`)
-  }
-  return zod.discriminatedUnion(
-    'type',
-    options as [(typeof options)[0], (typeof options)[1], ...typeof options],
-  ) as z.ZodType<NoteBlockNode>
-}
+export const noteBlockSchema = createRichTextBlockSchema<NoteBlockNode>(
+  allFlatBlockContentSchemas,
+  noteBlockIdSchema,
+)
 
 export const noteDocumentSchema = zod
   .array(noteBlockSchema)
   .min(1)
+  .superRefine(enforceUniqueRichTextBlockIdentities)
   .superRefine(enforceUniqueNoteDocumentIdentities)
 
 type PartialFlatBlockContent = {
@@ -310,7 +167,7 @@ type PartialNoteBlockNode = PartialFlatBlockContent & {
 }
 
 function createPartialBlockSchema(
-  schemas: ReadonlyArray<NoteBlockContentSchema>,
+  schemas: ReadonlyArray<z.ZodObject<{ type: z.ZodLiteral<string> } & z.ZodRawShape>>,
 ): z.ZodType<PartialNoteBlockNode> {
   let partialBlockNodeSchema: z.ZodType<PartialNoteBlockNode> | null = null
   const partialBlockSchema: z.ZodType<PartialNoteBlockNode> = zod.lazy(() => {
@@ -322,7 +179,7 @@ function createPartialBlockSchema(
 }
 
 function createPartialBlockNodeSchema(
-  schemas: ReadonlyArray<NoteBlockContentSchema>,
+  schemas: ReadonlyArray<z.ZodObject<{ type: z.ZodLiteral<string> } & z.ZodRawShape>>,
   partialBlockSchema: z.ZodType<PartialNoteBlockNode>,
 ): z.ZodType<PartialNoteBlockNode> {
   if (schemas.length < 2) {
@@ -334,8 +191,9 @@ function createPartialBlockNodeSchema(
   const options = schemas.map((schema) =>
     zod.strictObject({
       ...schema.shape,
-      props: schema.shape.props.optional(),
-      content: 'content' in schema.shape ? schema.shape.content : zod.undefined().optional(),
+      props: zod.optional(schema.shape.props),
+      content:
+        'content' in schema.shape ? zod.optional(schema.shape.content) : zod.undefined().optional(),
       id: noteBlockIdSchema.optional(),
       children: zod.array(partialBlockSchema).optional(),
     }),
@@ -350,18 +208,17 @@ const partialBlockNoteBlockSchema = createPartialBlockSchema(allFlatBlockContent
 export const partialNoteDocumentSchema = zod
   .array(partialBlockNoteBlockSchema)
   .min(1)
+  .superRefine(enforceUniqueRichTextBlockIdentities)
   .superRefine(enforceUniqueNoteDocumentIdentities)
 
 function enforceUniqueNoteDocumentIdentities(
   blocks: ReadonlyArray<PartialNoteBlockNode>,
   context: z.RefinementCtx,
 ): void {
-  const blockIds = new Set<string>()
   const valueIds = new Set<string>()
   const pending = blocks.map((block, index) => ({ block, path: [index] as Array<PropertyKey> }))
   while (pending.length > 0) {
     const { block, path } = pending.pop()!
-    addUniqueNoteIdentity(block.id, blockIds, 'block', [...path, 'id'], context)
     enforceUniqueNoteValueIdentities(block.content, [...path, 'content'], valueIds, context)
     block.children?.forEach((child, index) => {
       pending.push({ block: child, path: [...path, 'children', index] })
@@ -399,26 +256,24 @@ function enforceUniqueInlineValueIdentities(
 ): void {
   content.forEach((item, index) => {
     if (item.type !== 'value') return
-    addUniqueNoteIdentity(
+    addUniqueNoteValueIdentity(
       item.props.valueId,
       valueIds,
-      'value',
       [...path, index, 'props', 'valueId'],
       context,
     )
   })
 }
 
-function addUniqueNoteIdentity(
+function addUniqueNoteValueIdentity(
   value: unknown,
   identities: Set<string>,
-  kind: 'block' | 'value',
   path: Array<PropertyKey>,
   context: z.RefinementCtx,
 ): void {
   if (typeof value !== 'string') return
   if (identities.has(value)) {
-    context.addIssue({ code: 'custom', message: `Duplicate note ${kind} identity`, path })
+    context.addIssue({ code: 'custom', message: 'Duplicate note value identity', path })
     return
   }
   identities.add(value)

@@ -1,6 +1,6 @@
 import { BlockNoteSchema } from '@blocknote/core'
 import { createCustomInlineContentSpecs, createNoteBlockSpecs } from './schema-factory'
-import { createNoteStyleSpecs } from './style-specs'
+import { createCommonRichTextStyleSpecs } from '../../rich-text/blocknote/common-schema'
 import { headlessRenderers } from './headless-renderers'
 import { createHeadlessBlockNoteEditor } from './headless-editor'
 
@@ -8,9 +8,7 @@ const customInlineContentSpecs = createCustomInlineContentSpecs({
   valueInline: headlessRenderers.valueInline,
 })
 
-const customStyleSpecs = createNoteStyleSpecs({
-  textColor: headlessRenderers.textColor,
-})
+const customStyleSpecs = createCommonRichTextStyleSpecs(headlessRenderers.textColor)
 
 const headlessNoteBlockSpecs = createNoteBlockSpecs({
   renderEmbedBlock: headlessRenderers.embedBlock,

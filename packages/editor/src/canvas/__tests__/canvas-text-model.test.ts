@@ -58,4 +58,28 @@ describe('canvas text document', () => {
     expect(duplicate[0]?.children?.[0]?.id).not.toBe(source[0]?.children?.[0]?.id)
     expect(parseCanvasTextDocument(duplicate)).toEqual(duplicate)
   })
+
+  it.each(['toggleListItem', 'divider', 'embed', 'table'])(
+    'rejects note-only %s blocks',
+    (type) => {
+      expect(parseCanvasTextDocument([{ id: generateUuidV7(), type, props: {} }])).toBeNull()
+    },
+  )
+
+  it('rejects note-only inline values', () => {
+    expect(
+      parseCanvasTextDocument([
+        {
+          id: generateUuidV7(),
+          type: 'paragraph',
+          content: [
+            {
+              type: 'value',
+              props: { valueId: generateUuidV7(), label: 'Value', expressionSource: '0' },
+            },
+          ],
+        },
+      ]),
+    ).toBeNull()
+  })
 })

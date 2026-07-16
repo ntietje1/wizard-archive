@@ -1,9 +1,4 @@
-import {
-  createBlockSpec,
-  createInlineContentSpec,
-  defaultBlockSpecs,
-  defaultInlineContentSpecs,
-} from '@blocknote/core'
+import { createBlockSpec, createInlineContentSpec, defaultBlockSpecs } from '@blocknote/core'
 import { noteValueInlineConfig } from '../values/block-config'
 import { EMPTY_AUTHORED_DESTINATION_SERIALIZED } from '../../resources/authored-destination'
 import type {
@@ -12,6 +7,10 @@ import type {
   InlineContentSpecs,
   StyleSchema,
 } from '@blocknote/core'
+import {
+  commonRichTextBlockSpecs,
+  commonRichTextInlineContentSpecs,
+} from '../../rich-text/blocknote/common-schema'
 
 type ValueInlineRenderer = CustomInlineContentImplementation<
   typeof noteValueInlineConfig,
@@ -23,15 +22,6 @@ type NoteDocumentSpecRenderers = {
 }
 
 type EmbedBlockRenderer = () => { dom: HTMLElement }
-
-const { link: _link, ...inlineContentWithoutLinks } = defaultInlineContentSpecs
-const {
-  image: _image,
-  video: _video,
-  audio: _audio,
-  file: _file,
-  ...defaultBlockSpecsWithoutMedia
-} = defaultBlockSpecs
 
 const embedBlockConfig = {
   type: 'embed',
@@ -58,7 +48,7 @@ export function createCustomInlineContentSpecs(
 ) {
   const valueInlineSpec = createInlineContentSpec(noteValueInlineConfig, renderers.valueInline)
   return {
-    ...inlineContentWithoutLinks,
+    ...commonRichTextInlineContentSpecs,
     value: valueInlineSpec,
   } as InlineContentSpecs & { value: typeof valueInlineSpec }
 }
@@ -69,7 +59,10 @@ export function createNoteBlockSpecs({
   renderEmbedBlock: EmbedBlockRenderer
 }) {
   return {
-    ...defaultBlockSpecsWithoutMedia,
+    ...commonRichTextBlockSpecs,
+    toggleListItem: defaultBlockSpecs.toggleListItem,
+    divider: defaultBlockSpecs.divider,
+    table: defaultBlockSpecs.table,
     embed: createEmbedBlockSpec(renderEmbedBlock),
   } satisfies BlockSpecs
 }
