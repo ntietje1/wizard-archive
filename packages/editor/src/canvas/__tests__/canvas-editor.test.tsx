@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { CanvasEditor } from '../canvas-editor'
-import { createCanvasDocumentDoc } from '../document-contract'
+import { createCanvasDocumentDoc, readCanvasDocumentContent } from '../document-contract'
 import type { CanvasDocumentContent } from '../document-contract'
 import { initialVersion, sha256Digest } from '../../resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
@@ -71,6 +71,58 @@ describe('CanvasEditor', () => {
     expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fit view' })).toBeVisible()
+    view.unmount()
+    session.dispose()
+  })
+
+  it('previews drawing locally and persists one canonical stroke on release', async () => {
+    const session = await createSession()
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Drawing board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
+    fireEvent.click(screen.getByRole('button', { name: 'Draw' }))
+
+    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 20, pointerId: 5 })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 50,
+      clientY: 60,
+      pointerId: 5,
+      pressure: 0.75,
+    })
+    expect(screen.getByTestId('canvas-drawing-preview')).toBeVisible()
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(0)
+
+    fireEvent.pointerUp(surface, { clientX: 50, clientY: 60, pointerId: 5 })
+    expect(screen.queryByTestId('canvas-drawing-preview')).not.toBeInTheDocument()
+    const [stroke] = readCanvasDocumentContent(session.document).nodes
+    expect(stroke).toMatchObject({
+      type: 'stroke',
+      data: {
+        points: [
+          [10, 20, 0.5],
+          [50, 60, 0.75],
+        ],
+        color: 'var(--foreground)',
+        size: 4,
+        opacity: 100,
+      },
+    })
+    expect(screen.getByTestId('canvas-stroke-hit-target')).toBeVisible()
+
+    fireEvent.pointerDown(surface, { button: 0, clientX: 80, clientY: 20, pointerId: 6 })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 100,
+      clientY: 40,
+      pointerId: 6,
+    })
+    fireEvent.pointerCancel(surface, { pointerId: 6 })
+    expect(screen.queryByTestId('canvas-drawing-preview')).not.toBeInTheDocument()
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(1)
+
     view.unmount()
     session.dispose()
   })

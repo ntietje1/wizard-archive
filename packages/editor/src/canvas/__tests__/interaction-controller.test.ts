@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import {
   CanvasInteractionController,
   canvasToScreenPoint,
+  getCanvasDrawingPoints,
   getVisualCanvasSelection,
   screenToCanvasPoint,
 } from '../interaction-controller'
@@ -130,6 +131,39 @@ describe('CanvasInteractionController selection', () => {
 })
 
 describe('CanvasInteractionController pointer activities', () => {
+  it('owns freehand preview and returns one constrained final stroke', () => {
+    const controller = new CanvasInteractionController()
+    controller.beginDrawing(3, { x: 0, y: 0 }, 0, {
+      color: '#112233',
+      size: 4,
+      opacity: 60,
+    })
+    controller.updateDrawing(3, { x: 20, y: 8 }, 0.75, true)
+    const interaction = controller.get().interaction
+    expect(interaction.type).toBe('drawing')
+    if (interaction.type !== 'drawing') throw new Error('Expected drawing interaction')
+    expect(getCanvasDrawingPoints(interaction)).toEqual([
+      [0, 0, 0.5],
+      [20, 0, 0.75],
+    ])
+    expect(controller.commitDrawing(3)).toEqual({
+      points: [
+        [0, 0, 0.5],
+        [20, 0, 0.75],
+      ],
+      style: { color: '#112233', size: 4, opacity: 60 },
+    })
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
+
+    controller.beginDrawing(4, { x: 1, y: 2 }, 0.5, {
+      color: '#112233',
+      size: 4,
+      opacity: 60,
+    })
+    expect(controller.commitDrawing(4)).toBeNull()
+    controller.dispose()
+  })
+
   it('previews a multi-node drag and commits only a non-zero delta', () => {
     const controller = new CanvasInteractionController()
     controller.beginDrag(

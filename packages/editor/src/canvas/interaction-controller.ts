@@ -1,6 +1,6 @@
 import type { CanvasNodeId } from '../resources/domain-id'
 
-export type CanvasTool = 'hand' | 'lasso' | 'select' | 'text'
+export type CanvasTool = 'draw' | 'hand' | 'lasso' | 'select' | 'text'
 
 export type CanvasPoint = Readonly<{ x: number; y: number }>
 
@@ -13,6 +13,14 @@ export type CanvasSelection = Readonly<{
 
 export type CanvasSelectionKind = 'lasso' | 'marquee'
 export type CanvasSelectionMode = 'add' | 'replace'
+
+export type CanvasDrawStyle = Readonly<{
+  color: string
+  size: number
+  opacity: number
+}>
+
+export type CanvasDrawPoint = readonly [x: number, y: number, pressure: number]
 
 export type CanvasInteraction =
   | Readonly<{ type: 'idle' }>
@@ -39,6 +47,13 @@ export type CanvasInteraction =
       anchor: CanvasPoint
       initialPositions: ReadonlyMap<CanvasNodeId, CanvasPoint>
       delta: CanvasPoint
+    }>
+  | Readonly<{
+      type: 'drawing'
+      pointerId: number
+      rawPoints: ReadonlyArray<CanvasDrawPoint>
+      constrain: boolean
+      style: CanvasDrawStyle
     }>
   | Readonly<{
       type: 'panning'
@@ -143,6 +158,19 @@ export function getCanvasNodeInteractionPosition(
   return initial
     ? { x: initial.x + interaction.delta.x, y: initial.y + interaction.delta.y }
     : documentPosition
+}
+
+export function getCanvasDrawingPoints(
+  interaction: Extract<CanvasInteraction, { type: 'drawing' }>,
+): ReadonlyArray<CanvasDrawPoint> {
+  if (!interaction.constrain || interaction.rawPoints.length < 2) return interaction.rawPoints
+  const start = interaction.rawPoints[0]
+  const end = interaction.rawPoints[interaction.rawPoints.length - 1]
+  const deltaX = end[0] - start[0]
+  const deltaY = end[1] - start[1]
+  return Math.abs(deltaX) >= Math.abs(deltaY)
+    ? [start, [end[0], start[1], end[2]]]
+    : [start, [start[0], end[1], end[2]]]
 }
 
 export function screenToCanvasPoint(
@@ -281,6 +309,56 @@ export class CanvasInteractionController {
         delta: { x: 0, y: 0 },
       },
     })
+  }
+
+  beginDrawing(
+    pointerId: number,
+    point: CanvasPoint,
+    pressure: number,
+    style: CanvasDrawStyle,
+  ): void {
+    this.#assertActive()
+    if (style.color.length === 0 || !Number.isFinite(style.size) || style.size < 1) {
+      throw new TypeError('Canvas drawing requires a color and a stroke size of at least one')
+    }
+    if (!Number.isFinite(style.opacity) || style.opacity < 0 || style.opacity > 100) {
+      throw new TypeError('Canvas drawing opacity must be between zero and one hundred')
+    }
+    this.#publish({
+      ...this.#snapshot,
+      interaction: {
+        type: 'drawing',
+        pointerId,
+        rawPoints: [drawPoint(point, pressure)],
+        constrain: false,
+        style: { ...style },
+      },
+    })
+  }
+
+  updateDrawing(pointerId: number, point: CanvasPoint, pressure: number, constrain: boolean): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'drawing' || interaction.pointerId !== pointerId) return
+    this.#publish({
+      ...this.#snapshot,
+      interaction: {
+        ...interaction,
+        rawPoints: [...interaction.rawPoints, drawPoint(point, pressure)],
+        constrain,
+      },
+    })
+  }
+
+  commitDrawing(
+    pointerId: number,
+  ): Readonly<{ points: ReadonlyArray<CanvasDrawPoint>; style: CanvasDrawStyle }> | null {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'drawing' || interaction.pointerId !== pointerId) return null
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+    const points = getCanvasDrawingPoints(interaction)
+    return points.length >= 2 ? { points, style: interaction.style } : null
   }
 
   updateDrag(pointerId: number, point: CanvasPoint): void {
@@ -422,6 +500,7 @@ export class CanvasInteractionController {
       case 'editing':
         if (!nodeIds.has(currentInteraction.nodeId)) interaction = { type: 'idle' }
         break
+      case 'drawing':
       case 'idle':
       case 'panning':
         break
@@ -491,4 +570,8 @@ export class CanvasInteractionController {
   #assertActive(): void {
     if (this.#disposed) throw new Error('CanvasInteractionController is disposed')
   }
+}
+
+function drawPoint(point: CanvasPoint, pressure: number): CanvasDrawPoint {
+  return [point.x, point.y, Number.isFinite(pressure) && pressure > 0 ? Math.min(1, pressure) : 0.5]
 }

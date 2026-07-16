@@ -8,6 +8,7 @@ import type {
 import { canvasEdgePath } from './canvas-edge-geometry'
 import {
   getCanvasNodeInteractionPosition,
+  getCanvasDrawingPoints,
   getVisualCanvasSelection,
   screenToCanvasPoint,
 } from './interaction-controller'
@@ -73,6 +74,7 @@ export function CanvasScene({
           />
         ))}
       </svg>
+      <CanvasDrawingOverlay interaction={interaction} />
       <CanvasSelectionOverlay interaction={interaction} />
       {content.nodes.map((node) => (
         <CanvasNode
@@ -306,7 +308,7 @@ function CanvasNodeContent({
           stroke={node.data.color}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeOpacity={node.data.opacity ?? 1}
+          strokeOpacity={(node.data.opacity ?? 100) / 100}
           strokeWidth={node.data.size}
         />
       </svg>
@@ -392,11 +394,37 @@ function CanvasEdge({
       <path
         d={path}
         fill="none"
-        stroke={selected ? 'hsl(var(--ring))' : (edge.style?.stroke ?? 'hsl(var(--foreground))')}
+        stroke={selected ? 'var(--ring)' : (edge.style?.stroke ?? 'var(--foreground)')}
         strokeOpacity={edge.style?.opacity ?? 0.75}
         strokeWidth={edge.style?.strokeWidth ?? 2}
       />
     </g>
+  )
+}
+
+function CanvasDrawingOverlay({ interaction }: { interaction: CanvasInteractionSnapshot }) {
+  const drawing = interaction.interaction
+  if (drawing.type !== 'drawing') return null
+  const points = getCanvasDrawingPoints(drawing)
+    .map(([x, y]) => `${x},${y}`)
+    .join(' ')
+  return (
+    <svg
+      className="pointer-events-none absolute left-0 top-0 overflow-visible"
+      data-testid="canvas-drawing-preview"
+      width="1"
+      height="1"
+    >
+      <polyline
+        fill="none"
+        points={points}
+        stroke={drawing.style.color}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeOpacity={drawing.style.opacity / 100}
+        strokeWidth={drawing.style.size}
+      />
+    </svg>
   )
 }
 
@@ -426,9 +454,10 @@ function CanvasSelectionOverlay({ interaction }: { interaction: CanvasInteractio
           height="1"
         >
           <polygon
-            fill="hsl(var(--primary) / 0.1)"
+            fill="var(--primary)"
+            fillOpacity={0.1}
             points={gesture.points.map(({ x, y }) => `${x},${y}`).join(' ')}
-            stroke="hsl(var(--primary))"
+            stroke="var(--primary)"
             strokeWidth={1 / interaction.viewport.zoom}
           />
         </svg>

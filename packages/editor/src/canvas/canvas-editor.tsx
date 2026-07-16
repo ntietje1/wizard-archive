@@ -3,6 +3,7 @@ import {
   LassoSelect,
   Maximize,
   MousePointer2,
+  Pencil,
   Redo2,
   Type,
   Undo2,
@@ -18,6 +19,7 @@ import { CanvasInteractionController, screenToCanvasPoint } from './interaction-
 import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
 import { fitCanvasContent } from './canvas-layout'
+import { canvasStrokeBounds } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import {
@@ -30,10 +32,12 @@ import type { ResourceId } from '../resources/domain-id'
 import type { CanvasSession } from '../resources/content-session-contract'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
+const DEFAULT_DRAW_STYLE = { color: 'var(--foreground)', size: 4, opacity: 100 } as const
 const TOOL_BUTTONS: ReadonlyArray<Readonly<{ tool: CanvasTool; label: string; icon: LucideIcon }>> =
   [
     { tool: 'select', label: 'Pointer', icon: MousePointer2 },
     { tool: 'lasso', label: 'Lasso select', icon: LassoSelect },
+    { tool: 'draw', label: 'Draw', icon: Pencil },
     { tool: 'text', label: 'Text', icon: Type },
     { tool: 'hand', label: 'Hand', icon: Hand },
   ]
@@ -155,7 +159,7 @@ export function CanvasEditor({
       <section
         ref={surface}
         aria-label="Canvas surface"
-        className={`relative size-full touch-none overflow-hidden bg-[radial-gradient(circle,hsl(var(--border))_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
+        className={`relative size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
         data-tool={interaction.tool}
         data-testid="canvas-surface"
         tabIndex={-1}
@@ -170,6 +174,16 @@ export function CanvasEditor({
             return
           }
           if (event.button !== 0) return
+          if (snapshot.tool === 'draw') {
+            event.currentTarget.setPointerCapture(event.pointerId)
+            interactionController.beginDrawing(
+              event.pointerId,
+              screenToCanvasPoint(point, snapshot.viewport),
+              event.pressure,
+              DEFAULT_DRAW_STYLE,
+            )
+            return
+          }
           if (snapshot.tool === 'text') {
             createTextNode(screenToCanvasPoint(point, snapshot.viewport))
             return
@@ -187,6 +201,14 @@ export function CanvasEditor({
         onPointerMove={(event) => {
           const point = localPoint(event, event.currentTarget)
           interactionController.updatePan(event.pointerId, point)
+          if ((event.buttons & 1) === 1) {
+            interactionController.updateDrawing(
+              event.pointerId,
+              screenToCanvasPoint(point, interactionController.get().viewport),
+              event.pressure,
+              event.shiftKey,
+            )
+          }
           updateAreaSelection(
             event.pointerId,
             screenToCanvasPoint(point, interactionController.get().viewport),
@@ -199,6 +221,7 @@ export function CanvasEditor({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
+          if (commitDrawing(event.pointerId, interactionController, documentController)) return
           if (interactionController.commitPan(event.pointerId)) return
           commitAreaSelection(event.pointerId, interactionController)
         }}
@@ -428,6 +451,35 @@ function commitAreaSelection(pointerId: number, controller: CanvasInteractionCon
 
 function canvasToolCursor(tool: CanvasTool): string {
   if (tool === 'hand') return 'cursor-grab'
-  if (tool === 'lasso' || tool === 'text') return 'cursor-crosshair'
+  if (tool === 'draw' || tool === 'lasso' || tool === 'text') return 'cursor-crosshair'
   return 'cursor-default'
+}
+
+function commitDrawing(
+  pointerId: number,
+  interactionController: CanvasInteractionController,
+  documentController: CanvasDocumentController,
+): boolean {
+  const drawing = interactionController.commitDrawing(pointerId)
+  if (!drawing) return false
+  const bounds = canvasStrokeBounds(drawing.points, drawing.style.size)
+  documentController.apply({
+    type: 'insert',
+    nodes: [
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+        type: 'stroke',
+        position: { x: bounds.x, y: bounds.y },
+        width: bounds.width,
+        height: bounds.height,
+        data: {
+          points: drawing.points.map(([x, y, pressure]) => [x, y, pressure]),
+          ...drawing.style,
+          bounds,
+        },
+      },
+    ],
+    edges: [],
+  })
+  return true
 }
