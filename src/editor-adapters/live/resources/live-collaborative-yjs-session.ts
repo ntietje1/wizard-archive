@@ -1,7 +1,7 @@
 import type { CollaborationUser } from '@wizard-archive/editor/resources/content-session-contract'
 import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import { createLiveResourceAwareness } from './live-resource-awareness'
-import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
+import { createLiveResourcePresence } from './live-resource-presence'
+import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveYjsDocumentSession } from './live-yjs-document-session'
 import type { LiveYjsDocumentSessionOptions } from './live-yjs-document-session'
 
@@ -10,31 +10,31 @@ type LiveCollaborativeYjsSessionOptions = Omit<
   'disposeCompanion' | 'flushCompanion'
 > &
   Readonly<{
-    awarenessBackend: LiveResourceAwarenessBackend
+    presenceBackend: LiveResourcePresenceBackend
     memberId: CampaignMemberId
     resourceId: ResourceId
     user: CollaborationUser
   }>
 
 export function createLiveCollaborativeYjsSession(options: LiveCollaborativeYjsSessionOptions) {
-  const { awarenessBackend, memberId, resourceId, user, ...sessionOptions } = options
-  const awareness = createLiveResourceAwareness(
+  const { presenceBackend, memberId, resourceId, user, ...sessionOptions } = options
+  const presence = createLiveResourcePresence(
     sessionOptions.document,
     resourceId,
     memberId,
     user,
-    awarenessBackend,
+    presenceBackend,
     sessionOptions.changed,
   )
   try {
     const session = createLiveYjsDocumentSession({
       ...sessionOptions,
-      flushCompanion: () => awareness.flush(),
-      disposeCompanion: () => awareness.dispose(),
+      flushCompanion: () => presence.flush(),
+      disposeCompanion: () => presence.dispose(),
     })
-    return { awareness, session }
+    return { awareness: presence, session }
   } catch (error) {
-    void awareness.dispose()
+    void presence.dispose()
     throw error
   }
 }

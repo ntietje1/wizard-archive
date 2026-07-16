@@ -18,7 +18,6 @@ type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
-  awareness: Array<Doc<'resourceAwareness'>>
   fileContents: Array<Doc<'resourceFileContents'>>
   mapContents: Array<Doc<'resourceMapContents'>>
   mapPins: Array<Doc<'resourceMapPins'>>
@@ -34,7 +33,6 @@ function createPlan(): ResourceDeletionPlan {
     aliases: [],
     assetsFolders: [],
     noteContents: [],
-    awareness: [],
     fileContents: [],
     mapContents: [],
     mapPins: [],
@@ -55,7 +53,6 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
-    plan.awareness,
     plan.fileContents,
     plan.mapContents,
     plan.mapPins,
@@ -71,12 +68,6 @@ async function addContent(
   resource: Doc<'resources'>,
 ): Promise<void> {
   const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, resource.resourceUuid)
-  plan.awareness.push(
-    ...(await ctx.db
-      .query('resourceAwareness')
-      .withIndex('by_resourceUuid_and_clientId', (query) => query.eq('resourceUuid', resourceId))
-      .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
-  )
   switch (resource.kind) {
     case 'folder':
       return
@@ -180,7 +171,6 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'assetsFolders',
   'operations',
   'noteContents',
-  'awareness',
   'fileContents',
   'mapContents',
   'mapPins',
@@ -201,7 +191,6 @@ type CampaignResourceRow =
   | Doc<'resourceAssetsFolders'>
   | Doc<'resourceOperations'>
   | Doc<'resourceNoteContents'>
-  | Doc<'resourceAwareness'>
   | Doc<'resourceFileContents'>
   | Doc<'resourceMapContents'>
   | Doc<'resourceMapPins'>
@@ -276,11 +265,6 @@ async function loadCampaignResourceDeletionBatch(
     case 'noteContents':
       return await ctx.db
         .query('resourceNoteContents')
-        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'awareness':
-      return await ctx.db
-        .query('resourceAwareness')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'fileContents':

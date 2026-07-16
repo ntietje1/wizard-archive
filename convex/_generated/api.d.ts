@@ -74,11 +74,11 @@ import type * as resources_functions_mapContent from "../resources/functions/map
 import type * as resources_functions_noteContent from "../resources/functions/noteContent.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_functions_replaceMapImage from "../resources/functions/replaceMapImage.js";
-import type * as resources_functions_resourceAwareness from "../resources/functions/resourceAwareness.js";
 import type * as resources_functions_resourceBookmarks from "../resources/functions/resourceBookmarks.js";
 import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
+import type * as resources_functions_resourcePresence from "../resources/functions/resourcePresence.js";
 import type * as resources_functions_resourceRecordRow from "../resources/functions/resourceRecordRow.js";
 import type * as resources_functions_resourceSearchProjection from "../resources/functions/resourceSearchProjection.js";
 import type * as resources_functions_saveCanvasContent from "../resources/functions/saveCanvasContent.js";
@@ -200,11 +200,11 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/noteContent": typeof resources_functions_noteContent;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/functions/replaceMapImage": typeof resources_functions_replaceMapImage;
-  "resources/functions/resourceAwareness": typeof resources_functions_resourceAwareness;
   "resources/functions/resourceBookmarks": typeof resources_functions_resourceBookmarks;
   "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
+  "resources/functions/resourcePresence": typeof resources_functions_resourcePresence;
   "resources/functions/resourceRecordRow": typeof resources_functions_resourceRecordRow;
   "resources/functions/resourceSearchProjection": typeof resources_functions_resourceSearchProjection;
   "resources/functions/saveCanvasContent": typeof resources_functions_saveCanvasContent;
@@ -282,5 +282,6 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+  presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
 };

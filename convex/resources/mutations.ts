@@ -36,16 +36,18 @@ import {
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   contentProviderSaveResultValidator,
-  resourceAwarenessLeaseResultValidator,
-  resourceAwarenessReleaseResultValidator,
+  resourcePresenceHeartbeatResultValidator,
+  resourcePresenceReleaseResultValidator,
+  resourcePresenceUpdateResultValidator,
   versionStampValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
 import { saveCanvasContent as saveCanvasContentFn } from './functions/saveCanvasContent'
 import {
-  publishResourceAwareness as publishResourceAwarenessFn,
-  releaseResourceAwareness as releaseResourceAwarenessFn,
-} from './functions/resourceAwareness'
+  disconnectResourcePresence as disconnectResourcePresenceFn,
+  heartbeatResourcePresence as heartbeatResourcePresenceFn,
+  updateResourcePresence as updateResourcePresenceFn,
+} from './functions/resourcePresence'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
@@ -371,33 +373,43 @@ export const saveCanvasContent = campaignMutation({
     }),
 })
 
-export const publishResourceAwareness = campaignMutation({
+export const heartbeatResourcePresence = campaignMutation({
   args: {
     resourceId: resourceIdValidator,
     clientId: v.number(),
-    leaseId: v.string(),
-    state: v.bytes(),
+    sessionId: v.string(),
   },
-  returns: resourceAwarenessLeaseResultValidator,
+  returns: resourcePresenceHeartbeatResultValidator,
   handler: async (ctx, args) =>
-    await publishResourceAwarenessFn(ctx, {
+    await heartbeatResourcePresenceFn(ctx, {
       ...args,
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
     }),
 })
 
-export const releaseResourceAwareness = campaignMutation({
+export const updateResourcePresence = campaignMutation({
   args: {
     resourceId: resourceIdValidator,
     clientId: v.number(),
-    leaseId: v.string(),
+    state: v.bytes(),
   },
-  returns: resourceAwarenessReleaseResultValidator,
+  returns: resourcePresenceUpdateResultValidator,
   handler: async (ctx, args) =>
-    await releaseResourceAwarenessFn(ctx, {
+    await updateResourcePresenceFn(ctx, {
       ...args,
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
     }),
+})
+
+export const disconnectResourcePresence = campaignMutation({
+  args: { resourceId: resourceIdValidator, sessionToken: v.string() },
+  returns: resourcePresenceReleaseResultValidator,
+  handler: async (ctx, args) =>
+    await disconnectResourcePresenceFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      args.sessionToken,
+    ),
 })
 
 export const commitFileResourceCreation = campaignInternalMutation({

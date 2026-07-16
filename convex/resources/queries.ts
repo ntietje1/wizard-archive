@@ -11,14 +11,14 @@ import {
   fileDownloadSnapshotValidator,
   mapImageDownloadSnapshotValidator,
   noteContentSnapshotValidator,
-  resourceAwarenessSnapshotValidator,
+  resourcePresenceSnapshotValidator,
   resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
-import { loadResourceAwareness as loadResourceAwarenessFn } from './functions/resourceAwareness'
+import { loadResourcePresence as loadResourcePresenceFn } from './functions/resourcePresence'
 import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
 import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
@@ -120,11 +120,15 @@ export const loadNoteContent = campaignQuery({
   },
 })
 
-export const loadResourceAwareness = campaignQuery({
-  args: { resourceId: resourceIdValidator },
-  returns: resourceAwarenessSnapshotValidator,
+export const loadResourcePresence = campaignQuery({
+  args: { resourceId: resourceIdValidator, roomToken: v.string() },
+  returns: resourcePresenceSnapshotValidator,
   handler: async (ctx, args) =>
-    await loadResourceAwarenessFn(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)),
+    await loadResourcePresenceFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      args.roomToken,
+    ),
 })
 
 export const loadContent = campaignQuery({

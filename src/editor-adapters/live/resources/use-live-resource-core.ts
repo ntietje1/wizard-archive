@@ -19,7 +19,7 @@ import { createLiveNoteContentSource } from './live-note-content-source'
 import { createLiveMapSessionSource } from './live-map-session-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
 import { createLiveCanvasSessionSource } from './live-canvas-session-source'
-import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
+import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
@@ -82,21 +82,27 @@ function createScopedLiveResourceRuntime(
       base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
     ])
   }
-  const awarenessBackend: LiveResourceAwarenessBackend = {
-    publishAwareness: (args) =>
-      convex.mutation(api.resources.mutations.publishResourceAwareness, {
+  const presenceBackend: LiveResourcePresenceBackend = {
+    heartbeatPresence: (args) =>
+      convex.mutation(api.resources.mutations.heartbeatResourcePresence, {
         campaignId: currentScope.campaignId,
         ...args,
       }),
-    releaseAwareness: (args) =>
-      convex.mutation(api.resources.mutations.releaseResourceAwareness, {
+    updatePresence: (args) =>
+      convex.mutation(api.resources.mutations.updateResourcePresence, {
         campaignId: currentScope.campaignId,
         ...args,
       }),
-    watchAwareness: (resourceId, apply) => {
-      const watch = convex.watchQuery(api.resources.queries.loadResourceAwareness, {
+    disconnectPresence: (args) =>
+      convex.mutation(api.resources.mutations.disconnectResourcePresence, {
+        campaignId: currentScope.campaignId,
+        ...args,
+      }),
+    watchPresence: (resourceId, roomToken, apply) => {
+      const watch = convex.watchQuery(api.resources.queries.loadResourcePresence, {
         campaignId: currentScope.campaignId,
         resourceId,
+        roomToken,
       })
       return subscribeToWatch(watch, apply)
     },
@@ -106,7 +112,7 @@ function createScopedLiveResourceRuntime(
     currentScope.actorId,
     collaborationUser,
     {
-      ...awarenessBackend,
+      ...presenceBackend,
       create: (args) => convex.mutation(api.resources.mutations.createNoteResource, args),
       refresh,
       save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
@@ -204,7 +210,7 @@ function createScopedLiveResourceRuntime(
     currentScope.actorId,
     collaborationUser,
     {
-      ...awarenessBackend,
+      ...presenceBackend,
       ...contentBackend('canvas'),
       create: (args) => convex.mutation(api.resources.mutations.createCanvasResource, args),
       save: (args) => convex.mutation(api.resources.mutations.saveCanvasContent, args),

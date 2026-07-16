@@ -33,7 +33,7 @@ import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-se
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
 import { liveContentPendingState } from './live-content-pending-state'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
-import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
+import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
 
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
@@ -41,7 +41,7 @@ type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCan
 type SaveCanvasContentResult = FunctionReturnType<typeof api.resources.mutations.saveCanvasContent>
 
 type LiveCanvasBackend = LiveFixedContentBackend &
-  LiveResourceAwarenessBackend &
+  LiveResourcePresenceBackend &
   Readonly<{
     save(args: SaveCanvasContentArgs): Promise<SaveCanvasContentResult>
   }>
@@ -67,7 +67,7 @@ class LiveCanvasSession implements CanvasSession {
     failed: (result: RejectedYjsSave) => void,
   ) {
     const collaborative = createLiveCollaborativeYjsSession({
-      awarenessBackend: backend,
+      presenceBackend: backend,
       document,
       version,
       resourceId,

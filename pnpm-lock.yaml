@@ -37,6 +37,9 @@ importers:
       '@convex-dev/better-auth':
         specifier: 0.12.3
         version: 0.12.3(@standard-schema/spec@1.1.0)(better-auth@1.6.19(@tanstack/react-start@1.166.3(@voidzero-dev/vite-plus-core@0.2.2(@types/node@24.3.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.43.1)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.3))(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(mongodb@7.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(solid-js@1.9.9)(vitest@4.1.9))(convex@1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2)
+      '@convex-dev/presence':
+        specifier: 0.3.2
+        version: 0.3.2(convex@1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       '@convex-dev/react-query':
         specifier: 0.1.0
         version: 0.1.0(@tanstack/react-query@5.90.21(react@19.1.1))(convex@1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1))
@@ -85,9 +88,6 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
-      lib0:
-        specifier: ^0.2.117
-        version: 0.2.117
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -777,6 +777,20 @@ packages:
     resolution: {integrity: sha512-hLElzzSHuO83O/7PqaeFrMy8EOaDPMAUBNaqo7wkOzCsUCgA+tI9SXVSVLUozDGBBQjyXjAaPYRIBKoPeZbZKg==}
     peerDependencies:
       convex: ^1.34.1
+
+  '@convex-dev/presence@0.3.2':
+    resolution: {integrity: sha512-3Q4LOHW4hSDFWG8XZZv/xYya8WGbpFNEkyvxBYM6NLXTWSxc2ifw/8URRQziIhRx97v1VnSjrExntgXMGn4vLg==}
+    peerDependencies:
+      convex: ^1.24.8
+      expo-crypto: '>=14.1.0'
+      react: ~18.3.1 || ^19.0.0
+      react-dom: ~18.3.1 || ^19.0.0
+      react-native: '>=0.79.0'
+    peerDependenciesMeta:
+      expo-crypto:
+        optional: true
+      react-native:
+        optional: true
 
   '@convex-dev/rate-limiter@0.3.2':
     resolution: {integrity: sha512-+oBPsBfFbzdxiF/9XaaTQmVnvDlvEfg/c69/v8LxTbw4VLuiflIKlfnPQL8OS0azXQQ11hcPWHmU8ytFmHKDXA==}
@@ -6781,6 +6795,12 @@ snapshots:
       - eslint
       - supports-color
       - typescript
+
+  '@convex-dev/presence@0.3.2(convex@1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)':
+    dependencies:
+      convex: 1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
 
   '@convex-dev/rate-limiter@0.3.2(convex@1.35.1(@clerk/clerk-react@5.44.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1))(react@19.1.1)':
     dependencies:

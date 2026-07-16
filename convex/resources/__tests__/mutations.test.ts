@@ -21,7 +21,7 @@ import {
 } from '@wizard-archive/editor/canvas/document-contract'
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import * as Y from 'yjs'
-import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
+import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
 import {
   storeCommittedTestUploadSession,
@@ -37,17 +37,14 @@ import {
 } from '@wizard-archive/editor/resources/authored-destination'
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
-import {
-  MAX_RESOURCE_AWARENESS_CLIENTS,
-  decodeAuthenticatedResourceAwarenessUpdate,
-  collaborationColor,
-} from '../../../shared/resources/resource-awareness-protocol'
+import { collaborationColor } from '../../../shared/resources/collaboration-user'
+import presenceTest from '@convex-dev/presence/test'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
 >['command']
 
-function resourceAwarenessUpdate(state: Record<string, unknown> = {}) {
+function resourcePresenceUpdate(state: Record<string, unknown> = {}) {
   const document = new Y.Doc()
   const awareness = new Awareness(document)
   awareness.setLocalState(state)
@@ -60,6 +57,7 @@ function resourceAwarenessUpdate(state: Record<string, unknown> = {}) {
 
 describe('resource structure commands', () => {
   const t = createTestContext()
+  t.registerComponent('presence', presenceTest.schema, presenceTest.modules)
 
   afterEach(() => vi.useRealTimers())
 
@@ -1499,235 +1497,132 @@ describe('resource structure commands', () => {
   })
 
   it.each(['note', 'canvas'] as const)(
-    'leases %s resource awareness by client and removes it on release',
+    'authenticates two %s presence clients and disconnects them deterministically',
     async (kind) => {
       const campaign = await setupCampaignContext(t)
       const campaignUuid = await getCampaignUuid(campaign.campaignId)
       const resourceId = await createResource(campaign, campaignUuid, kind, null, 'Presence')
       const spoofedMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
-      const state = resourceAwarenessUpdate({
+      const first = resourcePresenceUpdate({
         memberId: spoofedMemberId,
         user: { name: 'Spoofed', color: '#000000' },
       })
-      const leaseId = generateDomainId(DOMAIN_ID_KIND.operation)
-
-      await expect(
-        asDm(campaign).mutation(api.resources.mutations.publishResourceAwareness, {
+      const second = resourcePresenceUpdate()
+      const connect = (clientId: number) =>
+        asDm(campaign).mutation(api.resources.mutations.heartbeatResourcePresence, {
           campaignId: campaignUuid,
           resourceId,
-          clientId: state.clientId,
-          leaseId,
-          state: state.update,
+          clientId,
+          sessionId: generateDomainId(DOMAIN_ID_KIND.operation),
+        })
+      const firstSession = await connect(first.clientId)
+      const secondSession = await connect(second.clientId)
+      if (firstSession.status !== 'active' || secondSession.status !== 'active') {
+        throw new Error('Expected active presence sessions')
+      }
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.updateResourcePresence, {
+          campaignId: campaignUuid,
+          resourceId,
+          clientId: first.clientId,
+          state: first.update,
         }),
       ).resolves.toEqual({ status: 'active' })
       await expect(
-        asDm(campaign).query(api.resources.queries.loadResourceAwareness, {
+        asDm(campaign).mutation(api.resources.mutations.updateResourcePresence, {
           campaignId: campaignUuid,
           resourceId,
+          clientId: second.clientId,
+          state: second.update,
         }),
-      ).resolves.toMatchObject({
-        status: 'ready',
-        entries: [{ clientId: state.clientId, memberId: campaign.dm.memberDomainId }],
-      })
-      const snapshot = await asDm(campaign).query(api.resources.queries.loadResourceAwareness, {
+      ).resolves.toEqual({ status: 'active' })
+
+      const snapshot = await asDm(campaign).query(api.resources.queries.loadResourcePresence, {
         campaignId: campaignUuid,
         resourceId,
+        roomToken: firstSession.roomToken,
       })
-      if (snapshot.status !== 'ready') throw new Error('Expected ready awareness snapshot')
-      const authenticated = decodeAuthenticatedResourceAwarenessUpdate(
-        snapshot.entries[0]!.state,
-        state.clientId,
-        campaign.dm.memberDomainId,
-      )
-      expect(authenticated?.state).toMatchObject({
+      if (snapshot.status !== 'ready') throw new Error('Expected ready presence snapshot')
+      expect(snapshot.entries).toHaveLength(2)
+      const firstEntry = snapshot.entries.find((entry) => entry.clientId === first.clientId)
+      expect(firstEntry).toMatchObject({
         memberId: campaign.dm.memberDomainId,
         user: { color: collaborationColor(campaign.dm.memberDomainId) },
       })
-      expect(authenticated?.state.user.name).not.toBe('Spoofed')
+      expect(firstEntry?.user.name).not.toBe('Spoofed')
+
       await expect(
-        asDm(campaign).mutation(api.resources.mutations.publishResourceAwareness, {
+        asPlayer(campaign).mutation(api.resources.mutations.heartbeatResourcePresence, {
           campaignId: campaignUuid,
           resourceId,
-          clientId: state.clientId,
-          leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
-          state: state.update,
-        }),
-      ).resolves.toEqual({ status: 'rejected', reason: 'lease_conflict' })
-      await expect(
-        asPlayer(campaign).mutation(api.resources.mutations.publishResourceAwareness, {
-          campaignId: campaignUuid,
-          resourceId,
-          clientId: state.clientId,
-          leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
-          state: state.update,
+          clientId: first.clientId,
+          sessionId: generateDomainId(DOMAIN_ID_KIND.operation),
         }),
       ).resolves.toEqual({ status: 'unavailable' })
       await expect(
-        asDm(campaign).mutation(api.resources.mutations.releaseResourceAwareness, {
+        asPlayer(campaign).query(api.resources.queries.loadResourcePresence, {
           campaignId: campaignUuid,
           resourceId,
-          clientId: state.clientId,
-          leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
+          roomToken: firstSession.roomToken,
         }),
-      ).resolves.toEqual({ status: 'rejected', reason: 'lease_conflict' })
+      ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
+
       await expect(
-        asDm(campaign).mutation(api.resources.mutations.releaseResourceAwareness, {
+        asDm(campaign).mutation(api.resources.mutations.disconnectResourcePresence, {
           campaignId: campaignUuid,
           resourceId,
-          clientId: state.clientId,
-          leaseId,
+          sessionToken: firstSession.sessionToken,
         }),
       ).resolves.toEqual({ status: 'released' })
       await expect(
-        asDm(campaign).query(api.resources.queries.loadResourceAwareness, {
+        asDm(campaign).query(api.resources.queries.loadResourcePresence, {
           campaignId: campaignUuid,
           resourceId,
+          roomToken: firstSession.roomToken,
         }),
-      ).resolves.toEqual({ status: 'ready', entries: [] })
+      ).resolves.toMatchObject({
+        status: 'ready',
+        entries: [{ clientId: second.clientId }],
+      })
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.disconnectResourcePresence, {
+          campaignId: campaignUuid,
+          resourceId,
+          sessionToken: secondSession.sessionToken,
+        }),
+      ).resolves.toEqual({ status: 'released' })
     },
   )
 
-  it('expires stale awareness without crowding out a reconnecting client', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
-    const campaign = await setupCampaignContext(t)
-    const campaignUuid = await getCampaignUuid(campaign.campaignId)
-    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Reconnect')
-    const state = resourceAwarenessUpdate()
-    const publish = (leaseId: string) =>
-      asDm(campaign).mutation(api.resources.mutations.publishResourceAwareness, {
-        campaignId: campaignUuid,
-        resourceId,
-        clientId: state.clientId,
-        leaseId,
-        state: state.update,
-      })
-
-    await expect(publish(generateDomainId(DOMAIN_ID_KIND.operation))).resolves.toEqual({
-      status: 'active',
-    })
-    vi.advanceTimersByTime(30_001)
-    await t.finishAllScheduledFunctions(vi.runAllTimers)
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadResourceAwareness, {
-        campaignId: campaignUuid,
-        resourceId,
-      }),
-    ).resolves.toEqual({ status: 'ready', entries: [] })
-    const reconnectedLease = generateDomainId(DOMAIN_ID_KIND.operation)
-    await expect(publish(reconnectedLease)).resolves.toEqual({ status: 'active' })
-    await t.run(async (ctx) => {
-      const rows = await ctx.db
-        .query('resourceAwareness')
-        .withIndex('by_resourceUuid_and_clientId', (query) => query.eq('resourceUuid', resourceId))
-        .take(2)
-      expect(rows).toHaveLength(1)
-      expect(rows[0]?.leaseId).toBe(reconnectedLease)
-    })
-  })
-
-  it('rejects malformed, oversized, and multi-client awareness updates', async () => {
+  it('rejects invalid sessions and oversized updates', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Invalid')
-    const valid = resourceAwarenessUpdate()
-    const publish = (clientId: number, state: ArrayBuffer) =>
-      asDm(campaign).mutation(api.resources.mutations.publishResourceAwareness, {
+    const valid = resourcePresenceUpdate()
+    const update = (clientId: number, state: ArrayBuffer) =>
+      asDm(campaign).mutation(api.resources.mutations.updateResourcePresence, {
         campaignId: campaignUuid,
         resourceId,
         clientId,
-        leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
         state,
       })
 
-    await expect(publish(valid.clientId, new ArrayBuffer(1))).resolves.toEqual({
-      status: 'rejected',
-      reason: 'invalid_update',
-    })
-    await expect(publish(valid.clientId, new ArrayBuffer(2_049))).resolves.toEqual({
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.heartbeatResourcePresence, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: -1,
+        sessionId: 'invalid',
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_client' })
+    await expect(update(valid.clientId, new ArrayBuffer(2_049))).resolves.toEqual({
       status: 'rejected',
       reason: 'payload_too_large',
     })
-    await expect(publish(valid.clientId + 1, valid.update)).resolves.toEqual({
+    await expect(update(-1, valid.update)).resolves.toEqual({
       status: 'rejected',
       reason: 'invalid_update',
     })
-
-    const firstDocument = new Y.Doc()
-    const firstAwareness = new Awareness(firstDocument)
-    firstAwareness.setLocalState({})
-    const secondDocument = new Y.Doc()
-    const secondAwareness = new Awareness(secondDocument)
-    secondAwareness.setLocalState({})
-    applyAwarenessUpdate(
-      firstAwareness,
-      encodeAwarenessUpdate(secondAwareness, [secondDocument.clientID]),
-      'test',
-    )
-    const multiClient = Uint8Array.from(
-      encodeAwarenessUpdate(firstAwareness, [firstDocument.clientID, secondDocument.clientID]),
-    ).buffer
-    await expect(publish(firstDocument.clientID, multiClient)).resolves.toEqual({
-      status: 'rejected',
-      reason: 'invalid_update',
-    })
-    firstAwareness.destroy()
-    firstDocument.destroy()
-    secondAwareness.destroy()
-    secondDocument.destroy()
-  })
-
-  it('rejects a 257th active awareness client', async () => {
-    const campaign = await setupCampaignContext(t)
-    const campaignUuid = await getCampaignUuid(campaign.campaignId)
-    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Capacity')
-    const now = Date.now()
-    const overflow = resourceAwarenessUpdate()
-    await t.run(async (ctx) => {
-      await Promise.all(
-        Array.from({ length: MAX_RESOURCE_AWARENESS_CLIENTS }, (_, index) => {
-          const clientId = index >= overflow.clientId ? index + 1 : index
-          return ctx.db.insert('resourceAwareness', {
-            campaignUuid,
-            resourceUuid: resourceId,
-            memberUuid: campaign.dm.memberDomainId,
-            clientId,
-            leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
-            state: new ArrayBuffer(0),
-            updatedAt: now,
-          })
-        }),
-      )
-    })
-
-    await expect(
-      asDm(campaign).mutation(api.resources.mutations.publishResourceAwareness, {
-        campaignId: campaignUuid,
-        resourceId,
-        clientId: overflow.clientId,
-        leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
-        state: overflow.update,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'capacity_exceeded' })
-
-    await t.run(async (ctx) => {
-      const clientId = overflow.clientId === 0xffff_ffff ? 0xffff_fffe : 0xffff_ffff
-      await ctx.db.insert('resourceAwareness', {
-        campaignUuid,
-        resourceUuid: resourceId,
-        memberUuid: campaign.dm.memberDomainId,
-        clientId,
-        leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
-        state: new ArrayBuffer(0),
-        updatedAt: now,
-      })
-    })
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadResourceAwareness, {
-        campaignId: campaignUuid,
-        resourceId,
-      }),
-    ).resolves.toEqual({ status: 'unavailable', reason: 'capacity_exceeded' })
   })
 
   it('creates ready revision-1 content for files, maps, and canvases', async () => {

@@ -5,7 +5,7 @@ import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resour
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { collaborationColor } from 'shared/resources/resource-awareness-protocol'
+import { collaborationColor } from 'shared/resources/collaboration-user'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { LiveWorkspaceRouteEffects } from './live-workspace-route-effects'
 import { useLiveResourceCore } from './resources/use-live-resource-core'

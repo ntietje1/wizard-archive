@@ -1062,15 +1062,15 @@ describe('deleteCampaign', () => {
         t.run(async (dbCtx) => {
           await Promise.all(
             Array.from({ length: 10 }, (_, index) => {
-              const clientId = batch * 10 + index
-              return dbCtx.db.insert('resourceAwareness', {
+              return dbCtx.db.insert('resourceCanvasContents', {
                 campaignUuid: ctx.campaignDomainId,
-                resourceUuid: resourceIds[0]!,
-                memberUuid: ctx.dm.memberDomainId,
-                clientId,
-                leaseId: generateDomainId(DOMAIN_ID_KIND.operation),
-                state: new ArrayBuffer(140_000),
-                updatedAt: Date.now(),
+                resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
+                update: new ArrayBuffer(140_000 + batch * 10 + index),
+                version: {
+                  scheme: 'authoritative-revision-v1',
+                  revision: 1,
+                  digest: '0'.repeat(64),
+                },
               })
             }),
           )
@@ -1109,6 +1109,12 @@ describe('deleteCampaign', () => {
         .withIndex('by_campaign_and_actor', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
       expect(operations).toHaveLength(0)
+
+      const canvasContents = await dbCtx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_campaignUuid', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(canvasContents).toHaveLength(0)
 
       const sessions = await dbCtx.db
         .query('sessions')

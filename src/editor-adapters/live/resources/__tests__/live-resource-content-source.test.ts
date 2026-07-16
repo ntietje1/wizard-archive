@@ -29,11 +29,17 @@ const version = {
 
 const collaborationUser = { name: 'Canvas collaborator', color: '#61afef' }
 
-function awarenessBackend() {
+function presenceBackend() {
   return {
-    publishAwareness: () => Promise.resolve({ status: 'active' as const }),
-    releaseAwareness: () => Promise.resolve({ status: 'released' as const }),
-    watchAwareness: () => () => undefined,
+    heartbeatPresence: () =>
+      Promise.resolve({
+        status: 'active' as const,
+        roomToken: 'room-token',
+        sessionToken: 'session-token',
+      }),
+    updatePresence: () => Promise.resolve({ status: 'active' as const }),
+    disconnectPresence: () => Promise.resolve({ status: 'released' as const }),
+    watchPresence: () => () => undefined,
   }
 }
 
@@ -126,16 +132,22 @@ describe('LiveResourceContentSource', () => {
     const campaignId = testDomainId('campaign', 'canvas-content-campaign')
     const resourceId = testDomainId('resource', 'canvas-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
-    const publishAwareness = vi.fn(() => Promise.resolve({ status: 'active' as const }))
-    const releaseAwareness = vi.fn(() => Promise.resolve({ status: 'released' as const }))
+    const heartbeatPresence = vi.fn(() =>
+      Promise.resolve({
+        status: 'active' as const,
+        roomToken: 'room-token',
+        sessionToken: 'session-token',
+      }),
+    )
+    const disconnectPresence = vi.fn(() => Promise.resolve({ status: 'released' as const }))
     const source = createLiveCanvasSessionSource(
       campaignId,
       testDomainId('campaignMember', 'canvas-content-member'),
       collaborationUser,
       {
-        ...awarenessBackend(),
-        publishAwareness,
-        releaseAwareness,
+        ...presenceBackend(),
+        heartbeatPresence,
+        disconnectPresence,
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         refresh: vi.fn(),
@@ -162,7 +174,7 @@ describe('LiveResourceContentSource', () => {
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas session')
     await ready.session.flush()
-    expect(publishAwareness).toHaveBeenCalledOnce()
+    expect(heartbeatPresence).toHaveBeenCalledOnce()
     apply({
       status: 'ready',
       kind: 'canvas',
@@ -186,7 +198,7 @@ describe('LiveResourceContentSource', () => {
 
     unsubscribe()
     source.dispose()
-    await vi.waitFor(() => expect(releaseAwareness).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(disconnectPresence).toHaveBeenCalledOnce())
   })
 
   it('projects readonly canvas previews without creating awareness or a mutable session', () => {
@@ -194,7 +206,13 @@ describe('LiveResourceContentSource', () => {
     const resourceId = testDomainId('resource', 'canvas-preview-resource')
     const nodeId = testDomainId('canvasNode', 'canvas-preview-node')
     let apply: (snapshot: Snapshot) => void = () => undefined
-    const publishAwareness = vi.fn(() => Promise.resolve({ status: 'active' as const }))
+    const heartbeatPresence = vi.fn(() =>
+      Promise.resolve({
+        status: 'active' as const,
+        roomToken: 'room-token',
+        sessionToken: 'session-token',
+      }),
+    )
     const document = createCanvasDocumentDoc({
       nodes: [{ id: nodeId, type: 'text', position: { x: 10, y: 20 }, data: {} }],
       edges: [],
@@ -206,8 +224,8 @@ describe('LiveResourceContentSource', () => {
       testDomainId('campaignMember', 'canvas-preview-member'),
       collaborationUser,
       {
-        ...awarenessBackend(),
-        publishAwareness,
+        ...presenceBackend(),
+        heartbeatPresence,
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         refresh: vi.fn(),
@@ -230,7 +248,7 @@ describe('LiveResourceContentSource', () => {
       expect.objectContaining({ id: nodeId }),
     ])
     expect(source.get(resourceId)).toEqual({ status: 'loading' })
-    expect(publishAwareness).not.toHaveBeenCalled()
+    expect(heartbeatPresence).not.toHaveBeenCalled()
 
     source.dispose()
   })
@@ -280,7 +298,7 @@ describe('LiveResourceContentSource', () => {
       testDomainId('campaignMember', 'canvas-save-member'),
       collaborationUser,
       {
-        ...awarenessBackend(),
+        ...presenceBackend(),
         create: vi.fn(),
         load: () =>
           Promise.resolve({
@@ -397,7 +415,7 @@ describe('LiveResourceContentSource', () => {
       memberId,
       collaborationUser,
       {
-        ...awarenessBackend(),
+        ...presenceBackend(),
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         refresh: vi.fn(),
@@ -475,7 +493,7 @@ describe('LiveResourceContentSource', () => {
         memberId,
         collaborationUser,
         {
-          ...awarenessBackend(),
+          ...presenceBackend(),
           create: vi.fn(),
           load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
           refresh: vi.fn(),
@@ -547,7 +565,7 @@ describe('LiveResourceContentSource', () => {
       memberId,
       collaborationUser,
       {
-        ...awarenessBackend(),
+        ...presenceBackend(),
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         refresh: vi.fn(),
@@ -633,7 +651,7 @@ describe('LiveResourceContentSource', () => {
       testDomainId('campaignMember', 'canvas-storage-member'),
       collaborationUser,
       {
-        ...awarenessBackend(),
+        ...presenceBackend(),
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         refresh: vi.fn(),

@@ -506,7 +506,7 @@ export const noteContentSnapshotValidator = v.union(
   contentIntegritySnapshotValidator,
 )
 
-export const resourceAwarenessSnapshotValidator = v.union(
+export const resourcePresenceSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
     entries: v.array(
@@ -514,6 +514,7 @@ export const resourceAwarenessSnapshotValidator = v.union(
         clientId: v.number(),
         memberId: campaignMemberIdValidator,
         state: v.bytes(),
+        user: v.object({ name: v.string(), color: v.string() }),
       }),
     ),
   }),
@@ -521,19 +522,31 @@ export const resourceAwarenessSnapshotValidator = v.union(
   v.object({ status: v.literal('unavailable'), reason: v.literal('capacity_exceeded') }),
 )
 
-export const resourceAwarenessLeaseResultValidator = v.union(
+export const resourcePresenceHeartbeatResultValidator = v.union(
+  v.object({
+    status: v.literal('active'),
+    roomToken: v.string(),
+    sessionToken: v.string(),
+  }),
+  v.object({ status: v.literal('unavailable') }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: v.literal('invalid_client'),
+  }),
+)
+
+export const resourcePresenceUpdateResultValidator = v.union(
   v.object({ status: v.literal('active') }),
   v.object({ status: v.literal('unavailable') }),
   v.object({
     status: v.literal('rejected'),
-    reason: literals('lease_conflict', 'invalid_update', 'payload_too_large', 'capacity_exceeded'),
+    reason: literals('invalid_update', 'payload_too_large'),
   }),
 )
 
-export const resourceAwarenessReleaseResultValidator = v.union(
+export const resourcePresenceReleaseResultValidator = v.union(
   v.object({ status: v.literal('released') }),
   v.object({ status: v.literal('unavailable') }),
-  v.object({ status: v.literal('rejected'), reason: v.literal('lease_conflict') }),
 )
 
 export const fileDownloadSnapshotValidator = v.union(
@@ -686,19 +699,6 @@ export const resourceTables = {
   })
     .index('by_campaignUuid', ['campaignUuid'])
     .index('by_resourceUuid', ['resourceUuid']),
-
-  resourceAwareness: defineTable({
-    campaignUuid: campaignIdValidator,
-    resourceUuid: resourceIdValidator,
-    memberUuid: campaignMemberIdValidator,
-    clientId: v.number(),
-    leaseId: v.string(),
-    state: v.bytes(),
-    updatedAt: v.number(),
-  })
-    .index('by_campaignUuid', ['campaignUuid'])
-    .index('by_resourceUuid_and_clientId', ['resourceUuid', 'clientId'])
-    .index('by_resourceUuid_and_updatedAt', ['resourceUuid', 'updatedAt']),
 
   resourceFileContents: defineTable({
     campaignUuid: campaignIdValidator,

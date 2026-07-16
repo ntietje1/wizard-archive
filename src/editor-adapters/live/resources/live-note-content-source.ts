@@ -32,7 +32,7 @@ import {
   readLiveStructureResult,
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
-import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
+import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
 import {
   createBackendYjsPersistence,
@@ -50,7 +50,7 @@ type CreateNoteResult = FunctionReturnType<typeof api.resources.mutations.create
 type SaveNoteContentArgs = FunctionArgs<typeof api.resources.mutations.saveNoteContent>
 type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.saveNoteContent>
 
-type LiveNoteContentBackend = LiveResourceAwarenessBackend &
+type LiveNoteContentBackend = LiveResourcePresenceBackend &
   Readonly<{
     load(resourceId: ResourceId): Promise<NoteSnapshot>
     watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
@@ -114,7 +114,7 @@ class LiveNoteSession implements NoteSession {
     failed: (result: RejectedYjsSave) => void,
   ) {
     const collaborative = createLiveCollaborativeYjsSession({
-      awarenessBackend: backend,
+      presenceBackend: backend,
       document,
       version,
       resourceId,

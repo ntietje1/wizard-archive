@@ -102,15 +102,22 @@ function backend() {
   return {
     create: vi.fn(create),
     load: vi.fn(load),
-    publishAwareness: vi.fn(() => Promise.resolve({ status: 'active' as const })),
-    releaseAwareness: vi.fn(() => Promise.resolve({ status: 'released' as const })),
+    heartbeatPresence: vi.fn(() =>
+      Promise.resolve({
+        status: 'active' as const,
+        roomToken: 'room-token',
+        sessionToken: 'session-token',
+      }),
+    ),
+    updatePresence: vi.fn(() => Promise.resolve({ status: 'active' as const })),
+    disconnectPresence: vi.fn(() => Promise.resolve({ status: 'released' as const })),
     refresh: vi.fn(() => Promise.resolve()),
     save: vi.fn(save),
     watch: vi.fn((resourceId: ResourceId, apply: (snapshot: never) => void) => {
       listeners.set(resourceId, apply)
       return () => listeners.delete(resourceId)
     }),
-    watchAwareness: vi.fn(() => () => {}),
+    watchPresence: vi.fn(() => () => {}),
     emit(resourceId: ResourceId, snapshot: unknown) {
       const candidate = snapshot as {
         status?: string
@@ -157,7 +164,7 @@ describe('LiveNoteContentSource', () => {
       'Unopened export',
     )
     expect(provider.watch).not.toHaveBeenCalled()
-    expect(provider.watchAwareness).not.toHaveBeenCalled()
+    expect(provider.watchPresence).not.toHaveBeenCalled()
     document.destroy()
     source.dispose()
   })
@@ -647,7 +654,7 @@ describe('LiveNoteContentSource', () => {
     const persisted = await provider.save.mock.results.at(-1)?.value
     if (!persisted || persisted.status !== 'completed') throw new Error('Expected saved snapshot')
     first.dispose()
-    await vi.waitFor(() => expect(provider.releaseAwareness).toHaveBeenCalled())
+    await vi.waitFor(() => expect(provider.disconnectPresence).toHaveBeenCalled())
 
     const second = createLiveNoteContentSource(
       campaignId,
@@ -904,7 +911,7 @@ describe('LiveNoteContentSource', () => {
       expect(provider.save).toHaveBeenCalledTimes(2)
       source.dispose()
       await vi.advanceTimersByTimeAsync(0)
-      expect(provider.releaseAwareness).toHaveBeenCalledOnce()
+      expect(provider.disconnectPresence).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }
@@ -962,7 +969,7 @@ describe('LiveNoteContentSource', () => {
       expect(source.get(resourceId).status).toBe('ready')
       source.dispose()
       await vi.advanceTimersByTimeAsync(0)
-      expect(provider.releaseAwareness).toHaveBeenCalledOnce()
+      expect(provider.disconnectPresence).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }
