@@ -116,12 +116,15 @@ function CanvasNode({
   const position = getCanvasNodeInteractionPosition(interaction, node.id, node.position)
   const editing =
     interaction.interaction.type === 'editing' && interaction.interaction.nodeId === node.id
+  const erasing =
+    interaction.interaction.type === 'erasing' && interaction.interaction.nodeIds.has(node.id)
   const size = canvasNodeSize(node)
   return (
     <div
       className={`absolute rounded-md ${node.type === 'stroke' ? 'pointer-events-none' : ''}`}
       data-node-id={node.id}
       data-node-type={node.type}
+      data-erasing={erasing}
       data-selected={selected}
       data-testid="canvas-node"
       style={{
@@ -129,6 +132,7 @@ function CanvasNode({
         height: size.height,
         transform: `translate(${position.x}px, ${position.y}px)`,
         zIndex: node.zIndex,
+        opacity: erasing ? 0.35 : undefined,
       }}
       onDoubleClick={(event) => {
         if (!canEdit || interaction.tool !== 'select' || node.type !== 'text') return

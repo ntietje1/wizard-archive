@@ -164,6 +164,23 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
+  it('bounds eraser trails and returns only the marked canonical node ids', () => {
+    const controller = new CanvasInteractionController()
+    controller.beginErasing(8, { x: 0, y: 0 })
+    for (let index = 1; index <= 220; index += 1) {
+      controller.updateErasing(8, { x: index, y: index }, new Set([NODE_A, NODE_B]))
+    }
+    const interaction = controller.get().interaction
+    expect(interaction.type).toBe('erasing')
+    if (interaction.type !== 'erasing') throw new Error('Expected erasing interaction')
+    expect(interaction.points).toHaveLength(200)
+
+    controller.reconcileDocument(new Set([NODE_B]), new Set())
+    expect(controller.commitErasing(8)).toEqual(new Set([NODE_B]))
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
+    controller.dispose()
+  })
+
   it('previews a multi-node drag and commits only a non-zero delta', () => {
     const controller = new CanvasInteractionController()
     controller.beginDrag(

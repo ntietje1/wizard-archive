@@ -123,6 +123,22 @@ describe('CanvasEditor', () => {
     expect(screen.queryByTestId('canvas-drawing-preview')).not.toBeInTheDocument()
     expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(1)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Eraser' }))
+    fireEvent.pointerDown(surface, { button: 0, clientX: 30, clientY: 0, pointerId: 7 })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 30,
+      clientY: 80,
+      pointerId: 7,
+    })
+    expect(screen.getByTestId('canvas-node')).toHaveAttribute('data-erasing', 'true')
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(1)
+    fireEvent.pointerUp(surface, { clientX: 30, clientY: 80, pointerId: 7 })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(0)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(1)
+
     view.unmount()
     session.dispose()
   })

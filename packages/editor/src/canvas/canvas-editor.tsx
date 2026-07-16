@@ -1,4 +1,5 @@
 import {
+  Eraser,
   Hand,
   LassoSelect,
   Maximize,
@@ -19,7 +20,7 @@ import { CanvasInteractionController, screenToCanvasPoint } from './interaction-
 import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
 import { fitCanvasContent } from './canvas-layout'
-import { canvasStrokeBounds } from './canvas-stroke-geometry'
+import { canvasStrokeBounds, findCanvasStrokesIntersectingTrail } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import {
@@ -38,6 +39,7 @@ const TOOL_BUTTONS: ReadonlyArray<Readonly<{ tool: CanvasTool; label: string; ic
     { tool: 'select', label: 'Pointer', icon: MousePointer2 },
     { tool: 'lasso', label: 'Lasso select', icon: LassoSelect },
     { tool: 'draw', label: 'Draw', icon: Pencil },
+    { tool: 'eraser', label: 'Eraser', icon: Eraser },
     { tool: 'text', label: 'Text', icon: Type },
     { tool: 'hand', label: 'Hand', icon: Hand },
   ]
@@ -184,6 +186,14 @@ export function CanvasEditor({
             )
             return
           }
+          if (snapshot.tool === 'eraser') {
+            event.currentTarget.setPointerCapture(event.pointerId)
+            interactionController.beginErasing(
+              event.pointerId,
+              screenToCanvasPoint(point, snapshot.viewport),
+            )
+            return
+          }
           if (snapshot.tool === 'text') {
             createTextNode(screenToCanvasPoint(point, snapshot.viewport))
             return
@@ -202,12 +212,14 @@ export function CanvasEditor({
           const point = localPoint(event, event.currentTarget)
           interactionController.updatePan(event.pointerId, point)
           if ((event.buttons & 1) === 1) {
+            const canvasPoint = screenToCanvasPoint(point, interactionController.get().viewport)
             interactionController.updateDrawing(
               event.pointerId,
-              screenToCanvasPoint(point, interactionController.get().viewport),
+              canvasPoint,
               event.pressure,
               event.shiftKey,
             )
+            updateErasing(event.pointerId, canvasPoint, content, interactionController)
           }
           updateAreaSelection(
             event.pointerId,
@@ -221,6 +233,7 @@ export function CanvasEditor({
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
+          if (commitErasing(event.pointerId, interactionController, documentController)) return
           if (commitDrawing(event.pointerId, interactionController, documentController)) return
           if (interactionController.commitPan(event.pointerId)) return
           commitAreaSelection(event.pointerId, interactionController)
@@ -451,8 +464,36 @@ function commitAreaSelection(pointerId: number, controller: CanvasInteractionCon
 
 function canvasToolCursor(tool: CanvasTool): string {
   if (tool === 'hand') return 'cursor-grab'
+  if (tool === 'eraser') return 'cursor-cell'
   if (tool === 'draw' || tool === 'lasso' || tool === 'text') return 'cursor-crosshair'
   return 'cursor-default'
+}
+
+function updateErasing(
+  pointerId: number,
+  point: CanvasPoint,
+  content: CanvasDocumentContent,
+  controller: CanvasInteractionController,
+) {
+  const interaction = controller.get().interaction
+  if (interaction.type !== 'erasing' || interaction.pointerId !== pointerId) return
+  const trail = [...interaction.points.slice(-199), point]
+  controller.updateErasing(
+    pointerId,
+    point,
+    findCanvasStrokesIntersectingTrail(content.nodes, trail, interaction.nodeIds),
+  )
+}
+
+function commitErasing(
+  pointerId: number,
+  interactionController: CanvasInteractionController,
+  documentController: CanvasDocumentController,
+): boolean {
+  const nodeIds = interactionController.commitErasing(pointerId)
+  if (!nodeIds) return false
+  documentController.apply({ type: 'remove', nodeIds: Array.from(nodeIds), edgeIds: [] })
+  return true
 }
 
 function commitDrawing(

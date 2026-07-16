@@ -1,5 +1,27 @@
-import type { CanvasStrokeDocumentNode } from './document-contract'
+import type { CanvasDocumentNode, CanvasStrokeDocumentNode } from './document-contract'
 import type { CanvasDrawPoint, CanvasPoint } from './interaction-controller'
+import { canvasPolylinesIntersect } from './polyline-geometry'
+import type { CanvasNodeId } from '../resources/domain-id'
+
+export function findCanvasStrokesIntersectingTrail(
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+  trail: ReadonlyArray<CanvasPoint>,
+  alreadyMarked: ReadonlySet<CanvasNodeId> = new Set(),
+): ReadonlySet<CanvasNodeId> {
+  const marked = new Set(alreadyMarked)
+  if (trail.length < 2) return marked
+  for (const node of nodes) {
+    if (
+      node.type === 'stroke' &&
+      !node.hidden &&
+      !marked.has(node.id) &&
+      canvasPolylinesIntersect(trail, canvasStrokeDocumentPoints(node))
+    ) {
+      marked.add(node.id)
+    }
+  }
+  return marked
+}
 
 export function canvasStrokeBounds(points: ReadonlyArray<CanvasDrawPoint>, size: number) {
   const radius = size / 2
