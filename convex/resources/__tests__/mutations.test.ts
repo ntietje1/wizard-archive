@@ -7,6 +7,7 @@ import type { FunctionArgs } from 'convex/server'
 import { api, internal } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createCampaignWithDm } from '../../_test/factories.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
@@ -443,6 +444,263 @@ describe('resource structure commands', () => {
     await t.run(async (ctx) => {
       await expect(ctx.db.get('fileStorage', original.sessionId)).resolves.toBeNull()
       await expect(ctx.storage.get(original.storageId)).resolves.toBeNull()
+    })
+  })
+
+  it('binds one upload to one resource across create, replace, campaign, and deletion lifecycles', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const otherCampaign = await createCampaignWithDm(t, campaign.dm.profile)
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['exclusive'], { type: 'text/plain' }),
+      'exclusive.txt',
+    )
+    const ownerResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const ownerOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const ownerCommand = fileCreateCommand(ownerResourceId, 'Owner')
+    const created = await asDm(campaign).action(api.resources.actions.createFileResource, {
+      campaignId: campaignUuid,
+      operationId: ownerOperationId,
+      command: ownerCommand,
+      uploadSessionId: upload.sessionId,
+    })
+    expect(created).toMatchObject({ status: 'completed' })
+    await expect(
+      asDm(campaign).action(api.resources.actions.createFileResource, {
+        campaignId: campaignUuid,
+        operationId: ownerOperationId,
+        command: ownerCommand,
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual(created)
+
+    const secondResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    await expect(
+      asDm(campaign).action(api.resources.actions.createFileResource, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: fileCreateCommand(secondResourceId, 'Second'),
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+
+    const crossCampaignResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    await expect(
+      campaign.dm.authed.action(api.resources.actions.createFileResource, {
+        campaignId: otherCampaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: fileCreateCommand(crossCampaignResourceId, 'Cross campaign'),
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+
+    const ownerVersion = await storedFileVersion(ownerResourceId)
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, {
+        campaignId: campaignUuid,
+        resourceId: ownerResourceId,
+        expectedVersion: ownerVersion,
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_file' })
+
+    const replacementTargetId = await createResource(
+      campaign,
+      campaignUuid,
+      'file',
+      null,
+      'Replacement target',
+    )
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, {
+        campaignId: campaignUuid,
+        resourceId: replacementTargetId,
+        expectedVersion: await storedFileVersion(replacementTargetId),
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_file' })
+
+    const crossCampaignUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['other'], { type: 'text/plain' }),
+      'other.txt',
+    )
+    const crossCampaignTargetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    await campaign.dm.authed.action(api.resources.actions.createFileResource, {
+      campaignId: otherCampaign.campaignDomainId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: fileCreateCommand(crossCampaignTargetId, 'Other file'),
+      uploadSessionId: crossCampaignUpload.sessionId,
+    })
+    await expect(
+      campaign.dm.authed.action(api.resources.actions.replaceFileContent, {
+        campaignId: otherCampaign.campaignDomainId,
+        resourceId: crossCampaignTargetId,
+        expectedVersion: await storedFileVersion(crossCampaignTargetId),
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_file' })
+
+    await t.run(async (ctx) => {
+      const owners = await ctx.db
+        .query('resourceAssetOwners')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetId))
+        .take(2)
+      expect(owners).toEqual([
+        expect.objectContaining({ campaignUuid, resourceUuid: ownerResourceId }),
+      ])
+      for (const resourceId of [secondResourceId, crossCampaignResourceId]) {
+        await expect(
+          ctx.db
+            .query('resources')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ).resolves.toBeNull()
+      }
+    })
+    const integrity = await t.query(internal.resources.integrity.diagnose, {
+      diagnostic: { type: 'dangling_domain_asset', source: 'owner' },
+      cursor: null,
+      limit: 1_000,
+    })
+    expect(integrity.issues).not.toContainEqual(
+      expect.objectContaining({ assetUuid: upload.assetId }),
+    )
+
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [ownerResourceId] })
+    await execute(campaign, campaignUuid, {
+      type: 'permanentlyDelete',
+      resourceIds: [ownerResourceId],
+    })
+    const retirementCandidateId = await t.run(async (ctx) => {
+      const candidate = await ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetId))
+        .unique()
+      expect(candidate).toMatchObject({ status: 'pending' })
+      return candidate!._id
+    })
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: retirementCandidateId,
+    })
+    await t.run(async (ctx) => {
+      await expect(ctx.db.get('fileStorage', upload.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(upload.storageId)).resolves.toBeNull()
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetId))
+          .unique(),
+      ).resolves.toBeNull()
+    })
+  })
+
+  it('serializes concurrent create claims for one upload', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['concurrent create'], { type: 'text/plain' }),
+      'concurrent.txt',
+    )
+    const resourceIds = [
+      generateDomainId(DOMAIN_ID_KIND.resource),
+      generateDomainId(DOMAIN_ID_KIND.resource),
+    ] as const
+    const results = await Promise.all(
+      resourceIds.map((resourceId, index) =>
+        asDm(campaign).action(api.resources.actions.createFileResource, {
+          campaignId: campaignUuid,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          command: fileCreateCommand(resourceId, `Concurrent ${index}`),
+          uploadSessionId: upload.sessionId,
+        }),
+      ),
+    )
+    expect(results.map(({ status }) => status).sort()).toEqual(['completed', 'rejected'])
+    expect(results).toContainEqual({ status: 'rejected', reason: 'invalid_command' })
+
+    await t.run(async (ctx) => {
+      const owners = await ctx.db
+        .query('resourceAssetOwners')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetId))
+        .take(2)
+      expect(owners).toHaveLength(1)
+      const contents = await Promise.all(
+        resourceIds.map((resourceId) =>
+          ctx.db
+            .query('resourceFileContents')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ),
+      )
+      expect(contents.filter((content) => content?.assetUuid === upload.assetId)).toHaveLength(1)
+      expect(contents.filter(Boolean)).toHaveLength(1)
+    })
+  })
+
+  it('serializes concurrent replacement claims and preserves exact response replay', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceIds = await Promise.all([
+      createResource(campaign, campaignUuid, 'file', null, 'First'),
+      createResource(campaign, campaignUuid, 'file', null, 'Second'),
+    ])
+    const versions = await Promise.all(resourceIds.map(storedFileVersion))
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['concurrent replacement'], { type: 'text/plain' }),
+      'replacement.txt',
+    )
+    const replacements = resourceIds.map((resourceId, index) => ({
+      campaignId: campaignUuid,
+      resourceId,
+      expectedVersion: versions[index]!,
+      uploadSessionId: upload.sessionId,
+    }))
+    const results = await Promise.all(
+      replacements.map((args) =>
+        asDm(campaign).action(api.resources.actions.replaceFileContent, args),
+      ),
+    )
+    expect(results.map(({ status }) => status).sort()).toEqual(['completed', 'rejected'])
+    expect(results).toContainEqual({ status: 'rejected', reason: 'invalid_file' })
+    const winnerIndex = results.findIndex(({ status }) => status === 'completed')
+    const loserIndex = winnerIndex === 0 ? 1 : 0
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, replacements[winnerIndex]!),
+    ).resolves.toEqual(results[winnerIndex])
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceFileContent, replacements[loserIndex]!),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_file' })
+
+    await t.run(async (ctx) => {
+      const owners = await ctx.db
+        .query('resourceAssetOwners')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetId))
+        .take(2)
+      expect(owners).toEqual([
+        expect.objectContaining({ campaignUuid, resourceUuid: resourceIds[winnerIndex] }),
+      ])
+      const contents = await Promise.all(
+        resourceIds.map((resourceId) =>
+          ctx.db
+            .query('resourceFileContents')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ),
+      )
+      expect(contents[winnerIndex]).toMatchObject({
+        assetUuid: upload.assetId,
+        version: { revision: versions[winnerIndex]!.revision + 1 },
+      })
+      expect(contents[loserIndex]?.version).toEqual(versions[loserIndex])
+      expect(contents[loserIndex]?.assetUuid).not.toBe(upload.assetId)
     })
   })
 
@@ -2223,6 +2481,29 @@ describe('resource structure commands', () => {
         .unique()
       return resource!.metadataVersion
     })
+  }
+
+  async function storedFileVersion(resourceId: ResourceId) {
+    return await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected file content')
+      return content.version
+    })
+  }
+
+  function fileCreateCommand(resourceId: ResourceId, title: string) {
+    return {
+      type: 'create' as const,
+      resourceId,
+      kind: 'file' as const,
+      parentId: null,
+      title,
+      icon: null,
+      color: null,
+    }
   }
 
   async function createResource(

@@ -9,10 +9,81 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMutationCtx } from '../../functions'
+import type { CampaignInternalMutationCtx, CampaignMutationCtx } from '../../functions'
 import { internal } from '../../_generated/api'
+import type { Doc, Id } from '../../_generated/dataModel'
+import { commitUpload } from '../../storage/functions/commitUpload'
+import { getUserUploadSession } from '../../storage/functions/getUserUploadSession'
 
 type AssetRetirementCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
+
+export type ResourceUploadClaim =
+  | Readonly<{
+      status: 'available'
+      assetId: AssetId
+      sessionId: Id<'fileStorage'>
+    }>
+  | Readonly<{
+      status: 'claimed'
+      assetId: AssetId
+      upload: Doc<'fileStorage'>
+    }>
+  | Readonly<{ status: 'unavailable' }>
+
+export async function prepareResourceUploadClaim(
+  ctx: CampaignInternalMutationCtx,
+  args: Readonly<{
+    campaignId: CampaignId
+    resourceId: ResourceId
+    sessionId: Id<'fileStorage'>
+  }>,
+): Promise<ResourceUploadClaim> {
+  const upload = await getUserUploadSession(ctx, args.sessionId, ctx.membership.userId)
+  if (!upload || upload.assetUuid === null || upload.storageId === null) {
+    return { status: 'unavailable' }
+  }
+  const assetId = assertDomainId(DOMAIN_ID_KIND.asset, upload.assetUuid)
+  const owner = await ctx.db
+    .query('resourceAssetOwners')
+    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetId))
+    .unique()
+  if (upload.status === 'uncommitted' && owner === null) {
+    return { status: 'available', assetId, sessionId: upload._id }
+  }
+  if (
+    upload.status === 'committed' &&
+    owner?.campaignUuid === args.campaignId &&
+    owner.resourceUuid === args.resourceId
+  ) {
+    return { status: 'claimed', assetId, upload }
+  }
+  return { status: 'unavailable' }
+}
+
+export async function commitResourceUploadClaim(
+  ctx: CampaignInternalMutationCtx,
+  claim: Extract<ResourceUploadClaim, { status: 'available' }>,
+  binding: Readonly<{
+    campaignId: CampaignId
+    resourceId: ResourceId
+    expectedByteSize: number
+  }>,
+) {
+  const upload = await commitUpload(ctx, { sessionId: claim.sessionId })
+  if (
+    upload.assetId === null ||
+    upload.assetId !== claim.assetId ||
+    upload.metadata.size !== binding.expectedByteSize
+  ) {
+    throw new TypeError('Uploaded file metadata is inconsistent')
+  }
+  await ctx.db.insert('resourceAssetOwners', {
+    campaignUuid: binding.campaignId,
+    resourceUuid: binding.resourceId,
+    assetUuid: claim.assetId,
+  })
+  return upload
+}
 
 export type PreparedAssetCopies = Readonly<{
   initializing: boolean

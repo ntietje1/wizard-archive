@@ -46,13 +46,17 @@ import {
 } from './functions/resourceAwareness'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
-import { commitUpload } from '../storage/functions/commitUpload'
 import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
 import { createMapContent } from './functions/mapContent'
 import { createCanvasContent } from './functions/canvasContent'
 import { syncNoteSearchProjection } from './functions/resourceSearchProjection'
 import { authorizeResourceContent } from './functions/authorizeResourceContent'
-import { queueAssetRetirements } from './functions/assetContent'
+import {
+  commitResourceUploadClaim,
+  prepareResourceUploadClaim,
+  queueAssetRetirements,
+} from './functions/assetContent'
+import type { ResourceUploadClaim } from './functions/assetContent'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -105,17 +109,6 @@ function fileMetadataMatches(
     content.mediaType === metadata.mediaType &&
     content.viewerUnavailableReason === metadata.viewerUnavailableReason
   )
-}
-
-type CommittedUpload = Awaited<ReturnType<typeof commitUpload>>
-
-function assertCommittedFileMetadata(
-  upload: CommittedUpload,
-  metadata: FileOwnedMetadata,
-): asserts upload is CommittedUpload & { assetId: AssetId } {
-  if (upload.assetId === null || upload.metadata.size !== metadata.byteSize) {
-    throw new TypeError('Uploaded file metadata is inconsistent')
-  }
 }
 
 function readStructureCommand(
@@ -417,24 +410,41 @@ export const commitFileResourceCreation = campaignInternalMutation({
     if (command.type !== 'create' || command.kind !== 'file') {
       return { status: 'rejected', reason: 'invalid_command' }
     }
+    const claim = await prepareResourceUploadClaim(ctx, {
+      campaignId: ctx.resourceScope.campaignId,
+      resourceId: command.resourceId,
+      sessionId: args.uploadSessionId,
+    })
+    if (claim.status === 'unavailable') {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
+    const existingContent = await ctx.db
+      .query('resourceFileContents')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
+      .unique()
+    if (claim.status === 'claimed' && existingContent === null) {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
     const result = await executeStructureCommandFn(ctx, {
       operationId: args.operationId,
       command,
     })
     if (result.status !== 'completed') return storedResult(result)
 
-    const content = await ctx.db
-      .query('resourceFileContents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
-      .unique()
+    const content =
+      existingContent ??
+      (await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
+        .unique())
     if (content) {
-      const upload = await ctx.db.get('fileStorage', args.uploadSessionId)
       const version = assertVersionStamp(args.version)
       if (
+        claim.status !== 'claimed' ||
         !existingFileContentMatches(content, {
           campaignId: ctx.resourceScope.campaignId,
           metadata: args.metadata,
-          upload,
+          upload: claim.upload,
           userId: ctx.membership.userId,
           version,
         })
@@ -444,25 +454,24 @@ export const commitFileResourceCreation = campaignInternalMutation({
       return storedResult(result)
     }
 
-    const upload = await commitUpload(ctx, { sessionId: args.uploadSessionId })
+    if (claim.status !== 'available') {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
     const version = assertVersionStamp(args.version)
     if (version.revision !== 1) throw new TypeError('Initial file version must be revision 1')
-    assertCommittedFileMetadata(upload, args.metadata)
-    await Promise.all([
-      ctx.db.insert('resourceFileContents', {
-        campaignUuid: ctx.resourceScope.campaignId,
-        resourceUuid: command.resourceId,
-        state: 'ready',
-        assetUuid: upload.assetId,
-        ...args.metadata,
-        version,
-      }),
-      ctx.db.insert('resourceAssetOwners', {
-        campaignUuid: ctx.resourceScope.campaignId,
-        resourceUuid: command.resourceId,
-        assetUuid: upload.assetId,
-      }),
-    ])
+    const upload = await commitResourceUploadClaim(ctx, claim, {
+      campaignId: ctx.resourceScope.campaignId,
+      resourceId: command.resourceId,
+      expectedByteSize: args.metadata.byteSize,
+    })
+    await ctx.db.insert('resourceFileContents', {
+      campaignUuid: ctx.resourceScope.campaignId,
+      resourceUuid: command.resourceId,
+      state: 'ready',
+      assetUuid: upload.assetId,
+      ...args.metadata,
+      version,
+    })
     return storedResult(result)
   },
 })
@@ -494,6 +503,7 @@ type PreparedFileContentReplacement = Readonly<{
   content: Doc<'resourceFileContents'>
   previousAssetId: AssetId | null
   previousOwner: Doc<'resourceAssetOwners'> | null
+  claim: Extract<ResourceUploadClaim, { status: 'available' }>
   version: VersionStamp
 }>
 
@@ -524,30 +534,33 @@ async function prepareFileContentReplacement(
   if (content.state === 'initializing') {
     return { status: 'retryable', reason: 'content_initializing' }
   }
+  const claim = await prepareResourceUploadClaim(ctx, {
+    campaignId: ctx.resourceScope.campaignId,
+    resourceId,
+    sessionId: args.uploadSessionId,
+  })
+  if (claim.status === 'unavailable') return rejectedFileReplacement('invalid_file')
   const digest = assertSha256Digest(args.digest)
-  const replay = fileReplacementReplay(
-    content,
-    await ctx.db.get('fileStorage', args.uploadSessionId),
-    args.metadata,
-    digest,
-  )
+  const replay = fileReplacementReplay(content, claim, args.metadata, digest)
   if (replay) return replay
+  if (claim.status === 'claimed') return rejectedFileReplacement('invalid_file')
   const version = fileReplacementVersion(content.version, args.expectedVersion, digest)
   if ('status' in version) return version
   const ownership = await loadFileReplacementOwnership(ctx, resourceId, content.assetUuid)
   if (ownership === 'corrupt') return rejectedFileReplacement('content_corrupt')
-  return { status: 'prepared', resourceId, content, version, ...ownership }
+  return { status: 'prepared', resourceId, content, claim, version, ...ownership }
 }
 
 function fileReplacementReplay(
   content: Doc<'resourceFileContents'>,
-  upload: Doc<'fileStorage'> | null,
+  claim: ResourceUploadClaim,
   metadata: FileOwnedMetadata,
   digest: string,
 ): StoredFileContentReplaceResult | null {
   const matches =
-    upload?.status === 'committed' &&
-    upload.assetUuid === content.assetUuid &&
+    claim.status === 'claimed' &&
+    content.version.revision > 1 &&
+    claim.assetId === content.assetUuid &&
     content.version.digest === digest &&
     fileMetadataMatches(content, metadata)
   return matches
@@ -601,8 +614,11 @@ async function commitPreparedFileContentReplacement(
   args: FileContentReplacementArgs,
   prepared: PreparedFileContentReplacement,
 ): Promise<StoredFileContentReplaceResult> {
-  const committed = await commitUpload(ctx, { sessionId: args.uploadSessionId })
-  assertCommittedFileMetadata(committed, args.metadata)
+  const committed = await commitResourceUploadClaim(ctx, prepared.claim, {
+    campaignId: ctx.resourceScope.campaignId,
+    resourceId: prepared.resourceId,
+    expectedByteSize: args.metadata.byteSize,
+  })
   await ctx.db.patch('resourceFileContents', prepared.content._id, {
     assetUuid: committed.assetId,
     state: 'ready',
@@ -610,11 +626,6 @@ async function commitPreparedFileContentReplacement(
     version: prepared.version,
   })
   if (prepared.previousOwner) await ctx.db.delete(prepared.previousOwner._id)
-  await ctx.db.insert('resourceAssetOwners', {
-    campaignUuid: ctx.resourceScope.campaignId,
-    resourceUuid: prepared.resourceId,
-    assetUuid: committed.assetId,
-  })
   if (prepared.previousAssetId) {
     await queueAssetRetirements(ctx, new Set([prepared.previousAssetId]))
   }
