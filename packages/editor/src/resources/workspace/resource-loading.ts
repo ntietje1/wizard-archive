@@ -10,12 +10,15 @@ import {
 export function useEnsureResourceCollection(
   runtime: EditorRuntime,
   query: ResourceCollectionQuery,
+  loadOnMount = true,
 ) {
   const [attempt, setAttempt] = useState(0)
   const queryKey = resourceCollectionQueryKey(query)
   const key = `${queryKey}:${attempt}`
   const [loaded, setLoaded] = useState<{ key: string; result: ResourceLoadResult } | null>(null)
+  const settled = loaded?.key === key
   useEffect(() => {
+    if ((!loadOnMount && attempt === 0) || settled) return
     let current = true
     void runtime.resources.loader
       .ensureCollection(resourceCollectionQueryFromKey(queryKey))
@@ -23,7 +26,7 @@ export function useEnsureResourceCollection(
     return () => {
       current = false
     }
-  }, [key, queryKey, runtime])
+  }, [attempt, key, loadOnMount, queryKey, runtime, settled])
   return {
     result: loaded?.key === key ? loaded.result : null,
     retry: () => setAttempt((value) => value + 1),

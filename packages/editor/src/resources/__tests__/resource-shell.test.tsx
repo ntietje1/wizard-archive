@@ -4,12 +4,13 @@ import { Awareness } from 'y-protocols/awareness'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
-import type { ResourceNavigation } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourceNavigation } from '../editor-runtime-contract'
 import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
 import {
   RESOURCE_INDEX_SCHEMA,
   authorizedResourceSummaryFromRecord,
 } from '../resource-index-contract'
+import type { AuthorizedResourceSnapshot, ResourceLoadResult } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceRecord } from '../resource-record'
 import { ResourceShell } from '../resource-shell'
@@ -17,8 +18,75 @@ import { DEFAULT_WORKSPACE_PREFERENCES } from '../workspace-preferences'
 import { EMPTY_WORKSPACE_SELECTION } from '../workspace-selection'
 import { createWorkspaceActions } from '../workspace/resource-operations'
 import { ResourceViewport } from '../workspace/resource-viewport'
+import { MutableWorkspaceResourceIndex, indexRevision } from '../workspace-resource-index'
 
 describe('ResourceShell', () => {
+  it('becomes ready only after the initial root collection is known', async () => {
+    const { core } = await shellRuntime(true)
+    await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
+    let releaseRoot!: () => void
+    const rootGate = new Promise<void>((resolve) => {
+      releaseRoot = resolve
+    })
+    const runtime = withControlledRootReadiness(core.runtime, async () => {
+      await rootGate
+      return { status: 'completed' }
+    })
+
+    render(
+      <ResourceShell ariaLabel="Delayed resources" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    const workspace = screen.getByRole('region', { name: 'Delayed resources' })
+    expect(workspace).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Loading workspace…')
+    expect(screen.queryByRole('navigation', { name: 'Sidebar' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      releaseRoot()
+      await rootGate
+    })
+
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Delayed resources' })).toHaveAttribute(
+        'aria-busy',
+        'false',
+      ),
+    )
+    expect(screen.getByRole('navigation', { name: 'Sidebar' })).toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('renders initial projection failure separately and retries to readiness', async () => {
+    const { core } = await shellRuntime(true)
+    await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
+    let attempt = 0
+    const runtime = withControlledRootReadiness(core.runtime, () => {
+      attempt += 1
+      return Promise.resolve(
+        attempt === 1
+          ? { status: 'failed', retryable: true, reason: 'network_unavailable' }
+          : { status: 'completed' },
+      )
+    })
+
+    render(
+      <ResourceShell ariaLabel="Retrying resources" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    const failure = await screen.findByRole('alert')
+    expect(failure).toHaveTextContent('Could not load workspace: network_unavailable')
+    expect(screen.getByRole('region', { name: 'Retrying resources' })).toHaveAttribute(
+      'aria-busy',
+      'false',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(await screen.findByRole('navigation', { name: 'Sidebar' })).toBeInTheDocument()
+    expect(attempt).toBe(2)
+    core.dispose()
+  })
+
   it('does not render mutating controls when structure editing is unavailable', async () => {
     const { core, resource } = await shellRuntime(false)
 
@@ -212,6 +280,229 @@ describe('ResourceShell', () => {
         expect.objectContaining({ kind: 'file', title: 'evidence.txt' }),
       ]),
     })
+    core.dispose()
+  })
+
+  it('keeps the create surface pending until the completed receipt opens its resource', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              await gate
+              return await authoritative.execute(...args)
+            },
+          },
+        },
+      },
+    }
+    render(<ResourceShell ariaLabel="Pending creation" runtime={runtime} workspaceName="DM view" />)
+
+    const trigger = await screen.findByRole('button', { name: 'Create resource' })
+    fireEvent.click(trigger)
+    fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
+      target: { value: 'Settled folder' },
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+
+    expect(trigger).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(navigation.current()).toBe(resource.id)
+
+    release()
+
+    expect(await screen.findByText('Folder created')).toBeInTheDocument()
+    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('opens a note created from an empty folder dashboard', async () => {
+    const { core } = await shellRuntime(true)
+    render(
+      <ResourceShell ariaLabel="Folder creation" runtime={core.runtime} workspaceName="DM view" />,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Create New' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Note$/ }))
+
+    expect(await screen.findByRole('heading', { name: 'Untitled note' })).toBeInTheDocument()
+    expect(screen.getByText('Note created')).toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('does not navigate when the invoking creation surface unmounts', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    let release!: () => void
+    let deliveryFinished!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const finished = new Promise<void>((resolve) => {
+      deliveryFinished = resolve
+    })
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              await gate
+              const delivery = await authoritative.execute(...args)
+              deliveryFinished()
+              return delivery
+            },
+          },
+        },
+      },
+    }
+    const view = render(
+      <ResourceShell ariaLabel="Unmounted creation" runtime={runtime} workspaceName="DM view" />,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+
+    view.unmount()
+    await act(async () => {
+      release()
+      await finished
+      await Promise.resolve()
+    })
+
+    expect(navigation.current()).toBe(resource.id)
+    core.dispose()
+  })
+
+  it('restores the create surface with the terminal rejection reason', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: () =>
+              Promise.resolve({
+                status: 'received' as const,
+                result: { status: 'rejected' as const, reason: 'invalid_parent' as const },
+              }),
+          },
+        },
+      },
+    }
+    render(
+      <ResourceShell ariaLabel="Rejected creation" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    const trigger = await screen.findByRole('button', { name: 'Create resource' })
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+
+    expect(await screen.findByText('rejected: invalid_parent')).toBeInTheDocument()
+    await waitFor(() => expect(trigger).toBeEnabled())
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(navigation.current()).toBe(resource.id)
+    core.dispose()
+  })
+
+  it('returns an indeterminate create settlement whose retry reuses the operation identity', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    const operationIds: Array<string> = []
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              operationIds.push(args[0].operationId)
+              return operationIds.length === 1
+                ? {
+                    status: 'indeterminate' as const,
+                    retryable: true as const,
+                    reason: 'response_lost' as const,
+                  }
+                : await authoritative.execute(...args)
+            },
+          },
+        },
+      },
+    }
+    const settlement = await createWorkspaceActions(runtime, vi.fn()).create(
+      'folder',
+      null,
+      'Uncertain folder',
+    )
+
+    expect(settlement).toMatchObject({ status: 'indeterminate', reason: 'response_lost' })
+    if (settlement.status !== 'indeterminate') throw new Error('expected indeterminate creation')
+    expect(navigation.current()).toBe(resource.id)
+
+    await expect(settlement.retry()).resolves.toMatchObject({ status: 'completed' })
+    expect(operationIds).toHaveLength(2)
+    expect(operationIds[1]).toBe(operationIds[0])
+    expect(navigation.current()).not.toBe(resource.id)
+    core.dispose()
+  })
+
+  it('returns a retryable provider failure without an unhandled creation promise', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    const operationIds: Array<string> = []
+    const report = vi.fn()
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              operationIds.push(args[0].operationId)
+              if (operationIds.length === 1) throw new Error('provider unavailable')
+              return await authoritative.execute(...args)
+            },
+          },
+        },
+      },
+    }
+
+    const settlement = await createWorkspaceActions(runtime, report).create(
+      'folder',
+      null,
+      'Retryable folder',
+    )
+
+    expect(settlement).toMatchObject({ status: 'failed', reason: 'provider_failure' })
+    if (settlement.status !== 'failed' || !settlement.retry) {
+      throw new Error('expected retryable provider failure')
+    }
+    expect(report).toHaveBeenLastCalledWith('Not committed: provider_failure', expect.any(Function))
+    expect(navigation.current()).toBe(resource.id)
+
+    await expect(settlement.retry()).resolves.toMatchObject({ status: 'completed' })
+    expect(operationIds[1]).toBe(operationIds[0])
+    expect(navigation.current()).not.toBe(resource.id)
     core.dispose()
   })
 
@@ -882,6 +1173,68 @@ function createNavigation(initialResourceId: ResourceRecord['id']): ResourceNavi
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
+    },
+  }
+}
+
+function withControlledRootReadiness(
+  runtime: EditorRuntime,
+  loadRoot: () => Promise<ResourceLoadResult>,
+): EditorRuntime {
+  const baseSnapshot = runtime.resources.index.getSnapshot()
+  const roots = baseSnapshot.list({ parentId: null, lifecycle: 'active' })
+  if (roots.state !== 'known') throw new Error('Expected known fixture roots')
+  const index = new MutableWorkspaceResourceIndex(
+    baseSnapshot.scope,
+    indexRevision('controlled-empty'),
+  )
+  const readyProjection: AuthorizedResourceSnapshot = {
+    scope: baseSnapshot.scope,
+    revision: indexRevision('controlled-ready'),
+    resources: roots.items,
+    missingResourceIds: [],
+    collections: [
+      {
+        query: { parentId: null, lifecycle: 'active' },
+        resourceIds: roots.items.map((resource) => resource.id),
+        complete: roots.complete,
+      },
+    ],
+  }
+  let inFlight: Promise<ResourceLoadResult> | null = null
+  return {
+    ...runtime,
+    resources: {
+      ...runtime.resources,
+      index,
+      loader: {
+        ...runtime.resources.loader,
+        ensureCollection: async (query) => {
+          if (
+            query.parentId !== null ||
+            query.lifecycle !== 'active' ||
+            query.kinds !== undefined
+          ) {
+            return await runtime.resources.loader.ensureCollection(query)
+          }
+          if (inFlight) return await inFlight
+          const request = loadRoot()
+            .then((result) => {
+              if (result.status === 'completed') {
+                index.applyAuthoritativeProjectionSnapshot(
+                  readyProjection,
+                  indexRevision('controlled-applied'),
+                )
+              }
+              return result
+            })
+            .finally(() => {
+              if (inFlight === request) inFlight = null
+            })
+          inFlight = request
+          return await request
+        },
+      },
     },
   }
 }

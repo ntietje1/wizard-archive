@@ -87,12 +87,7 @@ export async function navigateToCampaign(page: Page, campaignName: string) {
   await waitForCampaignsDashboard(page)
   await page.getByText(campaignName, { exact: true }).click()
   await page.waitForURL(/\/campaigns\/[^/]+\/editor/)
-  const resources = page.getByRole('navigation', { name: 'Sidebar' })
-  const campaignNotFound = page.getByRole('heading', { name: 'Campaign Not Found' })
-  await expect(resources.or(campaignNotFound)).toBeVisible({ timeout: 30000 })
-  if (await campaignNotFound.isVisible()) {
-    throw new Error(`Campaign card navigated to an unavailable campaign: ${page.url()}`)
-  }
+  await waitForWorkspaceReady(page, `Campaign card navigated to an unavailable campaign`)
 }
 
 export async function provisionCampaign(name: string): Promise<CampaignId> {
@@ -123,12 +118,22 @@ async function navigateToCampaignRoute(
   await authenticatePage(page)
   const search = resourceId ? `?resource=${resourceId}` : ''
   await page.goto(`/campaigns/${campaignId}/editor${search}`, { waitUntil: 'commit' })
-  const resources = page.getByRole('navigation', { name: 'Sidebar' })
+  await waitForWorkspaceReady(page, `Provisioned campaign is unavailable: ${campaignId}`)
+}
+
+async function waitForWorkspaceReady(page: Page, missingMessage: string) {
+  const workspace = page.getByRole('region', { name: 'Editor workspace' })
   const campaignNotFound = page.getByRole('heading', { name: 'Campaign Not Found' })
-  await expect(resources.or(campaignNotFound)).toBeVisible({ timeout: 30_000 })
+  await expect(workspace.or(campaignNotFound)).toBeVisible({ timeout: 30_000 })
   if (await campaignNotFound.isVisible()) {
-    throw new Error(`Provisioned campaign is unavailable: ${campaignId}`)
+    throw new Error(`${missingMessage}: ${page.url()}`)
   }
+  await expect(workspace).toHaveAttribute('aria-busy', 'false', { timeout: 30_000 })
+  const failure = workspace.getByRole('alert')
+  if (await failure.isVisible().catch(() => false)) {
+    throw new Error((await failure.textContent()) ?? 'Workspace failed to load')
+  }
+  await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible()
 }
 
 export async function deleteCampaignById(campaignId: CampaignId) {

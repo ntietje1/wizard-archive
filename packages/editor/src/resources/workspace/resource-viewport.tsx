@@ -1,5 +1,5 @@
 import { FileUp, Folder } from 'lucide-react'
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useRef, useSyncExternalStore } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -19,6 +19,7 @@ import {
 } from '../workspace-resource-drag'
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
+import { useWorkspaceCreation } from './use-workspace-creation'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
@@ -243,6 +244,7 @@ function FolderViewport({
   sort: WorkspaceSort
 }) {
   const query = { parentId: folder.id, lifecycle: 'active' as const }
+  const creation = useWorkspaceCreation(runtime.navigation, folder.id)
   const load = useEnsureResourceCollection(runtime, query)
   const collection = snapshot.list(query)
   if (collection.state === 'unknown') return <FolderLoadingState load={load} />
@@ -250,7 +252,7 @@ function FolderViewport({
   const resources = sortAuthorizedResourceSummaries(collection.items, sort.by, sort.direction)
   if (resources.length === 0 && collection.complete) {
     return canEdit ? (
-      <CreateNewDashboard actions={actions} folder={folder} />
+      <CreateNewDashboard actions={actions} creation={creation} folder={folder} />
     ) : (
       <ViewportState icon={Folder} title="This folder is empty" />
     )
@@ -290,6 +292,7 @@ function FolderViewport({
               actions={actions}
               label="Create item in this folder"
               parentId={folder.id}
+              runtime={runtime}
             />
           </div>
         )}
@@ -309,12 +312,14 @@ function FolderViewport({
 
 function CreateNewDashboard({
   actions,
+  creation,
   folder,
 }: {
   actions: WorkspaceActions
+  creation: ReturnType<typeof useWorkspaceCreation>
   folder: AuthorizedResourceSummary
 }) {
-  const [pending, setPending] = useState(false)
+  const pending = creation.pending
   const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
@@ -331,10 +336,9 @@ function CreateNewDashboard({
                 aria-busy={pending}
                 disabled={pending}
                 className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted"
-                onClick={() => {
+                onClick={async () => {
                   const title = `Untitled ${kind}`
-                  setPending(true)
-                  void actions.create(kind, folder.id, title).finally(() => setPending(false))
+                  await creation.run((signal) => actions.create(kind, folder.id, title, signal))
                 }}
               >
                 <Icon className="size-7 text-muted-foreground" />
@@ -357,12 +361,11 @@ function CreateNewDashboard({
             type="file"
             className="hidden"
             aria-label={`Upload file to ${folder.title}`}
-            onChange={(event) => {
+            onChange={async (event) => {
               const file = event.target.files?.[0]
               event.target.value = ''
               if (!file) return
-              setPending(true)
-              void actions.createFile(folder.id, file).finally(() => setPending(false))
+              await creation.run((signal) => actions.createFile(folder.id, file, signal))
             }}
           />
         </div>

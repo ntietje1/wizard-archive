@@ -17,7 +17,7 @@ import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
 import type { WorkspaceClipboard } from './workspace-clipboard'
 import { workspaceKeyboardCommand } from './workspace-keyboard'
 import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
-import { useEnsureResource } from './workspace/resource-loading'
+import { useEnsureResource, useEnsureResourceCollection } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
 import { ResourceMoveDialog } from './workspace/resource-move-dialog'
@@ -33,6 +33,7 @@ import type { WorkspaceActions, WorkspaceReport } from './workspace/resource-ope
 
 const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
+const ACTIVE_ROOT_QUERY = { parentId: null, lifecycle: 'active' as const }
 
 export function ResourceShell({
   ariaLabel,
@@ -52,6 +53,12 @@ export function ResourceShell({
   workspaceName: string | null
 }) {
   const snapshot = useResourceSnapshot(runtime)
+  const rootCollection = snapshot.list(ACTIVE_ROOT_QUERY)
+  const rootLoad = useEnsureResourceCollection(
+    runtime,
+    ACTIVE_ROOT_QUERY,
+    rootCollection.state === 'unknown',
+  )
   const selectedResourceId = useResourceSelection(runtime)
   const bookmarks = useResourceBookmarks(runtime)
   const preferencesState = useWorkspacePreferences(runtime)
@@ -154,9 +161,16 @@ export function ResourceShell({
     }
   }, [runtime.search, selectedResourceId])
 
+  if (rootCollection.state === 'unknown') {
+    return (
+      <WorkspaceReadinessBoundary ariaLabel={ariaLabel} load={rootLoad} onRetry={rootLoad.retry} />
+    )
+  }
+
   return (
     <section
       aria-label={ariaLabel}
+      aria-busy="false"
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
       onKeyDown={handleWorkspaceKeyDown}
     >
@@ -287,6 +301,48 @@ export function ResourceShell({
       )}
     </section>
   )
+}
+
+function WorkspaceReadinessBoundary({
+  ariaLabel,
+  load,
+  onRetry,
+}: {
+  ariaLabel: string
+  load: ReturnType<typeof useEnsureResourceCollection>
+  onRetry: () => void
+}) {
+  const result = load.result
+  const failed = result !== null && result.status !== 'completed'
+  return (
+    <section
+      aria-label={ariaLabel}
+      aria-busy={failed ? 'false' : 'true'}
+      className="flex h-full min-h-0 items-center justify-center bg-background text-foreground"
+    >
+      {failed ? (
+        <div role="alert" className="space-y-2 text-center">
+          <p>Could not load workspace: {workspaceLoadFailureMessage(result)}</p>
+          <button type="button" className="text-sm font-medium underline" onClick={onRetry}>
+            Retry
+          </button>
+        </div>
+      ) : (
+        <p role="status">Loading workspace…</p>
+      )}
+    </section>
+  )
+}
+
+function workspaceLoadFailureMessage(result: Exclude<ResourceLoadResult, { status: 'completed' }>) {
+  switch (result.status) {
+    case 'failed':
+      return result.reason
+    case 'scope_changed':
+      return 'scope changed'
+    case 'unavailable':
+      return result.reason
+  }
 }
 
 function runUndoShortcut(

@@ -5,6 +5,7 @@ async function openWorkspace(page: Page) {
   await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
   const workspace = page.getByRole('region', { name: 'Demo workspace' })
   await expect(workspace).toBeVisible()
+  await expect(workspace).toHaveAttribute('aria-busy', 'false')
   return workspace
 }
 
@@ -69,12 +70,14 @@ test.describe('resource mechanics', () => {
     await page.getByRole('button', { name: 'Create resource' }).click()
     await page.getByRole('textbox', { name: 'New resource title' }).fill('Operations')
     await page.getByRole('menuitem', { name: 'Folder' }).click()
+    await expect(page.getByText('Folder created')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Create New' })).toBeVisible()
     await expect(page.getByText('Create from Template')).toBeVisible()
     await expect(page.getByText('No templates yet')).toBeVisible()
 
     await page.getByRole('button', { name: 'Note', exact: true }).click()
+    await expect(page.getByText('Note created')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('heading', { name: 'Untitled note' })).toBeVisible()
     await page.getByRole('button', { name: 'More options' }).click()
     await page.getByRole('menuitem', { name: 'Edit details' }).click()

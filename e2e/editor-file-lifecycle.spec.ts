@@ -78,7 +78,6 @@ test.describe.serial('canonical file lifecycle', () => {
     })
     await expect(page.getByText('Please upload a valid file type')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
     await page.getByLabel('Create resource: choose file').evaluate((element) => {
       const file = new File(['small'], 'oversized.txt', { type: 'text/plain' })
       Object.defineProperty(file, 'size', { value: 100 * 1024 * 1024 + 1 })

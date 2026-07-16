@@ -40,6 +40,7 @@ import {
   resourcePresentationKey,
 } from './resource-presentation'
 import { ResourceTrashControl } from './resource-trash-control'
+import { useWorkspaceCreation } from './use-workspace-creation'
 
 const EMPTY_BOOKMARKS: ReadonlySet<ResourceId> = new Set()
 
@@ -190,7 +191,12 @@ export function ResourceSidebar({
       </div>
       <div className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1">
         {canEdit && (
-          <ResourceCreateMenu actions={actions} label="Create resource" parentId={null} />
+          <ResourceCreateMenu
+            actions={actions}
+            label="Create resource"
+            parentId={null}
+            runtime={runtime}
+          />
         )}
         <button
           type="button"
@@ -407,8 +413,8 @@ function ResourceCollection({
   sort: WorkspaceSort
   visibleIds: () => ReadonlyArray<ResourceId>
 }) {
-  const load = useEnsureResourceCollection(runtime, query)
   const collection = snapshot.list(query)
+  const load = useEnsureResourceCollection(runtime, query, collection.state === 'unknown')
   if (collection.state === 'unknown') {
     return <SidebarState load={load} pendingLabel="Loading resources…" />
   }
@@ -747,14 +753,17 @@ export function ResourceCreateMenu({
   actions,
   label,
   parentId,
+  runtime,
 }: {
   actions: WorkspaceActions
   label: string
   parentId: ResourceId | null
+  runtime: EditorRuntime
 }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
-  const [pending, setPending] = useState(false)
+  const creation = useWorkspaceCreation(runtime.navigation, parentId)
+  const pending = creation.pending
   const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="relative">
@@ -778,6 +787,7 @@ export function ResourceCreateMenu({
           <input
             autoFocus
             aria-label="New resource title"
+            disabled={pending}
             className="mb-1 h-8 w-full rounded border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             placeholder="Optional title"
             value={title}
@@ -797,11 +807,16 @@ export function ResourceCreateMenu({
                 key={kind}
                 role="menuitem"
                 type="button"
+                disabled={pending}
                 className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
-                onClick={() => {
-                  setOpen(false)
-                  setPending(true)
-                  void actions.create(kind, parentId, title).finally(() => setPending(false))
+                onClick={async () => {
+                  const settlement = await creation.run((signal) =>
+                    actions.create(kind, parentId, title, signal),
+                  )
+                  if (settlement.status === 'completed') {
+                    setOpen(false)
+                    setTitle('')
+                  }
                 }}
               >
                 <Icon className="size-4" />
@@ -812,6 +827,7 @@ export function ResourceCreateMenu({
           <button
             role="menuitem"
             type="button"
+            disabled={pending}
             className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
             onClick={() => upload.current?.click()}
           >
@@ -823,13 +839,17 @@ export function ResourceCreateMenu({
             type="file"
             className="hidden"
             aria-label={`${label}: choose file`}
-            onChange={(event) => {
+            onChange={async (event) => {
               const file = event.target.files?.[0]
               event.target.value = ''
               if (!file) return
-              setOpen(false)
-              setPending(true)
-              void actions.createFile(parentId, file).finally(() => setPending(false))
+              const settlement = await creation.run((signal) =>
+                actions.createFile(parentId, file, signal),
+              )
+              if (settlement.status === 'completed') {
+                setOpen(false)
+                setTitle('')
+              }
             }}
           />
         </div>
