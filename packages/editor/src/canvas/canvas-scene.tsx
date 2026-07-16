@@ -33,9 +33,10 @@ import { canvasDragSnapBounds, resolveCanvasDrag } from './canvas-snap-geometry'
 import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
-import { canvasTextDocumentPlainText, createCanvasTextDocument } from './text/model'
+import type { CanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
-import { CANVAS_WORKLOAD_LIMITS } from './workload'
+import { CanvasTextEditor } from './canvas-text-editor'
+import { CanvasTextPreview } from './canvas-text-preview'
 
 export function CanvasScene({
   canEdit,
@@ -247,7 +248,9 @@ function CanvasNode({
         selected={selected}
         zoom={interaction.viewport.zoom}
         onFinishEditing={() => interactionController.finishEditing()}
-        onSaveText={(text) => saveTextNode(canEdit, documentController, node.id, text)}
+        onSaveContent={(nextContent) =>
+          saveTextNode(canEdit, documentController, node.id, nextContent)
+        }
       />
       {canEdit && interaction.tool === 'edge' && (
         <CanvasNodeConnectionHandles
@@ -433,7 +436,7 @@ function saveTextNode(
   canEdit: boolean,
   documentController: CanvasDocumentController,
   nodeId: CanvasNodeId,
-  text: string,
+  content: CanvasTextDocument,
 ) {
   if (!canEdit) return
   const latest = documentController.read().nodes.find((candidate) => candidate.id === nodeId)
@@ -444,7 +447,7 @@ function saveTextNode(
       {
         id: latest.id,
         type: 'text',
-        data: { content: createCanvasTextDocument(text) },
+        data: { content },
       },
     ],
     edges: [],
@@ -455,14 +458,14 @@ function CanvasNodeContent({
   editing,
   node,
   onFinishEditing,
-  onSaveText,
+  onSaveContent,
   selected,
   zoom,
 }: {
   editing: boolean
   node: CanvasDocumentNode
   onFinishEditing: () => void
-  onSaveText: (text: string) => void
+  onSaveContent: (content: CanvasTextDocument) => void
   selected: boolean
   zoom: number
 }) {
@@ -511,36 +514,16 @@ function CanvasNodeContent({
       </div>
     )
   }
-  const text = canvasTextDocumentPlainText(node.data.content)
   if (editing) {
     return (
-      <textarea
-        autoFocus
-        aria-label="Canvas text"
-        className="nowheel nopan size-full resize-none rounded-md border bg-card p-2 text-sm outline-none ring-2 ring-ring"
-        defaultValue={text}
-        maxLength={CANVAS_WORKLOAD_LIMITS.textCharactersPerNode}
-        style={sharedStyle}
-        onBlur={(event) => {
-          onSaveText(event.currentTarget.value)
-          onFinishEditing()
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') event.currentTarget.blur()
-          event.stopPropagation()
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
+      <CanvasTextEditor
+        content={node.data.content}
+        onChange={onSaveContent}
+        onFinish={onFinishEditing}
       />
     )
   }
-  return (
-    <div
-      className={`size-full whitespace-pre-wrap rounded-md border bg-card p-2 text-sm shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}
-      style={sharedStyle}
-    >
-      {text || <span className="text-muted-foreground">Double-click to edit</span>}
-    </div>
-  )
+  return <CanvasTextPreview content={node.data.content} selected={selected} style={sharedStyle} />
 }
 
 function CanvasEdge({

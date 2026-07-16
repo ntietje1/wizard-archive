@@ -7,6 +7,7 @@ import type {
 } from './document-contract'
 import type { CanvasSelection } from './interaction-controller'
 import { canvasContentWithinWorkload, canvasSelectionWithinWorkload } from './workload'
+import { duplicateCanvasTextDocument } from './text/model'
 import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../resources/domain-id'
 import type { CanvasNodeId } from '../resources/domain-id'
 
@@ -62,11 +63,15 @@ export function materializeCanvasPaste(
       ...clipboard.edges.map((edge) => ({ id: `edge:${edge.id}`, zIndex: edge.zIndex })),
     ]).map((element, index) => [element.id, nextZIndex + index]),
   )
-  const nodes = clipboard.nodes.map((node) => {
+  const nodes: Array<CanvasDocumentNode> = clipboard.nodes.map((node): CanvasDocumentNode => {
     const id = generateDomainId(DOMAIN_ID_KIND.canvasNode)
     nodeIdMap.set(node.id, id)
+    const duplicate = cloneCanvasNode(node)
+    if (duplicate.type === 'text' && duplicate.data.content) {
+      duplicate.data.content = duplicateCanvasTextDocument(duplicate.data.content)
+    }
     return {
-      ...cloneCanvasNode(node),
+      ...duplicate,
       id,
       position: { x: node.position.x + offset, y: node.position.y + offset },
       zIndex: elementOrder.get(`node:${node.id}`),

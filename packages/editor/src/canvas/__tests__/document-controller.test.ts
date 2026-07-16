@@ -204,6 +204,8 @@ describe('CanvasDocumentController', () => {
       ],
       edges: [],
     })
+    const editedContent = createCanvasTextDocument('Edited')
+    const alsoEditedContent = createCanvasTextDocument('Also edited')
     const contentAndStyle = operation({
       type: 'update',
       nodes: [
@@ -211,7 +213,7 @@ describe('CanvasDocumentController', () => {
           id: NODE_A,
           type: 'text',
           data: {
-            content: createCanvasTextDocument('Edited'),
+            content: editedContent,
             backgroundColor: '#ff0000',
             borderWidth: 3,
           },
@@ -219,7 +221,7 @@ describe('CanvasDocumentController', () => {
         {
           id: NODE_B,
           type: 'text',
-          data: { content: createCanvasTextDocument('Also edited') },
+          data: { content: alsoEditedContent },
         },
       ],
       edges: [],
@@ -241,7 +243,7 @@ describe('CanvasDocumentController', () => {
             height: 120,
             zIndex: 2,
             data: {
-              content: createCanvasTextDocument('Edited'),
+              content: editedContent,
               backgroundColor: '#ff0000',
               borderWidth: 3,
             },
@@ -249,7 +251,7 @@ describe('CanvasDocumentController', () => {
           {
             ...textNode(NODE_B),
             zIndex: 1,
-            data: { content: createCanvasTextDocument('Also edited') },
+            data: { content: alsoEditedContent },
           },
         ],
         edges: [],

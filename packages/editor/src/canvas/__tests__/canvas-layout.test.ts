@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { fitCanvasContent } from '../canvas-layout'
 import { canvasToScreenPoint } from '../interaction-controller'
-import { canvasTextDocumentPlainText, createCanvasTextDocument } from '../text/model'
+import { createCanvasTextDocument } from '../text/model'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
 const NODE_ID = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -47,8 +47,8 @@ describe('canvas layout', () => {
 })
 
 describe('canvas text presentation', () => {
-  it('creates canonical text content and derives plain text without a second model', () => {
+  it('creates canonical text content without a second model', () => {
     const content = createCanvasTextDocument('Wizards')
-    expect(canvasTextDocumentPlainText(content)).toBe('Wizards')
+    expect(content[0]?.content).toEqual([{ type: 'text', text: 'Wizards' }])
   })
 })

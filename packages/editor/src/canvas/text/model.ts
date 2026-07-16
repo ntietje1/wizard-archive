@@ -1,6 +1,8 @@
 import type { ZodLiteral, z } from 'zod'
 import { z as zod } from 'zod'
 import { canvasTextWithinWorkload } from '../workload'
+import { generateUuidV7, isUuidV7 } from '../../resources/domain-id'
+import type { UuidV7 } from '../../resources/domain-id'
 
 const textStyleKeys = [
   'bold',
@@ -107,16 +109,21 @@ const canvasTextBlockContentSchemas = [
 
 type CanvasTextBlockContent = z.infer<(typeof canvasTextBlockContentSchemas)[number]>
 
-type CanvasTextBlock = CanvasTextBlockContent & {
-  id?: string
+export type CanvasTextBlock = CanvasTextBlockContent & {
+  id: UuidV7
   children?: Array<CanvasTextBlock>
 }
+
+const canvasTextBlockIdSchema = zod.custom<UuidV7>(
+  (value) => typeof value === 'string' && isUuidV7(value),
+  'Expected a lowercase UUIDv7 canvas text block id',
+)
 
 const canvasTextBlockSchema: z.ZodType<CanvasTextBlock> = zod.lazy(() => {
   const options = canvasTextBlockContentSchemas.map((schema) =>
     zod.strictObject({
       ...schema.shape,
-      id: zod.string().min(1).optional(),
+      id: canvasTextBlockIdSchema,
       children: zod.array(canvasTextBlockSchema).optional(),
     }),
   )
@@ -125,7 +132,9 @@ const canvasTextBlockSchema: z.ZodType<CanvasTextBlock> = zod.lazy(() => {
   return zod.discriminatedUnion('type', [first, second, ...rest]) as z.ZodType<CanvasTextBlock>
 })
 
-const canvasTextDocumentSchema: z.ZodType<CanvasTextDocument> = zod.array(canvasTextBlockSchema)
+const canvasTextDocumentSchema: z.ZodType<CanvasTextDocument> = zod
+  .array(canvasTextBlockSchema)
+  .superRefine(enforceUniqueCanvasTextBlockIdentities)
 
 export type CanvasTextDocument = Array<CanvasTextBlock>
 
@@ -136,18 +145,16 @@ export function parseCanvasTextDocument(value: unknown): CanvasTextDocument | nu
 }
 
 export function createCanvasTextDocument(text: string): CanvasTextDocument {
-  return [{ type: 'paragraph', content: [{ type: 'text', text }] }]
+  return [{ id: generateUuidV7(), type: 'paragraph', content: [{ type: 'text', text }] }]
 }
 
-export function canvasTextDocumentPlainText(document: CanvasTextDocument | undefined): string {
-  if (!document) return ''
-  const blocks: Array<string> = []
-  const visit = (block: CanvasTextBlock) => {
-    blocks.push(block.content?.map((content) => content.text).join('') ?? '')
-    block.children?.forEach(visit)
-  }
-  document.forEach(visit)
-  return blocks.join('\n')
+export function duplicateCanvasTextDocument(document: CanvasTextDocument): CanvasTextDocument {
+  const duplicateBlock = (block: CanvasTextBlock): CanvasTextBlock => ({
+    ...structuredClone(block),
+    id: generateUuidV7(),
+    ...(block.children ? { children: block.children.map(duplicateBlock) } : {}),
+  })
+  return document.map(duplicateBlock)
 }
 
 function createCanvasTextStyleShape() {
@@ -163,4 +170,20 @@ function createCanvasTextStyleShape() {
       ? z.ZodOptional<z.ZodString>
       : z.ZodOptional<z.ZodBoolean>
   }
+}
+
+function enforceUniqueCanvasTextBlockIdentities(
+  document: CanvasTextDocument,
+  context: z.RefinementCtx,
+): void {
+  const identities = new Set<string>()
+  const visit = (block: CanvasTextBlock, path: Array<PropertyKey>) => {
+    if (identities.has(block.id)) {
+      context.addIssue({ code: 'custom', message: 'Duplicate canvas text block identity', path })
+    } else {
+      identities.add(block.id)
+    }
+    block.children?.forEach((child, index) => visit(child, [...path, 'children', index, 'id']))
+  }
+  document.forEach((block, index) => visit(block, [index, 'id']))
 }

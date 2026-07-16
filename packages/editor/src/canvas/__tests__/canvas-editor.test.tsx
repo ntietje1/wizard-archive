@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vite-plus/test'
 import { StrictMode } from 'react'
 import * as Y from 'yjs'
 import { CanvasEditor } from '../canvas-editor'
+import { createCanvasDocumentController } from '../document-controller'
 import { createCanvasDocumentDoc, readCanvasDocumentContent } from '../document-contract'
 import type { CanvasDocumentContent } from '../document-contract'
 import { initialVersion, sha256Digest } from '../../resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createInMemoryCanvasSession } from '../../resources/in-memory-canvas-session'
-import { canvasTextDocumentPlainText } from '../text/model'
+import { createCanvasTextDocument } from '../text/model'
 
 const RESOURCE_ID = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-444444444444')
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -56,8 +57,21 @@ describe('CanvasEditor', () => {
     })
 
     const editor = screen.getByRole('textbox', { name: 'Canvas text' })
-    fireEvent.change(editor, { target: { value: 'Canonical canvas text' } })
-    fireEvent.blur(editor)
+    const externalController = createCanvasDocumentController(session.document)
+    const createdNode = readCanvasDocumentContent(session.document).nodes[0]!
+    externalController.apply({
+      type: 'update',
+      nodes: [
+        {
+          id: createdNode.id,
+          type: 'text',
+          data: { content: createCanvasTextDocument('Canonical canvas text') },
+        },
+      ],
+      edges: [],
+    })
+    externalController.dispose()
+    fireEvent.keyDown(editor, { key: 'Escape' })
     expect(screen.getByText('Canonical canvas text')).toBeVisible()
 
     fireEvent.keyDown(screen.getByTestId('canvas-editor-shell'), { key: 'Delete' })
@@ -320,16 +334,27 @@ describe('CanvasEditor', () => {
     view.rerender(renderEditor(true))
     fireEvent.click(screen.getByRole('button', { name: 'Text' }))
     fireEvent.pointerDown(surface, { button: 0, clientX: 500, clientY: 300, pointerId: 35 })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Canvas text' }), {
-      target: { value: 'Must not persist' },
+    const externalController = createCanvasDocumentController(session.document)
+    const editingNode = readCanvasDocumentContent(session.document).nodes.at(-1)!
+    externalController.apply({
+      type: 'update',
+      nodes: [
+        {
+          id: editingNode.id,
+          type: 'text',
+          data: { content: createCanvasTextDocument('Must persist') },
+        },
+      ],
+      edges: [],
     })
+    externalController.dispose()
     view.rerender(renderEditor(false))
     const beforeUndo = readCanvasDocumentContent(session.document)
     expect(beforeUndo.nodes).toHaveLength(initial.nodes.length + 1)
     const created = beforeUndo.nodes.at(-1)
     expect(created?.type).toBe('text')
     if (created?.type !== 'text') throw new Error('Expected the created text node')
-    expect(canvasTextDocumentPlainText(created.data.content)).toBe('')
+    expect(created.data.content?.[0]?.content).toEqual([{ type: 'text', text: 'Must persist' }])
     fireEvent.keyDown(screen.getByTestId('canvas-editor-shell'), { key: 'z', ctrlKey: true })
     expect(readCanvasDocumentContent(session.document)).toEqual(beforeUndo)
 

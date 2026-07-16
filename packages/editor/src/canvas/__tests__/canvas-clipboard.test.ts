@@ -3,6 +3,7 @@ import { captureCanvasSelection, materializeCanvasPaste } from '../canvas-clipbo
 import type { CanvasDocumentContent } from '../document-contract'
 import { DOMAIN_ID_KIND, assertDomainId, isUuidV7 } from '../../resources/domain-id'
 import { CANVAS_WORKLOAD_LIMITS } from '../workload'
+import { createCanvasTextDocument } from '../text/model'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -10,7 +11,13 @@ const NODE_C = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3
 
 const content: CanvasDocumentContent = {
   nodes: [
-    { id: NODE_A, type: 'text', position: { x: 10, y: 20 }, data: {}, zIndex: 2 },
+    {
+      id: NODE_A,
+      type: 'text',
+      position: { x: 10, y: 20 },
+      data: { content: createCanvasTextDocument('Copy me') },
+      zIndex: 2,
+    },
     { id: NODE_B, type: 'embed', position: { x: 100, y: 200 }, data: {}, zIndex: 4 },
     { id: NODE_C, type: 'text', position: { x: 300, y: 400 }, data: {}, zIndex: 6 },
   ],
@@ -40,6 +47,15 @@ describe('canvas clipboard', () => {
     ])
     expect(first.change.nodes.every((node) => isUuidV7(node.id))).toBe(true)
     expect(first.change.nodes.map((node) => node.id)).not.toEqual([NODE_A, NODE_B])
+    const sourceText = content.nodes[0]
+    const firstText = first.change.nodes[0]
+    expect(sourceText?.type).toBe('text')
+    expect(firstText?.type).toBe('text')
+    if (sourceText?.type !== 'text' || firstText?.type !== 'text') {
+      throw new Error('Expected copied text nodes')
+    }
+    expect(firstText.data.content?.[0]?.id).not.toBe(sourceText.data.content?.[0]?.id)
+    expect(isUuidV7(firstText.data.content?.[0]?.id ?? '')).toBe(true)
     expect(first.change.edges).toHaveLength(1)
     expect(first.change.edges[0]).toMatchObject({
       source: first.change.nodes[0]!.id,
@@ -63,6 +79,10 @@ describe('canvas clipboard', () => {
       { x: 74, y: 84 },
       { x: 164, y: 264 },
     ])
+    const secondText = second?.change.nodes[0]
+    expect(secondText?.type).toBe('text')
+    if (secondText?.type !== 'text') throw new Error('Expected second copied text node')
+    expect(secondText.data.content?.[0]?.id).not.toBe(firstText.data.content?.[0]?.id)
   })
 
   it('does not create an edge-only clipboard entry', () => {
