@@ -147,14 +147,28 @@ async function contentIssues(
 
 async function assetHasOwner(
   ctx: QueryCtx,
+  campaignUuid: string,
   resourceUuid: string,
   assetUuid: string,
 ): Promise<boolean> {
-  const owner = await ctx.db
-    .query('resourceAssetOwners')
-    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
-    .first()
-  return owner?.resourceUuid === resourceUuid
+  const [owners, storage] = await Promise.all([
+    ctx.db
+      .query('resourceAssetOwners')
+      .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
+      .take(2),
+    ctx.db
+      .query('fileStorage')
+      .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
+      .take(2),
+  ])
+  return (
+    owners.length === 1 &&
+    owners[0]!.campaignUuid === campaignUuid &&
+    owners[0]!.resourceUuid === resourceUuid &&
+    storage.length === 1 &&
+    storage[0]!.status === 'committed' &&
+    storage[0]!.storageId !== null
+  )
 }
 
 async function ownerIsCurrent(ctx: QueryCtx, owner: Doc<'resourceAssetOwners'>): Promise<boolean> {
@@ -256,7 +270,7 @@ async function diagnoseDanglingFileAsset(ctx: QueryCtx, pagination: DiagnosticPa
   const page = await ctx.db.query('resourceFileContents').order('asc').paginate(pagination)
   const issues = await collectAsyncIssues(page.page, async (content) =>
     content.assetUuid === null ||
-    (await assetHasOwner(ctx, content.resourceUuid, content.assetUuid))
+    (await assetHasOwner(ctx, content.campaignUuid, content.resourceUuid, content.assetUuid))
       ? null
       : {
           type: 'dangling_domain_asset',
@@ -277,7 +291,7 @@ async function diagnoseDanglingMapAsset(ctx: QueryCtx, pagination: DiagnosticPag
     const ownership = await Promise.all(
       assets.map(async (assetUuid) => ({
         assetUuid,
-        owned: await assetHasOwner(ctx, content.resourceUuid, assetUuid),
+        owned: await assetHasOwner(ctx, content.campaignUuid, content.resourceUuid, assetUuid),
       })),
     )
     const assetUuid = ownership.find(({ owned }) => !owned)?.assetUuid

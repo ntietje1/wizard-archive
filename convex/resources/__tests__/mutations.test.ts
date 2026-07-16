@@ -24,7 +24,11 @@ import {
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import * as Y from 'yjs'
 import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
-import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
+import {
+  initialBinaryContentVersion,
+  initialJsonContentVersion,
+  jsonContentDigest,
+} from '../functions/contentVersion'
 import {
   storeCommittedTestUploadSession,
   storeUncommittedTestUploadSession,
@@ -41,6 +45,11 @@ import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resour
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
 import presenceTest from '@convex-dev/presence/test'
+import {
+  advanceVersion,
+  assertVersionStamp,
+} from '@wizard-archive/editor/resources/component-version'
+import { projectMapContent } from '../functions/mapContent'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -882,6 +891,158 @@ describe('resource structure commands', () => {
       },
       version: { revision: 3 },
       url: expect.any(String),
+    })
+  })
+
+  it('retains a shared map asset until concurrent replacement removes its final reference', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'map', null, 'Shared map')
+    const originalBytes = testPng(1, 1)
+    const original = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([Uint8Array.from(originalBytes).buffer], { type: 'image/png' }),
+      'shared.png',
+    )
+    const attached = await asDm(campaign).action(api.resources.actions.replaceMapImage, {
+      campaignId: campaignUuid,
+      resourceId,
+      expectedVersion: await storedMapVersion(resourceId),
+      layerId: null,
+      uploadSessionId: original.sessionId,
+    })
+    if (attached.status !== 'completed') throw new TypeError('Expected attached map image')
+    const sharedLayerId = 'shared-layer'
+    const sharedVersion = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content?.image) throw new TypeError('Expected attached map content')
+      const layers = [{ id: sharedLayerId, name: 'Shared layer', image: content.image }]
+      const projected = projectMapContent({ image: content.image, layers }, [])
+      const version = advanceVersion(
+        assertVersionStamp(content.version),
+        await jsonContentDigest(projected),
+      )
+      await ctx.db.patch('resourceMapContents', content._id, { layers, version })
+      return version
+    })
+    const replacementUploads = await Promise.all(
+      [testPng(2, 3), testPng(4, 4)].map((bytes, index) =>
+        storeUncommittedTestUploadSession(
+          t,
+          campaign.dm.profile._id,
+          new Blob([Uint8Array.from(bytes).buffer], { type: 'image/png' }),
+          `replacement-${index}.png`,
+        ),
+      ),
+    )
+    const attempts = [
+      { layerId: null, uploadSessionId: replacementUploads[0]!.sessionId },
+      { layerId: sharedLayerId, uploadSessionId: replacementUploads[1]!.sessionId },
+    ] as const
+    const results = await Promise.all(
+      attempts.map((attempt) =>
+        asDm(campaign).action(api.resources.actions.replaceMapImage, {
+          campaignId: campaignUuid,
+          resourceId,
+          expectedVersion: sharedVersion,
+          ...attempt,
+        }),
+      ),
+    )
+    const winnerIndex = results.findIndex((result) => result.status === 'completed')
+    const loserIndex = results.findIndex(
+      (result) => result.status === 'rejected' && result.reason === 'version_conflict',
+    )
+    expect([winnerIndex, loserIndex].sort((left, right) => left - right)).toEqual([0, 1])
+    const winner = results[winnerIndex]!
+    if (winner.status !== 'completed') throw new TypeError('Expected one completed replacement')
+
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceMapImage, {
+        campaignId: campaignUuid,
+        resourceId,
+        expectedVersion: sharedVersion,
+        ...attempts[winnerIndex]!,
+      }),
+    ).resolves.toEqual(winner)
+
+    const remainingLayerId = attempts[loserIndex]!.layerId
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadMapImage, {
+        campaignId: campaignUuid,
+        resourceId,
+        layerId: remainingLayerId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      image: { status: 'attached', byteSize: originalBytes.byteLength },
+      url: expect.any(String),
+    })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .take(2),
+      ).resolves.toEqual([expect.objectContaining({ resourceUuid: resourceId })])
+      await expect(
+        ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .unique(),
+      ).resolves.toBeNull()
+    })
+
+    const finalReplacementArgs = {
+      campaignId: campaignUuid,
+      resourceId,
+      expectedVersion: winner.version,
+      layerId: remainingLayerId,
+      uploadSessionId: replacementUploads[loserIndex]!.sessionId,
+    }
+    const finalReplacement = await asDm(campaign).action(
+      api.resources.actions.replaceMapImage,
+      finalReplacementArgs,
+    )
+    expect(finalReplacement).toMatchObject({ status: 'completed' })
+    const retirementCandidateId = await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(
+        ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .take(2),
+      ).resolves.toEqual([expect.objectContaining({ status: 'pending' })])
+      const candidate = await ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+        .unique()
+      return candidate!._id
+    })
+    await expect(
+      asDm(campaign).action(api.resources.actions.replaceMapImage, finalReplacementArgs),
+    ).resolves.toEqual(finalReplacement)
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: retirementCandidateId,
+    })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(ctx.db.get('fileStorage', original.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(original.storageId)).resolves.toBeNull()
     })
   })
 

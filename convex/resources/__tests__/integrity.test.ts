@@ -167,4 +167,56 @@ describe('resource integrity diagnostics', () => {
       )
     })
   })
+
+  it('requires exactly one matching owner and committed storage for every map asset', async () => {
+    const campaignUuid = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const resourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
+    const assetUuid = generateDomainId(DOMAIN_ID_KIND.asset)
+    const fixture = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(new Blob(['map']))
+      const storageRecordId = await ctx.db.insert('fileStorage', {
+        assetUuid,
+        storageId,
+        userId: null,
+        status: 'committed',
+        originalFileName: 'map.png',
+      })
+      await ctx.db.insert('resourceMapContents', {
+        campaignUuid,
+        resourceUuid,
+        state: 'ready',
+        image: { assetUuid, byteSize: 3, digest: 'map', mediaType: 'image/png' },
+        layers: [],
+        recentOperations: [],
+        version: { scheme: 'authoritative-revision-v1', revision: 1, digest: 'map' },
+      })
+      await ctx.db.insert('resourceAssetOwners', { campaignUuid, resourceUuid, assetUuid })
+      return { storageRecordId }
+    })
+    const diagnose = async () =>
+      await t.query(internal.resources.integrity.diagnose, {
+        diagnostic: { type: 'dangling_domain_asset', source: 'map' },
+        cursor: null,
+        limit: 1_000,
+      })
+
+    await expect(diagnose()).resolves.toEqual(expect.objectContaining({ issues: [] }))
+    const duplicateOwnerId = await t.run((ctx) =>
+      ctx.db.insert('resourceAssetOwners', { campaignUuid, resourceUuid, assetUuid }),
+    )
+    await expect(diagnose()).resolves.toEqual(
+      expect.objectContaining({
+        issues: [expect.objectContaining({ resourceUuid, assetUuid })],
+      }),
+    )
+    await t.run(async (ctx) => {
+      await ctx.db.delete(duplicateOwnerId)
+      await ctx.db.delete(fixture.storageRecordId)
+    })
+    await expect(diagnose()).resolves.toEqual(
+      expect.objectContaining({
+        issues: [expect.objectContaining({ resourceUuid, assetUuid })],
+      }),
+    )
+  })
 })

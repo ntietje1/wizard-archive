@@ -14,6 +14,7 @@ import { authorizeResourceContent } from './authorizeResourceContent'
 import {
   commitResourceUploadClaim,
   loadResourceAssetOwnership,
+  mapAssetIds,
   prepareResourceUploadClaim,
   queueAssetRetirements,
 } from './assetContent'
@@ -212,10 +213,14 @@ async function commitMapImageReplacement(
     layers: prepared.nextContent.layers,
     version: prepared.version,
   })
-  if (prepared.ownership.previousOwner) {
+  const remainingAssetIds = new Set(mapAssetIds(prepared.nextContent))
+  const previousAssetStillReferenced =
+    prepared.ownership.previousAssetId !== null &&
+    remainingAssetIds.has(prepared.ownership.previousAssetId)
+  if (prepared.ownership.previousOwner && !previousAssetStillReferenced) {
     await ctx.db.delete(prepared.ownership.previousOwner._id)
   }
-  if (prepared.ownership.previousAssetId) {
+  if (prepared.ownership.previousAssetId && !previousAssetStillReferenced) {
     await queueAssetRetirements(ctx, new Set([prepared.ownership.previousAssetId]))
   }
   return { status: 'completed', content: prepared.projected, version: prepared.version }
