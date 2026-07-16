@@ -175,12 +175,9 @@ function allocateNoteBlock(source: NoteBlock, allocated: Array<AllocatedNoteBloc
 
 function noteResourceIds(blocks: ReadonlyArray<NoteBlock>): Array<ResourceId> | null {
   const result: Array<ResourceId> = []
-  const blockIds = new Set<NoteBlockId>()
   const pending = [...blocks]
   while (pending.length > 0) {
     const block = pending.pop()!
-    if (blockIds.has(block.id)) return null
-    blockIds.add(block.id)
     pending.push(...(block.children ?? []))
     if (block.type !== 'embed') continue
     const destination = parseSerializedAuthoredDestination(block.props.destination)

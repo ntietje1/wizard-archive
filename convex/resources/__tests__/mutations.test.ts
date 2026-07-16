@@ -12,6 +12,7 @@ import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
+  noteBlocksToYDoc,
 } from '@wizard-archive/editor/notes/document-yjs'
 import {
   createCanvasDocumentDoc,
@@ -522,6 +523,96 @@ describe('resource structure commands', () => {
         )
         .join(''),
     ).toBe(`${firstInsertion}Middle${secondInsertion}`)
+  })
+
+  it('rejects duplicate top-level and nested note block identities on create', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    for (const nested of [false, true]) {
+      const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+      const result = await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'note',
+          parentId: null,
+          title: nested ? 'Nested duplicate' : 'Top-level duplicate',
+          icon: null,
+          color: null,
+        },
+        update: noteUpdateWithDuplicateBlockIds(nested),
+      })
+      expect(result).toEqual({ status: 'rejected', reason: 'content_integrity_failure' })
+      await t.run(async (ctx) => {
+        expect(
+          await ctx.db
+            .query('resources')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ).toBeNull()
+      })
+    }
+  })
+
+  it('rejects duplicate note block identities formed by concurrent updates', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const base = noteBlocksToYDoc(
+      [
+        { id: generateDomainId(DOMAIN_ID_KIND.noteBlock), type: 'paragraph' },
+        { id: generateDomainId(DOMAIN_ID_KIND.noteBlock), type: 'paragraph' },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const baseUpdate = noteDocumentUpdate(base)
+    base.destroy()
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Concurrent identities',
+        icon: null,
+        color: null,
+      },
+      update: baseUpdate,
+    })
+
+    const collisionId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const updateIdentity = (index: number) => {
+      const document = new Y.Doc()
+      Y.applyUpdate(document, new Uint8Array(baseUpdate))
+      const vector = Y.encodeStateVector(document)
+      noteBlockElements(document)[index]!.setAttribute('id', collisionId)
+      const update = noteDocumentUpdate(document, vector)
+      document.destroy()
+      return update
+    }
+    const first = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: updateIdentity(0),
+    })
+    const second = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: updateIdentity(1),
+    })
+
+    expect(first).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    expect(second).toEqual({ status: 'rejected', reason: 'content_corrupt' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready', version: { revision: 2 } })
   })
 
   it('authorizes every note and canvas write against current role and lifecycle', async () => {
@@ -1874,6 +1965,37 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('rejects deep copy through the canonical note identity invariant', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Invalid note')
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', noteId))
+        .unique()
+      await ctx.db.patch(content!._id, { update: noteUpdateWithDuplicateBlockIds(false) })
+    })
+
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'deepCopy',
+        sourceRootIds: [noteId],
+        destinationParentId: null,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_integrity_failure' })
+    await t.run(async (ctx) => {
+      const roots = await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('parentResourceUuid', null),
+        )
+        .take(2)
+      expect(roots).toHaveLength(1)
+      expect(roots[0]!.resourceUuid).toBe(noteId)
+    })
+  })
+
   it('recursively trashes, restores with root fallback, and permanently deletes catalog state', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -2245,4 +2367,42 @@ function noteTextType(document: Y.Doc): Y.XmlText {
   const text = paragraph instanceof Y.XmlElement ? paragraph.get(0) : null
   if (!(text instanceof Y.XmlText)) throw new Error('Expected canonical note text')
   return text
+}
+
+function noteUpdateWithDuplicateBlockIds(nested: boolean): ArrayBuffer {
+  const document = noteBlocksToYDoc(
+    nested
+      ? [
+          {
+            type: 'paragraph',
+            children: [{ type: 'paragraph' }],
+          },
+        ]
+      : [{ type: 'paragraph' }, { type: 'paragraph' }],
+    NOTE_YJS_FRAGMENT,
+  )
+  const elements = noteBlockElements(document)
+  elements[1]!.setAttribute('id', elements[0]!.getAttribute('id')!)
+  const update = noteDocumentUpdate(document)
+  document.destroy()
+  return update
+}
+
+function noteBlockElements(document: Y.Doc): Array<Y.XmlElement> {
+  const elements: Array<Y.XmlElement> = []
+  const pending: Array<Y.XmlFragment | Y.XmlElement> = [document.getXmlFragment(NOTE_YJS_FRAGMENT)]
+  while (pending.length > 0) {
+    const parent = pending.pop()!
+    for (let index = parent.length - 1; index >= 0; index -= 1) {
+      const child = parent.get(index)
+      if (!(child instanceof Y.XmlElement)) continue
+      if (typeof child.getAttribute('id') === 'string') elements.push(child)
+      pending.push(child)
+    }
+  }
+  return elements
+}
+
+function noteDocumentUpdate(document: Y.Doc, vector?: Uint8Array): ArrayBuffer {
+  return Uint8Array.from(Y.encodeStateAsUpdate(document, vector)).buffer
 }

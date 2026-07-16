@@ -138,4 +138,83 @@ describe('canonical note document', () => {
       ),
     ).toThrow('requires an array of note blocks')
   })
+
+  it('rejects duplicate block and note-local value identities across the full tree', () => {
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    expect(() =>
+      noteBlocksToYDoc(
+        [
+          { id: blockId, type: 'paragraph' },
+          { id: blockId, type: 'paragraph' },
+        ],
+        NOTE_YJS_FRAGMENT,
+      ),
+    ).toThrow('Duplicate note block identity')
+    expect(() =>
+      noteBlocksToYDoc(
+        [
+          {
+            id: blockId,
+            type: 'paragraph',
+            children: [{ id: blockId, type: 'paragraph' }],
+          },
+        ],
+        NOTE_YJS_FRAGMENT,
+      ),
+    ).toThrow('Duplicate note block identity')
+
+    const valueId = generateUuidV7()
+    expect(() =>
+      noteBlocksToYDoc(
+        [
+          {
+            type: 'paragraph',
+            content: [{ type: 'value', props: { valueId, label: 'First', expressionSource: '1' } }],
+            children: [
+              {
+                type: 'paragraph',
+                content: [
+                  { type: 'value', props: { valueId, label: 'Second', expressionSource: '2' } },
+                ],
+              },
+            ],
+          },
+        ],
+        NOTE_YJS_FRAGMENT,
+      ),
+    ).toThrow('Duplicate note value identity')
+    expect(() =>
+      noteBlocksToYDoc(
+        [
+          {
+            type: 'paragraph',
+            content: [{ type: 'value', props: { valueId, label: 'First', expressionSource: '1' } }],
+          },
+          {
+            type: 'table',
+            content: {
+              type: 'tableContent',
+              columnWidths: [100],
+              rows: [
+                {
+                  cells: [
+                    {
+                      type: 'tableCell',
+                      content: [
+                        {
+                          type: 'value',
+                          props: { valueId, label: 'Second', expressionSource: '2' },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+        NOTE_YJS_FRAGMENT,
+      ),
+    ).toThrow('Duplicate note value identity')
+  })
 })

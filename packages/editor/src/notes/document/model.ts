@@ -289,7 +289,10 @@ function createNoteBlockNodeSchema(): z.ZodType<NoteBlockNode> {
   ) as z.ZodType<NoteBlockNode>
 }
 
-export const noteDocumentSchema = zod.array(noteBlockSchema).min(1)
+export const noteDocumentSchema = zod
+  .array(noteBlockSchema)
+  .min(1)
+  .superRefine(enforceUniqueNoteDocumentIdentities)
 
 type PartialFlatBlockContent = {
   [Type in NoteBlockContent['type']]: Omit<
@@ -344,7 +347,82 @@ function createPartialBlockNodeSchema(
 
 const partialBlockNoteBlockSchema = createPartialBlockSchema(allFlatBlockContentSchemas)
 
-export const partialNoteDocumentSchema = zod.array(partialBlockNoteBlockSchema).min(1)
+export const partialNoteDocumentSchema = zod
+  .array(partialBlockNoteBlockSchema)
+  .min(1)
+  .superRefine(enforceUniqueNoteDocumentIdentities)
+
+function enforceUniqueNoteDocumentIdentities(
+  blocks: ReadonlyArray<PartialNoteBlockNode>,
+  context: z.RefinementCtx,
+): void {
+  const blockIds = new Set<string>()
+  const valueIds = new Set<string>()
+  const pending = blocks.map((block, index) => ({ block, path: [index] as Array<PropertyKey> }))
+  while (pending.length > 0) {
+    const { block, path } = pending.pop()!
+    addUniqueNoteIdentity(block.id, blockIds, 'block', [...path, 'id'], context)
+    enforceUniqueNoteValueIdentities(block.content, [...path, 'content'], valueIds, context)
+    block.children?.forEach((child, index) => {
+      pending.push({ block: child, path: [...path, 'children', index] })
+    })
+  }
+}
+
+function enforceUniqueNoteValueIdentities(
+  content: PartialNoteBlockNode['content'],
+  path: Array<PropertyKey>,
+  valueIds: Set<string>,
+  context: z.RefinementCtx,
+): void {
+  if (Array.isArray(content)) {
+    enforceUniqueInlineValueIdentities(content, path, valueIds, context)
+    return
+  }
+  content?.rows.forEach((row, rowIndex) => {
+    row.cells.forEach((cell, cellIndex) => {
+      enforceUniqueInlineValueIdentities(
+        cell.content,
+        [...path, 'rows', rowIndex, 'cells', cellIndex, 'content'],
+        valueIds,
+        context,
+      )
+    })
+  })
+}
+
+function enforceUniqueInlineValueIdentities(
+  content: ReadonlyArray<InlineContentItem>,
+  path: Array<PropertyKey>,
+  valueIds: Set<string>,
+  context: z.RefinementCtx,
+): void {
+  content.forEach((item, index) => {
+    if (item.type !== 'value') return
+    addUniqueNoteIdentity(
+      item.props.valueId,
+      valueIds,
+      'value',
+      [...path, index, 'props', 'valueId'],
+      context,
+    )
+  })
+}
+
+function addUniqueNoteIdentity(
+  value: unknown,
+  identities: Set<string>,
+  kind: 'block' | 'value',
+  path: Array<PropertyKey>,
+  context: z.RefinementCtx,
+): void {
+  if (typeof value !== 'string') return
+  if (identities.has(value)) {
+    context.addIssue({ code: 'custom', message: `Duplicate note ${kind} identity`, path })
+    return
+  }
+  identities.add(value)
+}
 
 export type HeadingLevel = Extract<NoteBlockContent, { type: 'heading' }>['props']['level']
 
