@@ -17,6 +17,11 @@ import {
   storeUncommittedTestUploadSession,
 } from '../../_test/storage.helper'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import {
+  MAX_WORKSPACE_SEARCH_CANDIDATES,
+  createResourceSearchDocument,
+  searchResourceDocuments,
+} from '@wizard-archive/editor/resources/search-policy'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -440,6 +445,69 @@ describe('authorized resource projection', () => {
         query: 'citadel',
       }),
     ).resolves.toMatchObject({ results: [{ resourceId: noteId }] })
+  })
+
+  it('matches local candidate selection above the bound in stable resource order', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const memberUuid = await getMemberUuid(campaign.dm.memberId)
+    const resourceIds = Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, () =>
+      generateDomainId(DOMAIN_ID_KIND.resource),
+    )
+    const selected = new Set([...resourceIds].sort().slice(0, MAX_WORKSPACE_SEARCH_CANDIDATES))
+    const documents = resourceIds.map((resourceId) =>
+      createResourceSearchDocument(
+        resourceId,
+        selected.has(resourceId) ? 'Shared title' : 'needle',
+        selected.has(resourceId) ? 'Shared needle body' : '',
+      ),
+    )
+    await t.run(async (ctx) => {
+      for (const [index, document] of documents.entries()) {
+        await ctx.db.insert('resources', {
+          resourceUuid: document.resourceId,
+          campaignUuid,
+          parentResourceUuid: null,
+          kind: 'note',
+          title: document.title,
+          icon: null,
+          color: null,
+          lifecycle: 'active',
+          trashedAt: null,
+          trashedByMemberUuid: null,
+          metadataVersion: {
+            scheme: VERSION_SCHEME,
+            revision: 1,
+            digest: index.toString(16).padStart(64, '0'),
+          },
+          createdAt: index,
+          createdByMemberUuid: memberUuid,
+          updatedAt: index,
+          updatedByMemberUuid: memberUuid,
+        })
+        await ctx.db.insert('resourceSearchDocuments', {
+          campaignUuid,
+          resourceUuid: document.resourceId,
+          title: document.title,
+          body: document.body,
+        })
+      }
+    })
+    const expected = searchResourceDocuments(documents, 'NEEDLE')
+
+    const first = await asDm(campaign).query(api.resources.queries.searchResources, {
+      campaignId: campaignUuid,
+      query: 'NEEDLE',
+    })
+    const second = await asDm(campaign).query(api.resources.queries.searchResources, {
+      campaignId: campaignUuid,
+      query: 'NEEDLE',
+    })
+
+    expect(first.results).toEqual(expected)
+    expect(second.results).toEqual(expected)
+    expect(first.snapshot.resources).toHaveLength(expected.length)
+    expect(first.snapshot.missingResourceIds).toEqual([])
   })
 
   it(

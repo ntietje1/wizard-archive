@@ -13,25 +13,15 @@ export async function searchResources(
 ): Promise<ReadonlyArray<WorkspaceSearchResult>> {
   const normalized = normalizeSearchQuery(query)
   if (!normalized) return []
-  const [titleDocuments, bodyDocuments] = await Promise.all([
-    ctx.db
-      .query('resourceSearchDocuments')
-      .withSearchIndex('search_title', (search) =>
-        search.search('title', normalized).eq('campaignUuid', ctx.resourceScope.campaignId),
-      )
-      .take(MAX_WORKSPACE_SEARCH_CANDIDATES),
-    ctx.db
-      .query('resourceSearchDocuments')
-      .withSearchIndex('search_body', (search) =>
-        search.search('body', normalized).eq('campaignUuid', ctx.resourceScope.campaignId),
-      )
-      .take(MAX_WORKSPACE_SEARCH_CANDIDATES),
-  ])
-  const documents = new Map(
-    [...titleDocuments, ...bodyDocuments].map((document) => [document.resourceUuid, document]),
-  )
+  const documents = await ctx.db
+    .query('resourceSearchDocuments')
+    .withIndex('by_campaign_and_resource', (indexed) =>
+      indexed.eq('campaignUuid', ctx.resourceScope.campaignId),
+    )
+    .order('asc')
+    .take(MAX_WORKSPACE_SEARCH_CANDIDATES)
   return searchResourceDocuments(
-    Array.from(documents.values(), (document) => ({
+    documents.map((document) => ({
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, document.resourceUuid),
       title: document.title,
       body: document.body,

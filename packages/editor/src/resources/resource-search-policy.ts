@@ -29,11 +29,11 @@ export function searchResourceDocuments(
   if (!normalized) return []
   const terms = normalized.split(' ')
   const ranked: Array<RankedSearchResult> = []
-  for (const document of documents) {
+  for (const document of selectSearchCandidates(documents)) {
     const result = rankSearchDocument(document, normalized, terms)
-    if (!result) continue
-    insertRankedCandidate(ranked, result)
+    if (result) ranked.push(result)
   }
+  ranked.sort(compareRankedSearchResults)
   return ranked.slice(0, MAX_WORKSPACE_SEARCH_RESULTS).map(({ result }) => result)
 }
 
@@ -105,19 +105,22 @@ function searchExcerpt(text: string, index: number, length: number): string {
   return `${start > 0 ? '…' : ''}${scalars.slice(start, end).join('')}${end < scalars.length ? '…' : ''}`
 }
 
-function insertRankedCandidate(
-  ranked: Array<RankedSearchResult>,
-  candidate: RankedSearchResult,
-): void {
-  let low = 0
-  let high = ranked.length
-  while (low < high) {
-    const middle = (low + high) >>> 1
-    if (compareRankedSearchResults(candidate, ranked[middle]!) < 0) high = middle
-    else low = middle + 1
+function selectSearchCandidates(
+  documents: ReadonlyArray<ResourceSearchDocument>,
+): ReadonlyArray<ResourceSearchDocument> {
+  const candidates: Array<ResourceSearchDocument> = []
+  for (const document of documents) {
+    let low = 0
+    let high = candidates.length
+    while (low < high) {
+      const middle = (low + high) >>> 1
+      if (compareText(document.resourceId, candidates[middle]!.resourceId) < 0) high = middle
+      else low = middle + 1
+    }
+    candidates.splice(low, 0, document)
+    if (candidates.length > MAX_WORKSPACE_SEARCH_CANDIDATES) candidates.pop()
   }
-  ranked.splice(low, 0, candidate)
-  if (ranked.length > MAX_WORKSPACE_SEARCH_CANDIDATES) ranked.pop()
+  return candidates
 }
 
 function compareRankedSearchResults(left: RankedSearchResult, right: RankedSearchResult): number {

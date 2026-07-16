@@ -548,15 +548,7 @@ export const resourceTables = {
     body: v.string(),
   })
     .index('by_resourceUuid', ['resourceUuid'])
-    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
-    .searchIndex('search_title', {
-      searchField: 'title',
-      filterFields: ['campaignUuid'],
-    })
-    .searchIndex('search_body', {
-      searchField: 'body',
-      filterFields: ['campaignUuid'],
-    }),
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceNoteContents: defineTable({
     campaignUuid: campaignIdValidator,

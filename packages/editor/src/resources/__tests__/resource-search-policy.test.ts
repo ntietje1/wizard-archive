@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import {
   MAX_WORKSPACE_SEARCH_BODY_BYTES,
+  MAX_WORKSPACE_SEARCH_CANDIDATES,
   MAX_WORKSPACE_SEARCH_QUERY_TERMS,
   MAX_WORKSPACE_SEARCH_RESULTS,
   MAX_WORKSPACE_SEARCH_TERM_SCALARS,
@@ -41,6 +42,30 @@ describe('resource search policy', () => {
       'result',
     )
     expect(results).toHaveLength(MAX_WORKSPACE_SEARCH_RESULTS)
+  })
+
+  it('selects the same bounded identity prefix before ranking in every input order', () => {
+    const resourceIds = Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, (_, index) =>
+      testDomainId('resource', `candidate-${index}`),
+    )
+    const selectedIds = [...resourceIds].sort().slice(0, MAX_WORKSPACE_SEARCH_CANDIDATES)
+    const selected = new Set(selectedIds)
+    const documents = resourceIds.map((resourceId) => ({
+      resourceId,
+      title: selected.has(resourceId) ? 'Shared title' : 'needle',
+      body: selected.has(resourceId) ? 'Shared needle body' : '',
+    }))
+    const expectedIds = selectedIds.slice(0, MAX_WORKSPACE_SEARCH_RESULTS)
+
+    for (const input of [
+      documents,
+      [...documents].reverse(),
+      [...documents.slice(37), ...documents.slice(0, 37)],
+    ]) {
+      const results = searchResourceDocuments(input, 'NEEDLE')
+      expect(results.map((result) => result.resourceId)).toEqual(expectedIds)
+      expect(results.every((result) => result.match.type === 'body')).toBe(true)
+    }
   })
 
   it('bounds query terms and casing with locale-independent Unicode semantics', () => {
