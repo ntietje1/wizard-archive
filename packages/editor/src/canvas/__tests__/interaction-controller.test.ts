@@ -38,16 +38,23 @@ describe('CanvasInteractionController selection', () => {
   it('models selection preview as one valid discriminated interaction', () => {
     const controller = new CanvasInteractionController()
     controller.selectNode(NODE_A, false)
-    controller.beginSelection('marquee', 'add')
+    controller.beginSelection('marquee', 'add', 1, { x: 10, y: 20 })
 
     expect(getVisualCanvasSelection(controller.get()).nodeIds).toEqual(new Set([NODE_A]))
-    controller.previewSelection({ nodeIds: new Set([NODE_B]), edgeIds: new Set(['edge-a-b']) })
+    controller.updateSelection(
+      1,
+      { x: 50, y: 60 },
+      {
+        nodeIds: new Set([NODE_B]),
+        edgeIds: new Set(['edge-a-b']),
+      },
+    )
     expect(getVisualCanvasSelection(controller.get())).toEqual({
       nodeIds: new Set([NODE_A, NODE_B]),
       edgeIds: new Set(['edge-a-b']),
     })
 
-    controller.commitSelection()
+    expect(controller.commitSelection(1)).toBe(true)
     expect(controller.get()).toMatchObject({
       selection: {
         nodeIds: new Set([NODE_A, NODE_B]),
@@ -61,13 +68,27 @@ describe('CanvasInteractionController selection', () => {
   it('cancels previews on escape or tool change without changing committed selection', () => {
     const controller = new CanvasInteractionController()
     controller.selectNode(NODE_A, false)
-    controller.beginSelection('lasso', 'replace')
-    controller.previewSelection({ nodeIds: new Set([NODE_B]), edgeIds: new Set() })
+    controller.beginSelection('lasso', 'replace', 1, { x: 0, y: 0 })
+    controller.updateSelection(
+      1,
+      { x: 10, y: 0 },
+      {
+        nodeIds: new Set([NODE_B]),
+        edgeIds: new Set(),
+      },
+    )
     controller.cancelInteraction()
     expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_A]))
 
-    controller.beginSelection('marquee', 'replace')
-    controller.previewSelection({ nodeIds: new Set([NODE_B]), edgeIds: new Set() })
+    controller.beginSelection('marquee', 'replace', 2, { x: 0, y: 0 })
+    controller.updateSelection(
+      2,
+      { x: 10, y: 10 },
+      {
+        nodeIds: new Set([NODE_B]),
+        edgeIds: new Set(),
+      },
+    )
     controller.setTool('hand')
     expect(controller.get()).toMatchObject({ tool: 'hand', interaction: { type: 'idle' } })
     expect(controller.get().selection.nodeIds).toEqual(new Set([NODE_A]))
@@ -80,11 +101,15 @@ describe('CanvasInteractionController selection', () => {
       nodeIds: new Set([NODE_A, NODE_B]),
       edgeIds: new Set(['edge-a-b', 'edge-b-c']),
     })
-    controller.beginSelection('marquee', 'add')
-    controller.previewSelection({
-      nodeIds: new Set([NODE_A, NODE_B]),
-      edgeIds: new Set(['edge-b-c']),
-    })
+    controller.beginSelection('marquee', 'add', 3, { x: 5, y: 10 })
+    controller.updateSelection(
+      3,
+      { x: 15, y: 20 },
+      {
+        nodeIds: new Set([NODE_A, NODE_B]),
+        edgeIds: new Set(['edge-b-c']),
+      },
+    )
 
     controller.reconcileDocument(new Set([NODE_B]), new Set(['edge-b-c']))
     expect(controller.get().selection).toEqual({
@@ -94,7 +119,10 @@ describe('CanvasInteractionController selection', () => {
     expect(controller.get().interaction).toEqual({
       type: 'selecting',
       kind: 'marquee',
+      pointerId: 3,
       mode: 'add',
+      origin: { x: 5, y: 10 },
+      current: { x: 15, y: 20 },
       candidate: { nodeIds: new Set([NODE_B]), edgeIds: new Set(['edge-b-c']) },
     })
     controller.dispose()

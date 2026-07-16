@@ -11,6 +11,7 @@ import { createInMemoryCanvasSession } from '../../resources/in-memory-canvas-se
 const RESOURCE_ID = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-444444444444')
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
+const STROKE = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-333333333333')
 
 async function createSession(content: CanvasDocumentContent = { nodes: [], edges: [] }) {
   const document = createCanvasDocumentDoc(content)
@@ -73,4 +74,128 @@ describe('CanvasEditor', () => {
     view.unmount()
     session.dispose()
   })
+
+  it('previews and commits mixed node-edge marquee selection', async () => {
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 20, y: 20 }, data: {} },
+        { id: NODE_B, type: 'embed', position: { x: 300, y: 20 }, data: {} },
+      ],
+      edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Selection board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
+
+    fireEvent.pointerDown(surface, { button: 0, clientX: 0, clientY: 0, pointerId: 7 })
+    expect(surface).toHaveFocus()
+    fireEvent.pointerMove(surface, { clientX: 600, clientY: 220, pointerId: 7 })
+
+    expect(screen.getByTestId('canvas-marquee')).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('Selecting 2 nodes and 1 edge')
+    expect(
+      screen
+        .getAllByTestId('canvas-node')
+        .every((node) => node.getAttribute('data-selected') === 'true'),
+    ).toBe(true)
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'true')
+
+    fireEvent.pointerUp(surface, { clientX: 600, clientY: 220, pointerId: 7 })
+    expect(screen.queryByTestId('canvas-marquee')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lasso select' }))
+    fireEvent.pointerDown(surface, { button: 0, clientX: 0, clientY: 0, pointerId: 8 })
+    fireEvent.pointerMove(surface, { clientX: 220, clientY: 0, pointerId: 8 })
+    fireEvent.pointerMove(surface, { clientX: 220, clientY: 120, pointerId: 8 })
+    expect(screen.getByTestId('canvas-lasso')).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('Selecting 1 node and 1 edge')
+    fireEvent.pointerUp(surface, { clientX: 220, clientY: 120, pointerId: 8 })
+    expect(screen.getAllByTestId('canvas-node')[0]).toHaveAttribute('data-selected', 'true')
+    expect(screen.getAllByTestId('canvas-node')[1]).toHaveAttribute('data-selected', 'false')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pointer' }))
+    fireEvent.pointerDown(surface, { button: 0, clientX: 700, clientY: 500, pointerId: 9 })
+    fireEvent.pointerUp(surface, { clientX: 700, clientY: 500, pointerId: 9 })
+    expect(
+      screen
+        .getAllByTestId('canvas-node')
+        .every((node) => node.getAttribute('data-selected') === 'false'),
+    ).toBe(true)
+
+    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 10, pointerId: 10 })
+    fireEvent.pointerMove(surface, {
+      clientX: 110,
+      clientY: 60,
+      pointerId: 10,
+      shiftKey: true,
+    })
+    expect(screen.getByTestId('canvas-marquee')).toHaveStyle({ width: '100px', height: '100px' })
+    fireEvent.pointerCancel(surface, { pointerId: 10 })
+    expect(screen.queryByTestId('canvas-marquee')).not.toBeInTheDocument()
+
+    view.unmount()
+    session.dispose()
+  })
+
+  it('renders moved stroke coordinates with a screen-space hit target', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: STROKE,
+          type: 'stroke',
+          position: { x: 400, y: 100 },
+          width: 100,
+          height: 20,
+          data: {
+            bounds: { x: 120, y: 40, width: 100, height: 20 },
+            points: [
+              [120, 50, 0.5],
+              [220, 50, 0.5],
+            ],
+            color: '#000000',
+            size: 4,
+          },
+        },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor
+        canEdit={false}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Stroke board"
+      />,
+    )
+
+    const hitTarget = screen.getByTestId('canvas-stroke-hit-target')
+    expect(hitTarget).toHaveAttribute('points', '0,10 100,10')
+    expect(hitTarget).toHaveAttribute('stroke-width', '24')
+    fireEvent.pointerDown(hitTarget, { button: 0, clientX: 450, clientY: 110, pointerId: 11 })
+    expect(screen.getByTestId('canvas-node')).toHaveAttribute('data-selected', 'true')
+
+    view.unmount()
+    session.dispose()
+  })
 })
+
+function installPointerCapture(element: HTMLElement) {
+  const captured = new Set<number>()
+  Object.defineProperties(element, {
+    setPointerCapture: {
+      configurable: true,
+      value: (pointerId: number) => captured.add(pointerId),
+    },
+    hasPointerCapture: {
+      configurable: true,
+      value: (pointerId: number) => captured.has(pointerId),
+    },
+    releasePointerCapture: {
+      configurable: true,
+      value: (pointerId: number) => captured.delete(pointerId),
+    },
+  })
+}

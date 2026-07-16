@@ -1,4 +1,14 @@
-import { Hand, Maximize, MousePointer2, Redo2, Type, Undo2, ZoomIn, ZoomOut } from 'lucide-react'
+import {
+  Hand,
+  LassoSelect,
+  Maximize,
+  MousePointer2,
+  Redo2,
+  Type,
+  Undo2,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, PointerEvent, RefObject, WheelEvent } from 'react'
@@ -10,6 +20,11 @@ import { CanvasScene } from './canvas-scene'
 import { fitCanvasContent } from './canvas-layout'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
+import {
+  canvasBoundsFromPoints,
+  selectCanvasContentInPolygon,
+  selectCanvasContentInRectangle,
+} from './selection-geometry'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
 import type { CanvasSession } from '../resources/content-session-contract'
@@ -18,6 +33,7 @@ const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
 const TOOL_BUTTONS: ReadonlyArray<Readonly<{ tool: CanvasTool; label: string; icon: LucideIcon }>> =
   [
     { tool: 'select', label: 'Pointer', icon: MousePointer2 },
+    { tool: 'lasso', label: 'Lasso select', icon: LassoSelect },
     { tool: 'text', label: 'Text', icon: Type },
     { tool: 'hand', label: 'Hand', icon: Hand },
   ]
@@ -139,8 +155,10 @@ export function CanvasEditor({
       <section
         ref={surface}
         aria-label="Canvas surface"
-        className="relative size-full touch-none overflow-hidden bg-[radial-gradient(circle,hsl(var(--border))_1px,transparent_1px)] [background-size:20px_20px]"
+        className={`relative size-full touch-none overflow-hidden bg-[radial-gradient(circle,hsl(var(--border))_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
+        data-tool={interaction.tool}
         data-testid="canvas-surface"
+        tabIndex={-1}
         onPointerDown={(event) => {
           event.currentTarget.focus()
           const snapshot = interactionController.get()
@@ -156,16 +174,33 @@ export function CanvasEditor({
             createTextNode(screenToCanvasPoint(point, snapshot.viewport))
             return
           }
-          if (snapshot.tool === 'select') interactionController.clearSelection()
+          if (snapshot.tool === 'select' || snapshot.tool === 'lasso') {
+            event.currentTarget.setPointerCapture(event.pointerId)
+            interactionController.beginSelection(
+              snapshot.tool === 'select' ? 'marquee' : 'lasso',
+              event.metaKey || event.ctrlKey ? 'add' : 'replace',
+              event.pointerId,
+              screenToCanvasPoint(point, snapshot.viewport),
+            )
+          }
         }}
-        onPointerMove={(event) =>
-          interactionController.updatePan(event.pointerId, localPoint(event, event.currentTarget))
-        }
+        onPointerMove={(event) => {
+          const point = localPoint(event, event.currentTarget)
+          interactionController.updatePan(event.pointerId, point)
+          updateAreaSelection(
+            event.pointerId,
+            screenToCanvasPoint(point, interactionController.get().viewport),
+            content,
+            interactionController,
+            event.shiftKey,
+          )
+        }}
         onPointerUp={(event) => {
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
-          interactionController.commitPan(event.pointerId)
+          if (interactionController.commitPan(event.pointerId)) return
+          commitAreaSelection(event.pointerId, interactionController)
         }}
         onPointerCancel={() => interactionController.cancelInteraction()}
         onWheel={(event) => handleWheel(event, interactionController)}
@@ -343,4 +378,56 @@ function handleWheel(event: WheelEvent<HTMLElement>, controller: CanvasInteracti
     event.shiftKey ? { x: -event.deltaY, y: 0 } : { x: -event.deltaX, y: -event.deltaY },
     true,
   )
+}
+
+function updateAreaSelection(
+  pointerId: number,
+  point: CanvasPoint,
+  content: CanvasDocumentContent,
+  controller: CanvasInteractionController,
+  square: boolean,
+) {
+  const snapshot = controller.get()
+  const gesture = snapshot.interaction
+  if (gesture.type !== 'selecting' || gesture.pointerId !== pointerId) return
+  if (gesture.kind === 'marquee') {
+    const current = square ? squareSelectionPoint(gesture.origin, point) : point
+    const bounds = canvasBoundsFromPoints(gesture.origin, current)
+    const distance = Math.hypot(bounds.width, bounds.height) * snapshot.viewport.zoom
+    controller.updateSelection(
+      pointerId,
+      current,
+      distance > 1 ? selectCanvasContentInRectangle(content, bounds, snapshot.viewport.zoom) : null,
+    )
+    return
+  }
+  const points = [...gesture.points, point]
+  controller.updateSelection(
+    pointerId,
+    point,
+    points.length >= 3 ? selectCanvasContentInPolygon(content, points) : null,
+  )
+}
+
+function squareSelectionPoint(origin: CanvasPoint, point: CanvasPoint): CanvasPoint {
+  const size = Math.max(Math.abs(point.x - origin.x), Math.abs(point.y - origin.y))
+  return {
+    x: origin.x + (point.x < origin.x ? -size : size),
+    y: origin.y + (point.y < origin.y ? -size : size),
+  }
+}
+
+function commitAreaSelection(pointerId: number, controller: CanvasInteractionController) {
+  const gesture = controller.get().interaction
+  if (gesture.type !== 'selecting' || gesture.pointerId !== pointerId) return
+  const committed = controller.commitSelection(pointerId)
+  if (!committed && gesture.kind === 'marquee' && gesture.mode === 'replace') {
+    controller.clearSelection()
+  }
+}
+
+function canvasToolCursor(tool: CanvasTool): string {
+  if (tool === 'hand') return 'cursor-grab'
+  if (tool === 'lasso' || tool === 'text') return 'cursor-crosshair'
+  return 'cursor-default'
 }

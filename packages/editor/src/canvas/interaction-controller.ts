@@ -1,6 +1,6 @@
 import type { CanvasNodeId } from '../resources/domain-id'
 
-export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
+export type CanvasTool = 'hand' | 'lasso' | 'select' | 'text'
 
 export type CanvasPoint = Readonly<{ x: number; y: number }>
 
@@ -18,8 +18,19 @@ export type CanvasInteraction =
   | Readonly<{ type: 'idle' }>
   | Readonly<{
       type: 'selecting'
-      kind: CanvasSelectionKind
+      kind: 'marquee'
+      pointerId: number
       mode: CanvasSelectionMode
+      origin: CanvasPoint
+      current: CanvasPoint
+      candidate: CanvasSelection | null
+    }>
+  | Readonly<{
+      type: 'selecting'
+      kind: 'lasso'
+      pointerId: number
+      mode: CanvasSelectionMode
+      points: ReadonlyArray<CanvasPoint>
       candidate: CanvasSelection | null
     }>
   | Readonly<{
@@ -229,11 +240,27 @@ export class CanvasInteractionController {
     })
   }
 
-  beginSelection(kind: CanvasSelectionKind, mode: CanvasSelectionMode): void {
+  beginSelection(
+    kind: CanvasSelectionKind,
+    mode: CanvasSelectionMode,
+    pointerId: number,
+    point: CanvasPoint,
+  ): void {
     this.#assertActive()
     this.#publish({
       ...this.#snapshot,
-      interaction: { type: 'selecting', kind, mode, candidate: null },
+      interaction:
+        kind === 'marquee'
+          ? {
+              type: 'selecting',
+              kind,
+              pointerId,
+              mode,
+              origin: point,
+              current: point,
+              candidate: null,
+            }
+          : { type: 'selecting', kind, pointerId, mode, points: [point], candidate: null },
     })
   }
 
@@ -329,30 +356,35 @@ export class CanvasInteractionController {
     this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
   }
 
-  previewSelection(candidate: CanvasSelection): void {
+  updateSelection(pointerId: number, point: CanvasPoint, candidate: CanvasSelection | null): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'selecting') {
-      throw new Error('Selection preview requires an active canvas selection interaction')
-    }
-    const nextCandidate = cloneSelection(candidate)
-    if (interaction.candidate && selectionsEqual(interaction.candidate, nextCandidate)) return
+    if (interaction.type !== 'selecting' || interaction.pointerId !== pointerId) return
+    const nextCandidate = candidate ? cloneSelection(candidate) : null
     this.#publish({
       ...this.#snapshot,
-      interaction: { ...interaction, candidate: nextCandidate },
+      interaction:
+        interaction.kind === 'marquee'
+          ? { ...interaction, current: point, candidate: nextCandidate }
+          : { ...interaction, points: [...interaction.points, point], candidate: nextCandidate },
     })
   }
 
-  commitSelection(): void {
+  commitSelection(pointerId: number): boolean {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'selecting') return
+    if (interaction.type !== 'selecting' || interaction.pointerId !== pointerId) return false
+    if (interaction.candidate === null) {
+      this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+      return false
+    }
     const selection = getVisualCanvasSelection(this.#snapshot)
     this.#publish({
       ...this.#snapshot,
       selection: cloneSelection(selection),
       interaction: { type: 'idle' },
     })
+    return true
   }
 
   cancelInteraction(): void {

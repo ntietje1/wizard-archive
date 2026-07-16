@@ -5,14 +5,22 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from './document-contract'
-import { getCanvasNodeInteractionPosition, screenToCanvasPoint } from './interaction-controller'
+import { canvasEdgePath } from './canvas-edge-geometry'
+import {
+  getCanvasNodeInteractionPosition,
+  getVisualCanvasSelection,
+  screenToCanvasPoint,
+} from './interaction-controller'
 import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
   CanvasPoint,
+  CanvasSelection,
   CanvasViewport,
 } from './interaction-controller'
 import { canvasNodeSize } from './canvas-layout'
+import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
+import { canvasBoundsFromPoints } from './selection-geometry'
 import { canvasTextDocumentPlainText, createCanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
 
@@ -31,7 +39,16 @@ export function CanvasScene({
   interactionController: CanvasInteractionController
   surface: RefObject<HTMLElement | null>
 }) {
-  const nodeById = new Map(content.nodes.map((node) => [node.id, node]))
+  const nodeById = new Map<CanvasNodeId, CanvasDocumentNode>(
+    content.nodes.map((node) => [
+      node.id,
+      {
+        ...node,
+        position: getCanvasNodeInteractionPosition(interaction, node.id, node.position),
+      },
+    ]),
+  )
+  const visualSelection = getVisualCanvasSelection(interaction)
   return (
     <div
       className="absolute left-0 top-0 size-0 origin-top-left"
@@ -49,12 +66,14 @@ export function CanvasScene({
           <CanvasEdge
             key={edge.id}
             edge={edge}
-            interaction={interaction}
             nodeById={nodeById}
+            selected={visualSelection.edgeIds.has(edge.id)}
+            tool={interaction.tool}
             onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
           />
         ))}
       </svg>
+      <CanvasSelectionOverlay interaction={interaction} />
       {content.nodes.map((node) => (
         <CanvasNode
           key={node.id}
@@ -64,6 +83,7 @@ export function CanvasScene({
           interaction={interaction}
           interactionController={interactionController}
           node={node}
+          selected={visualSelection.nodeIds.has(node.id)}
           surface={surface}
         />
       ))}
@@ -78,6 +98,7 @@ function CanvasNode({
   interaction,
   interactionController,
   node,
+  selected,
   surface,
 }: {
   canEdit: boolean
@@ -86,17 +107,17 @@ function CanvasNode({
   interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
+  selected: boolean
   surface: RefObject<HTMLElement | null>
 }) {
   if (node.hidden) return null
   const position = getCanvasNodeInteractionPosition(interaction, node.id, node.position)
-  const selected = interaction.selection.nodeIds.has(node.id)
   const editing =
     interaction.interaction.type === 'editing' && interaction.interaction.nodeId === node.id
   const size = canvasNodeSize(node)
   return (
     <div
-      className="absolute rounded-md"
+      className={`absolute rounded-md ${node.type === 'stroke' ? 'pointer-events-none' : ''}`}
       data-node-id={node.id}
       data-node-type={node.type}
       data-selected={selected}
@@ -108,7 +129,7 @@ function CanvasNode({
         zIndex: node.zIndex,
       }}
       onDoubleClick={(event) => {
-        if (!canEdit || node.type !== 'text') return
+        if (!canEdit || interaction.tool !== 'select' || node.type !== 'text') return
         event.stopPropagation()
         interactionController.editNode(node.id)
       }}
@@ -135,6 +156,7 @@ function CanvasNode({
         editing={editing}
         node={node}
         selected={selected}
+        zoom={interaction.viewport.zoom}
         onFinishEditing={() => interactionController.finishEditing()}
         onSaveText={(text) => saveTextNode(documentController, node.id, text)}
       />
@@ -251,23 +273,36 @@ function CanvasNodeContent({
   onFinishEditing,
   onSaveText,
   selected,
+  zoom,
 }: {
   editing: boolean
   node: CanvasDocumentNode
   onFinishEditing: () => void
   onSaveText: (text: string) => void
   selected: boolean
+  zoom: number
 }) {
   if (node.type === 'stroke') {
-    const points = node.data.points.map(([x, y]) => `${x},${y}`).join(' ')
+    const points = canvasStrokeLocalPoints(node)
+      .map(({ x, y }) => `${x},${y}`)
+      .join(' ')
     return (
       <svg
         className="size-full overflow-visible"
         viewBox={`0 0 ${node.data.bounds.width} ${node.data.bounds.height}`}
       >
         <polyline
+          data-testid="canvas-stroke-hit-target"
           fill="none"
           points={points}
+          pointerEvents="stroke"
+          stroke="transparent"
+          strokeWidth={Math.max(node.data.size, 24 / zoom)}
+        />
+        <polyline
+          fill="none"
+          points={points}
+          pointerEvents="none"
           stroke={node.data.color}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -327,23 +362,20 @@ function CanvasNodeContent({
 
 function CanvasEdge({
   edge,
-  interaction,
   nodeById,
   onSelect,
+  selected,
+  tool,
 }: {
   edge: CanvasDocumentEdge
-  interaction: CanvasInteractionSnapshot
   nodeById: ReadonlyMap<CanvasNodeId, CanvasDocumentNode>
   onSelect: (additive: boolean) => void
+  selected: boolean
+  tool: CanvasInteractionSnapshot['tool']
 }) {
   if (edge.hidden) return null
-  const sourceNode = nodeById.get(edge.source)
-  const targetNode = nodeById.get(edge.target)
-  if (!sourceNode || !targetNode) return null
-  const source = nodeCenter(sourceNode, interaction)
-  const target = nodeCenter(targetNode, interaction)
-  const path = canvasEdgePath(edge, source, target)
-  const selected = interaction.selection.edgeIds.has(edge.id)
+  const path = canvasEdgePath(edge, nodeById)
+  if (!path) return null
   return (
     <g
       className="pointer-events-auto cursor-pointer"
@@ -351,6 +383,7 @@ function CanvasEdge({
       data-selected={selected}
       data-testid="canvas-edge"
       onPointerDown={(event) => {
+        if (tool !== 'select') return
         event.stopPropagation()
         onSelect(event.metaKey || event.ctrlKey)
       }}
@@ -367,20 +400,52 @@ function CanvasEdge({
   )
 }
 
-function nodeCenter(node: CanvasDocumentNode, interaction: CanvasInteractionSnapshot) {
-  const position = getCanvasNodeInteractionPosition(interaction, node.id, node.position)
-  const size = canvasNodeSize(node)
-  return { x: position.x + size.width / 2, y: position.y + size.height / 2 }
+function CanvasSelectionOverlay({ interaction }: { interaction: CanvasInteractionSnapshot }) {
+  const gesture = interaction.interaction
+  if (gesture.type !== 'selecting') return null
+  const marqueeBounds =
+    gesture.kind === 'marquee' ? canvasBoundsFromPoints(gesture.origin, gesture.current) : null
+  if (marqueeBounds?.width === 0 && marqueeBounds.height === 0) return null
+  const status = gesture.candidate ? selectionStatus(gesture.candidate) : null
+  return (
+    <>
+      {gesture.kind === 'marquee' ? (
+        <div
+          className="pointer-events-none absolute border border-primary bg-primary/10"
+          data-testid="canvas-marquee"
+          style={{
+            ...marqueeBounds,
+            borderWidth: 1 / interaction.viewport.zoom,
+          }}
+        />
+      ) : (
+        <svg
+          className="pointer-events-none absolute left-0 top-0 overflow-visible"
+          data-testid="canvas-lasso"
+          width="1"
+          height="1"
+        >
+          <polygon
+            fill="hsl(var(--primary) / 0.1)"
+            points={gesture.points.map(({ x, y }) => `${x},${y}`).join(' ')}
+            stroke="hsl(var(--primary))"
+            strokeWidth={1 / interaction.viewport.zoom}
+          />
+        </svg>
+      )}
+      {status && (
+        <span className="sr-only" role="status">
+          {status}
+        </span>
+      )}
+    </>
+  )
 }
 
-function canvasEdgePath(edge: CanvasDocumentEdge, source: CanvasPoint, target: CanvasPoint) {
-  if (edge.type === 'straight') return `M ${source.x} ${source.y} L ${target.x} ${target.y}`
-  if (edge.type === 'step') {
-    const middleX = (source.x + target.x) / 2
-    return `M ${source.x} ${source.y} L ${middleX} ${source.y} L ${middleX} ${target.y} L ${target.x} ${target.y}`
-  }
-  const offset = Math.max(40, Math.abs(target.x - source.x) / 2)
-  return `M ${source.x} ${source.y} C ${source.x + offset} ${source.y}, ${target.x - offset} ${target.y}, ${target.x} ${target.y}`
+function selectionStatus(selection: CanvasSelection): string {
+  const nodes = `${selection.nodeIds.size} ${selection.nodeIds.size === 1 ? 'node' : 'nodes'}`
+  const edges = `${selection.edgeIds.size} ${selection.edgeIds.size === 1 ? 'edge' : 'edges'}`
+  return `Selecting ${nodes} and ${edges}`
 }
 
 function canvasEmbedLabel(node: Extract<CanvasDocumentNode, { type: 'embed' }>) {
