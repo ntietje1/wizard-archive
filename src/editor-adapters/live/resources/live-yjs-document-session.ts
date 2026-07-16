@@ -83,8 +83,10 @@ class LiveYjsDocumentSession {
       this.#fail({ status: 'rejected', reason: 'content_corrupt' })
       return 'conflict'
     }
-    Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_YJS_UPDATE)
-    const canonicalization = this.#canonicalizeDocument()
+    const canonicalization = this.document.transact(() => {
+      Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_YJS_UPDATE)
+      return this.#canonicalizeDocument()
+    }, REMOTE_YJS_UPDATE)
     if (canonicalization === 'invalid' || canonicalization === 'unavailable') {
       this.#fail({
         status: 'rejected',

@@ -1,4 +1,8 @@
-import type { CanvasDocumentChange } from './document-controller'
+import type {
+  CanvasDocumentChange,
+  CanvasDocumentEdgeUpdate,
+  CanvasDocumentNodeUpdate,
+} from './document-controller'
 import type {
   CanvasDocumentContent,
   CanvasDocumentEdge,
@@ -39,8 +43,8 @@ export function createCanvasPropertyChange(
 ): CanvasDocumentChange | null {
   const selectedNodes = content.nodes.filter((node) => selection.nodeIds.has(node.id))
   const selectedEdges = content.edges.filter((edge) => selection.edgeIds.has(edge.id))
-  let nodes: ReadonlyArray<CanvasDocumentNode> = []
-  let edges: ReadonlyArray<CanvasDocumentEdge> = []
+  let nodes: ReadonlyArray<CanvasDocumentNodeUpdate> = []
+  let edges: ReadonlyArray<CanvasDocumentEdgeUpdate> = []
   switch (command.property) {
     case 'fill':
     case 'border':
@@ -58,11 +62,11 @@ export function createCanvasPropertyChange(
     }
     case 'edgeType':
       edges = selectedEdges.flatMap((edge) =>
-        edge.type === command.value ? [] : [{ ...edge, type: command.value }],
+        edge.type === command.value ? [] : [{ id: edge.id, type: command.value }],
       )
       break
   }
-  return nodes.length > 0 || edges.length > 0 ? { type: 'replace', nodes, edges } : null
+  return nodes.length > 0 || edges.length > 0 ? { type: 'update', nodes, edges } : null
 }
 
 function patchSurfaceNodes(
@@ -71,7 +75,7 @@ function patchSurfaceNodes(
     CanvasPropertyCommand,
     { property: 'fill' | 'border' | 'borderWidth' | 'textColor' }
   >,
-): ReadonlyArray<CanvasDocumentNode> {
+): ReadonlyArray<CanvasDocumentNodeUpdate> {
   return nodes.flatMap((node) => {
     if (node.type === 'stroke') return []
     const key =
@@ -82,7 +86,7 @@ function patchSurfaceNodes(
           : command.property
     const value = normalizedSurfaceValue(command)
     if (node.data[key] === value) return []
-    return [{ ...node, data: { ...node.data, [key]: value } }]
+    return [{ id: node.id, type: node.type, data: { [key]: value } }]
   })
 }
 
@@ -107,8 +111,8 @@ function patchLineSelection(
   edges: ReadonlyArray<CanvasDocumentEdge>,
   command: Extract<CanvasPropertyCommand, { property: 'lineColor' | 'lineWidth' | 'lineOpacity' }>,
 ): Readonly<{
-  nodes: ReadonlyArray<CanvasDocumentNode>
-  edges: ReadonlyArray<CanvasDocumentEdge>
+  nodes: ReadonlyArray<CanvasDocumentNodeUpdate>
+  edges: ReadonlyArray<CanvasDocumentEdgeUpdate>
 }> {
   const strokeKey =
     command.property === 'lineColor'
@@ -130,13 +134,11 @@ function patchLineSelection(
   return {
     nodes: nodes.flatMap((node) =>
       node.type === 'stroke' && node.data[strokeKey] !== strokeValue
-        ? [{ ...node, data: { ...node.data, [strokeKey]: strokeValue } }]
+        ? [{ id: node.id, type: 'stroke', data: { [strokeKey]: strokeValue } }]
         : [],
     ),
     edges: edges.flatMap((edge) =>
-      edge.style?.[edgeKey] !== edgeValue
-        ? [{ ...edge, style: { ...edge.style, [edgeKey]: edgeValue } }]
-        : [],
+      edge.style?.[edgeKey] !== edgeValue ? [{ id: edge.id, style: { [edgeKey]: edgeValue } }] : [],
     ),
   }
 }

@@ -1,4 +1,8 @@
-import type { CanvasDocumentChange } from './document-controller'
+import type {
+  CanvasDocumentChange,
+  CanvasDocumentEdgeUpdate,
+  CanvasDocumentNodeUpdate,
+} from './document-controller'
 import type {
   CanvasDocumentContent,
   CanvasDocumentEdge,
@@ -47,15 +51,18 @@ export function createCanvasReorderChange(
   )
   if (selected.size === 0) return null
   const ordered = reorderCanvasElements(elements, selected, direction)
-  const nodes: Array<CanvasDocumentNode> = []
-  const edges: Array<CanvasDocumentEdge> = []
+  const nodes: Array<CanvasDocumentNodeUpdate> = []
+  const edges: Array<CanvasDocumentEdgeUpdate> = []
   ordered.forEach((element, index) => {
     const zIndex = index + 1
     if (element.value.zIndex === zIndex) return
-    if (element.kind === 'node') nodes.push({ ...element.value, zIndex })
-    else edges.push({ ...element.value, zIndex })
+    if (element.kind === 'node') {
+      nodes.push({ id: element.value.id, type: element.value.type, zIndex })
+    } else {
+      edges.push({ id: element.value.id, zIndex })
+    }
   })
-  return nodes.length > 0 || edges.length > 0 ? { type: 'replace', nodes, edges } : null
+  return nodes.length > 0 || edges.length > 0 ? { type: 'update', nodes, edges } : null
 }
 
 function sortCanvasElements<TElement extends Readonly<{ zIndex?: number }>>(

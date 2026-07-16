@@ -7,9 +7,9 @@ import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/reso
 import {
   canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
-  getCanvasDocumentMaps,
   readCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
+import { CanvasDocumentController } from '@wizard-archive/editor/canvas/document-controller'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import {
   createLiveMapSessionSource,
@@ -26,6 +26,15 @@ const version = {
   scheme: 'authoritative-revision-v1' as const,
   revision: 1,
   digest: 'a'.repeat(64),
+}
+
+function applyCanvasChange(
+  document: Y.Doc,
+  change: Parameters<CanvasDocumentController['apply']>[0],
+): void {
+  const controller = new CanvasDocumentController(document)
+  controller.apply(change)
+  controller.dispose()
 }
 
 describe('LiveResourceContentSource', () => {
@@ -137,12 +146,23 @@ describe('LiveResourceContentSource', () => {
     source.dispose()
   })
 
-  it('flushes canonical canvas deltas and preserves the session across snapshots', async () => {
+  it('preserves concurrent local geometry and remote style through flush and snapshots', async () => {
     const campaignId = testDomainId('campaign', 'canvas-save-campaign')
     const resourceId = testDomainId('resource', 'canvas-save-resource')
     const firstNodeId = testDomainId('canvasNode', 'canvas-first-node')
     const secondNodeId = testDomainId('canvasNode', 'canvas-second-node')
-    const initialDocument = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const initialDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: firstNodeId,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 100,
+          data: { backgroundColor: '#ffffff' },
+        },
+      ],
+      edges: [],
+    })
     let persistedUpdate = Y.encodeStateAsUpdate(initialDocument).buffer as ArrayBuffer
     initialDocument.destroy()
     let persistedVersion = assertVersionStamp(version)
@@ -191,16 +211,44 @@ describe('LiveResourceContentSource', () => {
     apply({ status: 'ready', kind: 'canvas', update: persistedUpdate, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas')
-    getCanvasDocumentMaps(ready.session.document).nodesMap.set(firstNodeId, {
-      id: firstNodeId,
-      type: 'text',
-      position: { x: 10, y: 20 },
-      data: {},
+    applyCanvasChange(ready.session.document, {
+      type: 'update',
+      nodes: [
+        {
+          id: firstNodeId,
+          type: 'text',
+          position: { x: 10, y: 20 },
+          width: 240,
+        },
+      ],
+      edges: [],
+    })
+
+    const remoteDocument = new Y.Doc()
+    Y.applyUpdate(remoteDocument, new Uint8Array(persistedUpdate))
+    applyCanvasChange(remoteDocument, {
+      type: 'update',
+      nodes: [{ id: firstNodeId, type: 'text', data: { backgroundColor: '#ff0000' } }],
+      edges: [],
+    })
+    applyCanvasChange(remoteDocument, {
+      type: 'insert',
+      nodes: [{ id: secondNodeId, type: 'text', position: { x: 30, y: 40 }, data: {} }],
+      edges: [],
+    })
+    persistedUpdate = Y.encodeStateAsUpdate(remoteDocument).buffer as ArrayBuffer
+    remoteDocument.destroy()
+    persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
+    apply({
+      status: 'ready',
+      kind: 'canvas',
+      update: persistedUpdate,
+      version: persistedVersion,
     })
 
     await expect(ready.session.flush()).resolves.toMatchObject({
       status: 'completed',
-      version: { revision: 2 },
+      version: { revision: 3 },
     })
     expect(save).toHaveBeenCalledOnce()
     apply({
@@ -211,19 +259,6 @@ describe('LiveResourceContentSource', () => {
     })
     expect(source.get(resourceId)).toEqual(ready)
 
-    const remoteDocument = new Y.Doc()
-    Y.applyUpdate(remoteDocument, new Uint8Array(persistedUpdate))
-    getCanvasDocumentMaps(remoteDocument).nodesMap.set(secondNodeId, {
-      id: secondNodeId,
-      type: 'text',
-      position: { x: 30, y: 40 },
-      data: {},
-    })
-    const remoteUpdate = Y.encodeStateAsUpdate(remoteDocument).buffer as ArrayBuffer
-    remoteDocument.destroy()
-    const remoteVersion = { ...persistedVersion, revision: 3, digest: 'd'.repeat(64) }
-    apply({ status: 'ready', kind: 'canvas', update: remoteUpdate, version: remoteVersion })
-
     const current = source.get(resourceId)
     expect(current).toEqual(ready)
     if (current.status !== 'ready') throw new Error('Expected ready canvas')
@@ -233,6 +268,12 @@ describe('LiveResourceContentSource', () => {
         expect.objectContaining({ id: secondNodeId }),
       ]),
     )
+    expect(readCanvasDocumentContent(current.session.document).nodes[0]).toMatchObject({
+      id: firstNodeId,
+      position: { x: 10, y: 20 },
+      width: 240,
+      data: { backgroundColor: '#ff0000' },
+    })
     expect(current.session.version.revision).toBe(3)
     source.dispose()
   })
@@ -255,15 +296,14 @@ describe('LiveResourceContentSource', () => {
     const deleted = new Y.Doc()
     Y.applyUpdate(deleted, baseUpdate)
     const deleteVector = Y.encodeStateVector(deleted)
-    getCanvasDocumentMaps(deleted).nodesMap.delete(sourceId)
+    applyCanvasChange(deleted, { type: 'remove', nodeIds: [sourceId], edgeIds: [] })
     const deleteUpdate = Y.encodeStateAsUpdate(deleted, deleteVector)
     const server = new Y.Doc()
     Y.applyUpdate(server, baseUpdate)
-    getCanvasDocumentMaps(server).edgesMap.set('offline-edge', {
-      id: 'offline-edge',
-      source: sourceId,
-      target: targetId,
-      type: 'straight',
+    applyCanvasChange(server, {
+      type: 'insert',
+      nodes: [],
+      edges: [{ id: 'offline-edge', source: sourceId, target: targetId, type: 'straight' }],
     })
     let persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(server)).buffer
     let persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
@@ -317,11 +357,10 @@ describe('LiveResourceContentSource', () => {
       nodes: [{ id: targetId, type: 'text', position: { x: 10, y: 0 }, data: {} }],
       edges: [],
     })
-    getCanvasDocumentMaps(ready.session.document).nodesMap.set(sourceId, {
-      id: sourceId,
-      type: 'text',
-      position: { x: 0, y: 0 },
-      data: {},
+    applyCanvasChange(ready.session.document, {
+      type: 'insert',
+      nodes: [{ id: sourceId, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
     })
 
     await expect(ready.session.flush()).resolves.toMatchObject({ status: 'completed' })
@@ -384,11 +423,10 @@ describe('LiveResourceContentSource', () => {
       apply({ status: 'ready', kind: 'canvas', update: initialUpdate, version })
       const ready = source.get(resourceId)
       if (ready.status !== 'ready') throw new Error('Expected ready canvas')
-      getCanvasDocumentMaps(ready.session.document).nodesMap.set(nodeId, {
-        id: nodeId,
-        type: 'text',
-        position: { x: 10, y: 20 },
-        data: {},
+      applyCanvasChange(ready.session.document, {
+        type: 'insert',
+        nodes: [{ id: nodeId, type: 'text', position: { x: 10, y: 20 }, data: {} }],
+        edges: [],
       })
 
       const drain = ready.session.flush()

@@ -15,10 +15,10 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import {
   createCanvasDocumentDoc,
-  getCanvasDocumentMaps,
   parseCanvasDocumentContent,
   readCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
+import { CanvasDocumentController } from '@wizard-archive/editor/canvas/document-controller'
 import * as Y from 'yjs'
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
@@ -45,6 +45,10 @@ import {
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
 >['command']
+
+function canvasTextDocument(text: string) {
+  return [{ type: 'paragraph' as const, content: [{ type: 'text' as const, text }] }]
+}
 
 function noteAwarenessUpdate(state: Record<string, unknown> = {}) {
   const document = new Y.Doc()
@@ -713,32 +717,33 @@ describe('resource structure commands', () => {
       edges: [],
     })
     const baseUpdate = Uint8Array.from(Y.encodeStateAsUpdate(base)).buffer
-    const operation = (change: (document: Y.Doc) => void) => {
+    const operation = (change: Parameters<CanvasDocumentController['apply']>[0]) => {
       const document = new Y.Doc()
       Y.applyUpdate(document, new Uint8Array(baseUpdate))
       const vector = Y.encodeStateVector(document)
-      change(document)
+      const controller = new CanvasDocumentController(document)
+      controller.apply(change)
+      controller.dispose()
       const update = Uint8Array.from(Y.encodeStateAsUpdate(document, vector)).buffer
       document.destroy()
       return update
     }
-    const deleteNode = operation((document) => {
-      getCanvasDocumentMaps(document).nodesMap.delete(sourceId)
+    const deleteNode = operation({
+      type: 'remove',
+      nodeIds: [sourceId],
+      edgeIds: [],
     })
-    const createEdgeAndUnrelatedNode = operation((document) => {
-      const { edgesMap, nodesMap } = getCanvasDocumentMaps(document)
-      nodesMap.set(unrelatedId, {
-        id: unrelatedId,
-        type: 'text',
-        position: { x: 20, y: 0 },
-        data: {},
-      })
-      edgesMap.set('concurrent-edge', {
-        id: 'concurrent-edge',
-        source: sourceId,
-        target: targetId,
-        type: 'straight',
-      })
+    const createEdgeAndUnrelatedNode = operation({
+      type: 'insert',
+      nodes: [{ id: unrelatedId, type: 'text', position: { x: 20, y: 0 }, data: {} }],
+      edges: [
+        {
+          id: 'concurrent-edge',
+          source: sourceId,
+          target: targetId,
+          type: 'straight',
+        },
+      ],
     })
     const runOrder = async (deltas: ReadonlyArray<ArrayBuffer>) => {
       const resourceId = await createResource(campaign, campaignUuid, 'canvas', null, 'Conflict')
@@ -785,6 +790,129 @@ describe('resource structure commands', () => {
         expect(readCanvasDocumentContent(local).edges).toEqual([])
         local.destroy()
       }
+    }
+    base.destroy()
+  })
+
+  it('preserves concurrent canvas field updates in both save orders', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const firstId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const secondId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const base = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: firstId,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 50,
+          zIndex: 1,
+          data: { content: canvasTextDocument('Original'), backgroundColor: '#ffffff' },
+        },
+        {
+          id: secondId,
+          type: 'text',
+          position: { x: 10, y: 0 },
+          zIndex: 2,
+          data: { content: canvasTextDocument('Second') },
+        },
+      ],
+      edges: [],
+    })
+    const baseUpdate = Uint8Array.from(Y.encodeStateAsUpdate(base)).buffer
+    const operation = (change: Parameters<CanvasDocumentController['apply']>[0]) => {
+      const document = new Y.Doc()
+      Y.applyUpdate(document, new Uint8Array(baseUpdate))
+      const vector = Y.encodeStateVector(document)
+      const controller = new CanvasDocumentController(document)
+      controller.apply(change)
+      controller.dispose()
+      const update = Uint8Array.from(Y.encodeStateAsUpdate(document, vector)).buffer
+      document.destroy()
+      return update
+    }
+    const geometryAndOrder = operation({
+      type: 'update',
+      nodes: [
+        {
+          id: firstId,
+          type: 'text',
+          position: { x: 40, y: 60 },
+          width: 240,
+          height: 120,
+          zIndex: 2,
+        },
+        { id: secondId, type: 'text', zIndex: 1 },
+      ],
+      edges: [],
+    })
+    const contentAndStyle = operation({
+      type: 'update',
+      nodes: [
+        {
+          id: firstId,
+          type: 'text',
+          data: {
+            content: canvasTextDocument('Edited'),
+            backgroundColor: '#ff0000',
+            borderWidth: 3,
+          },
+        },
+        {
+          id: secondId,
+          type: 'text',
+          data: { content: canvasTextDocument('Also edited') },
+        },
+      ],
+      edges: [],
+    })
+
+    for (const deltas of [
+      [geometryAndOrder, contentAndStyle],
+      [contentAndStyle, geometryAndOrder],
+    ]) {
+      const resourceId = await createResource(campaign, campaignUuid, 'canvas', null, 'Fields')
+      await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        update: baseUpdate,
+      })
+      let result
+      for (const update of deltas) {
+        result = await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+          campaignId: campaignUuid,
+          resourceId,
+          update,
+        })
+        expect(result.status).toBe('completed')
+      }
+      if (!result || result.status !== 'completed') throw new Error('Expected completed save')
+      const merged = new Y.Doc()
+      Y.applyUpdate(merged, new Uint8Array(result.update))
+      expect(readCanvasDocumentContent(merged)).toMatchObject({
+        nodes: [
+          {
+            id: firstId,
+            position: { x: 40, y: 60 },
+            width: 240,
+            height: 120,
+            zIndex: 2,
+            data: {
+              content: canvasTextDocument('Edited'),
+              backgroundColor: '#ff0000',
+              borderWidth: 3,
+            },
+          },
+          {
+            id: secondId,
+            zIndex: 1,
+            data: { content: canvasTextDocument('Also edited') },
+          },
+        ],
+        edges: [],
+      })
+      merged.destroy()
     }
     base.destroy()
   })

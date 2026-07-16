@@ -575,7 +575,8 @@ function commitResize(
     return bounds
       ? [
           {
-            ...node,
+            id: node.id,
+            type: node.type,
             position: { x: bounds.x, y: bounds.y },
             width: bounds.width,
             height: bounds.height,
@@ -583,7 +584,7 @@ function commitResize(
         ]
       : []
   })
-  documentController.apply({ type: 'replace', nodes, edges: [] })
+  documentController.apply({ type: 'update', nodes, edges: [] })
   return true
 }
 

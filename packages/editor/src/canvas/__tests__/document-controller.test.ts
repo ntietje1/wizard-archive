@@ -4,17 +4,22 @@ import { CanvasDocumentController } from '../document-controller'
 import {
   canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
-  getCanvasDocumentMaps,
   parseCanvasDocumentContent,
 } from '../document-contract'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contract'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasTextDocumentNode,
+} from '../document-contract'
+import { createCanvasEdgeMap, createCanvasNodeMap, getCanvasDocumentMaps } from '../document-crdt'
+import { createCanvasTextDocument } from '../text/model'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
 const NODE_C = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-333333333333')
 
-function textNode(id: typeof NODE_A, x = 0): CanvasDocumentNode {
+function textNode(id: typeof NODE_A, x = 0): CanvasTextDocumentNode {
   return { id, type: 'text', position: { x, y: 0 }, data: {} }
 }
 
@@ -75,18 +80,18 @@ describe('CanvasDocumentController', () => {
     document.destroy()
   })
 
-  it('validates every replacement before changing any node', () => {
+  it('validates every update before changing any node', () => {
     const { controller, document } = createController({
       nodes: [textNode(NODE_A), textNode(NODE_B)],
     })
 
     expect(() =>
       controller.apply({
-        type: 'replace',
+        type: 'update',
         edges: [],
         nodes: [
-          textNode(NODE_A, 10),
-          { ...textNode(NODE_B, 20), position: { x: Number.NaN, y: 0 } },
+          { id: NODE_A, type: 'text', position: { x: 10, y: 0 } },
+          { id: NODE_B, type: 'text', position: { x: Number.NaN, y: 0 } },
         ],
       }),
     ).toThrow('invalid node')
@@ -122,12 +127,154 @@ describe('CanvasDocumentController', () => {
     const { controller, document, nodesMap } = createController()
     controller.apply({ type: 'insert', nodes: [textNode(NODE_A)], edges: [] })
 
-    document.transact(() => nodesMap.set(NODE_B, textNode(NODE_B)), 'remote')
+    document.transact(() => nodesMap.set(NODE_B, createCanvasNodeMap(textNode(NODE_B))), 'remote')
     expect(controller.undo()).toBe(true)
     expect(controller.read()).toEqual({ nodes: [textNode(NODE_B)], edges: [] })
     expect(controller.canUndo).toBe(false)
     controller.dispose()
     document.destroy()
+  })
+
+  it('preserves concurrent geometry, content, style, and layer field intents in both orders', () => {
+    const base = createCanvasDocumentDoc({
+      nodes: [
+        {
+          ...textNode(NODE_A),
+          width: 100,
+          height: 50,
+          zIndex: 1,
+          data: { content: createCanvasTextDocument('Original'), backgroundColor: '#ffffff' },
+        },
+        { ...textNode(NODE_B), zIndex: 2, data: { content: createCanvasTextDocument('Second') } },
+      ],
+      edges: [],
+    })
+    const baseUpdate = Y.encodeStateAsUpdate(base)
+    const operation = (change: Parameters<CanvasDocumentController['apply']>[0]) => {
+      const document = new Y.Doc()
+      Y.applyUpdate(document, baseUpdate)
+      const vector = Y.encodeStateVector(document)
+      const controller = new CanvasDocumentController(document)
+      controller.apply(change)
+      controller.dispose()
+      const update = Y.encodeStateAsUpdate(document, vector)
+      document.destroy()
+      return update
+    }
+    const geometryAndOrder = operation({
+      type: 'update',
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 40, y: 60 },
+          width: 240,
+          height: 120,
+          zIndex: 2,
+        },
+        { id: NODE_B, type: 'text', zIndex: 1 },
+      ],
+      edges: [],
+    })
+    const contentAndStyle = operation({
+      type: 'update',
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          data: {
+            content: createCanvasTextDocument('Edited'),
+            backgroundColor: '#ff0000',
+            borderWidth: 3,
+          },
+        },
+        {
+          id: NODE_B,
+          type: 'text',
+          data: { content: createCanvasTextDocument('Also edited') },
+        },
+      ],
+      edges: [],
+    })
+
+    for (const updates of [
+      [geometryAndOrder, contentAndStyle],
+      [contentAndStyle, geometryAndOrder],
+    ]) {
+      const merged = new Y.Doc()
+      Y.applyUpdate(merged, baseUpdate)
+      updates.forEach((update) => Y.applyUpdate(merged, update))
+      expect(parseCanvasDocumentContent(merged)).toEqual({
+        nodes: [
+          {
+            ...textNode(NODE_A),
+            position: { x: 40, y: 60 },
+            width: 240,
+            height: 120,
+            zIndex: 2,
+            data: {
+              content: createCanvasTextDocument('Edited'),
+              backgroundColor: '#ff0000',
+              borderWidth: 3,
+            },
+          },
+          {
+            ...textNode(NODE_B),
+            zIndex: 1,
+            data: { content: createCanvasTextDocument('Also edited') },
+          },
+        ],
+        edges: [],
+      })
+      merged.destroy()
+    }
+    base.destroy()
+  })
+
+  it('undoes local geometry without reverting a concurrent remote style field', () => {
+    const base = createCanvasDocumentDoc({
+      nodes: [
+        {
+          ...textNode(NODE_A),
+          data: { backgroundColor: '#ffffff' },
+        },
+      ],
+      edges: [],
+    })
+    const baseUpdate = Y.encodeStateAsUpdate(base)
+    const document = new Y.Doc()
+    Y.applyUpdate(document, baseUpdate)
+    const controller = new CanvasDocumentController(document)
+    controller.apply({
+      type: 'update',
+      nodes: [{ id: NODE_A, type: 'text', position: { x: 50, y: 25 } }],
+      edges: [],
+    })
+    const remote = new Y.Doc()
+    Y.applyUpdate(remote, baseUpdate)
+    const vector = Y.encodeStateVector(remote)
+    const remoteController = new CanvasDocumentController(remote)
+    remoteController.apply({
+      type: 'update',
+      nodes: [{ id: NODE_A, type: 'text', data: { backgroundColor: '#ff0000' } }],
+      edges: [],
+    })
+    remoteController.dispose()
+    Y.applyUpdate(document, Y.encodeStateAsUpdate(remote, vector), 'remote')
+    expect(controller.read().nodes[0]).toMatchObject({
+      position: { x: 50, y: 25 },
+      data: { backgroundColor: '#ff0000' },
+    })
+
+    expect(controller.undo()).toBe(true)
+    expect(controller.read().nodes[0]).toMatchObject({
+      position: { x: 0, y: 0 },
+      data: { backgroundColor: '#ff0000' },
+    })
+    controller.dispose()
+    document.destroy()
+    remote.destroy()
+    base.destroy()
   })
 
   it('keeps undo valid after canonicalizing a concurrent dangling edge', () => {
@@ -142,7 +289,7 @@ describe('CanvasDocumentController', () => {
     const remote = new Y.Doc()
     Y.applyUpdate(remote, baseUpdate)
     const remoteVector = Y.encodeStateVector(remote)
-    getCanvasDocumentMaps(remote).edgesMap.set('edge-a-b', edge('edge-a-b'))
+    getCanvasDocumentMaps(remote).edgesMap.set('edge-a-b', createCanvasEdgeMap(edge('edge-a-b')))
     const remoteEdge = Y.encodeStateAsUpdate(remote, remoteVector)
 
     controller.apply({ type: 'remove', nodeIds: [NODE_A], edgeIds: [] })
@@ -177,8 +324,8 @@ describe('CanvasDocumentController', () => {
     expect(controller.read().nodes.map((node) => node.id)).toEqual([NODE_A, NODE_B])
 
     controller.apply({
-      type: 'replace',
-      nodes: [{ ...textNode(NODE_A), hidden: true }],
+      type: 'update',
+      nodes: [{ id: NODE_A, type: 'text', hidden: true }],
       edges: [],
     })
     expect(controller.canRedo).toBe(false)
@@ -210,9 +357,10 @@ describe('CanvasDocumentController', () => {
 })
 
 describe('canvas document identity', () => {
-  it('rejects map keys that differ from their canonical element IDs', () => {
+  it('derives identity from canonical map keys and rejects whole-object storage', () => {
     const document = new Y.Doc()
-    const { edgesMap, nodesMap } = getCanvasDocumentMaps(document)
+    const nodesMap = document.getMap<unknown>('nodes')
+    const edgesMap = document.getMap<unknown>('edges')
     nodesMap.set(NODE_B, textNode(NODE_A))
     expect(parseCanvasDocumentContent(document)).toBeNull()
 

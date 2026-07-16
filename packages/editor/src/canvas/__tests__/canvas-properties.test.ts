@@ -55,7 +55,7 @@ describe('canvas properties', () => {
     expect(resolveCanvasSharedValue([3, 7])).toEqual({ state: 'mixed' })
   })
 
-  it('fans a surface update across selected surface nodes in one replacement', () => {
+  it('fans a surface update across selected surface nodes as field intent', () => {
     expect(
       createCanvasPropertyChange(
         CONTENT,
@@ -63,10 +63,10 @@ describe('canvas properties', () => {
         { property: 'borderWidth', value: 5 },
       ),
     ).toEqual({
-      type: 'replace',
+      type: 'update',
       nodes: [
-        { ...CONTENT.nodes[0], data: { borderWidth: 5 } },
-        { ...CONTENT.nodes[1], data: { borderWidth: 5 } },
+        { id: NODE_A, type: 'text', data: { borderWidth: 5 } },
+        { id: NODE_B, type: 'embed', data: { borderWidth: 5 } },
       ],
       edges: [],
     })
@@ -77,16 +77,16 @@ describe('canvas properties', () => {
     expect(
       createCanvasPropertyChange(CONTENT, selection, { property: 'lineWidth', value: 7 }),
     ).toEqual({
-      type: 'replace',
-      nodes: [{ ...CONTENT.nodes[2], data: { ...CONTENT.nodes[2]!.data, size: 7 } }],
-      edges: [{ ...CONTENT.edges[0], style: { ...CONTENT.edges[0]!.style, strokeWidth: 7 } }],
+      type: 'update',
+      nodes: [{ id: STROKE, type: 'stroke', data: { size: 7 } }],
+      edges: [{ id: 'edge-a-b', style: { strokeWidth: 7 } }],
     })
     expect(
       createCanvasPropertyChange(CONTENT, selection, { property: 'lineOpacity', value: 80 }),
     ).toEqual({
-      type: 'replace',
-      nodes: [{ ...CONTENT.nodes[2], data: { ...CONTENT.nodes[2]!.data, opacity: 80 } }],
-      edges: [{ ...CONTENT.edges[0], style: { ...CONTENT.edges[0]!.style, opacity: 0.8 } }],
+      type: 'update',
+      nodes: [{ id: STROKE, type: 'stroke', data: { opacity: 80 } }],
+      edges: [{ id: 'edge-a-b', style: { opacity: 0.8 } }],
     })
   })
 
@@ -95,9 +95,9 @@ describe('canvas properties', () => {
     expect(
       createCanvasPropertyChange(CONTENT, selection, { property: 'edgeType', value: 'step' }),
     ).toEqual({
-      type: 'replace',
+      type: 'update',
       nodes: [],
-      edges: [{ ...CONTENT.edges[0], type: 'step' }],
+      edges: [{ id: 'edge-a-b', type: 'step' }],
     })
     expect(
       createCanvasPropertyChange(CONTENT, selection, { property: 'edgeType', value: 'straight' }),

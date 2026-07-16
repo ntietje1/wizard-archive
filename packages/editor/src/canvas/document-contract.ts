@@ -1,4 +1,11 @@
 import * as Y from 'yjs'
+import {
+  createCanvasEdgeMap,
+  createCanvasNodeMap,
+  getCanvasDocumentMaps,
+  readCanvasEdgeMap,
+  readCanvasNodeMap,
+} from './document-crdt'
 import { parseCanvasEdgeStyle, parseCanvasEdgeType } from './edge'
 import { parseCanvasEmbedNodeData } from './embed-node-data'
 import { parseCanvasPoint2D } from './geometry'
@@ -287,28 +294,14 @@ export interface CanvasDocumentContent {
   nodes: ReadonlyArray<CanvasDocumentNode>
 }
 
-export interface CanvasDocumentMaps {
-  edgesMap: Y.Map<CanvasDocumentEdge>
-  nodesMap: Y.Map<CanvasDocumentNode>
-}
-
 const CANVAS_DOCUMENT_INIT_ORIGIN = 'canvas-document-init'
-const CANVAS_DOCUMENT_NODES_MAP = 'nodes'
-const CANVAS_DOCUMENT_EDGES_MAP = 'edges'
-
-export function getCanvasDocumentMaps(doc: Y.Doc): CanvasDocumentMaps {
-  return {
-    edgesMap: doc.getMap<CanvasDocumentEdge>(CANVAS_DOCUMENT_EDGES_MAP),
-    nodesMap: doc.getMap<CanvasDocumentNode>(CANVAS_DOCUMENT_NODES_MAP),
-  }
-}
 
 export function createCanvasDocumentDoc(content: CanvasDocumentContent): Y.Doc {
   const doc = new Y.Doc()
   const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
   doc.transact(() => {
-    content.nodes.forEach((node) => nodesMap.set(node.id, node))
-    content.edges.forEach((edge) => edgesMap.set(edge.id, edge))
+    content.nodes.forEach((node) => nodesMap.set(node.id, createCanvasNodeMap(node)))
+    content.edges.forEach((edge) => edgesMap.set(edge.id, createCanvasEdgeMap(edge)))
   }, CANVAS_DOCUMENT_INIT_ORIGIN)
   return doc
 }
@@ -317,11 +310,9 @@ export function readCanvasDocumentContent(doc: Y.Doc): {
   edges: Array<CanvasDocumentEdge>
   nodes: Array<CanvasDocumentNode>
 } {
-  const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
-  return {
-    edges: Array.from(edgesMap.values()),
-    nodes: Array.from(nodesMap.values()),
-  }
+  const content = parseCanvasDocumentEntries(doc)
+  if (!content) throw new TypeError('Canvas document content is invalid')
+  return { edges: [...content.edges], nodes: [...content.nodes] }
 }
 
 export function parseCanvasDocumentContent(doc: Y.Doc): CanvasDocumentContent | null {
@@ -360,12 +351,10 @@ export function canonicalizeCanvasDocumentContent(
 function parseCanvasDocumentEntries(doc: Y.Doc): CanvasDocumentContent | null {
   const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
   const nodes = Array.from(nodesMap.entries(), ([key, value]) => {
-    const node = parseCanvasDocumentNode(value)
-    return node?.id === key ? node : null
+    return parseCanvasDocumentNode(readCanvasNodeMap(key, value))
   })
   const edges = Array.from(edgesMap.entries(), ([key, value]) => {
-    const edge = parseCanvasDocumentEdge(value)
-    return edge?.id === key ? edge : null
+    return parseCanvasDocumentEdge(readCanvasEdgeMap(key, value))
   })
   if (nodes.some((node) => node === null) || edges.some((edge) => edge === null)) return null
   return {

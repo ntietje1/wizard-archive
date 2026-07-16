@@ -1,6 +1,5 @@
 import * as Y from 'yjs'
 import {
-  getCanvasDocumentMaps,
   parseCanvasDocumentContent,
   parseCanvasDocumentEdge,
   parseCanvasDocumentNode,
@@ -9,7 +8,18 @@ import type {
   CanvasDocumentContent,
   CanvasDocumentEdge,
   CanvasDocumentNode,
+  CanvasEdgeStyle,
+  CanvasEmbedNodeData,
+  CanvasStrokeNodeData,
+  CanvasTextNodeData,
 } from './document-contract'
+import {
+  applyCanvasEdgeUpdate,
+  applyCanvasNodeUpdate,
+  createCanvasEdgeMap,
+  createCanvasNodeMap,
+  getCanvasDocumentMaps,
+} from './document-crdt'
 import { assertDomainId, DOMAIN_ID_KIND } from '../resources/domain-id'
 import type { CanvasNodeId } from '../resources/domain-id'
 
@@ -20,15 +30,46 @@ export type CanvasDocumentChange =
       edges: ReadonlyArray<CanvasDocumentEdge>
     }>
   | Readonly<{
-      type: 'replace'
-      nodes: ReadonlyArray<CanvasDocumentNode>
-      edges: ReadonlyArray<CanvasDocumentEdge>
+      type: 'update'
+      nodes: ReadonlyArray<CanvasDocumentNodeUpdate>
+      edges: ReadonlyArray<CanvasDocumentEdgeUpdate>
     }>
   | Readonly<{
       type: 'remove'
       nodeIds: ReadonlyArray<CanvasNodeId>
       edgeIds: ReadonlyArray<string>
     }>
+
+type CanvasDocumentNodeUpdateBase<
+  TType extends CanvasDocumentNode['type'],
+  TData extends object,
+> = Readonly<{
+  id: CanvasNodeId
+  type: TType
+  position?: CanvasDocumentNode['position']
+  data?: Partial<TData>
+  width?: number | undefined
+  height?: number | undefined
+  hidden?: boolean | undefined
+  zIndex?: number | undefined
+}>
+
+export type CanvasDocumentNodeUpdate =
+  | CanvasDocumentNodeUpdateBase<'embed', CanvasEmbedNodeData>
+  | CanvasDocumentNodeUpdateBase<'stroke', CanvasStrokeNodeData>
+  | CanvasDocumentNodeUpdateBase<'text', CanvasTextNodeData>
+
+export type CanvasDocumentEdgeUpdate = Readonly<{
+  id: string
+  source?: CanvasNodeId
+  target?: CanvasNodeId
+  type?: CanvasDocumentEdge['type']
+  sourceHandle?: string | null | undefined
+  targetHandle?: string | null | undefined
+  style?: Partial<CanvasEdgeStyle> | undefined
+  hidden?: boolean | undefined
+  zIndex?: number | undefined
+}>
 
 export type CanvasDocumentChangeReceipt = Readonly<{
   nodesChanged: number
@@ -80,12 +121,56 @@ function parseDocumentElements(
   return { nodes, edges }
 }
 
+function mergePatch(current: Readonly<object>, patch: Readonly<object>): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...current }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) delete merged[key]
+    else merged[key] = value
+  }
+  return merged
+}
+
+function parseNodeUpdate(
+  current: CanvasDocumentNode,
+  update: CanvasDocumentNodeUpdate,
+): CanvasDocumentNode {
+  if (current.type !== update.type) {
+    throw new TypeError('Canvas document updates cannot change a node type')
+  }
+  const candidate = {
+    ...current,
+    ...update,
+    ...(update.data !== undefined ? { data: mergePatch(current.data, update.data) } : {}),
+  }
+  const parsed = parseCanvasDocumentNode(candidate)
+  if (!parsed) throw new TypeError('Canvas document change contains an invalid node update')
+  return parsed
+}
+
+function parseEdgeUpdate(
+  current: CanvasDocumentEdge,
+  update: CanvasDocumentEdgeUpdate,
+): CanvasDocumentEdge {
+  const candidate = {
+    ...current,
+    ...update,
+    ...(update.style !== undefined
+      ? { style: mergePatch(current.style ?? {}, update.style) }
+      : Object.hasOwn(update, 'style')
+        ? { style: undefined }
+        : {}),
+  }
+  const parsed = parseCanvasDocumentEdge(candidate)
+  if (!parsed) throw new TypeError('Canvas document change contains an invalid edge update')
+  return parsed
+}
+
 export class CanvasDocumentController {
   readonly #document: Y.Doc
-  readonly #edgesMap: Y.Map<CanvasDocumentEdge>
+  readonly #edgesMap: Y.Map<Y.Map<unknown>>
   readonly #historyListeners = new Set<() => void>()
   readonly #localOrigin = {}
-  readonly #nodesMap: Y.Map<CanvasDocumentNode>
+  readonly #nodesMap: Y.Map<Y.Map<unknown>>
   readonly #undoManager: Y.UndoManager
   #disposed = false
 
@@ -138,8 +223,8 @@ export class CanvasDocumentController {
     switch (change.type) {
       case 'insert':
         return this.#insert(change.nodes, change.edges)
-      case 'replace':
-        return this.#replace(change.nodes, change.edges)
+      case 'update':
+        return this.#update(change.nodes, change.edges)
       case 'remove':
         return this.#remove(change.nodeIds, change.edgeIds)
     }
@@ -191,11 +276,12 @@ export class CanvasDocumentController {
       if (this.#edgesMap.has(edge.id)) throw new Error(`Canvas edge "${edge.id}" already exists`)
     }
 
-    const nodeIds = new Set(Array.from(this.#nodesMap.values(), (node) => node.id))
+    const content = this.read()
+    const nodeIds = new Set(content.nodes.map((node) => node.id))
     nodes.forEach((node) => nodeIds.add(node.id))
     this.#assertConnectedEdges(edges, nodeIds)
 
-    let nextZIndex = this.#nextZIndex()
+    let nextZIndex = this.#nextZIndex(content)
     const insertedNodes = nodes.map((node) => ({
       ...node,
       zIndex: node.zIndex ?? nextZIndex++,
@@ -206,33 +292,46 @@ export class CanvasDocumentController {
     }))
 
     this.#commit(() => {
-      insertedNodes.forEach((node) => this.#nodesMap.set(node.id, node))
-      insertedEdges.forEach((edge) => this.#edgesMap.set(edge.id, edge))
+      insertedNodes.forEach((node) => this.#nodesMap.set(node.id, createCanvasNodeMap(node)))
+      insertedEdges.forEach((edge) => this.#edgesMap.set(edge.id, createCanvasEdgeMap(edge)))
     })
     return { nodesChanged: insertedNodes.length, edgesChanged: insertedEdges.length }
   }
 
-  #replace(
-    candidateNodes: ReadonlyArray<CanvasDocumentNode>,
-    candidateEdges: ReadonlyArray<CanvasDocumentEdge>,
+  #update(
+    candidateNodes: ReadonlyArray<CanvasDocumentNodeUpdate>,
+    candidateEdges: ReadonlyArray<CanvasDocumentEdgeUpdate>,
   ): CanvasDocumentChangeReceipt {
     if (candidateNodes.length === 0 && candidateEdges.length === 0) return NO_DOCUMENT_CHANGES
 
-    const { edges, nodes } = parseDocumentElements(candidateNodes, candidateEdges)
+    assertUniqueIds(candidateNodes, 'node')
+    assertUniqueIds(candidateEdges, 'edge')
+    const content = this.read()
+    const nodesById = new Map(content.nodes.map((node) => [node.id, node]))
+    const edgesById = new Map(content.edges.map((edge) => [edge.id, edge]))
+    const nodeUpdates = candidateNodes.flatMap((update) => {
+      const current = nodesById.get(update.id)
+      return current ? [{ update, next: parseNodeUpdate(current, update) }] : []
+    })
+    const edgeUpdates = candidateEdges.flatMap((update) => {
+      const current = edgesById.get(update.id)
+      return current ? [{ update, next: parseEdgeUpdate(current, update) }] : []
+    })
     this.#assertConnectedEdges(
-      edges,
-      new Set(Array.from(this.#nodesMap.values(), (node) => node.id)),
+      edgeUpdates.map(({ next }) => next),
+      new Set(nodesById.keys()),
     )
-
-    const replacedNodes = nodes.filter((node) => this.#nodesMap.has(node.id))
-    const replacedEdges = edges.filter((edge) => this.#edgesMap.has(edge.id))
-    if (replacedNodes.length === 0 && replacedEdges.length === 0) return NO_DOCUMENT_CHANGES
+    if (nodeUpdates.length === 0 && edgeUpdates.length === 0) return NO_DOCUMENT_CHANGES
 
     this.#commit(() => {
-      replacedNodes.forEach((node) => this.#nodesMap.set(node.id, node))
-      replacedEdges.forEach((edge) => this.#edgesMap.set(edge.id, edge))
+      nodeUpdates.forEach(({ update }) =>
+        applyCanvasNodeUpdate(this.#nodesMap.get(update.id)!, update),
+      )
+      edgeUpdates.forEach(({ update }) =>
+        applyCanvasEdgeUpdate(this.#edgesMap.get(update.id)!, update),
+      )
     })
-    return { nodesChanged: replacedNodes.length, edgesChanged: replacedEdges.length }
+    return { nodesChanged: nodeUpdates.length, edgesChanged: edgeUpdates.length }
   }
 
   #remove(
@@ -243,7 +342,8 @@ export class CanvasDocumentController {
     assertEdgeIds(candidateEdgeIds)
     const nodeIds = new Set(candidateNodeIds.filter((id) => this.#nodesMap.has(id)))
     const edgeIds = new Set(candidateEdgeIds.filter((id) => this.#edgesMap.has(id)))
-    for (const [edgeId, edge] of this.#edgesMap) {
+    for (const edge of this.read().edges) {
+      const edgeId = edge.id
       if (nodeIds.has(edge.source) || nodeIds.has(edge.target)) edgeIds.add(edgeId)
     }
     if (nodeIds.size === 0 && edgeIds.size === 0) return NO_DOCUMENT_CHANGES
@@ -264,8 +364,8 @@ export class CanvasDocumentController {
     }
   }
 
-  #nextZIndex(): number {
-    const elements = [...this.#nodesMap.values(), ...this.#edgesMap.values()]
+  #nextZIndex(content: CanvasDocumentContent): number {
+    const elements = [...content.nodes, ...content.edges]
     return elements.reduce((max, element, index) => Math.max(max, element.zIndex ?? index), 0) + 1
   }
 

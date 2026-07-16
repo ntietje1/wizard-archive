@@ -36,10 +36,10 @@ export function createCanvasArrangeChange(
   const changed = nodes.flatMap((node) => {
     const position = positions.get(node.id)
     return position && (position.x !== node.position.x || position.y !== node.position.y)
-      ? [{ ...node, position }]
+      ? [{ id: node.id, type: node.type, position }]
       : []
   })
-  return changed.length > 0 ? { type: 'replace', nodes: changed, edges: [] } : null
+  return changed.length > 0 ? { type: 'update', nodes: changed, edges: [] } : null
 }
 
 function arrangeCanvasNodes(

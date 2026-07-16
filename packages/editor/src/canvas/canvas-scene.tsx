@@ -1,7 +1,7 @@
 import type { CSSProperties, PointerEvent, RefObject } from 'react'
 import { canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
-import type { CanvasDocumentController } from './document-controller'
+import type { CanvasDocumentController, CanvasDocumentNodeUpdate } from './document-controller'
 import type {
   CanvasDocumentContent,
   CanvasDocumentEdge,
@@ -402,12 +402,12 @@ function commitNodeDrag(
   }
   const positions = interactionController.commitDrag(event.pointerId)
   if (!positions) return
-  const nodes: Array<CanvasDocumentNode> = []
+  const nodes: Array<CanvasDocumentNodeUpdate> = []
   for (const candidate of documentController.read().nodes) {
     const position = positions.get(candidate.id)
-    if (position) nodes.push({ ...candidate, position })
+    if (position) nodes.push({ id: candidate.id, type: candidate.type, position })
   }
-  documentController.apply({ type: 'replace', nodes, edges: [] })
+  documentController.apply({ type: 'update', nodes, edges: [] })
 }
 
 function saveTextNode(
@@ -420,11 +420,12 @@ function saveTextNode(
   const latest = documentController.read().nodes.find((candidate) => candidate.id === nodeId)
   if (!latest || latest.type !== 'text') return
   documentController.apply({
-    type: 'replace',
+    type: 'update',
     nodes: [
       {
-        ...latest,
-        data: { ...latest.data, content: createCanvasTextDocument(text) },
+        id: latest.id,
+        type: 'text',
+        data: { content: createCanvasTextDocument(text) },
       },
     ],
     edges: [],

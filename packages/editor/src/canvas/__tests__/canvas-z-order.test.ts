@@ -30,16 +30,16 @@ describe('canvas z-order', () => {
         'sendToBack',
       ),
     ).toEqual({
-      type: 'replace',
+      type: 'update',
       nodes: [
-        { ...tied.nodes[0], zIndex: 1 },
-        { ...tied.nodes[1], zIndex: 2 },
+        { id: NODE_A, type: 'text', zIndex: 1 },
+        { id: NODE_B, type: 'text', zIndex: 2 },
       ],
-      edges: [{ ...tied.edges[0], zIndex: 3 }],
+      edges: [{ id: 'edge-a', zIndex: 3 }],
     })
   })
 
-  it('reorders mixed node-edge layers in one normalized replacement', () => {
+  it('reorders mixed node-edge layers with isolated order fields', () => {
     expect(
       createCanvasReorderChange(
         CONTENT,
@@ -47,11 +47,11 @@ describe('canvas z-order', () => {
         'bringToFront',
       ),
     ).toEqual({
-      type: 'replace',
-      nodes: [{ ...CONTENT.nodes[1], zIndex: 2 }],
+      type: 'update',
+      nodes: [{ id: NODE_B, type: 'text', zIndex: 2 }],
       edges: [
-        { ...CONTENT.edges[1], zIndex: 3 },
-        { ...CONTENT.edges[0], zIndex: 4 },
+        { id: 'edge-b', zIndex: 3 },
+        { id: 'edge-a', zIndex: 4 },
       ],
     })
   })
@@ -64,14 +64,14 @@ describe('canvas z-order', () => {
         'bringForward',
       ),
     ).toEqual({
-      type: 'replace',
+      type: 'update',
       nodes: [
-        { ...CONTENT.nodes[0], zIndex: 2 },
-        { ...CONTENT.nodes[1], zIndex: 4 },
+        { id: NODE_A, type: 'text', zIndex: 2 },
+        { id: NODE_B, type: 'text', zIndex: 4 },
       ],
       edges: [
-        { ...CONTENT.edges[0], zIndex: 1 },
-        { ...CONTENT.edges[1], zIndex: 3 },
+        { id: 'edge-a', zIndex: 1 },
+        { id: 'edge-b', zIndex: 3 },
       ],
     })
   })

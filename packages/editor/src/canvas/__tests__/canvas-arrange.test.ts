@@ -172,7 +172,7 @@ function createNode(
 }
 
 function arrangedPositions(content: CanvasDocumentContent, change: CanvasDocumentChange | null) {
-  if (!change || change.type !== 'replace') throw new Error('Expected canvas arrange replacement')
+  if (!change || change.type !== 'update') throw new Error('Expected canvas arrange update')
   const changed = new Map(change.nodes.map((changedNode) => [changedNode.id, changedNode.position]))
   return content.nodes.map((contentNode) => {
     const position = changed.get(contentNode.id) ?? contentNode.position
