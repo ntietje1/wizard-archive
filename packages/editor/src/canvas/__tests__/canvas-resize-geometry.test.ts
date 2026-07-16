@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { projectCanvasResizeNodeBounds, resolveCanvasResize } from '../canvas-resize-geometry'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { createCanvasCandidateWorkBudget } from '../workload'
 
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -21,6 +22,7 @@ describe('canvas resize geometry', () => {
       square: false,
       snap: false,
       zoom: 1,
+      candidateWork: createCanvasCandidateWorkBudget(),
     }).bounds
 
     expect(bounds).toEqual({ x: 0, y: 0, width: 960, height: 160 })
@@ -46,6 +48,7 @@ describe('canvas resize geometry', () => {
         square: false,
         snap: false,
         zoom: 1,
+        candidateWork: createCanvasCandidateWorkBudget(),
       }).bounds,
     ).toEqual({ x: 240, y: 100, width: 40, height: 80 })
     expect(
@@ -58,6 +61,7 @@ describe('canvas resize geometry', () => {
         square: true,
         snap: false,
         zoom: 1,
+        candidateWork: createCanvasCandidateWorkBudget(),
       }).bounds,
     ).toEqual({ x: 100, y: 100, width: 220, height: 220 })
   })
@@ -74,11 +78,23 @@ describe('canvas resize geometry', () => {
       zoom: 1,
     }
 
-    expect(resolveCanvasResize({ ...options, snap: false })).toEqual({
+    expect(
+      resolveCanvasResize({
+        ...options,
+        snap: false,
+        candidateWork: createCanvasCandidateWorkBudget(),
+      }),
+    ).toEqual({
       bounds: { x: 0, y: 0, width: 296, height: 126 },
       guides: [],
     })
-    expect(resolveCanvasResize({ ...options, snap: true })).toEqual({
+    expect(
+      resolveCanvasResize({
+        ...options,
+        snap: true,
+        candidateWork: createCanvasCandidateWorkBudget(),
+      }),
+    ).toEqual({
       bounds: { x: 0, y: 0, width: 300, height: 130 },
       guides: [
         { orientation: 'vertical', position: 300, start: 0, end: 210 },
@@ -105,8 +121,13 @@ describe('canvas resize geometry', () => {
       zoom: 1,
     }
 
-    const first = resolveCanvasResize(options)
-    expect(resolveCanvasResize(options)).toEqual(first)
-    expect(first.bounds).toEqual({ x: 0, y: 0, width: 300, height: 126 })
+    const resolve = () =>
+      resolveCanvasResize({ ...options, candidateWork: createCanvasCandidateWorkBudget() })
+    const first = resolve()
+    expect(resolve()).toEqual(first)
+    expect(first).toEqual({
+      bounds: { x: 0, y: 0, width: 296, height: 126 },
+      guides: [],
+    })
   })
 })

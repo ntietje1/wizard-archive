@@ -6,6 +6,7 @@ import type {
   CanvasPoint,
 } from './interaction-controller'
 import type { CanvasNodeId } from '../resources/domain-id'
+import type { CanvasCandidateWorkBudget } from './workload'
 
 const BEZIER_SEGMENTS = 16
 
@@ -64,12 +65,16 @@ export function findCanvasConnectionTarget(
   sourceNodeId: CanvasNodeId,
   point: CanvasPoint,
   radius: number,
+  budget: CanvasCandidateWorkBudget,
 ): CanvasConnectionAnchor | null {
+  if (budget.exhausted) return null
   let closest: CanvasConnectionAnchor | null = null
   let closestDistance = radius
   for (const node of nodes) {
+    if (!budget.consume()) return null
     if (node.hidden || node.id === sourceNodeId) continue
     for (const handle of CANVAS_CONNECTION_HANDLES) {
+      if (!budget.consume()) return null
       const anchor = canvasNodeHandlePoint(node, handle)
       const distance = Math.hypot(anchor.x - point.x, anchor.y - point.y)
       if (distance >= closestDistance) continue

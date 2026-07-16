@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { resolveCanvasDrag } from '../canvas-snap-geometry'
+import { createCanvasCandidateWorkBudget } from '../workload'
 
 describe('canvas snap geometry', () => {
   it('snaps dragged edges and centers with a zoom-correct screen threshold', () => {
@@ -11,6 +12,7 @@ describe('canvas snap geometry', () => {
         constrain: false,
         snap: true,
         zoom: 2,
+        candidateWork: createCanvasCandidateWorkBudget(),
       }),
     ).toEqual({
       delta: { x: 94, y: 50 },
@@ -25,6 +27,7 @@ describe('canvas snap geometry', () => {
         constrain: false,
         snap: true,
         zoom: 2,
+        candidateWork: createCanvasCandidateWorkBudget(),
       }).delta,
     ).toEqual({ x: 100, y: 50 })
   })
@@ -38,6 +41,7 @@ describe('canvas snap geometry', () => {
         constrain: true,
         snap: true,
         zoom: 1,
+        candidateWork: createCanvasCandidateWorkBudget(),
       }),
     ).toEqual({ delta: { x: 20, y: 0 }, guides: [] })
   })
@@ -57,8 +61,10 @@ describe('canvas snap geometry', () => {
       zoom: 2,
     }
 
-    const first = resolveCanvasDrag(options)
-    expect(resolveCanvasDrag(options)).toEqual(first)
-    expect(first.delta).toEqual({ x: 100, y: 46 })
+    const resolve = () =>
+      resolveCanvasDrag({ ...options, candidateWork: createCanvasCandidateWorkBudget() })
+    const first = resolve()
+    expect(resolve()).toEqual(first)
+    expect(first).toEqual({ delta: { x: 96, y: 46 }, guides: [] })
   })
 })

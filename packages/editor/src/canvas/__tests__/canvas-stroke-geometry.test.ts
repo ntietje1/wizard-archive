@@ -5,6 +5,7 @@ import {
   findCanvasStrokesIntersectingTrail,
 } from '../canvas-stroke-geometry'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from '../workload'
 
 const HIT = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const MISS = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -42,10 +43,15 @@ describe('canvas stroke eraser geometry', () => {
     ]
 
     expect(
-      findCanvasStrokesIntersectingTrail(nodes, [
-        { x: 40, y: 0 },
-        { x: 40, y: 40 },
-      ]),
+      findCanvasStrokesIntersectingTrail(
+        nodes,
+        [
+          { x: 40, y: 0 },
+          { x: 40, y: 40 },
+        ],
+        new Set(),
+        createCanvasCandidateWorkBudget(),
+      ),
     ).toEqual(new Set([HIT]))
     expect(
       findCanvasStrokesIntersectingTrail(
@@ -55,6 +61,7 @@ describe('canvas stroke eraser geometry', () => {
           { x: 40, y: 140 },
         ],
         new Set([HIT]),
+        createCanvasCandidateWorkBudget(),
       ),
     ).toEqual(new Set([HIT, MISS]))
   })
@@ -67,5 +74,25 @@ describe('canvas stroke eraser geometry', () => {
       { x: 0, y: 0 },
       { x: 180, y: 0 },
     ])
+  })
+
+  it('keeps only previously proven erasures when candidate work becomes uncertain', () => {
+    const budget = createCanvasCandidateWorkBudget()
+    let consumed = 0
+    while (budget.consume()) consumed += 1
+
+    expect(consumed).toBe(CANVAS_WORKLOAD_LIMITS.candidateWorkPerGesture)
+    expect(
+      findCanvasStrokesIntersectingTrail(
+        [stroke(HIT, 10), stroke(MISS, 10)],
+        [
+          { x: 40, y: 0 },
+          { x: 40, y: 40 },
+        ],
+        new Set([HIT]),
+        budget,
+      ),
+    ).toEqual(new Set([HIT]))
+    expect(budget.exhausted).toBe(true)
   })
 })

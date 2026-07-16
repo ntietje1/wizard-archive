@@ -104,14 +104,34 @@ export function canvasSelectionWithinWorkload(selection: {
   return selection.nodeIds.size + selection.edgeIds.size <= CANVAS_WORKLOAD_LIMITS.selectedElements
 }
 
-export type CanvasCandidateWorkBudget = { remaining: number }
-
-export function createCanvasCandidateWorkBudget(): CanvasCandidateWorkBudget {
-  return { remaining: CANVAS_WORKLOAD_LIMITS.candidateWorkPerGesture }
+export interface CanvasCandidateWorkBudget {
+  readonly exhausted: boolean
+  readonly remaining: number
+  consume(): boolean
 }
 
-export function consumeCanvasCandidateWork(budget: CanvasCandidateWorkBudget): boolean {
-  if (budget.remaining === 0) return false
-  budget.remaining -= 1
-  return true
+export function createCanvasCandidateWorkBudget(): CanvasCandidateWorkBudget {
+  return new CandidateWorkBudget()
+}
+
+class CandidateWorkBudget implements CanvasCandidateWorkBudget {
+  #exhausted = false
+  #remaining: number = CANVAS_WORKLOAD_LIMITS.candidateWorkPerGesture
+
+  get exhausted(): boolean {
+    return this.#exhausted
+  }
+
+  get remaining(): number {
+    return this.#remaining
+  }
+
+  consume(): boolean {
+    if (this.#remaining === 0) {
+      this.#exhausted = true
+      return false
+    }
+    this.#remaining -= 1
+    return true
+  }
 }

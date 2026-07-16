@@ -3,7 +3,7 @@ import type { CanvasResizeHandle } from './interaction-controller'
 import { bestSnapCandidate, canvasSnapThreshold, snapGuide } from './canvas-snap-geometry'
 import type { CanvasSnapCandidate, CanvasSnapGuide } from './canvas-snap-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
-import { createCanvasCandidateWorkBudget } from './workload'
+import type { CanvasCandidateWorkBudget } from './workload'
 
 const MIN_CANVAS_NODE_SIZE = 40
 
@@ -16,6 +16,7 @@ export function resolveCanvasResize({
   square,
   snap,
   zoom,
+  candidateWork,
 }: {
   handle: CanvasResizeHandle
   initialBounds: CanvasBounds
@@ -25,11 +26,12 @@ export function resolveCanvasResize({
   square: boolean
   snap: boolean
   zoom: number
+  candidateWork: CanvasCandidateWorkBudget
 }): Readonly<{ bounds: CanvasBounds; guides: ReadonlyArray<CanvasSnapGuide> }> {
   const bounds = resolveCanvasResizeBounds(handle, initialBounds, point, initialNodeBounds, square)
+  if (candidateWork.exhausted) return { bounds, guides: [] }
   if (!snap || targetBounds.length === 0) return { bounds, guides: [] }
   const threshold = canvasSnapThreshold(zoom)
-  const budget = createCanvasCandidateWorkBudget()
   const xCandidates = affectsResizeAxis(handle, 'x')
     ? resizeSnapCandidatesForTargets('x', bounds, targetBounds, handle)
     : []
@@ -37,11 +39,12 @@ export function resolveCanvasResize({
     ? resizeSnapCandidatesForTargets('y', bounds, targetBounds, handle)
     : []
   const candidates = square
-    ? [bestSnapCandidate(chainCandidates(xCandidates, yCandidates), threshold, budget)]
+    ? [bestSnapCandidate(chainCandidates(xCandidates, yCandidates), threshold, candidateWork)]
     : [
-        bestSnapCandidate(xCandidates, threshold, budget),
-        bestSnapCandidate(yCandidates, threshold, budget),
+        bestSnapCandidate(xCandidates, threshold, candidateWork),
+        bestSnapCandidate(yCandidates, threshold, candidateWork),
       ]
+  if (candidateWork.exhausted) return { bounds, guides: [] }
   const selected = candidates.filter(
     (candidate): candidate is CanvasResizeSnapCandidate => candidate !== null,
   )

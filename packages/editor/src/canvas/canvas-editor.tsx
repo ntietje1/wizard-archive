@@ -496,19 +496,29 @@ function updateAreaSelection(
     const current = square ? squareSelectionPoint(gesture.origin, point) : point
     const bounds = canvasBoundsFromPoints(gesture.origin, current)
     const distance = Math.hypot(bounds.width, bounds.height) * snapshot.viewport.zoom
-    controller.updateSelection(
-      pointerId,
-      current,
-      distance > 1 ? selectCanvasContentInRectangle(content, bounds, snapshot.viewport.zoom) : null,
-    )
+    if (distance <= 1) {
+      controller.updateSelection(pointerId, current, null)
+      return
+    }
+    const resolved = controller.withCandidateWork(pointerId, (budget) => ({
+      candidate: selectCanvasContentInRectangle(content, bounds, snapshot.viewport.zoom, budget),
+      exhausted: budget.exhausted,
+    }))
+    if (!resolved) return
+    controller.updateSelection(pointerId, current, resolved.exhausted ? null : resolved.candidate)
     return
   }
   const points = [...gesture.points, point]
-  controller.updateSelection(
-    pointerId,
-    point,
-    points.length >= 3 ? selectCanvasContentInPolygon(content, points) : null,
-  )
+  if (points.length < 3) {
+    controller.updateSelection(pointerId, point, null)
+    return
+  }
+  const resolved = controller.withCandidateWork(pointerId, (budget) => ({
+    candidate: selectCanvasContentInPolygon(content, points, budget),
+    exhausted: budget.exhausted,
+  }))
+  if (!resolved) return
+  controller.updateSelection(pointerId, point, resolved.exhausted ? null : resolved.candidate)
 }
 
 function squareSelectionPoint(origin: CanvasPoint, point: CanvasPoint): CanvasPoint {
@@ -523,7 +533,12 @@ function commitAreaSelection(pointerId: number, controller: CanvasInteractionCon
   const gesture = controller.get().interaction
   if (gesture.type !== 'selecting' || gesture.pointerId !== pointerId) return
   const committed = controller.commitSelection(pointerId)
-  if (!committed && gesture.kind === 'marquee' && gesture.mode === 'replace') {
+  const isClick =
+    gesture.kind === 'marquee' &&
+    Math.hypot(gesture.current.x - gesture.origin.x, gesture.current.y - gesture.origin.y) *
+      controller.get().viewport.zoom <=
+      1
+  if (!committed && isClick && gesture.mode === 'replace') {
     controller.clearSelection()
   }
 }
@@ -548,17 +563,20 @@ function updateResize(
   const resizing = controller.get().interaction
   if (resizing.type !== 'resizing' || resizing.pointerId !== pointerId) return
   const selectedIds = new Set(resizing.initialNodeBounds.keys())
-  const targetBounds = canvasSnapTargetBounds(content.nodes, selectedIds)
-  const resolved = resolveCanvasResize({
-    handle: resizing.handle,
-    initialBounds: resizing.initialBounds,
-    point,
-    initialNodeBounds: resizing.initialNodeBounds,
-    targetBounds,
-    square,
-    snap,
-    zoom: controller.get().viewport.zoom,
-  })
+  const resolved = controller.withCandidateWork(pointerId, (candidateWork) =>
+    resolveCanvasResize({
+      handle: resizing.handle,
+      initialBounds: resizing.initialBounds,
+      point,
+      initialNodeBounds: resizing.initialNodeBounds,
+      targetBounds: snap ? canvasSnapTargetBounds(content.nodes, selectedIds, candidateWork) : [],
+      square,
+      snap,
+      zoom: controller.get().viewport.zoom,
+      candidateWork,
+    }),
+  )
+  if (!resolved) return
   controller.updateResize(pointerId, resolved.bounds, resolved.guides)
 }
 
@@ -603,16 +621,17 @@ function updateConnection(
   const snapshot = controller.get()
   const connection = snapshot.interaction
   if (connection.type !== 'connecting' || connection.pointerId !== pointerId) return
-  controller.updateConnection(
-    pointerId,
-    point,
-    findCanvasConnectionTarget(
+  const resolved = controller.withCandidateWork(pointerId, (budget) => ({
+    target: findCanvasConnectionTarget(
       content.nodes,
       connection.source.nodeId,
       point,
       20 / snapshot.viewport.zoom,
+      budget,
     ),
-  )
+  }))
+  if (!resolved) return
+  controller.updateConnection(pointerId, point, resolved.target)
 }
 
 function commitConnection(
@@ -654,11 +673,11 @@ function updateErasing(
   if (interaction.type !== 'erasing' || interaction.pointerId !== pointerId) return
   const previous = interaction.points[interaction.points.length - 1]
   const trail = previous ? [previous, point] : [point]
-  controller.updateErasing(
-    pointerId,
-    point,
-    findCanvasStrokesIntersectingTrail(content.nodes, trail, interaction.nodeIds),
+  const nodeIds = controller.withCandidateWork(pointerId, (budget) =>
+    findCanvasStrokesIntersectingTrail(content.nodes, trail, interaction.nodeIds, budget),
   )
+  if (!nodeIds) return
+  controller.updateErasing(pointerId, point, nodeIds)
 }
 
 function commitErasing(

@@ -1,7 +1,8 @@
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasSnapGuide } from './canvas-snap-geometry'
-import { CANVAS_WORKLOAD_LIMITS } from './workload'
+import { CANVAS_WORKLOAD_LIMITS, createCanvasCandidateWorkBudget } from './workload'
+import type { CanvasCandidateWorkBudget } from './workload'
 
 export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
 
@@ -407,6 +408,7 @@ export function createCanvasInteractionController(
 }
 
 class CanvasInteractionControllerState {
+  #candidateWork: CanvasCandidateWorkBudget | null = null
   readonly #listeners = new Set<() => void>()
   readonly #viewportCommitListeners = new Set<(viewport: CanvasViewport) => void>()
   #disposed = false
@@ -486,6 +488,7 @@ class CanvasInteractionControllerState {
     point: CanvasPoint,
   ): void {
     this.#assertActive()
+    this.#candidateWork = createCanvasCandidateWorkBudget()
     this.#publish({
       ...this.#snapshot,
       interaction:
@@ -515,6 +518,7 @@ class CanvasInteractionControllerState {
     ) {
       throw new Error('Canvas drag requires a bounded non-empty node selection')
     }
+    this.#candidateWork = createCanvasCandidateWorkBudget()
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -555,6 +559,7 @@ class CanvasInteractionControllerState {
 
   beginErasing(pointerId: number, point: CanvasPoint): void {
     this.#assertActive()
+    this.#candidateWork = createCanvasCandidateWorkBudget()
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -568,6 +573,7 @@ class CanvasInteractionControllerState {
 
   beginConnection(pointerId: number, source: CanvasConnectionAnchor, point: CanvasPoint): void {
     this.#assertActive()
+    this.#candidateWork = createCanvasCandidateWorkBudget()
     this.#publish({
       ...this.#snapshot,
       interaction: { type: 'connecting', pointerId, source, current: point, target: null },
@@ -584,6 +590,7 @@ class CanvasInteractionControllerState {
     if (nodeBounds.size === 0 || nodeBounds.size > CANVAS_WORKLOAD_LIMITS.selectedElements) {
       throw new TypeError('Canvas resize requires a bounded non-empty node selection')
     }
+    this.#candidateWork = createCanvasCandidateWorkBudget()
     this.#publish({
       ...this.#snapshot,
       interaction: {
@@ -819,6 +826,22 @@ class CanvasInteractionControllerState {
     this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
   }
 
+  withCandidateWork<T>(
+    pointerId: number,
+    resolve: (budget: CanvasCandidateWorkBudget) => T,
+  ): T | null {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (
+      !('pointerId' in interaction) ||
+      interaction.pointerId !== pointerId ||
+      !this.#candidateWork
+    ) {
+      return null
+    }
+    return resolve(this.#candidateWork)
+  }
+
   reconcileDocument(nodeIds: ReadonlySet<CanvasNodeId>, edgeIds: ReadonlySet<string>): void {
     this.#assertActive()
     const selection = filterSelection(this.#snapshot.selection, nodeIds, edgeIds)
@@ -873,11 +896,13 @@ class CanvasInteractionControllerState {
   dispose(): void {
     if (this.#disposed) return
     this.#disposed = true
+    this.#candidateWork = null
     this.#listeners.clear()
     this.#viewportCommitListeners.clear()
   }
 
   #publish(snapshot: CanvasInteractionSnapshot): void {
+    if (!interactionUsesCandidateWork(snapshot.interaction)) this.#candidateWork = null
     this.#snapshot = snapshot
     for (const listener of this.#listeners) listener()
   }
@@ -889,6 +914,16 @@ class CanvasInteractionControllerState {
   #assertActive(): void {
     if (this.#disposed) throw new Error('CanvasInteractionController is disposed')
   }
+}
+
+function interactionUsesCandidateWork(interaction: CanvasInteraction): boolean {
+  return (
+    interaction.type === 'selecting' ||
+    interaction.type === 'dragging' ||
+    interaction.type === 'erasing' ||
+    interaction.type === 'connecting' ||
+    interaction.type === 'resizing'
+  )
 }
 
 function drawPoint(point: CanvasPoint, pressure: number): CanvasDrawPoint {

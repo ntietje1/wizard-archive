@@ -1,5 +1,4 @@
 import type { CSSProperties, PointerEvent, RefObject } from 'react'
-import { canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentController, CanvasDocumentNodeUpdate } from './document-controller'
 import type {
@@ -30,7 +29,7 @@ import type {
 import { canvasNodeSize } from './canvas-layout'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { CanvasSelectionBounds } from './canvas-selection-bounds'
-import { canvasSnapTargetBounds, resolveCanvasDrag } from './canvas-snap-geometry'
+import { canvasDragSnapBounds, resolveCanvasDrag } from './canvas-snap-geometry'
 import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
 import { canvasBoundsFromPoints } from './selection-geometry'
@@ -367,20 +366,23 @@ function updateNodeDrag(
     x: bounds.left,
     y: bounds.top,
   })
-  const selectedIds = new Set(dragging.initialPositions.keys())
-  const draggedBounds = content.nodes.flatMap((node) => {
-    const position = dragging.initialPositions.get(node.id)
-    return position ? [canvasNodeBounds({ ...node, position })] : []
+  const constrain = event.shiftKey
+  const snap = event.metaKey || event.ctrlKey
+  const resolved = interactionController.withCandidateWork(event.pointerId, (candidateWork) => {
+    const snapBounds =
+      snap && !constrain
+        ? canvasDragSnapBounds(content.nodes, dragging.initialPositions, candidateWork)
+        : { draggedBounds: [], targetBounds: [] }
+    return resolveCanvasDrag({
+      delta: { x: point.x - dragging.anchor.x, y: point.y - dragging.anchor.y },
+      ...snapBounds,
+      constrain,
+      snap,
+      zoom: viewport.zoom,
+      candidateWork,
+    })
   })
-  const targetBounds = canvasSnapTargetBounds(content.nodes, selectedIds)
-  const resolved = resolveCanvasDrag({
-    delta: { x: point.x - dragging.anchor.x, y: point.y - dragging.anchor.y },
-    draggedBounds,
-    targetBounds,
-    constrain: event.shiftKey,
-    snap: event.metaKey || event.ctrlKey,
-    zoom: viewport.zoom,
-  })
+  if (!resolved) return
   interactionController.updateDrag(event.pointerId, resolved.delta, resolved.guides)
 }
 
