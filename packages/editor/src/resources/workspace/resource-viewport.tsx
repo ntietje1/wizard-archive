@@ -31,6 +31,7 @@ import { NoteEditor } from '../../notes/note-editor'
 import { CanvasEditor } from '../../canvas/canvas-editor'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasPreviewSource } from '../content-session-contract'
+import { FileViewer } from '../../files/file-viewer'
 
 export function ResourceViewport({
   actions,
@@ -81,13 +82,7 @@ export function ResourceViewport({
     case 'note':
       return <NoteViewport canEdit={canEdit} resource={resource} runtime={runtime} />
     case 'file':
-      return (
-        <ResourceContentViewport
-          canEdit={canEdit}
-          resource={resource}
-          source={runtime.content.files}
-        />
-      )
+      return <FileViewport canEdit={canEdit} resource={resource} runtime={runtime} />
     case 'map':
       return (
         <ResourceContentViewport
@@ -99,6 +94,30 @@ export function ResourceViewport({
     case 'canvas':
       return <CanvasViewport canEdit={canEdit} resource={resource} runtime={runtime} />
   }
+}
+
+function FileViewport({
+  canEdit,
+  resource,
+  runtime,
+}: {
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  const source = runtime.content.files
+  const state = useContentSnapshot(source, resource.id)
+  if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
+  return (
+    <FileViewer
+      canEdit={canEdit}
+      content={state.content}
+      resourceId={resource.id}
+      source={source}
+      title={resource.title}
+      version={state.version}
+    />
+  )
 }
 
 function CanvasViewport({
@@ -168,7 +187,6 @@ function NoteViewport({
 }
 
 type ResourceContentState =
-  | ReturnType<EditorRuntime['content']['files']['get']>
   | ReturnType<EditorRuntime['content']['maps']['get']>
   | ReturnType<EditorRuntime['content']['canvases']['get']>
 
