@@ -21,6 +21,7 @@ type LiveYjsDocumentSessionOptions = Readonly<{
   persist(update: Uint8Array): Promise<PersistedYjsUpdate>
   changed(): void
   failed(result: RejectedYjsSave): void
+  canonicalize(document: Y.Doc, origin: unknown): 'changed' | 'invalid' | 'unchanged'
   flushCompanion?(): Promise<void>
   disposeCompanion?(): Promise<void>
 }>
@@ -37,6 +38,7 @@ class LiveYjsDocumentSession {
   readonly #persistUpdate: LiveYjsDocumentSessionOptions['persist']
   readonly #changed: LiveYjsDocumentSessionOptions['changed']
   readonly #failed: LiveYjsDocumentSessionOptions['failed']
+  readonly #canonicalize: LiveYjsDocumentSessionOptions['canonicalize']
   readonly #flushCompanion: NonNullable<LiveYjsDocumentSessionOptions['flushCompanion']>
   readonly #disposeCompanion: NonNullable<LiveYjsDocumentSessionOptions['disposeCompanion']>
   #version: VersionStamp
@@ -53,6 +55,7 @@ class LiveYjsDocumentSession {
     this.#persistUpdate = options.persist
     this.#changed = options.changed
     this.#failed = options.failed
+    this.#canonicalize = options.canonicalize
     this.#flushCompanion = options.flushCompanion ?? (() => Promise.resolve())
     this.#disposeCompanion = options.disposeCompanion ?? (() => Promise.resolve())
 
@@ -60,6 +63,11 @@ class LiveYjsDocumentSession {
     if (recovered.status === 'unavailable') throw new YjsUpdateOutboxUnavailableError()
     if (recovered.update) Y.applyUpdate(this.document, recovered.update, REMOTE_YJS_UPDATE)
     this.#pendingUpdate = recovered.update
+    const canonicalization = this.#canonicalizeDocument()
+    if (canonicalization === 'unavailable') throw new YjsUpdateOutboxUnavailableError()
+    if (canonicalization === 'invalid') {
+      throw new TypeError('Recovered Yjs update produced invalid content')
+    }
     this.document.on('update', this.#onUpdate)
     if (this.#pendingUpdate) this.#scheduleSave()
   }
@@ -76,7 +84,16 @@ class LiveYjsDocumentSession {
       return 'conflict'
     }
     Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_YJS_UPDATE)
+    const canonicalization = this.#canonicalizeDocument()
+    if (canonicalization === 'invalid' || canonicalization === 'unavailable') {
+      this.#fail({
+        status: 'rejected',
+        reason: canonicalization === 'invalid' ? 'content_corrupt' : 'scope_unavailable',
+      })
+      return 'conflict'
+    }
     this.#version = version
+    if (canonicalization === 'changed') this.#scheduleSave()
     this.#changed()
     return 'applied'
   }
@@ -102,6 +119,18 @@ class LiveYjsDocumentSession {
     }
     this.#pendingUpdate = mergeOptionalYjsUpdates(this.#pendingUpdate, update)
     this.#scheduleSave()
+  }
+
+  #canonicalizeDocument(): 'changed' | 'invalid' | 'unavailable' | 'unchanged' {
+    const vector = Y.encodeStateVector(this.document)
+    const result = this.#canonicalize(this.document, REMOTE_YJS_UPDATE)
+    if (result !== 'changed') return result
+
+    const update = Y.encodeStateAsUpdate(this.document, vector)
+    const accepted = this.#outbox.merge(update)
+    if (accepted.status === 'unavailable') return 'unavailable'
+    this.#pendingUpdate = mergeOptionalYjsUpdates(this.#pendingUpdate, update)
+    return 'changed'
   }
 
   #flushDocument(): Promise<ContentSessionSaveResult> {

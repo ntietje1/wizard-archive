@@ -325,6 +325,39 @@ export function readCanvasDocumentContent(doc: Y.Doc): {
 }
 
 export function parseCanvasDocumentContent(doc: Y.Doc): CanvasDocumentContent | null {
+  const content = parseCanvasDocumentEntries(doc)
+  if (!content) return null
+  const nodeIds = new Set(content.nodes.map((node) => node.id))
+  if (content.edges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) {
+    return null
+  }
+  return content
+}
+
+export function canonicalizeCanvasDocumentContent(
+  doc: Y.Doc,
+  origin?: unknown,
+): CanvasDocumentContent | null {
+  const content = parseCanvasDocumentEntries(doc)
+  if (!content) return null
+  const nodeIds = new Set(content.nodes.map((node) => node.id))
+  const danglingEdgeIds: Array<string> = []
+  const edges: Array<CanvasDocumentEdge> = []
+  for (const edge of content.edges) {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
+      danglingEdgeIds.push(edge.id)
+    } else {
+      edges.push(edge)
+    }
+  }
+  if (danglingEdgeIds.length === 0) return content
+
+  const { edgesMap } = getCanvasDocumentMaps(doc)
+  doc.transact(() => danglingEdgeIds.forEach((edgeId) => edgesMap.delete(edgeId)), origin)
+  return { nodes: content.nodes, edges }
+}
+
+function parseCanvasDocumentEntries(doc: Y.Doc): CanvasDocumentContent | null {
   const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
   const nodes = Array.from(nodesMap.entries(), ([key, value]) => {
     const node = parseCanvasDocumentNode(value)
@@ -335,9 +368,8 @@ export function parseCanvasDocumentContent(doc: Y.Doc): CanvasDocumentContent | 
     return edge?.id === key ? edge : null
   })
   if (nodes.some((node) => node === null) || edges.some((edge) => edge === null)) return null
-  const typedNodes = nodes as Array<CanvasDocumentNode>
-  const typedEdges = edges as Array<CanvasDocumentEdge>
-  const nodeIds = new Set(typedNodes.map((node) => node.id))
-  if (typedEdges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) return null
-  return { nodes: typedNodes, edges: typedEdges }
+  return {
+    nodes: nodes as Array<CanvasDocumentNode>,
+    edges: edges as Array<CanvasDocumentEdge>,
+  }
 }

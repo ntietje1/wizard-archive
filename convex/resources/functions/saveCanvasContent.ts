@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { parseCanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
+import { canonicalizeCanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
 import {
   advanceVersion,
   assertVersionStamp,
@@ -63,7 +63,7 @@ async function mergeCanvasUpdate(
   try {
     Y.applyUpdate(document, new Uint8Array(current))
     Y.applyUpdate(document, new Uint8Array(delta))
-    if (!parseCanvasDocumentContent(document)) {
+    if (!canonicalizeCanvasDocumentContent(document)) {
       return { status: 'rejected', reason: 'content_corrupt' }
     }
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer

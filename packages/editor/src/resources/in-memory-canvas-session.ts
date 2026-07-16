@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { parseCanvasDocumentContent } from '../canvas/document-contract'
+import { canonicalizeCanvasDocumentContent } from '../canvas/document-contract'
 import { advanceVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
 import type { CanvasSession, ContentSessionSaveResult } from './content-session-contract'
@@ -27,7 +27,7 @@ export function createInMemoryCanvasSession(
     async flush(): Promise<ContentSessionSaveResult> {
       if (disposed) return { status: 'rejected', reason: 'scope_unavailable' }
       if (!dirty) return { status: 'completed', version }
-      if (!parseCanvasDocumentContent(document)) {
+      if (!canonicalizeCanvasDocumentContent(document)) {
         return { status: 'rejected', reason: 'content_corrupt' }
       }
       try {

@@ -5,6 +5,7 @@ import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import {
+  canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
   getCanvasDocumentMaps,
   readCanvasDocumentContent,
@@ -15,6 +16,7 @@ import {
   createLiveResourceContentSource,
 } from '../live-resource-content-source'
 import { createLiveCanvasSessionSource } from '../live-canvas-session-source'
+import { createYjsUpdateOutbox } from '../yjs-update-outbox'
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type SaveCanvasArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
@@ -233,6 +235,111 @@ describe('LiveResourceContentSource', () => {
     )
     expect(current.session.version.revision).toBe(3)
     source.dispose()
+  })
+
+  it('reconciles a recovered node deletion with an offline edge creation', async () => {
+    sessionStorage.clear()
+    const campaignId = testDomainId('campaign', 'canvas-recovery-campaign')
+    const memberId = testDomainId('campaignMember', 'canvas-recovery-member')
+    const resourceId = testDomainId('resource', 'canvas-recovery-resource')
+    const sourceId = testDomainId('canvasNode', 'canvas-recovery-source')
+    const targetId = testDomainId('canvasNode', 'canvas-recovery-target')
+    const base = createCanvasDocumentDoc({
+      nodes: [
+        { id: sourceId, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: targetId, type: 'text', position: { x: 10, y: 0 }, data: {} },
+      ],
+      edges: [],
+    })
+    const baseUpdate = Y.encodeStateAsUpdate(base)
+    const deleted = new Y.Doc()
+    Y.applyUpdate(deleted, baseUpdate)
+    const deleteVector = Y.encodeStateVector(deleted)
+    getCanvasDocumentMaps(deleted).nodesMap.delete(sourceId)
+    const deleteUpdate = Y.encodeStateAsUpdate(deleted, deleteVector)
+    const server = new Y.Doc()
+    Y.applyUpdate(server, baseUpdate)
+    getCanvasDocumentMaps(server).edgesMap.set('offline-edge', {
+      id: 'offline-edge',
+      source: sourceId,
+      target: targetId,
+      type: 'straight',
+    })
+    let persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(server)).buffer
+    let persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
+    const outbox = createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId)
+    expect(outbox.merge(deleteUpdate)).toEqual({ status: 'accepted' })
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+      const merged = new Y.Doc()
+      Y.applyUpdate(merged, new Uint8Array(persistedUpdate))
+      Y.applyUpdate(merged, new Uint8Array(update))
+      if (!canonicalizeCanvasDocumentContent(merged)) throw new Error('Invalid canvas merge')
+      persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(merged)).buffer
+      merged.destroy()
+      persistedVersion = assertVersionStamp({
+        ...persistedVersion,
+        revision: persistedVersion.revision + 1,
+        digest: 'c'.repeat(64),
+      })
+      return Promise.resolve({
+        status: 'completed',
+        resourceId,
+        update: persistedUpdate,
+        version: persistedVersion,
+      })
+    })
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      memberId,
+      {
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, listener) => {
+          apply = listener
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+    source.subscribe(resourceId, () => {})
+    apply({
+      status: 'ready',
+      kind: 'canvas',
+      update: persistedUpdate,
+      version: persistedVersion,
+    })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected recovered canvas session')
+    expect(readCanvasDocumentContent(ready.session.document)).toEqual({
+      nodes: [{ id: targetId, type: 'text', position: { x: 10, y: 0 }, data: {} }],
+      edges: [],
+    })
+    getCanvasDocumentMaps(ready.session.document).nodesMap.set(sourceId, {
+      id: sourceId,
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    })
+
+    await expect(ready.session.flush()).resolves.toMatchObject({ status: 'completed' })
+    expect(save).toHaveBeenCalledOnce()
+    expect(outbox.load()).toEqual({ status: 'available', update: null })
+    const persisted = new Y.Doc()
+    Y.applyUpdate(persisted, new Uint8Array(persistedUpdate))
+    expect(readCanvasDocumentContent(persisted).nodes).toHaveLength(2)
+    expect(readCanvasDocumentContent(persisted).edges).toEqual([])
+    expect(readCanvasDocumentContent(persisted)).toEqual(
+      readCanvasDocumentContent(ready.session.document),
+    )
+
+    persisted.destroy()
+    source.dispose()
+    server.destroy()
+    deleted.destroy()
+    base.destroy()
   })
 
   it('retries a transient canvas provider failure without corrupting the session', async () => {

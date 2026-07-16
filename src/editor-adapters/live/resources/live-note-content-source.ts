@@ -128,6 +128,7 @@ class LiveNoteSession implements NoteSession {
         version,
         outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
         persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
+        canonicalize: () => 'unchanged',
         changed,
         failed,
         flushCompanion: () => this.#liveAwareness.flush(),

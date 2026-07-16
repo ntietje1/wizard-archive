@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { CanvasDocumentController } from '../document-controller'
 import {
+  canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
   getCanvasDocumentMaps,
   parseCanvasDocumentContent,
@@ -127,6 +128,41 @@ describe('CanvasDocumentController', () => {
     expect(controller.canUndo).toBe(false)
     controller.dispose()
     document.destroy()
+  })
+
+  it('keeps undo valid after canonicalizing a concurrent dangling edge', () => {
+    const base = createCanvasDocumentDoc({
+      nodes: [textNode(NODE_A), textNode(NODE_B)],
+      edges: [],
+    })
+    const baseUpdate = Y.encodeStateAsUpdate(base)
+    const document = new Y.Doc()
+    Y.applyUpdate(document, baseUpdate)
+    const controller = new CanvasDocumentController(document)
+    const remote = new Y.Doc()
+    Y.applyUpdate(remote, baseUpdate)
+    const remoteVector = Y.encodeStateVector(remote)
+    getCanvasDocumentMaps(remote).edgesMap.set('edge-a-b', edge('edge-a-b'))
+    const remoteEdge = Y.encodeStateAsUpdate(remote, remoteVector)
+
+    controller.apply({ type: 'remove', nodeIds: [NODE_A], edgeIds: [] })
+    Y.applyUpdate(document, remoteEdge, 'remote')
+    expect(parseCanvasDocumentContent(document)).toBeNull()
+    expect(canonicalizeCanvasDocumentContent(document, 'remote')).toEqual({
+      nodes: [textNode(NODE_B)],
+      edges: [],
+    })
+    expect(controller.read()).toEqual({ nodes: [textNode(NODE_B)], edges: [] })
+
+    expect(controller.undo()).toBe(true)
+    expect(controller.read()).toEqual({
+      nodes: [textNode(NODE_A), textNode(NODE_B)],
+      edges: [],
+    })
+    controller.dispose()
+    remote.destroy()
+    document.destroy()
+    base.destroy()
   })
 
   it('keeps redos separate and clears redo when a new local change is applied', () => {

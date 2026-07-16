@@ -15,6 +15,8 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import {
   createCanvasDocumentDoc,
+  getCanvasDocumentMaps,
+  parseCanvasDocumentContent,
   readCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import * as Y from 'yjs'
@@ -695,6 +697,96 @@ describe('resource structure commands', () => {
       kind: 'canvas',
       version: { revision: 3 },
     })
+  })
+
+  it('canonicalizes node-delete and edge-create conflicts in both save orders', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const sourceId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const targetId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const unrelatedId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const base = createCanvasDocumentDoc({
+      nodes: [
+        { id: sourceId, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: targetId, type: 'text', position: { x: 10, y: 0 }, data: {} },
+      ],
+      edges: [],
+    })
+    const baseUpdate = Uint8Array.from(Y.encodeStateAsUpdate(base)).buffer
+    const operation = (change: (document: Y.Doc) => void) => {
+      const document = new Y.Doc()
+      Y.applyUpdate(document, new Uint8Array(baseUpdate))
+      const vector = Y.encodeStateVector(document)
+      change(document)
+      const update = Uint8Array.from(Y.encodeStateAsUpdate(document, vector)).buffer
+      document.destroy()
+      return update
+    }
+    const deleteNode = operation((document) => {
+      getCanvasDocumentMaps(document).nodesMap.delete(sourceId)
+    })
+    const createEdgeAndUnrelatedNode = operation((document) => {
+      const { edgesMap, nodesMap } = getCanvasDocumentMaps(document)
+      nodesMap.set(unrelatedId, {
+        id: unrelatedId,
+        type: 'text',
+        position: { x: 20, y: 0 },
+        data: {},
+      })
+      edgesMap.set('concurrent-edge', {
+        id: 'concurrent-edge',
+        source: sourceId,
+        target: targetId,
+        type: 'straight',
+      })
+    })
+    const runOrder = async (deltas: ReadonlyArray<ArrayBuffer>) => {
+      const resourceId = await createResource(campaign, campaignUuid, 'canvas', null, 'Conflict')
+      await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        update: baseUpdate,
+      })
+      let result
+      for (const update of deltas) {
+        // Each save is intentionally ordered to prove the same authoritative merge rule.
+        result = await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+          campaignId: campaignUuid,
+          resourceId,
+          update,
+        })
+        expect(result.status).toBe('completed')
+      }
+      if (!result || result.status !== 'completed') throw new Error('Expected reconciled canvas')
+      const merged = new Y.Doc()
+      Y.applyUpdate(merged, new Uint8Array(result.update))
+      expect(parseCanvasDocumentContent(merged)).not.toBeNull()
+      expect(readCanvasDocumentContent(merged)).toEqual({
+        nodes: expect.arrayContaining([
+          expect.objectContaining({ id: targetId }),
+          expect.objectContaining({ id: unrelatedId }),
+        ]),
+        edges: [],
+      })
+      expect(readCanvasDocumentContent(merged).nodes).toHaveLength(2)
+      merged.destroy()
+      return result.update
+    }
+
+    const deleteThenEdge = await runOrder([deleteNode, createEdgeAndUnrelatedNode])
+    const edgeThenDelete = await runOrder([createEdgeAndUnrelatedNode, deleteNode])
+    for (const update of [deleteThenEdge, edgeThenDelete]) {
+      for (const localDelta of [deleteNode, createEdgeAndUnrelatedNode]) {
+        const local = new Y.Doc()
+        Y.applyUpdate(local, new Uint8Array(baseUpdate))
+        Y.applyUpdate(local, new Uint8Array(localDelta))
+        Y.applyUpdate(local, new Uint8Array(update))
+        expect(parseCanvasDocumentContent(local)).not.toBeNull()
+        expect(readCanvasDocumentContent(local).edges).toEqual([])
+        local.destroy()
+      }
+    }
+    base.destroy()
   })
 
   it('leases note awareness by client and removes it on release', async () => {

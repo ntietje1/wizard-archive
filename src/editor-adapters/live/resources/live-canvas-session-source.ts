@@ -1,5 +1,8 @@
 import * as Y from 'yjs'
-import { parseCanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
+import {
+  canonicalizeCanvasDocumentContent,
+  parseCanvasDocumentContent,
+} from '@wizard-archive/editor/canvas/document-contract'
 import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type {
@@ -58,6 +61,10 @@ class LiveCanvasSession implements CanvasSession {
       document,
       version,
       outbox: createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId),
+      canonicalize: (canvas, origin) => {
+        if (parseCanvasDocumentContent(canvas)) return 'unchanged'
+        return canonicalizeCanvasDocumentContent(canvas, origin) ? 'changed' : 'invalid'
+      },
       persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
       changed,
       failed,
