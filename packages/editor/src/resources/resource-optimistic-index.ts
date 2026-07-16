@@ -45,7 +45,7 @@ export type ResourceOptimisticSubmitResult =
         | 'scope_changed'
     }
 
-export type ResourceOptimisticConfirmResult =
+type ResourceOptimisticConfirmResult =
   | { readonly status: 'confirmed' }
   | { readonly status: 'retired' }
   | {
@@ -53,7 +53,7 @@ export type ResourceOptimisticConfirmResult =
       readonly reason: 'overlay_missing' | 'receipt_mismatch' | 'wrong_scope'
     }
 
-export type ResourceOptimisticReconcileResult =
+type ResourceOptimisticReconcileResult =
   | { readonly status: 'confirmed' }
   | { readonly status: 'retained' }
   | { readonly status: 'removed' }
@@ -310,7 +310,7 @@ function createProjectedSnapshot(
   return { scope: base.scope, revision: base.revision, lookup, list, ancestors }
 }
 
-export class OptimisticWorkspaceResourceIndex implements WorkspaceResourceIndex {
+export class OptimisticWorkspaceResourceIndex {
   #baseScope: ResourceProjectionScope
   #nextOrdinal = 1
   #overlays: Array<StoredOverlay> = []
@@ -327,32 +327,13 @@ export class OptimisticWorkspaceResourceIndex implements WorkspaceResourceIndex 
     this.#unsubscribeBase = base.subscribe(() => this.#baseChanged())
   }
 
-  getSnapshot(): WorkspaceResourceIndexSnapshot {
+  snapshot(): WorkspaceResourceIndexSnapshot {
     return this.#snapshot
   }
 
-  subscribe(listener: () => void): () => void {
+  onChange(listener: () => void): () => void {
     this.#listeners.add(listener)
     return () => this.#listeners.delete(listener)
-  }
-
-  overlays(): ReadonlyArray<ResourceOptimisticOverlay> {
-    return this.#overlays.map((overlay) =>
-      overlay.status === 'pending'
-        ? {
-            status: overlay.status,
-            ordinal: overlay.ordinal,
-            operationId: overlay.operationId,
-            command: overlay.command,
-          }
-        : {
-            status: overlay.status,
-            ordinal: overlay.ordinal,
-            operationId: overlay.operationId,
-            command: overlay.command,
-            postconditions: overlay.postconditions,
-          },
-    )
   }
 
   async submit(

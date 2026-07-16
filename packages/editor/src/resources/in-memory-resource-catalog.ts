@@ -1,13 +1,6 @@
 import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from './domain-id'
 import type { CampaignId, CampaignMemberId, OperationId, ResourceId } from './domain-id'
-import type {
-  ResourceCatalogPage,
-  ResourceCatalogReader,
-  ResourceCatalogSnapshotSource,
-  ResourceCatalogSnapshot,
-  SourcePathAlias,
-} from './resource-catalog-contract'
-import { assertResourceCatalogPageSize } from './resource-catalog-contract'
+import type { ResourceCatalogSnapshot, SourcePathAlias } from './resource-catalog-contract'
 import { assertSourcePathAlias } from './source-path-alias'
 import type {
   AuthoritativeResourceOperationExecutor,
@@ -17,6 +10,7 @@ import type {
   ResourceCommandReceipt,
   ResourceCompensationEnvelope,
   ResourcePostcondition,
+  StoredResourceOperation,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from './resource-command-contract'
@@ -31,8 +25,6 @@ import type { AuditStamp, ResourceRecord } from './resource-record'
 import { canonicalizeResourceTitle } from './resource-record'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceTombstone } from './resource-metadata-version'
-import type { ResourceCollectionQuery } from './resource-index-contract'
-import { InMemoryResourceOperationLedger } from './resource-operation-ledger'
 import type {
   CanonicalTargetMapEntry,
   ContentCopyPlanner,
@@ -49,12 +41,12 @@ import {
   transitionResourceGraph,
 } from './resource-graph-transition'
 
-export type ResourceOperationAuthorizer = (
+type ResourceOperationAuthorizer = (
   actorId: CampaignMemberId,
   campaignId: CampaignId,
 ) => boolean | Promise<boolean>
 
-export type InMemoryResourceCatalogOptions = Readonly<{
+type InMemoryResourceCatalogOptions = Readonly<{
   initialSnapshot?: ResourceCatalogSnapshot
 }>
 
@@ -64,7 +56,7 @@ export type InMemoryResourceOperationsOptions<TContentCopyPlan = never> = Readon
   now?: () => number
 }>
 
-export interface InMemoryResourceOperations
+interface InMemoryResourceOperations
   extends AuthoritativeResourceOperationExecutor, AuthoritativeResourceCompensationExecutor {
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
   assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void>
@@ -254,9 +246,12 @@ type PreparedDeepCopy = Readonly<{
   commitContent: () => void
 }>
 
-export class InMemoryResourceCatalog
-  implements ResourceCatalogReader, ResourceCatalogSnapshotSource
-{
+type ResourceOperationLookup =
+  | { readonly status: 'new' }
+  | { readonly status: 'replay'; readonly receipt: ResourceCommandReceipt }
+  | { readonly status: 'rejected'; readonly reason: 'operation_id_reused' }
+
+export class InMemoryResourceCatalog {
   readonly #backend: InMemoryResourceCatalogBackend
 
   constructor(options: InMemoryResourceCatalogOptions = {}) {
@@ -308,94 +303,15 @@ export class InMemoryResourceCatalog
       if (listeners.size === 0) backend.listeners.delete(campaignId)
     }
   }
-
-  getResource(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceRecord | null> {
-    const resource = this.#backend.state.resources.get(resourceId)
-    return Promise.resolve(resource?.campaignId === campaignId ? resource : null)
-  }
-
-  getResources(
-    campaignId: CampaignId,
-    resourceIds: ReadonlyArray<ResourceId>,
-  ): Promise<ReadonlyArray<ResourceRecord>> {
-    const state = this.#backend.state
-    return Promise.resolve(
-      resourceIds.flatMap((resourceId) => {
-        const resource = state.resources.get(resourceId)
-        return resource?.campaignId === campaignId ? [resource] : []
-      }),
-    )
-  }
-
-  listCollection(
-    campaignId: CampaignId,
-    query: ResourceCollectionQuery,
-    limit: number,
-    cursor: string | null,
-  ): Promise<ResourceCatalogPage<ResourceRecord>> {
-    try {
-      assertResourceCatalogPageSize(limit)
-    } catch (error) {
-      return Promise.reject(error)
-    }
-    const kinds = query.kinds === undefined ? null : new Set(query.kinds)
-    const candidates = Array.from(this.#backend.state.resources.values())
-      .filter((resource) => {
-        if (
-          resource.campaignId !== campaignId ||
-          resource.lifecycle.state !== query.lifecycle ||
-          (cursor !== null && resource.id <= cursor) ||
-          (kinds !== null && !kinds.has(resource.kind))
-        ) {
-          return false
-        }
-        if (query.parentId !== null || query.lifecycle === 'active') {
-          return resource.parentId === query.parentId
-        }
-        if (resource.parentId === null) return true
-        const parent = this.#backend.state.resources.get(resource.parentId)
-        return parent?.campaignId !== campaignId || parent.lifecycle.state !== 'trashed'
-      })
-      .sort(byResourceId)
-    const items = candidates.slice(0, limit)
-    return Promise.resolve({
-      items,
-      cursor: candidates.length > items.length ? items[items.length - 1]!.id : null,
-    })
-  }
-
-  getTombstone(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceTombstone | null> {
-    const tombstone = this.#backend.state.tombstones.get(resourceId)
-    return Promise.resolve(tombstone?.campaignId === campaignId ? tombstone : null)
-  }
-
-  listAliases(
-    campaignId: CampaignId,
-    resourceId: ResourceId,
-  ): Promise<ReadonlyArray<SourcePathAlias>> {
-    return Promise.resolve(
-      (this.#backend.state.aliases.get(resourceId) ?? [])
-        .filter((alias) => alias.campaignId === campaignId)
-        .sort(byAlias),
-    )
-  }
-
-  getAssetsFolder(campaignId: CampaignId): Promise<ResourceId | null> {
-    return Promise.resolve(this.#backend.state.assetsFolders.get(campaignId) ?? null)
-  }
-
-  readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
-    return Promise.resolve(this.getSnapshot(campaignId))
-  }
 }
 
 class InMemoryResourceOperationExecutor<
   TContentCopyPlan = never,
 > implements InMemoryResourceOperations {
   readonly #backend: InMemoryResourceCatalogBackend
-  readonly #ledger = new InMemoryResourceOperationLedger<
-    ResourceCommandReceipt,
-    ResourceCompensationPlan | null
+  readonly #operations = new Map<
+    string,
+    StoredResourceOperation<ResourceCommandReceipt, ResourceCompensationPlan | null>
   >()
   readonly #authorize: ResourceOperationAuthorizer
   readonly #contentCopy: ContentCopyPlanner<TContentCopyPlan, () => void> | undefined
@@ -487,7 +403,7 @@ class InMemoryResourceOperationExecutor<
       return { status: 'rejected', reason: 'unauthorized' }
     }
     const fingerprint = await fingerprintResourceStructureCommand(normalizedEnvelope.command)
-    const lookup = this.#ledger.lookup(
+    const lookup = this.#lookupOperation(
       normalizedEnvelope.campaignId,
       actorId,
       normalizedEnvelope.operationId,
@@ -531,7 +447,7 @@ class InMemoryResourceOperationExecutor<
       result.receipt,
     )
     preparedDeepCopy?.commitContent()
-    this.#ledger.record({
+    this.#recordOperation({
       campaignId: normalizedEnvelope.campaignId,
       actorId,
       operationId: normalizedEnvelope.operationId,
@@ -564,11 +480,11 @@ class InMemoryResourceOperationExecutor<
       return { status: 'rejected', reason: 'unauthorized' }
     }
     const fingerprint = await fingerprintResourceCompensationRequest(originalOperationId)
-    const lookup = this.#ledger.lookup(campaignId, actorId, operationId, fingerprint)
+    const lookup = this.#lookupOperation(campaignId, actorId, operationId, fingerprint)
     if (lookup.status === 'replay') return { status: 'completed', receipt: lookup.receipt }
     if (lookup.status === 'rejected') return { status: 'rejected', reason: lookup.reason }
 
-    const original = this.#ledger.get(campaignId, originalOperationId)
+    const original = this.#operations.get(this.#operationKey(campaignId, originalOperationId))
     if (!original) return { status: 'rejected', reason: 'history_missing' }
     if (original.actorId !== actorId) return { status: 'rejected', reason: 'unauthorized' }
     if (original.compensation === null) {
@@ -586,7 +502,7 @@ class InMemoryResourceOperationExecutor<
       )
       if (!applied) return { status: 'rejected', reason: 'history_conflict' }
       for (const resource of applied.transition.upserted) draft.resources.set(resource.id, resource)
-      this.#ledger.record({
+      this.#recordOperation({
         campaignId,
         actorId,
         operationId,
@@ -607,6 +523,32 @@ class InMemoryResourceOperationExecutor<
       }
       throw error
     }
+  }
+
+  #lookupOperation(
+    campaignId: CampaignId,
+    actorId: CampaignMemberId,
+    operationId: OperationId,
+    fingerprint: StoredResourceOperation['fingerprint'],
+  ): ResourceOperationLookup {
+    const stored = this.#operations.get(this.#operationKey(campaignId, operationId))
+    if (!stored) return { status: 'new' }
+    if (stored.actorId !== actorId || stored.fingerprint !== fingerprint) {
+      return { status: 'rejected', reason: 'operation_id_reused' }
+    }
+    return { status: 'replay', receipt: stored.receipt }
+  }
+
+  #recordOperation(
+    operation: StoredResourceOperation<ResourceCommandReceipt, ResourceCompensationPlan | null>,
+  ): void {
+    const key = this.#operationKey(operation.campaignId, operation.operationId)
+    if (this.#operations.has(key)) throw new TypeError('operation_id_reused')
+    this.#operations.set(key, operation)
+  }
+
+  #operationKey(campaignId: CampaignId, operationId: OperationId): string {
+    return `${campaignId}:${operationId}`
   }
 
   #publish(campaignId: CampaignId): void {

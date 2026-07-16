@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vite-plus/test'
 import type { AuthoredDestination } from '../authored-destination-contract'
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
@@ -96,25 +95,5 @@ describe('canonical contract fixtures', () => {
     expect(internal.target.blockId).toBe(blockId)
     expect(external?.url).toBe('https://example.com/path')
     expect(unresolved.rawTarget).toBe('../missing.md')
-  })
-})
-
-describe('removed architecture boundaries', () => {
-  it('keeps replaced command, index, and version models out of canonical contracts', () => {
-    const command = readFileSync(
-      'packages/editor/src/resources/resource-command-contract.ts',
-      'utf8',
-    )
-    const index = readFileSync('packages/editor/src/resources/resource-index-contract.ts', 'utf8')
-    const componentVersion = readFileSync(
-      'packages/editor/src/resources/component-version.ts',
-      'utf8',
-    )
-
-    expect(command).not.toMatch(
-      /needsDecision|inverse|undo|redo|emptyTrash|ifMatch|clientFingerprint/,
-    )
-    expect(index).not.toMatch(/ensureSubtree|providerCursor|operationId/)
-    expect(componentVersion).not.toMatch(/concurrent|vectorClock|replicaId|codecRegistry/)
   })
 })

@@ -2198,7 +2198,6 @@ describe('resource structure commands', () => {
           status: 'pending',
         }),
       )
-      expect(intent).not.toHaveProperty('storageId')
       return { assetId: content!.assetUuid!, intentId: intent!._id }
     })
 
@@ -2608,7 +2607,6 @@ describe('resource structure commands', () => {
         fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
         receipt: { operationId, resourceIds: [resourceId], bookmarked: true },
       })
-      expect(operation).not.toHaveProperty('resourceUuids')
     })
     await expect(
       asDm(campaign).query(api.resources.queries.loadBookmarks, { campaignId: campaignUuid }),

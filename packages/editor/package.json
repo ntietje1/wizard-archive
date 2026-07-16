@@ -94,14 +94,6 @@
       "types": "./dist/resources/resource-graph-transition.d.mts",
       "default": "./dist/resources/resource-graph-transition.mjs"
     },
-    "./resources/operation-ledger": {
-      "types": "./dist/resources/resource-operation-ledger.d.mts",
-      "default": "./dist/resources/resource-operation-ledger.mjs"
-    },
-    "./resources/in-memory-catalog": {
-      "types": "./dist/resources/in-memory-resource-catalog.d.mts",
-      "default": "./dist/resources/in-memory-resource-catalog.mjs"
-    },
     "./resources/in-memory-editor-runtime": {
       "types": "./dist/resources/in-memory-editor-runtime.d.mts",
       "default": "./dist/resources/in-memory-editor-runtime.mjs"
@@ -117,14 +109,6 @@
     "./resources/content-copy-contract": {
       "types": "./dist/resources/content-copy-contract.d.mts",
       "default": "./dist/resources/content-copy-contract.mjs"
-    },
-    "./resources/optimism-contract": {
-      "types": "./dist/resources/resource-optimism-contract.d.mts",
-      "default": "./dist/resources/resource-optimism-contract.mjs"
-    },
-    "./resources/optimistic-index": {
-      "types": "./dist/resources/resource-optimistic-index.d.mts",
-      "default": "./dist/resources/resource-optimistic-index.mjs"
     },
     "./resources/optimistic-runtime": {
       "types": "./dist/resources/resource-optimistic-runtime.d.mts",
@@ -176,44 +160,5 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "yjs": "^13.6.29"
-  },
-  "wizardArchive": {
-    "backendSafeSubpaths": [
-      "./canvas/document-contract",
-      "./canvas/workload",
-      "./canvas/native-document",
-      "./notes/document-contract",
-      "./notes/document-yjs",
-      "./notes/document-text",
-      "./resources/domain-id",
-      "./resources/workspace-preferences",
-      "./resources/component-version",
-      "./resources/resource-record",
-      "./resources/resource-metadata-version",
-      "./resources/catalog-contract",
-      "./resources/source-path-alias",
-      "./resources/index-contract",
-      "./resources/workspace-index",
-      "./resources/command-contract",
-      "./resources/command-protocol",
-      "./resources/undo-history",
-      "./resources/graph-transition",
-      "./resources/operation-ledger",
-      "./resources/in-memory-catalog",
-      "./resources/in-memory-editor-runtime",
-      "./resources/content-session-contract",
-      "./resources/session-store",
-      "./resources/content-copy-contract",
-      "./resources/optimism-contract",
-      "./resources/optimistic-index",
-      "./resources/optimistic-runtime",
-      "./resources/authored-destination",
-      "./resources/editor-runtime-contract",
-      "./resources/search-policy",
-      "./resources/file-content-contract",
-      "./resources/map-native-document",
-      "./resources/content-version",
-      "./resources/source-classifier"
-    ]
   }
 }

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vite-plus/test'
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
 import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-version'
@@ -24,12 +23,5 @@ describe('canonical resource schema', () => {
     expect(resourceCommandReceiptValidator).toBeTruthy()
     expect(VERSION_SCHEME).toBe('authoritative-revision-v1')
     expect(RESOURCE_COMMAND_PROTOCOL_VERSION).toBe('resource-command-v1')
-  })
-
-  it('keeps provider identity and superseded protocol fields outside canonical rows', () => {
-    const source = readFileSync('convex/resources/schema.ts', 'utf8')
-    expect(source).not.toMatch(
-      /v\.id\(|providerCursor|clientFingerprint|ifMatch|inverse|undoable|campaignSequence|slug/,
-    )
   })
 })

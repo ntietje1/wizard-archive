@@ -1,14 +1,8 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { InMemoryResourceCatalog } from '@wizard-archive/editor/resources/in-memory-catalog'
-import { defineResourceCatalogConformance } from '../../../../../shared/test/resource-catalog-conformance'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import type { AuthoritativeResourceOperationExecutor } from '@wizard-archive/editor/resources/command-contract'
-
-defineResourceCatalogConformance('in-memory', (options) => {
-  const catalog = new InMemoryResourceCatalog()
-  return { catalog, operations: catalog.operations(options) }
-})
+import type { AuthoritativeResourceOperationExecutor } from '../resource-command-contract'
+import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
+import { InMemoryResourceCatalog } from '../in-memory-resource-catalog'
+import { canonicalizeResourceTitle } from '../resource-record'
 
 const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, '01890f47-f6c8-7a5b-8c9d-000000000001')
 const actorId = assertDomainId(
@@ -18,14 +12,6 @@ const actorId = assertDomainId(
 const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-f6c8-7a5b-8c9d-000000000003')
 
 describe('InMemoryResourceCatalog snapshots', () => {
-  it('keeps authorization, operation execution, and transaction writers off the catalog', () => {
-    const catalog = new InMemoryResourceCatalog()
-
-    expect(catalog).not.toHaveProperty('execute')
-    expect(catalog).not.toHaveProperty('appendAlias')
-    expect(catalog).not.toHaveProperty('assignAssetsFolder')
-  })
-
   it('hydrates an authoritative snapshot and publishes committed changes', async () => {
     const source = new InMemoryResourceCatalog()
     const sourceOperations = source.operations({
@@ -215,8 +201,9 @@ describe('in-memory resource operations deep copy', () => {
         },
       ]),
     )
-    expect(await catalog.listAliases(campaignId, copiedChild!.id)).toEqual([])
-    expect(await catalog.getAssetsFolder(campaignId)).toBe(sourceRootId)
+    const snapshot = catalog.getSnapshot(campaignId)
+    expect(snapshot.aliases.filter((alias) => alias.resourceId === copiedChild!.id)).toEqual([])
+    expect(snapshot.assetsFolderId).toBe(sourceRootId)
     expect(listener).toHaveBeenCalledOnce()
   })
 

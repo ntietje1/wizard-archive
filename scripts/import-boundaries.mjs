@@ -31,11 +31,6 @@ const uiPackageName = '@wizard-archive/ui'
 const editorPackageJson = JSON.parse(
   readFileSync(path.join(process.cwd(), 'packages/editor/package.json'), 'utf8'),
 )
-const backendSafeEditorPackageSpecifiers = new Set(
-  editorPackageJson.wizardArchive.backendSafeSubpaths.map(
-    (subpath) => `${editorPackageName}${subpath.slice(1)}`,
-  ),
-)
 const publicEditorPackageSpecifiers = new Set(
   Object.keys(editorPackageJson.exports).map((subpath) =>
     subpath === '.' ? editorPackageName : `${editorPackageName}${subpath.slice(1)}`,
@@ -200,7 +195,7 @@ function sharedBoundaryViolation(filePath, source, index, specifier, kind, sourc
   if (specifier === `${editorPackageName}/resources/domain-id`) {
     return null
   }
-  if (filePath.startsWith('shared/test/') && backendSafeEditorPackageSpecifiers.has(specifier)) {
+  if (filePath.startsWith('shared/test/') && publicEditorPackageSpecifiers.has(specifier)) {
     return null
   }
   if (!['convex', 'src', 'editor-package', 'ui-package'].includes(targetZone)) return null
@@ -223,28 +218,6 @@ function convexBoundaryViolation(filePath, source, index, specifier, kind, sourc
     )
   }
   return null
-}
-
-function isProductionConvexFile(filePath) {
-  if (!filePath.startsWith('convex/')) return false
-  if (filePath.startsWith('convex/_test/')) return false
-  if (filePath.includes('/__tests__/')) return false
-  return true
-}
-
-function convexEditorPackageBoundaryViolation(filePath, source, index, specifier, kind) {
-  if (!isProductionConvexFile(filePath)) return null
-  if (specifier !== editorPackageName && !specifier.startsWith(`${editorPackageName}/`)) {
-    return null
-  }
-  if (backendSafeEditorPackageSpecifiers.has(specifier)) return null
-
-  return importViolation(
-    filePath,
-    source,
-    index,
-    `convex may not import ${kind} from backend-unsafe editor package subpath ${specifier}`,
-  )
 }
 
 function editorPackageBoundaryViolation(
@@ -360,7 +333,6 @@ function boundaryViolation(filePath, source, index, specifier, kind) {
       uiPackageName,
     ) ??
     editorAdapterBoundaryViolation(filePath, source, index, specifier, kind) ??
-    convexEditorPackageBoundaryViolation(filePath, source, index, specifier, kind) ??
     sharedBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) ??
     convexBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) ??
     editorPackageBoundaryViolation(

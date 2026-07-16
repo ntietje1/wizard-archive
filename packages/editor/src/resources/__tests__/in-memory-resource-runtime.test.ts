@@ -81,7 +81,6 @@ describe('in-memory resource runtime', () => {
       items: [expect.objectContaining({ id: folderId })],
       complete: true,
     })
-    expect(runtime).not.toHaveProperty('catalog')
     runtime.dispose()
   })
 

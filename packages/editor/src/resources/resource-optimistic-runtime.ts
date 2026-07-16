@@ -66,20 +66,30 @@ function createOptimisticStructureGateway(
   }
 }
 
-export interface ResourceOptimisticObserver {
+interface ResourceOptimisticObserver {
   applied(envelope: CommandEnvelope<OptimisticResourceCommand>): void
 }
+
+type OptimisticResourceStructureRuntime = Readonly<{
+  dispose: () => void
+  index: WorkspaceResourceIndex
+  structure: ResourceStructureCommandGateway
+}>
 
 export function createOptimisticResourceStructureRuntime(
   baseIndex: WorkspaceResourceIndex,
   authoritativeGateway: ResourceStructureCommandGateway,
   now: () => number = Date.now,
   observer?: ResourceOptimisticObserver,
-) {
+): OptimisticResourceStructureRuntime {
   const index = new OptimisticWorkspaceResourceIndex(baseIndex, now)
+  const projectedIndex: WorkspaceResourceIndex = {
+    getSnapshot: () => index.snapshot(),
+    subscribe: (listener) => index.onChange(listener),
+  }
   return {
     dispose: () => index.dispose(),
-    index,
+    index: projectedIndex,
     structure: createOptimisticStructureGateway(index, authoritativeGateway, observer),
   }
 }

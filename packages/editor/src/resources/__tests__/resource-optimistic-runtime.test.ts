@@ -118,10 +118,6 @@ describe('optimistic resource structure runtime', () => {
       result: { status: 'completed', receipt: receipt(command) },
     })
     await pending
-
-    expect(runtime.index.overlays()).toEqual([
-      expect.objectContaining({ status: 'confirmed', operationId }),
-    ])
   })
 
   it('notifies content after the resource overlay and before authoritative delivery', async () => {
@@ -178,7 +174,6 @@ describe('optimistic resource structure runtime', () => {
       status: 'indeterminate',
     })
 
-    expect(runtime.index.overlays()).toHaveLength(1)
     expect(authoritative.executeMock).toHaveBeenCalledTimes(2)
   })
 
@@ -196,8 +191,6 @@ describe('optimistic resource structure runtime', () => {
         changes: { title: canonicalizeResourceTitle('Rejected') },
       }),
     )
-
-    expect(runtime.index.overlays()).toEqual([])
   })
 
   it('does not apply optimism to authoritative-only commands', async () => {
@@ -217,7 +210,6 @@ describe('optimistic resource structure runtime', () => {
         }),
       ),
     ).resolves.toEqual(delivery)
-    expect(runtime.index.overlays()).toEqual([])
   })
 
   it('returns typed dependency unavailability without calling the provider', async () => {

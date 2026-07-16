@@ -199,40 +199,6 @@ describe('import boundary checks', () => {
     ])
   })
 
-  it('blocks production convex from backend-unsafe editor package subpaths', () => {
-    expect(
-      analyzeImportBoundaries([
-        {
-          filePath: 'convex/gameMaps/functions/createItemPins.ts',
-          source: "import { planMapPinCreations } from '@wizard-archive/editor/game-maps'",
-        },
-        {
-          filePath: 'convex/canvases/functions/enhanceCanvas.ts',
-          source: "import type { CanvasItem } from '@wizard-archive/editor/canvas/item-contract'",
-        },
-        {
-          filePath: 'convex/canvases/functions/createCanvas.ts',
-          source:
-            "import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'",
-        },
-        {
-          filePath: 'convex/notes/functions/enhanceNote.ts',
-          source: "import type { NoteItem } from '@wizard-archive/editor/notes'",
-        },
-        {
-          filePath: 'convex/notes/functions/importText.ts',
-          source:
-            "import { createImportedTextNotePayload } from '@wizard-archive/editor/notes/imported-text'",
-        },
-      ]),
-    ).toEqual([
-      'convex/gameMaps/functions/createItemPins.ts:1 convex may not import value from backend-unsafe editor package subpath @wizard-archive/editor/game-maps',
-      'convex/canvases/functions/enhanceCanvas.ts:1 convex may not import type from backend-unsafe editor package subpath @wizard-archive/editor/canvas/item-contract',
-      'convex/notes/functions/enhanceNote.ts:1 convex may not import type from backend-unsafe editor package subpath @wizard-archive/editor/notes',
-      'convex/notes/functions/importText.ts:1 convex may not import value from backend-unsafe editor package subpath @wizard-archive/editor/notes/imported-text',
-    ])
-  })
-
   it('reports disallowed src imports with file and line details', () => {
     expect(
       analyzeImportBoundaries([

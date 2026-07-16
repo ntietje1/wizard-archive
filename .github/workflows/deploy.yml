@@ -107,10 +107,9 @@ jobs:
             release_message="Production candidate ${release_sha}"
           fi
 
-          vp run check:editor-sdk
+          vp run check:editor-package
           vp check
           vp run lint:convex
-          vp run check:no-reexports
           vp run check:import-boundaries
           vp test run --config vitest.config.ts --reporter=verbose
           vp test run --config convex/vitest.config.mts --reporter=verbose

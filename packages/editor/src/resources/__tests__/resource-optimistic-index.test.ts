@@ -114,10 +114,10 @@ describe('OptimisticWorkspaceResourceIndex', () => {
       }),
     ).resolves.toEqual({ status: 'applied' })
 
-    expect(optimistic.getSnapshot().revision).toBe(baseSnapshot.revision)
+    expect(optimistic.snapshot().revision).toBe(baseSnapshot.revision)
     expect(base.getSnapshot()).toBe(baseSnapshot)
     expect(base.getSnapshot().lookup(createdId)).toEqual({ state: 'unknown' })
-    expect(optimistic.getSnapshot().lookup(createdId)).toEqual({
+    expect(optimistic.snapshot().lookup(createdId)).toEqual({
       state: 'known',
       value: expect.objectContaining({
         id: createdId,
@@ -126,15 +126,10 @@ describe('OptimisticWorkspaceResourceIndex', () => {
         updatedAt: 100,
       }),
     })
-    expect(optimistic.getSnapshot().list({ parentId: null, lifecycle: 'active' }).state).toBe(
-      'known',
-    )
-    expect(optimistic.getSnapshot().list({ parentId: rootId, lifecycle: 'active' })).toEqual({
+    expect(optimistic.snapshot().list({ parentId: null, lifecycle: 'active' }).state).toBe('known')
+    expect(optimistic.snapshot().list({ parentId: rootId, lifecycle: 'active' })).toEqual({
       state: 'unknown',
     })
-    expect(optimistic.overlays()).toEqual([
-      expect.objectContaining({ status: 'pending', ordinal: 1, operationId }),
-    ])
   })
 
   it('requires structural dependencies to exist in the authoritative base', async () => {
@@ -203,20 +198,19 @@ describe('OptimisticWorkspaceResourceIndex', () => {
       resourceIds: [noteId],
       destinationParentId: folderId,
     })
-    expect(optimistic.overlays().map((overlay) => overlay.ordinal)).toEqual([1, 2])
-    expect(optimistic.getSnapshot().lookup(noteId)).toEqual({
+    expect(optimistic.snapshot().lookup(noteId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ title: 'Renamed', displayParentId: folderId }),
     })
 
     expect(optimistic.remove(renameOperation)).toBe(true)
-    expect(optimistic.getSnapshot().lookup(noteId)).toEqual({
+    expect(optimistic.snapshot().lookup(noteId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ title: 'Entry', displayParentId: folderId }),
     })
     expect(optimistic.remove(renameOperation)).toBe(false)
     expect(optimistic.remove(moveOperation)).toBe(true)
-    expect(optimistic.getSnapshot().lookup(noteId)).toEqual({
+    expect(optimistic.snapshot().lookup(noteId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ displayParentId: null }),
     })
@@ -245,15 +239,15 @@ describe('OptimisticWorkspaceResourceIndex', () => {
     const optimistic = new OptimisticWorkspaceResourceIndex(base)
 
     await optimistic.submit(operation(25), { type: 'trash', resourceIds: [folderId] })
-    expect(optimistic.getSnapshot().lookup(folderId)).toEqual({
+    expect(optimistic.snapshot().lookup(folderId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ lifecycle: 'trashed' }),
     })
-    expect(optimistic.getSnapshot().lookup(noteId)).toEqual({
+    expect(optimistic.snapshot().lookup(noteId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ lifecycle: 'trashed' }),
     })
-    expect(optimistic.getSnapshot().lookup(rootId)).toEqual({
+    expect(optimistic.snapshot().lookup(rootId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ lifecycle: 'active' }),
     })
@@ -270,15 +264,11 @@ describe('OptimisticWorkspaceResourceIndex', () => {
     })
 
     expect(optimistic.confirm(receipt(operationId, rootId))).toEqual({ status: 'confirmed' })
-    expect(optimistic.overlays()[0]).toEqual(
-      expect.objectContaining({ status: 'confirmed', postconditions: expect.any(Array) }),
-    )
-    expect(optimistic.getSnapshot().lookup(rootId)).toEqual({
+    expect(optimistic.snapshot().lookup(rootId)).toEqual({
       state: 'known',
       value: expect.objectContaining({ title: 'Renamed', metadataVersion: version2 }),
     })
     expect(optimistic.confirm(receipt(operationId, rootId))).toEqual({ status: 'confirmed' })
-    expect(optimistic.overlays()).toHaveLength(1)
     expect(optimistic.confirm(receipt(operationId, rootId, version3))).toEqual({
       status: 'rejected',
       reason: 'receipt_mismatch',
@@ -301,8 +291,7 @@ describe('OptimisticWorkspaceResourceIndex', () => {
         ],
       }),
     ).toEqual({ status: 'applied' })
-    expect(optimistic.overlays()).toEqual([])
-    expect(optimistic.getSnapshot()).toBe(base.getSnapshot())
+    expect(optimistic.snapshot()).toBe(base.getSnapshot())
   })
 
   it('retires immediately when the base already satisfies a receipt', async () => {
@@ -318,7 +307,6 @@ describe('OptimisticWorkspaceResourceIndex', () => {
     })
 
     expect(optimistic.confirm(receipt(operationId, rootId))).toEqual({ status: 'retired' })
-    expect(optimistic.overlays()).toEqual([])
   })
 
   it('clears all overlays synchronously when projection scope changes', async () => {
@@ -336,9 +324,8 @@ describe('OptimisticWorkspaceResourceIndex', () => {
 
     base.replaceScope(nextScope, indexRevision('new-scope'))
 
-    expect(optimistic.overlays()).toEqual([])
-    expect(optimistic.getSnapshot().scope).toEqual(nextScope)
-    expect(optimistic.getSnapshot().lookup(rootId)).toEqual({ state: 'unknown' })
+    expect(optimistic.snapshot().scope).toEqual(nextScope)
+    expect(optimistic.snapshot().lookup(rootId)).toEqual({ state: 'unknown' })
   })
 
   it('reconciles delivery without dropping indeterminate operations', async () => {
@@ -357,7 +344,6 @@ describe('OptimisticWorkspaceResourceIndex', () => {
         reason: 'response_lost',
       }),
     ).toEqual({ status: 'retained' })
-    expect(optimistic.overlays()).toHaveLength(1)
 
     expect(
       optimistic.reconcile(retainedOperation, {
@@ -366,7 +352,6 @@ describe('OptimisticWorkspaceResourceIndex', () => {
         reason: 'transport_unavailable',
       }),
     ).toEqual({ status: 'removed' })
-    expect(optimistic.overlays()).toEqual([])
   })
 
   it('removes only matching rejected or unavailable operations', async () => {
@@ -390,9 +375,6 @@ describe('OptimisticWorkspaceResourceIndex', () => {
         result: { status: 'rejected', reason: 'unauthorized' },
       }),
     ).toEqual({ status: 'removed' })
-    expect(optimistic.overlays().map((overlay) => overlay.operationId)).toEqual([
-      unavailableOperation,
-    ])
     expect(
       optimistic.reconcile(unavailableOperation, {
         status: 'received',
@@ -416,7 +398,6 @@ describe('OptimisticWorkspaceResourceIndex', () => {
         result: { status: 'completed', receipt: receipt(operation(35), rootId) },
       }),
     ).toEqual({ status: 'rejected', reason: 'receipt_mismatch' })
-    expect(optimistic.overlays()).toHaveLength(1)
     expect(
       optimistic.reconcile(operationId, {
         status: 'received',

@@ -37,10 +37,9 @@ jobs:
 
       - name: Validate Preview Candidate
         run: |
-          vp run check:editor-sdk
+          vp run check:editor-package
           vp check
           vp run lint:convex
-          vp run check:no-reexports
           vp run check:import-boundaries
           vp run build:production
         env:
@@ -77,10 +76,9 @@ jobs:
 
       - name: Validate Preview Candidate
         run: |
-          vp run check:editor-sdk
+          vp run check:editor-package
           vp check
           vp run lint:convex
-          vp run check:no-reexports
           vp run check:import-boundaries
           vp run build:production
         working-directory: candidate

@@ -14,10 +14,6 @@ export default defineConfig({
       'src/**/__tests__/**/*.test.{ts,tsx}',
       'packages/*/src/**/__tests__/**/*.test.{ts,tsx}',
     ],
-    exclude: [
-      'packages/editor/src/__tests__/editor-sdk-portability.test.ts',
-      'packages/editor/src/__tests__/public-api-shape.test.ts',
-    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
