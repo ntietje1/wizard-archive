@@ -20,6 +20,7 @@ import { initialFileContentVersion } from '@wizard-archive/editor/resources/cont
 import {
   MAX_WORKSPACE_SEARCH_CANDIDATES,
   createResourceSearchDocument,
+  normalizeResourceSearchText,
   searchResourceDocuments,
 } from '@wizard-archive/editor/resources/search-policy'
 
@@ -447,21 +448,25 @@ describe('authorized resource projection', () => {
     ).resolves.toMatchObject({ results: [{ resourceId: noteId }] })
   })
 
-  it('finds a late exact title beyond the bounded resource identity prefix', async () => {
+  it('globally ranks more than 200 exact, prefix, generic title, and body matches', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const memberUuid = await getMemberUuid(campaign.dm.memberId)
-    const resourceIds = Array.from({ length: MAX_WORKSPACE_SEARCH_CANDIDATES + 2 }, () =>
-      generateDomainId(DOMAIN_ID_KIND.resource),
-    )
+    const resourceIds = Array.from({ length: 302 }, () => generateDomainId(DOMAIN_ID_KIND.resource))
     const sortedResourceIds = [...resourceIds].sort()
     const exactId = sortedResourceIds[sortedResourceIds.length - 1]!
-    const bodyId = sortedResourceIds[sortedResourceIds.length - 2]!
-    const documents = resourceIds.map((resourceId) =>
+    const unicodeId = sortedResourceIds[sortedResourceIds.length - 2]!
+    const documents = resourceIds.map((resourceId, index) =>
       createResourceSearchDocument(
         resourceId,
-        resourceId === exactId ? 'Needle' : 'Shared title',
-        resourceId === bodyId ? 'Sunken archive' : '',
+        resourceId === exactId
+          ? 'Needle'
+          : resourceId === unicodeId
+            ? 'Ärcane entry'
+            : index < 60
+              ? 'Journal entry shared'
+              : `Journal entry ${index.toString().padStart(3, '0')}`,
+        resourceId === unicodeId ? 'Shared archive citadèle' : 'Shared archive',
       ),
     )
     await t.run(async (ctx) => {
@@ -491,6 +496,7 @@ describe('authorized resource projection', () => {
           campaignUuid,
           resourceUuid: document.resourceId,
           title: document.title,
+          normalizedTitle: normalizeResourceSearchText(document.title),
           body: document.body,
         })
       }
@@ -509,14 +515,37 @@ describe('authorized resource projection', () => {
     expect(first.snapshot.resources).toHaveLength(first.results.length)
     expect(first.snapshot.missingResourceIds).toEqual([])
 
-    const body = await asDm(campaign).query(api.resources.queries.searchResources, {
-      campaignId: campaignUuid,
-      query: 'archive',
+    for (const query of ['journal', 'entry', 'archive', 'ärcane', 'citadèle']) {
+      const result = await asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query,
+      })
+      expect(result.results).toEqual(searchResourceDocuments(documents, query))
+    }
+  })
+
+  it('rejects a query whose complete global rank exceeds the bounded provider window', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    await t.run(async (ctx) => {
+      for (let index = 0; index <= MAX_WORKSPACE_SEARCH_CANDIDATES; index += 1) {
+        const title = `Overflow ${index.toString().padStart(4, '0')}`
+        await ctx.db.insert('resourceSearchDocuments', {
+          campaignUuid,
+          resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
+          title,
+          normalizedTitle: normalizeResourceSearchText(title),
+          body: 'Common overflow body',
+        })
+      }
     })
-    expect(body.results).toEqual(searchResourceDocuments(documents, 'archive'))
-    expect(body.results).toEqual([
-      { resourceId: bodyId, match: { type: 'body', text: 'Sunken archive' } },
-    ])
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.searchResources, {
+        campaignId: campaignUuid,
+        query: 'common',
+      }),
+    ).rejects.toThrow('Search query exceeds the bounded candidate set')
   })
 
   it(

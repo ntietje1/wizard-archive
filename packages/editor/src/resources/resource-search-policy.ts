@@ -6,7 +6,7 @@ export const MAX_WORKSPACE_SEARCH_QUERY_TERMS = 16
 export const MAX_WORKSPACE_SEARCH_TERM_BYTES = 32
 export const MAX_WORKSPACE_SEARCH_TITLE_BYTES = 2 * 1024
 export const MAX_WORKSPACE_SEARCH_BODY_BYTES = 64 * 1024
-export const MAX_WORKSPACE_SEARCH_CANDIDATES = 200
+export const MAX_WORKSPACE_SEARCH_CANDIDATES = 1024
 export const MAX_WORKSPACE_SEARCH_RESULTS = 50
 
 export type ResourceSearchDocument = Readonly<{
@@ -66,7 +66,7 @@ function rankSearchDocument(
   query: string,
   terms: ReadonlyArray<string>,
 ): RankedSearchResult | null {
-  const title = normalizeSearchText(document.title)
+  const title = normalizeResourceSearchText(document.title)
   if (matchesAllTerms(title, terms)) {
     return {
       result: { resourceId: document.resourceId, match: { type: 'title' } },
@@ -75,7 +75,7 @@ function rankSearchDocument(
     }
   }
   const body = foldCase(document.body)
-  if (!matchesAllTerms(normalizeSearchText(document.body), terms)) return null
+  if (!matchesAllTerms(normalizeResourceSearchText(document.body), terms)) return null
   const firstMatch = Math.min(...terms.map((term) => body.indexOf(term)))
   return {
     result: {
@@ -149,8 +149,15 @@ function foldCase(value: string): string {
   return Array.from(value, (scalar) => scalar.toLowerCase()).join('')
 }
 
-function normalizeSearchText(value: string): string {
+export function normalizeResourceSearchText(value: string): string {
   return (foldCase(value).match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}]*/gu) ?? []).join(' ')
+}
+
+export function resourceSearchPrefixUpperBound(prefix: string): string {
+  const scalars = Array.from(prefix)
+  const last = scalars.pop()
+  if (!last) throw new TypeError('Expected a non-empty search prefix')
+  return scalars.join('') + String.fromCodePoint(last.codePointAt(0)! + 1)
 }
 
 function truncateUtf8(value: string, maxBytes: number): string {

@@ -86,6 +86,22 @@ describe('in-memory workspace search', () => {
     await expect(search.gateway.search('renamed')).resolves.toMatchObject([{ resourceId }])
     expect(getCount).toBe(2)
 
+    resources = [
+      {
+        ...resources[0]!,
+        lifecycle: { state: 'trashed', at: 2, by: actorId },
+      },
+    ]
+    resourceListener?.()
+    await expect(search.gateway.search('archive')).resolves.toEqual([])
+    expect(noteListeners.size).toBe(0)
+
+    resources = [{ ...resources[0]!, lifecycle: { state: 'active' } }]
+    resourceListener?.()
+    await expect(search.gateway.search('archive')).resolves.toMatchObject([{ resourceId }])
+    expect(getCount).toBe(3)
+    expect(noteListeners.size).toBe(1)
+
     search.dispose()
     expect(noteListeners.size).toBe(0)
     session.dispose()

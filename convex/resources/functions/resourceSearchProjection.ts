@@ -5,7 +5,10 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
-import { createResourceSearchDocument } from '@wizard-archive/editor/resources/search-policy'
+import {
+  createResourceSearchDocument,
+  normalizeResourceSearchText,
+} from '@wizard-archive/editor/resources/search-policy'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 import { resourceRecordFromRow } from './resourceRecordRow'
@@ -29,6 +32,7 @@ export async function syncResourceSearchProjection(
     campaignUuid: resource.campaignId,
     resourceUuid: resource.id,
     title: document.title,
+    normalizedTitle: normalizeResourceSearchText(document.title),
     body: document.body,
   }
   if (existing) await ctx.db.replace('resourceSearchDocuments', existing._id, value)

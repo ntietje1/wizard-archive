@@ -545,10 +545,12 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,
     title: v.string(),
+    normalizedTitle: v.string(),
     body: v.string(),
   })
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
+    .index('by_campaign_and_normalized_title', ['campaignUuid', 'normalizedTitle', 'resourceUuid'])
     .searchIndex('search_title', {
       searchField: 'title',
       filterFields: ['campaignUuid'],

@@ -6,7 +6,8 @@ import type { CampaignId, ResourceId } from './domain-id'
 import type { ResourceBookmarkGateway, WorkspaceSearch } from './editor-runtime-contract'
 import type { CommandDelivery, ResourceBookmarkCommandResult } from './resource-command-contract'
 import type { ResourceRecord } from './resource-record'
-import { createResourceSearchDocument, searchResourceDocuments } from './resource-search-policy'
+import { ResourceSearchIndex } from './resource-search-index'
+import { createResourceSearchDocument } from './resource-search-policy'
 
 export function createInMemoryBookmarks(
   campaignId: CampaignId,
@@ -66,7 +67,7 @@ export function createInMemoryWorkspaceSearch(
 ): Readonly<{ gateway: WorkspaceSearch; dispose(): void }> {
   let recent: ReadonlyArray<ResourceId> = []
   const listeners = new Set<() => void>()
-  const documents = new Map<ResourceId, ReturnType<typeof createResourceSearchDocument>>()
+  const documents = new ResourceSearchIndex()
   const noteSubscriptions = new Map<ResourceId, () => void>()
   let resourcesById = new Map<ResourceId, ResourceRecord>()
 
@@ -74,7 +75,6 @@ export function createInMemoryWorkspaceSearch(
     const resource = resourcesById.get(resourceId)
     if (!resource || resource.kind !== 'note' || resource.lifecycle.state !== 'active') return
     documents.set(
-      resourceId,
       createResourceSearchDocument(resourceId, resource.title, noteBody(notes, resourceId)),
     )
   }
@@ -89,7 +89,6 @@ export function createInMemoryWorkspaceSearch(
       }
       const existing = documents.get(resource.id)
       documents.set(
-        resource.id,
         createResourceSearchDocument(
           resource.id,
           resource.title,
@@ -103,7 +102,7 @@ export function createInMemoryWorkspaceSearch(
         )
       }
     }
-    for (const resourceId of Array.from(documents.keys())) {
+    for (const resourceId of Array.from(documents.ids())) {
       if (resourcesById.has(resourceId)) continue
       documents.delete(resourceId)
       noteSubscriptions.get(resourceId)?.()
@@ -114,7 +113,12 @@ export function createInMemoryWorkspaceSearch(
   const unsubscribeResources = subscribeResources(refreshResources)
 
   const gateway: WorkspaceSearch = {
-    search: (query) => Promise.resolve(searchResourceDocuments([...documents.values()], query)),
+    search: (query) => {
+      const result = documents.search(query)
+      return result.complete
+        ? Promise.resolve(result.results)
+        : Promise.reject(new Error('Search query exceeds the bounded candidate set'))
+    },
     recent: () => recent,
     subscribeRecent: (listener) => {
       listeners.add(listener)
