@@ -1,6 +1,6 @@
 import * as Y from 'yjs'
 import { Awareness } from 'y-protocols/awareness'
-import type { NoteSession, NoteSessionSaveResult } from './content-session-contract'
+import type { ContentSessionSaveResult, NoteSession } from './content-session-contract'
 import { advanceNoteContentVersion } from './resource-content-version'
 import type { VersionStamp } from './component-version'
 
@@ -31,7 +31,7 @@ export function createInMemoryNoteSession(
     },
     awareness: { status: 'unavailable' },
     collaboration,
-    async flush(): Promise<NoteSessionSaveResult> {
+    async flush(): Promise<ContentSessionSaveResult> {
       if (disposed) return { status: 'rejected', reason: 'scope_unavailable' }
       if (dirty) {
         version = await advanceNoteContentVersion(version, Y.encodeStateAsUpdate(document))

@@ -4,20 +4,19 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 
-const OUTBOX_PREFIX = 'wizard-archive:note-update-outbox:v1'
-
-export type NoteUpdateOutbox = Readonly<{
+export type YjsUpdateOutbox = Readonly<{
   clear(): void
   load(): Uint8Array | null
   replace(update: Uint8Array): void
 }>
 
-export function createNoteUpdateOutbox(
+export function createYjsUpdateOutbox(
+  kind: 'canvas' | 'note',
   campaignId: CampaignId,
   resourceId: ResourceId,
   memberId: CampaignMemberId,
-): NoteUpdateOutbox {
-  const key = `${OUTBOX_PREFIX}:${memberId}:${campaignId}:${resourceId}`
+): YjsUpdateOutbox {
+  const key = `wizard-archive:${kind}-update-outbox:v1:${memberId}:${campaignId}:${resourceId}`
   return {
     clear: () => sessionStorage.removeItem(key),
     load: () => {

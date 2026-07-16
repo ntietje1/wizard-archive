@@ -16,11 +16,9 @@ import {
 } from './live-resource-structure-gateway'
 import { createResourceUndoHistory } from '@wizard-archive/editor/resources/undo-history'
 import { createLiveNoteContentSource } from './live-note-content-source'
-import {
-  createLiveCanvasSessionSource,
-  createLiveMapSessionSource,
-} from './live-resource-content-source'
+import { createLiveMapSessionSource } from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
+import { createLiveCanvasSessionSource } from './live-canvas-session-source'
 import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
@@ -186,9 +184,11 @@ function createScopedLiveResourceRuntime(
   )
   const canvases = createLiveCanvasSessionSource(
     currentScope.campaignId,
+    currentScope.actorId,
     {
       ...contentBackend('canvas'),
       create: (args) => convex.mutation(api.resources.mutations.createCanvasResource, args),
+      save: (args) => convex.mutation(api.resources.mutations.saveCanvasContent, args),
       refresh,
     },
     undo.begin,

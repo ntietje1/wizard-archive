@@ -7,6 +7,7 @@ import type { VersionStamp } from './component-version'
 import type {
   CanvasSessionSource,
   CanvasSessionState,
+  CanvasSession,
   ContentExportResult,
   CreateCanvasResourceCommand,
   CreateFileResourceCommand,
@@ -21,6 +22,7 @@ import type {
   MapSessionState,
   NoteSessionSource,
   NoteSessionState,
+  NoteSession,
 } from './content-session-contract'
 import type {
   CommandDelivery,
@@ -49,6 +51,7 @@ import {
   createInMemoryWorkspaceSearch,
 } from './in-memory-workspace-discovery'
 import { createInMemoryNoteSession } from './in-memory-note-session'
+import { createInMemoryCanvasSession } from './in-memory-canvas-session'
 import { encodeWizardMapDocument } from './map-native-document'
 
 type ReadyContent<T> = Readonly<{
@@ -56,6 +59,31 @@ type ReadyContent<T> = Readonly<{
   resourceId: ResourceId
   version: VersionStamp
 }>
+
+function createInMemoryYjsSessionRegistry<TSession extends { document: Y.Doc; dispose(): void }>(
+  create: (
+    document: Y.Doc,
+    version: VersionStamp,
+    changed: (session: TSession) => void,
+  ) => TSession,
+  publish: (resourceId: ResourceId, session: TSession) => void,
+) {
+  const sessions = new Map<ResourceId, TSession>()
+  return {
+    replace(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void {
+      const previous = sessions.get(resourceId)
+      if (previous && previous.document !== document) previous.dispose()
+      const session = create(document, version, (next) => publish(resourceId, next))
+      sessions.set(resourceId, session)
+      publish(resourceId, session)
+    },
+    dispose(finish: () => void): void {
+      for (const session of sessions.values()) session.dispose()
+      sessions.clear()
+      finish()
+    },
+  }
+}
 
 type ReadyFileContent = ReadyContent<FileResourceContent> &
   Readonly<{
@@ -83,7 +111,10 @@ class InMemoryNoteSessionSource
   extends ResourceSessionStore<NoteSessionState>
   implements NoteSessionSource
 {
-  readonly #sessions = new Map<ResourceId, ReturnType<typeof createInMemoryNoteSession>>()
+  readonly #sessions = createInMemoryYjsSessionRegistry(
+    createInMemoryNoteSession,
+    (resourceId, session: NoteSession) => this.set(resourceId, { status: 'ready', session }),
+  )
   readonly #creates = new Map<
     ResourceId,
     Readonly<{
@@ -162,21 +193,10 @@ class InMemoryNoteSessionSource
     }
   }
 
-  setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void {
-    const previous = this.#sessions.get(resourceId)
-    if (previous && previous.document !== document) previous.dispose()
-    const session = createInMemoryNoteSession(document, version, (next) => {
-      this.set(resourceId, { status: 'ready', session: next })
-    })
-    this.#sessions.set(resourceId, session)
-    this.set(resourceId, { status: 'ready', session })
-  }
+  readonly setReady = (resourceId: ResourceId, document: Y.Doc, version: VersionStamp) =>
+    this.#sessions.replace(resourceId, document, version)
 
-  override dispose(): void {
-    for (const session of this.#sessions.values()) session.dispose()
-    this.#sessions.clear()
-    super.dispose()
-  }
+  override readonly dispose = () => this.#sessions.dispose(() => super.dispose())
 }
 
 class InMemoryFileContentSource
@@ -333,18 +353,21 @@ class InMemoryCanvasSessionSource
   extends InMemoryOwnedSessionSource<CanvasSessionState>
   implements CanvasSessionSource
 {
+  readonly #sessions = createInMemoryYjsSessionRegistry(
+    createInMemoryCanvasSession,
+    (resourceId, session: CanvasSession) => this.set(resourceId, { status: 'ready', session }),
+  )
+
   async create(
     envelope: CommandEnvelope<CreateCanvasResourceCommand>,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
     return await this.createContent(envelope, async () => {
       const document = new Y.Doc()
-      this.set(envelope.command.resourceId, {
-        status: 'ready',
-        session: localContentSession(
-          { document },
-          initialVersion(await sha256Digest(Y.encodeStateAsUpdate(document))),
-        ),
-      })
+      this.setReady(
+        envelope.command.resourceId,
+        document,
+        initialVersion(await sha256Digest(Y.encodeStateAsUpdate(document))),
+      )
     })
   }
 
@@ -356,6 +379,11 @@ class InMemoryCanvasSessionSource
       'application/vnd.wizard-archive.canvas',
     )
   }
+
+  readonly setReady = (resourceId: ResourceId, document: Y.Doc, version: VersionStamp) =>
+    this.#sessions.replace(resourceId, document, version)
+
+  override readonly dispose = () => this.#sessions.dispose(() => super.dispose())
 }
 
 function nativeContentExport(
@@ -453,14 +481,7 @@ export function createInMemoryEditorRuntime({
     (envelope) => executeStructure(envelope),
   )
   for (const entry of content.canvases ?? []) {
-    canvases.set(entry.resourceId, {
-      status: 'ready',
-      session: {
-        document: entry.content,
-        version: entry.version,
-        awareness: { status: 'unavailable' },
-      },
-    })
+    canvases.setReady(entry.resourceId, entry.content, entry.version)
   }
   const resources = createInMemoryResourceRuntime({
     scope,

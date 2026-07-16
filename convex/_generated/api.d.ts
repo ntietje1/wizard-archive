@@ -76,8 +76,10 @@ import type * as resources_functions_resourceContentCopy from "../resources/func
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
 import type * as resources_functions_resourceRecordRow from "../resources/functions/resourceRecordRow.js";
 import type * as resources_functions_resourceSearchProjection from "../resources/functions/resourceSearchProjection.js";
+import type * as resources_functions_saveCanvasContent from "../resources/functions/saveCanvasContent.js";
 import type * as resources_functions_saveNoteContent from "../resources/functions/saveNoteContent.js";
 import type * as resources_functions_searchResources from "../resources/functions/searchResources.js";
+import type * as resources_functions_validateContentResource from "../resources/functions/validateContentResource.js";
 import type * as resources_integrity from "../resources/integrity.js";
 import type * as resources_internalActions from "../resources/internalActions.js";
 import type * as resources_internalMutations from "../resources/internalMutations.js";
@@ -196,8 +198,10 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
   "resources/functions/resourceRecordRow": typeof resources_functions_resourceRecordRow;
   "resources/functions/resourceSearchProjection": typeof resources_functions_resourceSearchProjection;
+  "resources/functions/saveCanvasContent": typeof resources_functions_saveCanvasContent;
   "resources/functions/saveNoteContent": typeof resources_functions_saveNoteContent;
   "resources/functions/searchResources": typeof resources_functions_searchResources;
+  "resources/functions/validateContentResource": typeof resources_functions_validateContentResource;
   "resources/integrity": typeof resources_integrity;
   "resources/internalActions": typeof resources_internalActions;
   "resources/internalMutations": typeof resources_internalMutations;

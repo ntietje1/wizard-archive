@@ -326,7 +326,7 @@ export const resourceCompensationResultValidator = v.union(
   }),
 )
 
-export const saveNoteContentResultValidator = v.union(
+export const contentSessionSaveResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
     resourceId: resourceIdValidator,

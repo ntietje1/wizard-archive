@@ -1,15 +1,24 @@
 import * as Y from 'yjs'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { FunctionReturnType } from 'convex/server'
+import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import {
+  createCanvasDocumentDoc,
+  getCanvasDocumentMaps,
+  readCanvasDocumentContent,
+} from '@wizard-archive/editor/canvas/document-contract'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import {
   createLiveMapSessionSource,
   createLiveResourceContentSource,
 } from '../live-resource-content-source'
+import { createLiveCanvasSessionSource } from '../live-canvas-session-source'
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
+type SaveCanvasArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
+type SaveCanvasResult = FunctionReturnType<typeof api.resources.mutations.saveCanvasContent>
 
 const version = {
   scheme: 'authoritative-revision-v1' as const,
@@ -85,15 +94,24 @@ describe('LiveResourceContentSource', () => {
   })
 
   it('owns decoded canvas documents and rejects corrupt updates', () => {
+    const campaignId = testDomainId('campaign', 'canvas-content-campaign')
     const resourceId = testDomainId('resource', 'canvas-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
-    const source = createLiveResourceContentSource('canvas', {
-      load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
-      watch: (_resourceId, update) => {
-        apply = update
-        return () => undefined
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      testDomainId('campaignMember', 'canvas-content-member'),
+      {
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save: vi.fn(),
+        watch: (_resourceId, update) => {
+          apply = update
+          return () => undefined
+        },
       },
-    })
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
     const update = Y.encodeStateAsUpdate(new Y.Doc())
 
     const unsubscribe = source.subscribe(resourceId, () => {})
@@ -114,6 +132,106 @@ describe('LiveResourceContentSource', () => {
     })
 
     unsubscribe()
+    source.dispose()
+  })
+
+  it('flushes canonical canvas deltas and preserves the session across snapshots', async () => {
+    const campaignId = testDomainId('campaign', 'canvas-save-campaign')
+    const resourceId = testDomainId('resource', 'canvas-save-resource')
+    const firstNodeId = testDomainId('canvasNode', 'canvas-first-node')
+    const secondNodeId = testDomainId('canvasNode', 'canvas-second-node')
+    const initialDocument = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    let persistedUpdate = Y.encodeStateAsUpdate(initialDocument).buffer as ArrayBuffer
+    initialDocument.destroy()
+    let persistedVersion = assertVersionStamp(version)
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+      const persisted = new Y.Doc()
+      Y.applyUpdate(persisted, new Uint8Array(persistedUpdate))
+      Y.applyUpdate(persisted, new Uint8Array(update))
+      persistedUpdate = Y.encodeStateAsUpdate(persisted).buffer as ArrayBuffer
+      persisted.destroy()
+      persistedVersion = assertVersionStamp({
+        ...persistedVersion,
+        revision: persistedVersion.revision + 1,
+        digest: (persistedVersion.digest === version.digest ? 'b' : 'c').repeat(64),
+      })
+      return Promise.resolve({
+        status: 'completed' as const,
+        resourceId,
+        update: persistedUpdate,
+        version: persistedVersion,
+      })
+    })
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      testDomainId('campaignMember', 'canvas-save-member'),
+      {
+        create: vi.fn(),
+        load: () =>
+          Promise.resolve({
+            status: 'ready' as const,
+            kind: 'canvas' as const,
+            update: persistedUpdate,
+            version: persistedVersion,
+          }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, update) => {
+          apply = update
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    source.subscribe(resourceId, () => {})
+    apply({ status: 'ready', kind: 'canvas', update: persistedUpdate, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready canvas')
+    getCanvasDocumentMaps(ready.session.document).nodesMap.set(firstNodeId, {
+      id: firstNodeId,
+      type: 'text',
+      position: { x: 10, y: 20 },
+      data: {},
+    })
+
+    await expect(ready.session.flush()).resolves.toMatchObject({
+      status: 'completed',
+      version: { revision: 2 },
+    })
+    expect(save).toHaveBeenCalledOnce()
+    apply({
+      status: 'ready',
+      kind: 'canvas',
+      update: persistedUpdate,
+      version: persistedVersion,
+    })
+    expect(source.get(resourceId)).toEqual(ready)
+
+    const remoteDocument = new Y.Doc()
+    Y.applyUpdate(remoteDocument, new Uint8Array(persistedUpdate))
+    getCanvasDocumentMaps(remoteDocument).nodesMap.set(secondNodeId, {
+      id: secondNodeId,
+      type: 'text',
+      position: { x: 30, y: 40 },
+      data: {},
+    })
+    const remoteUpdate = Y.encodeStateAsUpdate(remoteDocument).buffer as ArrayBuffer
+    remoteDocument.destroy()
+    const remoteVersion = { ...persistedVersion, revision: 3, digest: 'd'.repeat(64) }
+    apply({ status: 'ready', kind: 'canvas', update: remoteUpdate, version: remoteVersion })
+
+    const current = source.get(resourceId)
+    expect(current).toEqual(ready)
+    if (current.status !== 'ready') throw new Error('Expected ready canvas')
+    expect(readCanvasDocumentContent(current.session.document).nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: firstNodeId }),
+        expect.objectContaining({ id: secondNodeId }),
+      ]),
+    )
+    expect(current.session.version.revision).toBe(3)
     source.dispose()
   })
 

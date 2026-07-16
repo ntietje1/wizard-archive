@@ -1,5 +1,3 @@
-import * as Y from 'yjs'
-import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
 import { encodeWizardMapDocument } from '@wizard-archive/editor/resources/map-native-document'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
@@ -8,8 +6,6 @@ import { assertVersionStamp } from '@wizard-archive/editor/resources/component-v
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
-  CanvasSessionSource,
-  CanvasSessionState,
   ContentExportResult,
   CreateCanvasResourceCommand,
   CreateMapResourceCommand,
@@ -31,10 +27,11 @@ import {
   readLiveStructureResult,
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
+import { liveContentPendingState } from './live-content-pending-state'
 
 type ResourceContentSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
-type ResourceContentKind = 'file' | 'map' | 'canvas'
-type ResourceContentState = FileContentState | MapSessionState | CanvasSessionState
+type ResourceContentKind = 'file' | 'map'
+type ResourceContentState = FileContentState | MapSessionState
 type LiveFileContentStateSource = Pick<FileContentSource, 'dispose' | 'get' | 'subscribe'> & {
   load(resourceId: ResourceId): Promise<FileContentState>
 }
@@ -44,15 +41,9 @@ type LiveMapSessionStateSource = Pick<
 > & {
   load(resourceId: ResourceId): Promise<MapSessionState>
 }
-type LiveCanvasSessionStateSource = Pick<
-  CanvasSessionSource,
-  'dispose' | 'export' | 'get' | 'subscribe'
-> & { load(resourceId: ResourceId): Promise<CanvasSessionState> }
 type LiveContentSourceForKind<TKind extends ResourceContentKind> = TKind extends 'file'
   ? LiveFileContentStateSource
-  : TKind extends 'map'
-    ? LiveMapSessionStateSource
-    : LiveCanvasSessionStateSource
+  : LiveMapSessionStateSource
 type ResourceContentStore = ReturnType<
   typeof createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>
 >
@@ -64,7 +55,6 @@ export type LiveResourceContentBackend = Readonly<{
 
 class LiveResourceContentSource {
   readonly #store: ResourceContentStore
-  readonly #disposers = new Map<ResourceId, () => void>()
 
   constructor(
     private readonly kind: ResourceContentKind,
@@ -92,8 +82,6 @@ class LiveResourceContentSource {
 
   dispose(): void {
     this.#store.dispose()
-    for (const dispose of this.#disposers.values()) dispose()
-    this.#disposers.clear()
   }
 
   async export(resourceId: ResourceId): Promise<ContentExportResult> {
@@ -109,36 +97,15 @@ class LiveResourceContentSource {
         mediaType: 'application/vnd.wizard-archive.map+json',
       }
     }
-    if (this.kind === 'canvas' && 'session' in state && 'document' in state.session) {
-      return {
-        status: 'ready',
-        bytes: encodeWizardCanvasDocument(state.session.document),
-        extension: 'wizardcanvas',
-        mediaType: 'application/vnd.wizard-archive.canvas',
-      }
-    }
     return { status: 'unavailable', reason: 'capability_not_supported' }
   }
 
   #apply(resourceId: ResourceId, snapshot: ResourceContentSnapshot): void {
-    switch (snapshot.status) {
-      case 'initializing':
-        try {
-          this.#setState(resourceId, {
-            status: 'initializing',
-            operationId: assertDomainId(DOMAIN_ID_KIND.operation, snapshot.operationId),
-          })
-        } catch {
-          this.#setState(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
-        }
-        return
-      case 'unavailable':
-      case 'integrity_error':
-        this.#setState(resourceId, snapshot)
-        return
-      case 'ready':
-        this.#applyReady(resourceId, snapshot)
+    if (snapshot.status !== 'ready') {
+      this.#setState(resourceId, liveContentPendingState(snapshot))
+      return
     }
+    this.#applyReady(resourceId, snapshot)
   }
 
   #applyReady(
@@ -200,25 +167,13 @@ class LiveResourceContentSource {
         })
         return
       }
-      const doc = new Y.Doc()
-      Y.applyUpdate(doc, new Uint8Array(snapshot.update))
-      this.#setState(
-        resourceId,
-        {
-          status: 'ready',
-          session: { document: doc, version, awareness: { status: 'unavailable' } },
-        },
-        () => doc.destroy(),
-      )
+      this.#setState(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
     } catch {
       this.#setState(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
     }
   }
 
-  #setState(resourceId: ResourceId, state: ResourceContentState, dispose?: () => void): void {
-    this.#disposers.get(resourceId)?.()
-    this.#disposers.delete(resourceId)
-    if (dispose) this.#disposers.set(resourceId, dispose)
+  #setState(resourceId: ResourceId, state: ResourceContentState): void {
     this.#store.set(resourceId, state)
   }
 }
@@ -246,7 +201,7 @@ export function createLiveResourceContentSource<TKind extends ResourceContentKin
 
 type ContentCreateArgs = FunctionArgs<typeof api.resources.mutations.createMapResource>
 type ContentCreateResult = FunctionReturnType<typeof api.resources.mutations.createMapResource>
-type LiveContentCreateBackend = LiveResourceContentBackend &
+export type LiveFixedContentBackend = LiveResourceContentBackend &
   Readonly<{
     create(args: ContentCreateArgs): Promise<ContentCreateResult>
     refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
@@ -256,7 +211,7 @@ export async function finalizeLiveContentCreate(
   delivery: CommandDelivery<ResourceStructureCommandResult>,
   resourceId: ResourceId,
   parentId: ResourceId | null,
-  backend: Pick<LiveContentCreateBackend, 'refresh'>,
+  backend: Pick<LiveFixedContentBackend, 'refresh'>,
   recording: ResourceHistoryRecording,
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
   if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
@@ -268,10 +223,10 @@ export async function finalizeLiveContentCreate(
   return delivery
 }
 
-async function createLiveContentResource(
+export async function createLiveFixedContentResource(
   campaignId: CampaignId,
   envelope: CommandEnvelope<CreateMapResourceCommand | CreateCanvasResourceCommand>,
-  backend: LiveContentCreateBackend,
+  backend: LiveFixedContentBackend,
   beginCreate: () => ResourceHistoryRecording,
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
   if (envelope.campaignId !== campaignId) {
@@ -307,27 +262,13 @@ async function createLiveContentResource(
 
 export function createLiveMapSessionSource(
   campaignId: CampaignId,
-  backend: LiveContentCreateBackend,
+  backend: LiveFixedContentBackend,
   beginCreate: () => ResourceHistoryRecording,
 ): MapSessionSource {
   const content = createLiveResourceContentSource('map', backend)
   return {
-    create: (envelope) => createLiveContentResource(campaignId, envelope, backend, beginCreate),
-    dispose: content.dispose,
-    export: content.export,
-    get: content.get,
-    subscribe: content.subscribe,
-  }
-}
-
-export function createLiveCanvasSessionSource(
-  campaignId: CampaignId,
-  backend: LiveContentCreateBackend,
-  beginCreate: () => ResourceHistoryRecording,
-): CanvasSessionSource {
-  const content = createLiveResourceContentSource('canvas', backend)
-  return {
-    create: (envelope) => createLiveContentResource(campaignId, envelope, backend, beginCreate),
+    create: (envelope) =>
+      createLiveFixedContentResource(campaignId, envelope, backend, beginCreate),
     dispose: content.dispose,
     export: content.export,
     get: content.get,

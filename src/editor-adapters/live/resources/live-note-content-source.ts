@@ -17,7 +17,6 @@ import type {
   NoteCollaboration,
   NoteCollaborationUser,
   NoteSession,
-  NoteSessionSaveResult,
   NoteSessionSource,
   NoteSessionState,
 } from '@wizard-archive/editor/resources/content-session-contract'
@@ -35,8 +34,15 @@ import {
 } from './live-resource-structure-gateway'
 import { createLiveNoteAwareness } from './live-note-awareness'
 import type { LiveNoteAwarenessBackend } from './live-note-awareness'
-import { createNoteUpdateOutbox } from './note-update-outbox'
-import type { NoteUpdateOutbox } from './note-update-outbox'
+import {
+  createBackendYjsPersistence,
+  createLiveYjsDocumentSession,
+  failedYjsSessionState,
+  mergeOptionalYjsUpdates,
+  yjsUpdateArrayBuffer,
+} from './live-yjs-document-session'
+import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-session'
+import { createYjsUpdateOutbox } from './yjs-update-outbox'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
@@ -61,13 +67,6 @@ type LocalCreate = {
   stop(): void
 }
 type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
-const REMOTE_NOTE_UPDATE = Symbol('remote-note-update')
-const NOTE_SAVE_DELAY_MS = 250
-const NOTE_SAVE_RETRY_DELAYS_MS = [250, 500, 1000, 2000] as const
-
-type RejectedNoteSave = Extract<NoteSessionSaveResult, { status: 'rejected' }>
-type PersistedNoteSave = Extract<SaveNoteContentResult, { status: 'completed' }> | RejectedNoteSave
-type VersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
 function exportNoteDocument(document: Y.Doc): ContentExportResult {
   try {
@@ -97,37 +96,20 @@ function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
 
 class LiveNoteSession implements NoteSession {
   readonly #liveAwareness: ReturnType<typeof createLiveNoteAwareness>
-  readonly #outbox: NoteUpdateOutbox
-  #version
-  #unacknowledgedUpdate: Uint8Array | null = null
-  #drainPromise: Promise<NoteSessionSaveResult> | null = null
-  #lifecycle: 'closing' | 'destroyed' | 'open' = 'open'
-  #pendingUpdate: Uint8Array | null = null
-  #terminal: RejectedNoteSave | null = null
-  #timer: ReturnType<typeof setTimeout> | null = null
+  readonly #session: ReturnType<typeof createLiveYjsDocumentSession>
 
   constructor(
     readonly document: Y.Doc,
     version: NoteSession['version'],
-    private readonly campaignId: CampaignId,
-    private readonly resourceId: ResourceId,
-    private readonly backend: LiveNoteContentBackend,
+    campaignId: CampaignId,
+    resourceId: ResourceId,
+    backend: LiveNoteContentBackend,
     memberId: CampaignMemberId,
     user: NoteCollaborationUser,
-    private readonly changed: () => void,
-    private readonly failed: (result: RejectedNoteSave) => void,
+    changed: () => void,
+    failed: (result: RejectedYjsSave) => void,
     initialPendingUpdate: Uint8Array | null = null,
   ) {
-    this.#version = version
-    this.#outbox = createNoteUpdateOutbox(campaignId, resourceId, memberId)
-    const recovered = this.#outbox.load()
-    if (recovered) {
-      Y.applyUpdate(document, recovered, REMOTE_NOTE_UPDATE)
-    }
-    this.#pendingUpdate = mergeOptionalUpdates(recovered, initialPendingUpdate)
-    this.#unacknowledgedUpdate = this.#pendingUpdate
-    if (this.#unacknowledgedUpdate) this.#outbox.replace(this.#unacknowledgedUpdate)
-    document.on('update', this.#onUpdate)
     this.#liveAwareness = createLiveNoteAwareness(
       document,
       resourceId,
@@ -136,11 +118,21 @@ class LiveNoteSession implements NoteSession {
       backend,
       changed,
     )
-    if (this.#pendingUpdate) this.#scheduleSave()
+    this.#session = createLiveYjsDocumentSession({
+      document,
+      version,
+      outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
+      initialPendingUpdate,
+      persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
+      changed,
+      failed,
+      flushCompanion: () => this.#liveAwareness.flush(),
+      disposeCompanion: () => this.#liveAwareness.dispose(),
+    })
   }
 
   get version() {
-    return this.#version
+    return this.#session.version
   }
 
   get awareness() {
@@ -151,165 +143,21 @@ class LiveNoteSession implements NoteSession {
     return this.#liveAwareness.collaboration
   }
 
-  apply(update: ArrayBuffer, version: NoteSession['version']): VersionDecision {
-    if (version.revision < this.#version.revision) return 'stale'
-    if (version.revision === this.#version.revision) {
-      if (version.digest === this.#version.digest) return 'duplicate'
-      this.#fail({ status: 'rejected', reason: 'content_corrupt' })
-      return 'conflict'
-    }
-    Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_NOTE_UPDATE)
-    this.#version = version
-    this.changed()
-    return 'applied'
+  apply(update: ArrayBuffer, version: NoteSession['version']): YjsVersionDecision {
+    return this.#session.apply(update, version)
   }
 
-  readonly flush = (): Promise<NoteSessionSaveResult> => {
-    const awareness = this.#liveAwareness.flush()
-    const document = this.#flushDocument()
-    return Promise.all([awareness, document]).then(([, result]) => result)
-  }
-
-  #flushDocument(): Promise<NoteSessionSaveResult> {
-    if (this.#lifecycle === 'destroyed') {
-      return Promise.resolve(this.#terminal ?? { status: 'rejected', reason: 'scope_unavailable' })
-    }
-    if (this.#terminal) return Promise.resolve(this.#terminal)
-    if (this.#drainPromise) return this.#drainPromise
-    if (this.#pendingUpdate === null) {
-      return Promise.resolve({ status: 'completed', version: this.#version })
-    }
-    this.#drainPromise = this.#drain().finally(() => {
-      this.#drainPromise = null
-      if (this.#lifecycle === 'closing') this.#destroy()
-    })
-    return this.#drainPromise
-  }
+  readonly flush = () => this.#session.flush()
 
   dispose(): void {
-    if (this.#lifecycle !== 'open') return
-    this.#close()
-    void this.flush().finally(() => this.#destroy())
+    this.#session.dispose()
   }
-
-  readonly #onUpdate = (update: Uint8Array, origin: unknown) => {
-    if (origin === REMOTE_NOTE_UPDATE || this.#lifecycle !== 'open') return
-    this.#pendingUpdate =
-      this.#pendingUpdate === null
-        ? Uint8Array.from(update)
-        : Y.mergeUpdates([this.#pendingUpdate, update])
-    this.#unacknowledgedUpdate =
-      this.#unacknowledgedUpdate === null
-        ? Uint8Array.from(update)
-        : Y.mergeUpdates([this.#unacknowledgedUpdate, update])
-    this.#outbox.replace(this.#unacknowledgedUpdate)
-    this.#scheduleSave()
-  }
-
-  #scheduleSave(): void {
-    if (this.#drainPromise) return
-    if (this.#timer) clearTimeout(this.#timer)
-    this.#timer = setTimeout(() => {
-      this.#timer = null
-      void this.flush()
-    }, NOTE_SAVE_DELAY_MS)
-  }
-
-  async #drain(): Promise<NoteSessionSaveResult> {
-    while (this.#pendingUpdate !== null) {
-      const update = this.#pendingUpdate
-      this.#pendingUpdate = null
-      const result = await this.#persist(update)
-      if (result.status === 'rejected') {
-        this.#pendingUpdate =
-          this.#pendingUpdate === null ? update : Y.mergeUpdates([update, this.#pendingUpdate])
-        this.#fail(result)
-        return result
-      }
-      if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
-        return this.#terminal!
-      }
-      this.#unacknowledgedUpdate = this.#pendingUpdate
-      if (this.#unacknowledgedUpdate === null) this.#outbox.clear()
-      else this.#outbox.replace(this.#unacknowledgedUpdate)
-    }
-    return { status: 'completed', version: this.#version }
-  }
-
-  async #persist(update: Uint8Array): Promise<PersistedNoteSave> {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        const result = await this.backend.save({
-          campaignId: this.campaignId,
-          resourceId: this.resourceId,
-          update: toArrayBuffer(update),
-        })
-        return result.status === 'rejected'
-          ? { status: 'rejected', reason: saveRejection(result.reason) }
-          : result
-      } catch {
-        const delay = NOTE_SAVE_RETRY_DELAYS_MS[attempt]
-        if (delay === undefined) {
-          return { status: 'rejected', reason: 'scope_unavailable' }
-        }
-        await new Promise<void>((resolve) => setTimeout(resolve, delay))
-      }
-    }
-  }
-
-  #fail(result: RejectedNoteSave): void {
-    if (this.#terminal) return
-    this.#terminal = result
-    this.#close()
-    this.failed(result)
-    if (!this.#drainPromise) this.#destroy()
-  }
-
-  #close(): void {
-    if (this.#lifecycle !== 'open') return
-    this.#lifecycle = 'closing'
-    if (this.#timer) clearTimeout(this.#timer)
-    this.#timer = null
-    this.document.off('update', this.#onUpdate)
-  }
-
-  #destroy(): void {
-    if (this.#lifecycle === 'destroyed') return
-    this.#lifecycle = 'destroyed'
-    void this.#liveAwareness.dispose().finally(() => this.document.destroy())
-  }
-}
-
-function saveRejection(reason: Extract<SaveNoteContentResult, { status: 'rejected' }>['reason']) {
-  if (reason === 'ownership_mismatch') return 'unauthorized' as const
-  if (reason === 'wrong_kind' || reason === 'invalid_uuid') return 'content_corrupt' as const
-  return reason
-}
-
-function toArrayBuffer(update: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(update.byteLength)
-  copy.set(update)
-  return copy.buffer
 }
 
 function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
   return {
     status: 'received',
     result: { status: 'rejected', reason: 'invalid_command' },
-  }
-}
-
-function failedNoteState(result: RejectedNoteSave): NoteSessionState {
-  switch (result.reason) {
-    case 'scope_unavailable':
-    case 'unauthorized':
-      return { status: 'unavailable', reason: result.reason }
-    case 'content_corrupt':
-    case 'version_exhausted':
-      return { status: 'integrity_error', issue: result.reason }
-    case 'content_missing':
-    case 'resource_missing':
-      return { status: 'integrity_error', issue: 'content_missing' }
   }
 }
 
@@ -375,7 +223,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
             command: toLiveStructureMutationCommand(
               normalizeResourceStructureCommand(envelope.command),
             ),
-            update: toArrayBuffer(create.initialUpdate),
+            update: yjsUpdateArrayBuffer(create.initialUpdate),
           }),
         ),
         this.campaignId,
@@ -469,7 +317,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       (result) => {
         if (this.#sessions.get(resourceId)?.document !== document) return
         this.#sessions.delete(resourceId)
-        this.#setState(resourceId, failedNoteState(result))
+        this.#setState(resourceId, failedYjsSessionState(result))
       },
       pendingUpdate,
     )
@@ -495,7 +343,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       stop: () => doc.off('update', onUpdate),
     }
     const onUpdate = (update: Uint8Array) => {
-      create.pendingUpdate = mergeOptionalUpdates(create.pendingUpdate, update)
+      create.pendingUpdate = mergeOptionalYjsUpdates(create.pendingUpdate, update)
     }
     doc.on('update', onUpdate)
     return create
@@ -510,13 +358,4 @@ export function createLiveNoteContentSource(
   beginCreate: () => ResourceHistoryRecording,
 ) {
   return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreate)
-}
-
-function mergeOptionalUpdates(
-  first: Uint8Array | null,
-  second: Uint8Array | null,
-): Uint8Array | null {
-  if (!first) return second ? Uint8Array.from(second) : null
-  if (!second) return Uint8Array.from(first)
-  return Y.mergeUpdates([first, second])
 }

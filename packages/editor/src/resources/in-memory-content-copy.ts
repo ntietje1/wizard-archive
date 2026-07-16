@@ -51,7 +51,9 @@ type ContentStores = Readonly<{
     ): void
   }
   maps: ContentStore<MapSessionState>
-  canvases: ContentStore<CanvasSessionState>
+  canvases: ContentStore<CanvasSessionState> & {
+    setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void
+  }
 }>
 
 type PreparedContent =
@@ -258,10 +260,7 @@ async function finalizeContentCopy(
       const version = initialVersion(await sha256Digest(Y.encodeStateAsUpdate(content)))
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.canvases.set(entry.destinationId, {
-          status: 'ready',
-          session: { document: content, version, awareness: { status: 'unavailable' } },
-        })
+        stores.canvases.setReady(entry.destinationId, content, version)
       }
     }
   }

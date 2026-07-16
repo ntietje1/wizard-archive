@@ -27,12 +27,13 @@ import {
   resourceStructureCommandValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
-  saveNoteContentResultValidator,
+  contentSessionSaveResultValidator,
   noteAwarenessLeaseResultValidator,
   noteAwarenessReleaseResultValidator,
   versionStampValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
+import { saveCanvasContent as saveCanvasContentFn } from './functions/saveCanvasContent'
 import {
   publishNoteAwareness as publishNoteAwarenessFn,
   releaseNoteAwareness as releaseNoteAwarenessFn,
@@ -330,9 +331,22 @@ export const saveNoteContent = campaignMutation({
     resourceId: resourceIdValidator,
     update: v.bytes(),
   },
-  returns: saveNoteContentResultValidator,
+  returns: contentSessionSaveResultValidator,
   handler: async (ctx, args) =>
     await saveNoteContentFn(ctx, {
+      resourceId: args.resourceId,
+      update: args.update,
+    }),
+})
+
+export const saveCanvasContent = campaignMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    update: v.bytes(),
+  },
+  returns: contentSessionSaveResultValidator,
+  handler: async (ctx, args) =>
+    await saveCanvasContentFn(ctx, {
       resourceId: args.resourceId,
       update: args.update,
     }),

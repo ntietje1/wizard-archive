@@ -8,8 +8,9 @@ import {
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
-import { findNoteContent, validateNoteResource } from './noteContent'
+import { findNoteContent } from './noteContent'
 import { syncNoteSearchProjection } from './resourceSearchProjection'
+import { validateContentResource } from './validateContentResource'
 
 export type SaveNoteContentResult =
   | {
@@ -34,7 +35,7 @@ export async function saveNoteContent(
   ctx: CampaignMutationCtx,
   args: { resourceId: string; update: ArrayBuffer },
 ): Promise<SaveNoteContentResult> {
-  const validation = await validateNoteResource(ctx, args.resourceId)
+  const validation = await validateContentResource(ctx, args.resourceId, 'note')
   if (validation.status === 'rejected') return validation
   const resourceId = validation.resourceId
   const content = await findNoteContent(ctx.db, resourceId)

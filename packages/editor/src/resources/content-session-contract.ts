@@ -54,7 +54,7 @@ export type NoteCollaboration = Readonly<{
   user: NoteCollaborationUser
 }>
 
-export type NoteSessionSaveResult =
+export type ContentSessionSaveResult =
   | { readonly status: 'completed'; readonly version: VersionStamp }
   | {
       readonly status: 'rejected'
@@ -72,7 +72,15 @@ export interface NoteSession {
   readonly version: VersionStamp
   readonly awareness: SessionAwareness
   readonly collaboration: NoteCollaboration
-  readonly flush: () => Promise<NoteSessionSaveResult>
+  readonly flush: () => Promise<ContentSessionSaveResult>
+  dispose(): void
+}
+
+export interface CanvasSession {
+  readonly document: Y.Doc
+  readonly version: VersionStamp
+  readonly awareness: SessionAwareness
+  readonly flush: () => Promise<ContentSessionSaveResult>
   dispose(): void
 }
 
@@ -133,11 +141,7 @@ export type CanvasSessionState =
   | ContentPendingState
   | {
       readonly status: 'ready'
-      readonly session: Readonly<{
-        document: Y.Doc
-        version: VersionStamp
-        awareness: SessionAwareness
-      }>
+      readonly session: CanvasSession
     }
 
 export type CreateNoteResourceCommand = Omit<CreateResourceCommand, 'kind'> & {

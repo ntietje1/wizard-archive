@@ -499,6 +499,90 @@ describe('resource structure commands', () => {
     ).toBe(`${firstInsertion}Middle${secondInsertion}`)
   })
 
+  it('merges concurrent canonical canvas updates and rejects invalid document state', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'canvas', null, 'Canvas')
+    const firstNodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const secondNodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const firstDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: firstNodeId,
+          type: 'text',
+          position: { x: 10, y: 20 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const secondDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: secondNodeId,
+          type: 'text',
+          position: { x: 30, y: 40 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+
+    const first = await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: Uint8Array.from(Y.encodeStateAsUpdate(firstDocument)).buffer,
+    })
+    const second = await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: Uint8Array.from(Y.encodeStateAsUpdate(secondDocument)).buffer,
+    })
+    firstDocument.destroy()
+    secondDocument.destroy()
+
+    expect(first).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    expect(second).toMatchObject({ status: 'completed', version: { revision: 3 } })
+    if (second.status !== 'completed') throw new Error('Expected merged canvas content')
+    const merged = new Y.Doc()
+    Y.applyUpdate(merged, new Uint8Array(second.update))
+    expect(readCanvasDocumentContent(merged).nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: firstNodeId }),
+        expect.objectContaining({ id: secondNodeId }),
+      ]),
+    )
+    merged.destroy()
+
+    const invalid = new Y.Doc()
+    invalid.getMap('nodes').set('invalid-node-id', {
+      id: 'invalid-node-id',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        update: Uint8Array.from(Y.encodeStateAsUpdate(invalid)).buffer,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_corrupt' })
+    invalid.destroy()
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId,
+        kind: 'canvas',
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      kind: 'canvas',
+      version: { revision: 3 },
+    })
+  })
+
   it('leases note awareness by client and removes it on release', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
