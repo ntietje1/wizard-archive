@@ -24,6 +24,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
   return (
     <CanvasEditorSurface
       canEdit={props.canEdit}
+      collaboration={props.session.collaboration}
       documentController={runtime.documentController}
       interactionController={runtime.interactionController}
       resourceId={props.resourceId}

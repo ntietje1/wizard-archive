@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import type { EditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
-import type { NoteCollaborationUser } from '@wizard-archive/editor/resources/content-session-contract'
+import type { CollaborationUser } from '@wizard-archive/editor/resources/content-session-contract'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { noteCollaborationColor } from 'shared/resources/note-awareness-protocol'
+import { collaborationColor } from 'shared/resources/resource-awareness-protocol'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { LiveWorkspaceRouteEffects } from './live-workspace-route-effects'
 import { useLiveResourceCore } from './resources/use-live-resource-core'
@@ -30,7 +30,7 @@ export function LiveWorkspaceRuntimeProvider({
   const projection = membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'
   const collaborationUser = {
     name: membership.userProfile.name?.trim() || membership.userProfile.username,
-    color: noteCollaborationColor(membership.id),
+    color: collaborationColor(membership.id),
   }
   return (
     <LoadedLiveWorkspaceRuntimeContent
@@ -55,7 +55,7 @@ function LoadedLiveWorkspaceRuntimeContent({
   workspaceId: CampaignId
   actorId: CampaignMemberId
   children: (runtime: EditorRuntime) => ReactNode
-  collaborationUser: NoteCollaborationUser
+  collaborationUser: CollaborationUser
   projection: 'dm' | 'player'
 }) {
   const resourceNavigation = useLiveResourceNavigation()

@@ -19,7 +19,7 @@ type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
-  noteAwareness: Array<Doc<'resourceNoteAwareness'>>
+  awareness: Array<Doc<'resourceAwareness'>>
   fileContents: Array<Doc<'resourceFileContents'>>
   mapContents: Array<Doc<'resourceMapContents'>>
   mapPins: Array<Doc<'resourceMapPins'>>
@@ -35,7 +35,7 @@ function createPlan(): ResourceDeletionPlan {
     aliases: [],
     assetsFolders: [],
     noteContents: [],
-    noteAwareness: [],
+    awareness: [],
     fileContents: [],
     mapContents: [],
     mapPins: [],
@@ -56,7 +56,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
-    plan.noteAwareness,
+    plan.awareness,
     plan.fileContents,
     plan.mapContents,
     plan.mapPins,
@@ -72,20 +72,18 @@ async function addContent(
   resource: Doc<'resources'>,
 ): Promise<void> {
   const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, resource.resourceUuid)
+  plan.awareness.push(
+    ...(await ctx.db
+      .query('resourceAwareness')
+      .withIndex('by_resourceUuid_and_clientId', (query) => query.eq('resourceUuid', resourceId))
+      .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+  )
   switch (resource.kind) {
     case 'folder':
       return
     case 'note': {
       const content = await loadNoteContentDeletion(ctx, resourceId)
       if (content) plan.noteContents.push(content)
-      plan.noteAwareness.push(
-        ...(await ctx.db
-          .query('resourceNoteAwareness')
-          .withIndex('by_resourceUuid_and_clientId', (query) =>
-            query.eq('resourceUuid', resourceId),
-          )
-          .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
-      )
       return
     }
     case 'file': {
@@ -220,7 +218,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'assetsFolders',
   'operations',
   'noteContents',
-  'noteAwareness',
+  'awareness',
   'fileContents',
   'mapContents',
   'mapPins',
@@ -241,7 +239,7 @@ type CampaignResourceRow =
   | Doc<'resourceAssetsFolders'>
   | Doc<'resourceOperations'>
   | Doc<'resourceNoteContents'>
-  | Doc<'resourceNoteAwareness'>
+  | Doc<'resourceAwareness'>
   | Doc<'resourceFileContents'>
   | Doc<'resourceMapContents'>
   | Doc<'resourceMapPins'>
@@ -318,9 +316,9 @@ async function loadCampaignResourceDeletionBatch(
         .query('resourceNoteContents')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'noteAwareness':
+    case 'awareness':
       return await ctx.db
-        .query('resourceNoteAwareness')
+        .query('resourceAwareness')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'fileContents':

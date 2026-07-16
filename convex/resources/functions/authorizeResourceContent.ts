@@ -9,6 +9,14 @@ export async function authorizeResourceContent(
   resourceId: ResourceId,
   kind: Exclude<ResourceKind, 'folder'>,
 ) {
+  return authorizeResourceContentKinds(ctx, resourceId, [kind])
+}
+
+export async function authorizeResourceContentKinds(
+  ctx: CampaignMutationCtx | CampaignQueryCtx,
+  resourceId: ResourceId,
+  kinds: ReadonlyArray<Exclude<ResourceKind, 'folder'>>,
+) {
   const resource = await findCanonicalResource(ctx.db, resourceId)
   if (
     !resource ||
@@ -20,7 +28,7 @@ export async function authorizeResourceContent(
   if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     return { status: 'unavailable' as const, reason: 'unauthorized' as const }
   }
-  if (resource.kind !== kind) {
+  if (resource.kind === 'folder' || !kinds.includes(resource.kind)) {
     return { status: 'unavailable' as const, reason: 'capability_not_supported' as const }
   }
   return { status: 'authorized' as const }

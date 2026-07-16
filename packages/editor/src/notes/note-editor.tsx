@@ -8,7 +8,7 @@ import { BlockNoteView } from '@blocknote/shadcn'
 import { Sigma } from 'lucide-react'
 import { useEffect } from 'react'
 import type * as Y from 'yjs'
-import type { NoteCollaboration } from '../resources/content-session-contract'
+import type { ContentCollaboration } from '../resources/content-session-contract'
 import { createNoteBlockSpecs } from './document/schema-factory'
 import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
 import { noteInlineContentSpecs, noteStyleSpecs } from './dom-specs'
@@ -39,7 +39,7 @@ const noteEditorSchema = BlockNoteSchema.create({
 })
 
 type NoteEditorProps = {
-  collaboration?: NoteCollaboration
+  collaboration?: ContentCollaboration
   document: Y.Doc
   label: string
 } & (

@@ -1063,7 +1063,7 @@ describe('deleteCampaign', () => {
           await Promise.all(
             Array.from({ length: 10 }, (_, index) => {
               const clientId = batch * 10 + index
-              return dbCtx.db.insert('resourceNoteAwareness', {
+              return dbCtx.db.insert('resourceAwareness', {
                 campaignUuid: ctx.campaignDomainId,
                 resourceUuid: resourceIds[0]!,
                 memberUuid: ctx.dm.memberDomainId,

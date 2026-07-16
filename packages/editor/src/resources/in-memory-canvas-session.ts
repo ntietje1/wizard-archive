@@ -4,30 +4,17 @@ import { advanceVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
 import type { CanvasSession, ContentSessionSaveResult } from './content-session-contract'
 import { canvasEncodedBytesWithinWorkload } from '../canvas/workload'
+import { createInMemoryYjsSession } from './in-memory-yjs-session'
 
 export function createInMemoryCanvasSession(
   document: Y.Doc,
   initialVersion: VersionStamp,
   changed: (session: CanvasSession) => void = () => {},
 ): CanvasSession {
-  let version = initialVersion
-  let dirty = false
-  let disposed = false
-
-  const onUpdate = () => {
-    if (!disposed) dirty = true
-  }
-  document.on('update', onUpdate)
-
-  const session: CanvasSession = {
+  return createInMemoryYjsSession(
     document,
-    get version() {
-      return version
-    },
-    awareness: { status: 'unavailable' },
-    async flush(): Promise<ContentSessionSaveResult> {
-      if (disposed) return { status: 'rejected', reason: 'scope_unavailable' }
-      if (!dirty) return { status: 'completed', version }
+    initialVersion,
+    async (version): Promise<ContentSessionSaveResult> => {
       if (!canvasEncodedBytesWithinWorkload(Y.encodeStateAsUpdate(document))) {
         return { status: 'rejected', reason: 'content_limit_exceeded' }
       }
@@ -39,10 +26,7 @@ export function createInMemoryCanvasSession(
         if (!canvasEncodedBytesWithinWorkload(update)) {
           return { status: 'rejected', reason: 'content_limit_exceeded' }
         }
-        version = advanceVersion(version, await sha256Digest(update))
-        dirty = false
-        changed(session)
-        return { status: 'completed', version }
+        return { status: 'completed', version: advanceVersion(version, await sha256Digest(update)) }
       } catch (error) {
         return {
           status: 'rejected',
@@ -50,12 +34,6 @@ export function createInMemoryCanvasSession(
         }
       }
     },
-    dispose() {
-      if (disposed) return
-      document.off('update', onUpdate)
-      disposed = true
-      document.destroy()
-    },
-  }
-  return session
+    changed,
+  )
 }

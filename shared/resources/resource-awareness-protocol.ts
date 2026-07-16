@@ -7,9 +7,9 @@ import {
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
-export const NOTE_AWARENESS_TTL_MS = 30_000
-export const MAX_NOTE_AWARENESS_CLIENTS = 256
-const MAX_NOTE_AWARENESS_UPDATE_BYTES = 2_048
+export const RESOURCE_AWARENESS_TTL_MS = 30_000
+export const MAX_RESOURCE_AWARENESS_CLIENTS = 256
+const MAX_RESOURCE_AWARENESS_UPDATE_BYTES = 2_048
 
 const COLLABORATION_COLORS = [
   '#e06c75',
@@ -22,14 +22,14 @@ const COLLABORATION_COLORS = [
   '#be5046',
 ] as const
 
-type NoteAwarenessUser = Readonly<{
+type ResourceAwarenessUser = Readonly<{
   name: string
   color: string
 }>
 
 type AwarenessState = Record<string, unknown> & {
   memberId: CampaignMemberId
-  user: NoteAwarenessUser
+  user: ResourceAwarenessUser
 }
 
 type DecodedAwarenessUpdate = Readonly<{
@@ -38,29 +38,29 @@ type DecodedAwarenessUpdate = Readonly<{
   state: AwarenessState
 }>
 
-type NoteAwarenessUpdateRejection = 'invalid_update' | 'payload_too_large'
+type ResourceAwarenessUpdateRejection = 'invalid_update' | 'payload_too_large'
 
-export function noteCollaborationColor(memberId: CampaignMemberId): string {
+export function collaborationColor(memberId: CampaignMemberId): string {
   let hash = 0
   for (const character of memberId) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0
   return COLLABORATION_COLORS[Math.abs(hash) % COLLABORATION_COLORS.length]
 }
 
-export function validateNoteAwarenessIdentity(clientId: number, leaseId: string): boolean {
+export function validateResourceAwarenessIdentity(clientId: number, leaseId: string): boolean {
   return (
     Number.isSafeInteger(clientId) && clientId >= 0 && clientId <= 0xffff_ffff && isUuidV7(leaseId)
   )
 }
 
-export function authenticateNoteAwarenessUpdate(
+export function authenticateResourceAwarenessUpdate(
   update: ArrayBuffer,
   claimedClientId: number,
   memberId: CampaignMemberId,
-  user: NoteAwarenessUser,
+  user: ResourceAwarenessUser,
 ):
   | { status: 'accepted'; update: ArrayBuffer }
-  | { status: 'rejected'; reason: NoteAwarenessUpdateRejection } {
-  if (update.byteLength > MAX_NOTE_AWARENESS_UPDATE_BYTES) {
+  | { status: 'rejected'; reason: ResourceAwarenessUpdateRejection } {
+  if (update.byteLength > MAX_RESOURCE_AWARENESS_UPDATE_BYTES) {
     return { status: 'rejected', reason: 'payload_too_large' }
   }
   const decoded = decodeWireUpdate(new Uint8Array(update))
@@ -71,18 +71,18 @@ export function authenticateNoteAwarenessUpdate(
     ...decoded,
     state: { ...decoded.state, memberId, user },
   })
-  if (authenticated.byteLength > MAX_NOTE_AWARENESS_UPDATE_BYTES) {
+  if (authenticated.byteLength > MAX_RESOURCE_AWARENESS_UPDATE_BYTES) {
     return { status: 'rejected', reason: 'payload_too_large' }
   }
   return { status: 'accepted', update: Uint8Array.from(authenticated).buffer }
 }
 
-export function decodeAuthenticatedNoteAwarenessUpdate(
+export function decodeAuthenticatedResourceAwarenessUpdate(
   update: ArrayBuffer,
   claimedClientId: number,
   claimedMemberId: CampaignMemberId,
 ): DecodedAwarenessUpdate | null {
-  if (update.byteLength > MAX_NOTE_AWARENESS_UPDATE_BYTES) return null
+  if (update.byteLength > MAX_RESOURCE_AWARENESS_UPDATE_BYTES) return null
   const decoded = decodeWireUpdate(new Uint8Array(update))
   const memberIdValue = decoded?.state?.memberId
   const user = decoded?.state?.user
@@ -141,7 +141,7 @@ function encodeWireUpdate(update: {
   return encoding.toUint8Array(encoder)
 }
 
-function isCollaborationUser(value: unknown): value is NoteAwarenessUser {
+function isCollaborationUser(value: unknown): value is ResourceAwarenessUser {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const user = value as Record<string, unknown>
   return typeof user.name === 'string' && typeof user.color === 'string'

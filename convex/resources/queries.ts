@@ -10,14 +10,14 @@ import {
   authorizedResourceSnapshotValidator,
   fileDownloadSnapshotValidator,
   noteContentSnapshotValidator,
-  noteAwarenessSnapshotValidator,
+  resourceAwarenessSnapshotValidator,
   resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
-import { loadNoteAwareness as loadNoteAwarenessFn } from './functions/noteAwareness'
+import { loadResourceAwareness as loadResourceAwarenessFn } from './functions/resourceAwareness'
 import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
 import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
@@ -118,11 +118,11 @@ export const loadNoteContent = campaignQuery({
   },
 })
 
-export const loadNoteAwareness = campaignQuery({
+export const loadResourceAwareness = campaignQuery({
   args: { resourceId: resourceIdValidator },
-  returns: noteAwarenessSnapshotValidator,
+  returns: resourceAwarenessSnapshotValidator,
   handler: async (ctx, args) =>
-    await loadNoteAwarenessFn(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)),
+    await loadResourceAwarenessFn(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)),
 })
 
 export const loadContent = campaignQuery({

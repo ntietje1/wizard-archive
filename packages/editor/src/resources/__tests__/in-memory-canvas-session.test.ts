@@ -71,6 +71,40 @@ describe('createInMemoryCanvasSession', () => {
     session.dispose()
   })
 
+  it('keeps an edit arriving during version advancement pending for the next flush', async () => {
+    const document = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const initial = initialVersion(await sha256Digest(Y.encodeStateAsUpdate(document)))
+    const changed = vi.fn()
+    const session = createInMemoryCanvasSession(document, initial, changed)
+    const controller = createCanvasDocumentController(document)
+    const nodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    controller.apply({
+      type: 'insert',
+      nodes: [{ id: nodeId, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+    })
+
+    const firstFlush = session.flush()
+    controller.apply({
+      type: 'update',
+      nodes: [{ id: nodeId, type: 'text', position: { x: 40, y: 60 } }],
+      edges: [],
+    })
+
+    await expect(firstFlush).resolves.toMatchObject({
+      status: 'completed',
+      version: { revision: 2 },
+    })
+    await expect(session.flush()).resolves.toMatchObject({
+      status: 'completed',
+      version: { revision: 3 },
+    })
+    expect(changed).toHaveBeenCalledTimes(2)
+
+    controller.dispose()
+    session.dispose()
+  })
+
   it('preserves independently merged canvas fields before an in-memory flush', async () => {
     const nodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
     const document = createCanvasDocumentDoc({

@@ -19,6 +19,8 @@ import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
+import type { ContentCollaboration } from '../resources/content-session-contract'
+import { setCanvasCollaborationCursor } from './canvas-collaboration'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
 const DEFAULT_DRAW_STYLE = { color: 'var(--foreground)', size: 4, opacity: 100 } as const
@@ -34,6 +36,7 @@ const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
 
 type CanvasEditorSurfaceProps = Readonly<{
   canEdit: boolean
+  collaboration: ContentCollaboration
   documentController: CanvasDocumentController
   interactionController: CanvasInteractionController
   resourceId: ResourceId
@@ -42,6 +45,7 @@ type CanvasEditorSurfaceProps = Readonly<{
 
 export function CanvasEditorSurface({
   canEdit,
+  collaboration,
   documentController,
   interactionController,
   resourceId,
@@ -78,6 +82,8 @@ export function CanvasEditorSurface({
       saveCanvasViewport(window.localStorage, resourceId, viewport),
     )
   }, [interactionController, resourceId])
+
+  useEffect(() => () => setCanvasCollaborationCursor(collaboration, null), [collaboration])
 
   const createTextNode = (point: CanvasPoint) => {
     if (!canEdit) return
@@ -245,6 +251,10 @@ export function CanvasEditorSurface({
         }}
         onPointerMove={(event) => {
           const point = localPoint(event, event.currentTarget)
+          setCanvasCollaborationCursor(
+            collaboration,
+            screenToCanvasPoint(point, interactionController.get().viewport),
+          )
           interactionController.updatePan(event.pointerId, point)
           if (canEdit && (event.buttons & 1) === 1) {
             const canvasPoint = screenToCanvasPoint(point, interactionController.get().viewport)
@@ -292,10 +302,12 @@ export function CanvasEditorSurface({
           commitAreaSelection(event.pointerId, interactionController)
         }}
         onPointerCancel={() => interactionController.cancelInteraction()}
+        onPointerLeave={() => setCanvasCollaborationCursor(collaboration, null)}
         onWheel={(event) => handleWheel(event, interactionController)}
       >
         <CanvasScene
           canEdit={canEdit}
+          collaboration={collaboration}
           content={content}
           documentController={documentController}
           interaction={interaction}

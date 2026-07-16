@@ -9,6 +9,7 @@ import type {
   CanvasSession,
   CanvasSessionSource,
   CanvasSessionState,
+  CollaborationUser,
   ContentExportResult,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
@@ -24,7 +25,6 @@ import { createLiveFixedContentResource } from './live-resource-content-source'
 import type { LiveFixedContentBackend } from './live-resource-content-source'
 import {
   createBackendYjsPersistence,
-  createLiveYjsDocumentSession,
   failedYjsSessionState,
   YjsUpdateOutboxUnavailableError,
 } from './live-yjs-document-session'
@@ -32,12 +32,15 @@ import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-se
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
 import { liveContentPendingState } from './live-content-pending-state'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
+import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
+import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
 
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
 type SaveCanvasContentResult = FunctionReturnType<typeof api.resources.mutations.saveCanvasContent>
 
 type LiveCanvasBackend = LiveFixedContentBackend &
+  LiveResourceAwarenessBackend &
   Readonly<{
     save(args: SaveCanvasContentArgs): Promise<SaveCanvasContentResult>
   }>
@@ -45,8 +48,8 @@ type LiveCanvasBackend = LiveFixedContentBackend &
 type CanvasStore = ReturnType<typeof createResourceWatchStore<CanvasSnapshot, CanvasSessionState>>
 
 class LiveCanvasSession implements CanvasSession {
-  readonly awareness = { status: 'unavailable' as const }
-  readonly #session: ReturnType<typeof createLiveYjsDocumentSession>
+  readonly #liveAwareness: ReturnType<typeof createLiveCollaborativeYjsSession>['awareness']
+  readonly #session: ReturnType<typeof createLiveCollaborativeYjsSession>['session']
 
   constructor(
     readonly document: Y.Doc,
@@ -54,13 +57,18 @@ class LiveCanvasSession implements CanvasSession {
     campaignId: CampaignId,
     resourceId: ResourceId,
     memberId: CampaignMemberId,
+    user: CollaborationUser,
     backend: LiveCanvasBackend,
     changed: () => void,
     failed: (result: RejectedYjsSave) => void,
   ) {
-    this.#session = createLiveYjsDocumentSession({
+    const collaborative = createLiveCollaborativeYjsSession({
+      awarenessBackend: backend,
       document,
       version,
+      resourceId,
+      memberId,
+      user,
       outbox: createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId),
       canonicalize: (canvas, origin) => {
         if (parseCanvasDocumentContent(canvas)) return 'unchanged'
@@ -70,10 +78,20 @@ class LiveCanvasSession implements CanvasSession {
       changed,
       failed,
     })
+    this.#liveAwareness = collaborative.awareness
+    this.#session = collaborative.session
   }
 
   get version() {
     return this.#session.version
+  }
+
+  get awareness() {
+    return this.#liveAwareness.awareness
+  }
+
+  get collaboration() {
+    return this.#liveAwareness.collaboration
   }
 
   apply(update: ArrayBuffer, version: CanvasSession['version']): YjsVersionDecision {
@@ -94,6 +112,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   constructor(
     private readonly campaignId: CampaignId,
     private readonly memberId: CampaignMemberId,
+    private readonly user: CollaborationUser,
     private readonly backend: LiveCanvasBackend,
     private readonly beginCreate: () => ResourceHistoryRecording,
   ) {
@@ -179,6 +198,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
         this.campaignId,
         resourceId,
         this.memberId,
+        this.user,
         this.backend,
         () => this.#store.set(resourceId, { status: 'ready', session }),
         (result) => this.#fail(resourceId, session, result),
@@ -213,8 +233,9 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
 export function createLiveCanvasSessionSource(
   campaignId: CampaignId,
   memberId: CampaignMemberId,
+  user: CollaborationUser,
   backend: LiveCanvasBackend,
   beginCreate: () => ResourceHistoryRecording,
 ): CanvasSessionSource {
-  return new LiveCanvasSessionSource(campaignId, memberId, backend, beginCreate)
+  return new LiveCanvasSessionSource(campaignId, memberId, user, backend, beginCreate)
 }

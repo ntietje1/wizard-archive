@@ -45,14 +45,14 @@ export type SessionAwareness =
   | { readonly status: 'unavailable' }
   | { readonly status: 'available'; readonly collaboratorIds: ReadonlyArray<CampaignMemberId> }
 
-export type NoteCollaborationUser = Readonly<{
+export type CollaborationUser = Readonly<{
   name: string
   color: string
 }>
 
-export type NoteCollaboration = Readonly<{
+export type ContentCollaboration = Readonly<{
   provider: Readonly<{ awareness: Awareness }>
-  user: NoteCollaborationUser
+  user: CollaborationUser
 }>
 
 export type ContentSessionSaveResult =
@@ -73,7 +73,7 @@ export interface NoteSession {
   readonly document: Y.Doc
   readonly version: VersionStamp
   readonly awareness: SessionAwareness
-  readonly collaboration: NoteCollaboration
+  readonly collaboration: ContentCollaboration
   readonly flush: () => Promise<ContentSessionSaveResult>
   dispose(): void
 }
@@ -82,6 +82,7 @@ export interface CanvasSession {
   readonly document: Y.Doc
   readonly version: VersionStamp
   readonly awareness: SessionAwareness
+  readonly collaboration: ContentCollaboration
   readonly flush: () => Promise<ContentSessionSaveResult>
   dispose(): void
 }

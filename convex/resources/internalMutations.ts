@@ -3,7 +3,7 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import { internal } from '../_generated/api'
 import { internalMutation } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
-import { NOTE_AWARENESS_TTL_MS } from '../../shared/resources/note-awareness-protocol'
+import { RESOURCE_AWARENESS_TTL_MS } from '../../shared/resources/resource-awareness-protocol'
 import {
   campaignResourceDeletionStageValidator,
   deleteCampaignResourceBatch as deleteCampaignResourceBatchFn,
@@ -15,7 +15,7 @@ const workResult = v.union(
   v.object({ status: v.literal('completed') }),
 )
 
-export const expireNoteAwarenessLease = internalMutation({
+export const expireResourceAwarenessLease = internalMutation({
   args: {
     resourceId: v.string(),
     clientId: v.number(),
@@ -25,21 +25,21 @@ export const expireNoteAwarenessLease = internalMutation({
   handler: async (ctx, args): Promise<null> => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     const row = await ctx.db
-      .query('resourceNoteAwareness')
+      .query('resourceAwareness')
       .withIndex('by_resourceUuid_and_clientId', (query) =>
         query.eq('resourceUuid', resourceId).eq('clientId', args.clientId),
       )
       .unique()
     if (!row || row.leaseId !== args.leaseId) return null
 
-    const remaining = row.updatedAt + NOTE_AWARENESS_TTL_MS - Date.now()
+    const remaining = row.updatedAt + RESOURCE_AWARENESS_TTL_MS - Date.now()
     if (remaining <= 0) {
       await ctx.db.delete(row._id)
       return null
     }
     await ctx.scheduler.runAfter(
       remaining,
-      internal.resources.internalMutations.expireNoteAwarenessLease,
+      internal.resources.internalMutations.expireResourceAwarenessLease,
       args,
     )
     return null

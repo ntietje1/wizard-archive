@@ -372,7 +372,7 @@ export const noteContentSnapshotValidator = v.union(
   contentIntegritySnapshotValidator,
 )
 
-export const noteAwarenessSnapshotValidator = v.union(
+export const resourceAwarenessSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
     entries: v.array(
@@ -387,7 +387,7 @@ export const noteAwarenessSnapshotValidator = v.union(
   v.object({ status: v.literal('unavailable'), reason: v.literal('capacity_exceeded') }),
 )
 
-export const noteAwarenessLeaseResultValidator = v.union(
+export const resourceAwarenessLeaseResultValidator = v.union(
   v.object({ status: v.literal('active') }),
   v.object({ status: v.literal('unavailable') }),
   v.object({
@@ -396,7 +396,7 @@ export const noteAwarenessLeaseResultValidator = v.union(
   }),
 )
 
-export const noteAwarenessReleaseResultValidator = v.union(
+export const resourceAwarenessReleaseResultValidator = v.union(
   v.object({ status: v.literal('released') }),
   v.object({ status: v.literal('unavailable') }),
   v.object({ status: v.literal('rejected'), reason: v.literal('lease_conflict') }),
@@ -575,7 +575,7 @@ export const resourceTables = {
     .index('by_campaignUuid', ['campaignUuid'])
     .index('by_resourceUuid', ['resourceUuid']),
 
-  resourceNoteAwareness: defineTable({
+  resourceAwareness: defineTable({
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,
     memberUuid: campaignMemberIdValidator,

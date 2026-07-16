@@ -14,8 +14,8 @@ import type {
 import type {
   CreateNoteResourceCommand,
   ContentExportResult,
-  NoteCollaboration,
-  NoteCollaborationUser,
+  ContentCollaboration,
+  CollaborationUser,
   NoteSession,
   NoteSessionSource,
   NoteSessionState,
@@ -32,11 +32,10 @@ import {
   readLiveStructureResult,
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
-import { createLiveNoteAwareness } from './live-note-awareness'
-import type { LiveNoteAwarenessBackend } from './live-note-awareness'
+import type { LiveResourceAwarenessBackend } from './live-resource-awareness'
+import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
 import {
   createBackendYjsPersistence,
-  createLiveYjsDocumentSession,
   failedYjsSessionState,
   yjsUpdateArrayBuffer,
   YjsUpdateOutboxUnavailableError,
@@ -51,7 +50,7 @@ type CreateNoteResult = FunctionReturnType<typeof api.resources.mutations.create
 type SaveNoteContentArgs = FunctionArgs<typeof api.resources.mutations.saveNoteContent>
 type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.saveNoteContent>
 
-type LiveNoteContentBackend = LiveNoteAwarenessBackend &
+type LiveNoteContentBackend = LiveResourceAwarenessBackend &
   Readonly<{
     load(resourceId: ResourceId): Promise<NoteSnapshot>
     watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
@@ -100,8 +99,8 @@ function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
 }
 
 class LiveNoteSession implements NoteSession {
-  readonly #liveAwareness: ReturnType<typeof createLiveNoteAwareness>
-  readonly #session: ReturnType<typeof createLiveYjsDocumentSession>
+  readonly #liveAwareness: ReturnType<typeof createLiveCollaborativeYjsSession>['awareness']
+  readonly #session: ReturnType<typeof createLiveCollaborativeYjsSession>['session']
 
   constructor(
     readonly document: Y.Doc,
@@ -110,34 +109,25 @@ class LiveNoteSession implements NoteSession {
     resourceId: ResourceId,
     backend: LiveNoteContentBackend,
     memberId: CampaignMemberId,
-    user: NoteCollaborationUser,
+    user: CollaborationUser,
     changed: () => void,
     failed: (result: RejectedYjsSave) => void,
   ) {
-    this.#liveAwareness = createLiveNoteAwareness(
+    const collaborative = createLiveCollaborativeYjsSession({
+      awarenessBackend: backend,
       document,
+      version,
       resourceId,
       memberId,
       user,
-      backend,
+      outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
+      persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
+      canonicalize: () => 'unchanged',
       changed,
-    )
-    try {
-      this.#session = createLiveYjsDocumentSession({
-        document,
-        version,
-        outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
-        persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
-        canonicalize: () => 'unchanged',
-        changed,
-        failed,
-        flushCompanion: () => this.#liveAwareness.flush(),
-        disposeCompanion: () => this.#liveAwareness.dispose(),
-      })
-    } catch (error) {
-      void this.#liveAwareness.dispose()
-      throw error
-    }
+      failed,
+    })
+    this.#liveAwareness = collaborative.awareness
+    this.#session = collaborative.session
   }
 
   get version() {
@@ -148,7 +138,7 @@ class LiveNoteSession implements NoteSession {
     return this.#liveAwareness.awareness
   }
 
-  get collaboration(): NoteCollaboration {
+  get collaboration(): ContentCollaboration {
     return this.#liveAwareness.collaboration
   }
 
@@ -178,7 +168,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
   constructor(
     private readonly campaignId: CampaignId,
     private readonly memberId: CampaignMemberId,
-    private readonly user: NoteCollaborationUser,
+    private readonly user: CollaborationUser,
     private readonly backend: LiveNoteContentBackend,
     private readonly beginCreate: () => ResourceHistoryRecording,
   ) {
@@ -411,7 +401,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
 export function createLiveNoteContentSource(
   campaignId: CampaignId,
   memberId: CampaignMemberId,
-  user: NoteCollaborationUser,
+  user: CollaborationUser,
   backend: LiveNoteContentBackend,
   beginCreate: () => ResourceHistoryRecording,
 ) {

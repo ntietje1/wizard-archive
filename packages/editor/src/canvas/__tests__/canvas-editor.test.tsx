@@ -42,6 +42,27 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('publishes canvas-space cursor awareness without persisting it in the document', async () => {
+    const session = await createSession()
+    const before = Y.encodeStateVector(session.document)
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Awareness board" />,
+    )
+    const surface = screen.getByRole('region', { name: 'Canvas surface' })
+
+    fireEvent.pointerMove(surface, { clientX: 120, clientY: 90, pointerId: 4 })
+    expect(session.collaboration.provider.awareness.getLocalState()).toMatchObject({
+      cursor: { x: 120, y: 90 },
+    })
+    expect(Y.encodeStateVector(session.document)).toEqual(before)
+
+    fireEvent.pointerLeave(surface)
+    expect(session.collaboration.provider.awareness.getLocalState()).toMatchObject({ cursor: null })
+
+    view.unmount()
+    session.dispose()
+  })
+
   it('creates, edits, deletes, and restores text through canonical controllers', async () => {
     const session = await createSession()
     const view = render(

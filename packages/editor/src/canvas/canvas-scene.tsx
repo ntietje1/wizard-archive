@@ -38,9 +38,12 @@ import type { CanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
 import { CanvasTextEditor } from './canvas-text-editor'
 import { CanvasTextPreview } from './canvas-text-preview'
+import type { ContentCollaboration } from '../resources/content-session-contract'
+import { CanvasCollaborationCursors } from './canvas-collaboration-cursors'
 
 export function CanvasScene({
   canEdit,
+  collaboration,
   content,
   documentController,
   interaction,
@@ -49,6 +52,7 @@ export function CanvasScene({
   surface,
 }: {
   canEdit: boolean
+  collaboration: ContentCollaboration
   content: CanvasDocumentContent
   documentController: CanvasDocumentController
   interaction: CanvasInteractionSnapshot
@@ -97,6 +101,7 @@ export function CanvasScene({
       <CanvasDrawingOverlay interaction={interaction} />
       <CanvasSelectionOverlay interaction={interaction} />
       <CanvasSnapGuides interaction={interaction} />
+      <CanvasCollaborationCursors collaboration={collaboration} zoom={interaction.viewport.zoom} />
       {visualNodes.map((node) => (
         <CanvasNode
           key={node.id}

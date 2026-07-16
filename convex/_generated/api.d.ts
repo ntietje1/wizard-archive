@@ -68,9 +68,9 @@ import type * as resources_functions_loadFileDownload from "../resources/functio
 import type * as resources_functions_loadNoteContent from "../resources/functions/loadNoteContent.js";
 import type * as resources_functions_loadResourceContent from "../resources/functions/loadResourceContent.js";
 import type * as resources_functions_mapContent from "../resources/functions/mapContent.js";
-import type * as resources_functions_noteAwareness from "../resources/functions/noteAwareness.js";
 import type * as resources_functions_noteContent from "../resources/functions/noteContent.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
+import type * as resources_functions_resourceAwareness from "../resources/functions/resourceAwareness.js";
 import type * as resources_functions_resourceBookmarks from "../resources/functions/resourceBookmarks.js";
 import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
@@ -190,9 +190,9 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/loadNoteContent": typeof resources_functions_loadNoteContent;
   "resources/functions/loadResourceContent": typeof resources_functions_loadResourceContent;
   "resources/functions/mapContent": typeof resources_functions_mapContent;
-  "resources/functions/noteAwareness": typeof resources_functions_noteAwareness;
   "resources/functions/noteContent": typeof resources_functions_noteContent;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
+  "resources/functions/resourceAwareness": typeof resources_functions_resourceAwareness;
   "resources/functions/resourceBookmarks": typeof resources_functions_resourceBookmarks;
   "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;

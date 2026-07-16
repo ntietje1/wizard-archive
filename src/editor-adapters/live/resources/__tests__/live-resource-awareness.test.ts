@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { LiveNoteAwarenessBackend } from '../live-note-awareness'
-import { createLiveNoteAwareness } from '../live-note-awareness'
-import { authenticateNoteAwarenessUpdate } from 'shared/resources/note-awareness-protocol'
+import type { LiveResourceAwarenessBackend } from '../live-resource-awareness'
+import { createLiveResourceAwareness } from '../live-resource-awareness'
+import { authenticateResourceAwarenessUpdate } from 'shared/resources/resource-awareness-protocol'
 
-describe('LiveNoteAwareness', () => {
+describe('LiveResourceAwareness', () => {
   afterEach(() => vi.useRealTimers())
 
   it('projects remote collaborators through the session-owned provider', async () => {
@@ -14,12 +14,12 @@ describe('LiveNoteAwareness', () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const memberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const remoteMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
-    let apply: Parameters<LiveNoteAwarenessBackend['watchAwareness']>[1] | undefined
+    let apply: Parameters<LiveResourceAwarenessBackend['watchAwareness']>[1] | undefined
     const publishAwareness = vi.fn(() => Promise.resolve({ status: 'active' as const }))
     const releaseAwareness = vi.fn(() => Promise.resolve({ status: 'released' as const }))
     const unsubscribe = vi.fn()
     const collaboratorsChanged = vi.fn()
-    const collaboration = createLiveNoteAwareness(
+    const collaboration = createLiveResourceAwareness(
       document,
       resourceId,
       memberId,
@@ -45,7 +45,7 @@ describe('LiveNoteAwareness', () => {
     const remoteDocument = new Y.Doc()
     const remoteAwareness = new Awareness(remoteDocument)
     remoteAwareness.setLocalStateField('user', { name: 'Remote', color: '#e06c75' })
-    const remoteState = authenticateNoteAwarenessUpdate(
+    const remoteState = authenticateResourceAwarenessUpdate(
       Uint8Array.from(encodeAwarenessUpdate(remoteAwareness, [remoteDocument.clientID])).buffer,
       remoteDocument.clientID,
       remoteMemberId,
@@ -100,7 +100,7 @@ describe('LiveNoteAwareness', () => {
       .fn()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValue({ status: 'active' as const })
-    const collaboration = createLiveNoteAwareness(
+    const collaboration = createLiveResourceAwareness(
       document,
       generateDomainId(DOMAIN_ID_KIND.resource),
       generateDomainId(DOMAIN_ID_KIND.campaignMember),
@@ -129,15 +129,15 @@ describe('LiveNoteAwareness', () => {
     const remoteMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const differentMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     remoteAwareness.setLocalStateField('user', { name: 'Remote', color: '#e06c75' })
-    const authenticated = authenticateNoteAwarenessUpdate(
+    const authenticated = authenticateResourceAwarenessUpdate(
       Uint8Array.from(encodeAwarenessUpdate(remoteAwareness, [remoteDocument.clientID])).buffer,
       remoteDocument.clientID,
       remoteMemberId,
       { name: 'Remote', color: '#e06c75' },
     )
     if (authenticated.status !== 'accepted') throw new Error('Expected valid awareness state')
-    let apply: Parameters<LiveNoteAwarenessBackend['watchAwareness']>[1] | undefined
-    const collaboration = createLiveNoteAwareness(
+    let apply: Parameters<LiveResourceAwarenessBackend['watchAwareness']>[1] | undefined
+    const collaboration = createLiveResourceAwareness(
       document,
       generateDomainId(DOMAIN_ID_KIND.resource),
       generateDomainId(DOMAIN_ID_KIND.campaignMember),
@@ -187,7 +187,7 @@ describe('LiveNoteAwareness', () => {
     vi.useFakeTimers()
     const document = new Y.Doc()
     const publishAwareness = vi.fn(() => Promise.resolve(result))
-    const collaboration = createLiveNoteAwareness(
+    const collaboration = createLiveResourceAwareness(
       document,
       generateDomainId(DOMAIN_ID_KIND.resource),
       generateDomainId(DOMAIN_ID_KIND.campaignMember),

@@ -6,15 +6,15 @@ import {
 } from 'y-protocols/awareness'
 import type * as Y from 'yjs'
 import type {
-  NoteCollaboration,
-  NoteCollaborationUser,
+  ContentCollaboration,
+  CollaborationUser,
   SessionAwareness,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import { generateUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import { decodeAuthenticatedNoteAwarenessUpdate } from 'shared/resources/note-awareness-protocol'
+import { decodeAuthenticatedResourceAwarenessUpdate } from 'shared/resources/resource-awareness-protocol'
 
-type NoteAwarenessSnapshot =
+type ResourceAwarenessSnapshot =
   | Readonly<{
       status: 'ready'
       entries: ReadonlyArray<{
@@ -25,10 +25,10 @@ type NoteAwarenessSnapshot =
     }>
   | Readonly<{ status: 'unavailable'; reason: string }>
 
-export type LiveNoteAwarenessBackend = Readonly<{
+export type LiveResourceAwarenessBackend = Readonly<{
   watchAwareness(
     resourceId: ResourceId,
-    apply: (snapshot: NoteAwarenessSnapshot) => void,
+    apply: (snapshot: ResourceAwarenessSnapshot) => void,
   ): () => void
   publishAwareness(args: {
     resourceId: ResourceId
@@ -43,12 +43,12 @@ export type LiveNoteAwarenessBackend = Readonly<{
   }): Promise<{ status: 'released' | 'unavailable' } | { status: 'rejected'; reason: string }>
 }>
 
-const REMOTE_AWARENESS_UPDATE = Symbol('remote-note-awareness-update')
+const REMOTE_AWARENESS_UPDATE = Symbol('remote-resource-awareness-update')
 const AWARENESS_THROTTLE_MS = 16
 const AWARENESS_HEARTBEAT_MS = 10_000
 
-class LiveNoteAwareness {
-  readonly collaboration: NoteCollaboration
+class LiveResourceAwareness {
+  readonly collaboration: ContentCollaboration
   readonly #awareness: Awareness
   readonly #leaseId = generateUuidV7()
   readonly #memberIds = new Map<number, CampaignMemberId>()
@@ -65,8 +65,8 @@ class LiveNoteAwareness {
     document: Y.Doc,
     private readonly resourceId: ResourceId,
     memberId: CampaignMemberId,
-    user: NoteCollaborationUser,
-    private readonly backend: LiveNoteAwarenessBackend,
+    user: CollaborationUser,
+    private readonly backend: LiveResourceAwarenessBackend,
     private readonly collaboratorsChanged: () => void,
   ) {
     this.#awareness = new Awareness(document)
@@ -144,7 +144,7 @@ class LiveNoteAwareness {
       .catch(() => undefined)
   }
 
-  readonly #apply = (snapshot: NoteAwarenessSnapshot) => {
+  readonly #apply = (snapshot: ResourceAwarenessSnapshot) => {
     if (this.#destroyed) return
     if (snapshot.status !== 'ready') {
       this.#setAvailable(false)
@@ -166,7 +166,7 @@ class LiveNoteAwareness {
     let changed = false
     for (const entry of entries) {
       if (entry.clientId === localClientId) continue
-      const decoded = decodeAuthenticatedNoteAwarenessUpdate(
+      const decoded = decodeAuthenticatedResourceAwarenessUpdate(
         entry.state,
         entry.clientId,
         entry.memberId,
@@ -236,15 +236,22 @@ class LiveNoteAwareness {
   }
 }
 
-export function createLiveNoteAwareness(
+export function createLiveResourceAwareness(
   document: Y.Doc,
   resourceId: ResourceId,
   memberId: CampaignMemberId,
-  user: NoteCollaborationUser,
-  backend: LiveNoteAwarenessBackend,
+  user: CollaborationUser,
+  backend: LiveResourceAwarenessBackend,
   collaboratorsChanged: () => void,
 ) {
-  return new LiveNoteAwareness(document, resourceId, memberId, user, backend, collaboratorsChanged)
+  return new LiveResourceAwareness(
+    document,
+    resourceId,
+    memberId,
+    user,
+    backend,
+    collaboratorsChanged,
+  )
 }
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {

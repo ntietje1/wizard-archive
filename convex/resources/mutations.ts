@@ -28,16 +28,16 @@ import {
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   contentProviderSaveResultValidator,
-  noteAwarenessLeaseResultValidator,
-  noteAwarenessReleaseResultValidator,
+  resourceAwarenessLeaseResultValidator,
+  resourceAwarenessReleaseResultValidator,
   versionStampValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
 import { saveCanvasContent as saveCanvasContentFn } from './functions/saveCanvasContent'
 import {
-  publishNoteAwareness as publishNoteAwarenessFn,
-  releaseNoteAwareness as releaseNoteAwarenessFn,
-} from './functions/noteAwareness'
+  publishResourceAwareness as publishResourceAwarenessFn,
+  releaseResourceAwareness as releaseResourceAwarenessFn,
+} from './functions/resourceAwareness'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { commitUpload } from '../storage/functions/commitUpload'
@@ -352,30 +352,30 @@ export const saveCanvasContent = campaignMutation({
     }),
 })
 
-export const publishNoteAwareness = campaignMutation({
+export const publishResourceAwareness = campaignMutation({
   args: {
     resourceId: resourceIdValidator,
     clientId: v.number(),
     leaseId: v.string(),
     state: v.bytes(),
   },
-  returns: noteAwarenessLeaseResultValidator,
+  returns: resourceAwarenessLeaseResultValidator,
   handler: async (ctx, args) =>
-    await publishNoteAwarenessFn(ctx, {
+    await publishResourceAwarenessFn(ctx, {
       ...args,
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
     }),
 })
 
-export const releaseNoteAwareness = campaignMutation({
+export const releaseResourceAwareness = campaignMutation({
   args: {
     resourceId: resourceIdValidator,
     clientId: v.number(),
     leaseId: v.string(),
   },
-  returns: noteAwarenessReleaseResultValidator,
+  returns: resourceAwarenessReleaseResultValidator,
   handler: async (ctx, args) =>
-    await releaseNoteAwarenessFn(ctx, {
+    await releaseResourceAwarenessFn(ctx, {
       ...args,
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
     }),

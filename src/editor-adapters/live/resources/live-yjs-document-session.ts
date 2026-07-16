@@ -19,7 +19,7 @@ type RetryableYjsUpdate = Readonly<{
 }>
 export type YjsVersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
-type LiveYjsDocumentSessionOptions = Readonly<{
+export type LiveYjsDocumentSessionOptions = Readonly<{
   document: Y.Doc
   version: VersionStamp
   outbox: YjsUpdateOutbox
