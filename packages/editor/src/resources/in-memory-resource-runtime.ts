@@ -178,6 +178,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
 
   return {
     catalogSnapshot: () => catalog.getSnapshot(scope.campaignId),
+    subscribeCatalog: (listener: () => void) => catalog.subscribe(scope.campaignId, listener),
     dispose: () => {
       unsubscribe()
       optimistic.dispose()

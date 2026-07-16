@@ -544,7 +544,7 @@ export function createInMemoryEditorRuntime({
   const bookmarks = createInMemoryBookmarks(scope.campaignId, (resourceId) =>
     catalogResources().some((resource) => resource.id === resourceId),
   )
-  const search = createInMemoryWorkspaceSearch(catalogResources, notes)
+  const search = createInMemoryWorkspaceSearch(catalogResources, resources.subscribeCatalog, notes)
 
   return {
     runtime: {
@@ -563,10 +563,11 @@ export function createInMemoryEditorRuntime({
       content: contentSources,
       navigation,
       preferences,
-      search: { status: 'available', value: search },
+      search: { status: 'available', value: search.gateway },
       history: unsupported,
     },
     dispose: () => {
+      search.dispose()
       for (const source of Object.values(contentSources)) source.dispose()
       resources.dispose()
     },

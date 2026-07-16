@@ -61,12 +61,60 @@ export function createInMemoryBookmarks(
 
 export function createInMemoryWorkspaceSearch(
   resources: () => ReadonlyArray<ResourceRecord>,
+  subscribeResources: (listener: () => void) => () => void,
   notes: NoteSessionSource,
-): WorkspaceSearch {
+): Readonly<{ gateway: WorkspaceSearch; dispose(): void }> {
   let recent: ReadonlyArray<ResourceId> = []
   const listeners = new Set<() => void>()
-  return {
-    search: (query) => Promise.resolve(searchResources(resources(), notes, query)),
+  const documents = new Map<ResourceId, ReturnType<typeof createResourceSearchDocument>>()
+  const noteSubscriptions = new Map<ResourceId, () => void>()
+  let resourcesById = new Map<ResourceId, ResourceRecord>()
+
+  const refreshNote = (resourceId: ResourceId) => {
+    const resource = resourcesById.get(resourceId)
+    if (!resource || resource.kind !== 'note' || resource.lifecycle.state !== 'active') return
+    documents.set(
+      resourceId,
+      createResourceSearchDocument(resourceId, resource.title, noteBody(notes, resourceId)),
+    )
+  }
+  const refreshResources = () => {
+    resourcesById = new Map(resources().map((resource) => [resource.id, resource]))
+    for (const resource of resourcesById.values()) {
+      if (resource.lifecycle.state !== 'active') {
+        documents.delete(resource.id)
+        noteSubscriptions.get(resource.id)?.()
+        noteSubscriptions.delete(resource.id)
+        continue
+      }
+      const existing = documents.get(resource.id)
+      documents.set(
+        resource.id,
+        createResourceSearchDocument(
+          resource.id,
+          resource.title,
+          resource.kind === 'note' ? (existing?.body ?? noteBody(notes, resource.id)) : '',
+        ),
+      )
+      if (resource.kind === 'note' && !noteSubscriptions.has(resource.id)) {
+        noteSubscriptions.set(
+          resource.id,
+          notes.subscribe(resource.id, () => refreshNote(resource.id)),
+        )
+      }
+    }
+    for (const resourceId of Array.from(documents.keys())) {
+      if (resourcesById.has(resourceId)) continue
+      documents.delete(resourceId)
+      noteSubscriptions.get(resourceId)?.()
+      noteSubscriptions.delete(resourceId)
+    }
+  }
+  refreshResources()
+  const unsubscribeResources = subscribeResources(refreshResources)
+
+  const gateway: WorkspaceSearch = {
+    search: (query) => Promise.resolve(searchResourceDocuments([...documents.values()], query)),
     recent: () => recent,
     subscribeRecent: (listener) => {
       listeners.add(listener)
@@ -77,27 +125,16 @@ export function createInMemoryWorkspaceSearch(
       for (const listener of listeners) listener()
     },
   }
-}
-
-function searchResources(
-  resources: ReadonlyArray<ResourceRecord>,
-  notes: NoteSessionSource,
-  query: string,
-): ReturnType<typeof searchResourceDocuments> {
-  return searchResourceDocuments(
-    resources.flatMap((resource) =>
-      resource.lifecycle.state === 'active'
-        ? [
-            createResourceSearchDocument(
-              resource.id,
-              resource.title,
-              resource.kind === 'note' ? noteBody(notes, resource.id) : '',
-            ),
-          ]
-        : [],
-    ),
-    query,
-  )
+  return {
+    gateway,
+    dispose: () => {
+      unsubscribeResources()
+      for (const unsubscribe of noteSubscriptions.values()) unsubscribe()
+      noteSubscriptions.clear()
+      documents.clear()
+      listeners.clear()
+    },
+  }
 }
 
 function noteBody(notes: NoteSessionSource, resourceId: ResourceId): string {

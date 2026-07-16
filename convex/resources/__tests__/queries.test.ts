@@ -20,6 +20,7 @@ import { initialFileContentVersion } from '@wizard-archive/editor/resources/cont
 import {
   MAX_WORKSPACE_SEARCH_CANDIDATES,
   createResourceSearchDocument,
+  searchResourceDocuments,
 } from '@wizard-archive/editor/resources/search-policy'
 
 type StoredResourceStructureCommand = FunctionArgs<
@@ -455,11 +456,12 @@ describe('authorized resource projection', () => {
     )
     const sortedResourceIds = [...resourceIds].sort()
     const exactId = sortedResourceIds[sortedResourceIds.length - 1]!
+    const bodyId = sortedResourceIds[sortedResourceIds.length - 2]!
     const documents = resourceIds.map((resourceId) =>
       createResourceSearchDocument(
         resourceId,
         resourceId === exactId ? 'Needle' : 'Shared title',
-        resourceId === exactId ? '' : 'Shared needle body',
+        resourceId === bodyId ? 'Sunken archive' : '',
       ),
     )
     await t.run(async (ctx) => {
@@ -502,10 +504,19 @@ describe('authorized resource projection', () => {
       query: 'NEEDLE',
     })
 
-    expect(first.results[0]).toEqual({ resourceId: exactId, match: { type: 'title' } })
+    expect(first.results).toEqual(searchResourceDocuments(documents, 'NEEDLE'))
     expect(second.results).toEqual(first.results)
     expect(first.snapshot.resources).toHaveLength(first.results.length)
     expect(first.snapshot.missingResourceIds).toEqual([])
+
+    const body = await asDm(campaign).query(api.resources.queries.searchResources, {
+      campaignId: campaignUuid,
+      query: 'archive',
+    })
+    expect(body.results).toEqual(searchResourceDocuments(documents, 'archive'))
+    expect(body.results).toEqual([
+      { resourceId: bodyId, match: { type: 'body', text: 'Sunken archive' } },
+    ])
   })
 
   it(

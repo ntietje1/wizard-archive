@@ -31,10 +31,9 @@ export function searchResourceDocuments(
   const ranked: Array<RankedSearchResult> = []
   for (const document of documents) {
     const result = rankSearchDocument(document, normalized, terms)
-    if (result) ranked.push(result)
+    if (result) insertRankedResult(ranked, result)
   }
-  ranked.sort(compareRankedSearchResults)
-  return ranked.slice(0, MAX_WORKSPACE_SEARCH_RESULTS).map(({ result }) => result)
+  return ranked.map(({ result }) => result)
 }
 
 export function normalizeSearchQuery(query: string): string {
@@ -113,6 +112,22 @@ function compareRankedSearchResults(left: RankedSearchResult, right: RankedSearc
     compareText(left.title, right.title) ||
     compareText(left.result.resourceId, right.result.resourceId)
   )
+}
+
+function insertRankedResult(
+  ranked: Array<RankedSearchResult>,
+  candidate: RankedSearchResult,
+): void {
+  let low = 0
+  let high = ranked.length
+  while (low < high) {
+    const middle = (low + high) >>> 1
+    if (compareRankedSearchResults(candidate, ranked[middle]!) < 0) high = middle
+    else low = middle + 1
+  }
+  if (low >= MAX_WORKSPACE_SEARCH_RESULTS) return
+  ranked.splice(low, 0, candidate)
+  if (ranked.length > MAX_WORKSPACE_SEARCH_RESULTS) ranked.pop()
 }
 
 function compareText(left: string, right: string): number {

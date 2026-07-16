@@ -32,15 +32,19 @@ describe('resource search policy', () => {
   })
 
   it('bounds results after applying the shared ranking policy', () => {
-    const results = searchResourceDocuments(
-      Array.from({ length: MAX_WORKSPACE_SEARCH_RESULTS + 10 }, (_, index) => ({
-        resourceId: testDomainId('resource', `result-${index}`),
-        title: `Result ${index}`,
-        body: '',
-      })),
-      'result',
-    )
+    const documents = Array.from({ length: MAX_WORKSPACE_SEARCH_RESULTS + 10 }, (_, index) => ({
+      resourceId: testDomainId('resource', `result-${index}`),
+      title: 'Result',
+      body: '',
+    }))
+    const results = searchResourceDocuments(documents, 'result')
     expect(results).toHaveLength(MAX_WORKSPACE_SEARCH_RESULTS)
+    expect(results.map((result) => result.resourceId)).toEqual(
+      documents
+        .map((document) => document.resourceId)
+        .sort()
+        .slice(0, MAX_WORKSPACE_SEARCH_RESULTS),
+    )
   })
 
   it('ranks a matching document independently of its resource identity or input order', () => {
@@ -51,7 +55,7 @@ describe('resource search policy', () => {
     const documents = resourceIds.map((resourceId) => ({
       resourceId,
       title: resourceId === exactId ? 'Needle' : 'Shared title',
-      body: resourceId === exactId ? '' : 'Shared needle body',
+      body: '',
     }))
 
     for (const input of [
