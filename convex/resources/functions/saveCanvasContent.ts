@@ -10,6 +10,8 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { loadCanvasContentDeletion } from './canvasContent'
+import { contentMergeRejection } from './contentVersion'
+import type { ContentMergeRejection } from './contentVersion'
 
 export type SaveCanvasContentResult =
   | Readonly<{
@@ -38,25 +40,40 @@ export async function saveCanvasContent(
   const content = await loadCanvasContentDeletion(ctx, resourceId)
   if (!content) return { status: 'rejected', reason: 'content_missing' }
 
+  const merged = await mergeCanvasUpdate(content.update, args.update, content.version)
+  if (merged.status === 'rejected') return merged
+  if (merged.version.digest !== content.version.digest) {
+    await ctx.db.patch('resourceCanvasContents', content._id, {
+      update: merged.update,
+      version: merged.version,
+    })
+  }
+  return { status: 'completed', resourceId, update: merged.update, version: merged.version }
+}
+
+async function mergeCanvasUpdate(
+  current: ArrayBuffer,
+  delta: ArrayBuffer,
+  currentVersion: unknown,
+): Promise<
+  | Readonly<{ status: 'completed'; update: ArrayBuffer; version: VersionStamp }>
+  | ContentMergeRejection
+> {
   const document = new Y.Doc()
   try {
-    Y.applyUpdate(document, new Uint8Array(content.update))
-    Y.applyUpdate(document, new Uint8Array(args.update))
+    Y.applyUpdate(document, new Uint8Array(current))
+    Y.applyUpdate(document, new Uint8Array(delta))
     if (!parseCanvasDocumentContent(document)) {
       return { status: 'rejected', reason: 'content_corrupt' }
     }
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
-    const currentVersion = assertVersionStamp(content.version)
-    const version = advanceVersion(currentVersion, await sha256Digest(new Uint8Array(update)))
-    if (version.digest !== currentVersion.digest) {
-      await ctx.db.patch('resourceCanvasContents', content._id, { update, version })
-    }
-    return { status: 'completed', resourceId, update, version }
+    const version = advanceVersion(
+      assertVersionStamp(currentVersion),
+      await sha256Digest(new Uint8Array(update)),
+    )
+    return { status: 'completed', update, version }
   } catch (error) {
-    return {
-      status: 'rejected',
-      reason: error instanceof RangeError ? 'version_exhausted' : 'content_corrupt',
-    }
+    return contentMergeRejection(error)
   } finally {
     document.destroy()
   }

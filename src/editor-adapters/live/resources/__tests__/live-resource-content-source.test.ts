@@ -235,6 +235,110 @@ describe('LiveResourceContentSource', () => {
     source.dispose()
   })
 
+  it('retries a transient canvas provider failure without corrupting the session', async () => {
+    vi.useFakeTimers()
+    try {
+      sessionStorage.clear()
+      const campaignId = testDomainId('campaign', 'canvas-retry-campaign')
+      const memberId = testDomainId('campaignMember', 'canvas-retry-member')
+      const resourceId = testDomainId('resource', 'canvas-retry-resource')
+      const nodeId = testDomainId('canvasNode', 'canvas-retry-node')
+      const initialDocument = createCanvasDocumentDoc({ nodes: [], edges: [] })
+      const initialUpdate = Y.encodeStateAsUpdate(initialDocument).buffer as ArrayBuffer
+      initialDocument.destroy()
+      let apply: (snapshot: Snapshot) => void = () => undefined
+      let attempt = 0
+      const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+        attempt += 1
+        if (attempt === 1) return Promise.reject(new Error('provider unavailable'))
+        return Promise.resolve({
+          status: 'completed',
+          resourceId,
+          update,
+          version: assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) }),
+        })
+      })
+      const source = createLiveCanvasSessionSource(
+        campaignId,
+        memberId,
+        {
+          create: vi.fn(),
+          load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+          refresh: vi.fn(),
+          save,
+          watch: (_resourceId, update) => {
+            apply = update
+            return () => undefined
+          },
+        },
+        () => ({ abandon: vi.fn(), completed: vi.fn() }),
+      )
+      source.subscribe(resourceId, () => {})
+      apply({ status: 'ready', kind: 'canvas', update: initialUpdate, version })
+      const ready = source.get(resourceId)
+      if (ready.status !== 'ready') throw new Error('Expected ready canvas')
+      getCanvasDocumentMaps(ready.session.document).nodesMap.set(nodeId, {
+        id: nodeId,
+        type: 'text',
+        position: { x: 10, y: 20 },
+        data: {},
+      })
+
+      const drain = ready.session.flush()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(save).toHaveBeenCalledOnce()
+      await vi.advanceTimersByTimeAsync(250)
+
+      await expect(drain).resolves.toMatchObject({ status: 'completed' })
+      expect(save).toHaveBeenCalledTimes(2)
+      expect(source.get(resourceId)).toEqual(ready)
+      source.dispose()
+      await vi.advanceTimersByTimeAsync(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reports canvas outbox storage denial as scope unavailability', () => {
+    sessionStorage.clear()
+    const campaignId = testDomainId('campaign', 'canvas-storage-campaign')
+    const resourceId = testDomainId('resource', 'canvas-storage-resource')
+    const document = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const update = Y.encodeStateAsUpdate(document).buffer as ArrayBuffer
+    document.destroy()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      testDomainId('campaignMember', 'canvas-storage-member'),
+      {
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save: vi.fn(),
+        watch: (_resourceId, next) => {
+          apply = next
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+    source.subscribe(resourceId, () => {})
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('access denied', 'SecurityError')
+    })
+
+    try {
+      apply({ status: 'ready', kind: 'canvas', update, version })
+      expect(source.get(resourceId)).toEqual({
+        status: 'unavailable',
+        reason: 'scope_unavailable',
+      })
+    } finally {
+      getItem.mockRestore()
+      source.dispose()
+    }
+  })
+
   it('rejects a completed kind-owned create with the wrong receipt identity', async () => {
     const campaignId = testDomainId('campaign', 'map-create-campaign')
     const resourceId = testDomainId('resource', 'map-create-resource')

@@ -281,6 +281,100 @@ describe('LiveNoteContentSource', () => {
     rebound.destroy()
   })
 
+  it('recovers an accepted edit after reload when the atomic create response is lost', async () => {
+    sessionStorage.clear()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const provider = backend()
+    const commitCreate = provider.create.getMockImplementation()!
+    let createCommitted = false
+    let loseResponse: (() => void) | undefined
+    provider.create.mockImplementation(async (args) => {
+      await commitCreate(args)
+      createCommitted = true
+      await new Promise<void>((resolve) => {
+        loseResponse = resolve
+      })
+      throw new Error('response lost')
+    })
+    const first = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const local = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'before create' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+
+    const creation = first.create(createEnvelope(resourceId, operationId), local)
+    await vi.waitFor(() => expect(createCommitted).toBe(true))
+    noteTextType(local).insert(13, ' and durably accepted')
+    loseResponse?.()
+    await expect(creation).resolves.toEqual({
+      status: 'indeterminate',
+      retryable: true,
+      reason: 'response_lost',
+    })
+    const initialUpdate = provider.create.mock.calls[0]![0].update
+    const initialVersion = await versionFor(initialUpdate)
+    first.dispose()
+
+    const recovered = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    recovered.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: initialUpdate,
+      version: initialVersion,
+    })
+    const recoveredState = recovered.get(resourceId)
+    if (recoveredState.status !== 'ready') throw new Error('Expected recovered note')
+    expect(noteTextType(recoveredState.session.document).toString()).toBe(
+      'before create and durably accepted',
+    )
+    await expect(recoveredState.session.flush()).resolves.toMatchObject({ status: 'completed' })
+    expect(provider.save).toHaveBeenCalledOnce()
+    const persisted = await provider.save.mock.results[0]?.value
+    if (!persisted || persisted.status !== 'completed') throw new Error('Expected recovery save')
+    recovered.dispose()
+
+    const reloaded = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    reloaded.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: persisted.update,
+      version: persisted.version,
+    })
+    const reloadedState = reloaded.get(resourceId)
+    if (reloadedState.status !== 'ready') throw new Error('Expected reloaded note')
+    expect(noteTextType(reloadedState.session.document).toString()).toBe(
+      'before create and durably accepted',
+    )
+    await reloadedState.session.flush()
+    expect(provider.save).toHaveBeenCalledOnce()
+    reloaded.dispose()
+  })
+
   it('removes only the rejected create local state', async () => {
     const rejectedId = generateDomainId(DOMAIN_ID_KIND.resource)
     const retainedId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -625,6 +719,55 @@ describe('LiveNoteContentSource', () => {
       status: 'integrity_error',
       issue: 'content_corrupt',
     })
+  })
+
+  it('makes an initializing note unavailable when an edit cannot enter the durable outbox', async () => {
+    sessionStorage.clear()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const provider = backend()
+    const commitCreate = provider.create.getMockImplementation()!
+    let releaseCreate: (() => void) | undefined
+    provider.create.mockImplementation(async (args) => {
+      await new Promise<void>((resolve) => {
+        releaseCreate = resolve
+      })
+      return await commitCreate(args)
+    })
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const local = new Y.Doc()
+    const creation = source.create(createEnvelope(resourceId, operationId), local)
+    await vi.waitFor(() => expect(provider.create).toHaveBeenCalledOnce())
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota exceeded', 'QuotaExceededError')
+    })
+
+    try {
+      local.getMap('unsaved').set('value', true)
+      expect(source.get(resourceId)).toEqual({
+        status: 'unavailable',
+        reason: 'scope_unavailable',
+      })
+      releaseCreate?.()
+      await expect(creation).resolves.toMatchObject({
+        status: 'received',
+        result: { status: 'completed' },
+      })
+      expect(source.get(resourceId)).toEqual({
+        status: 'unavailable',
+        reason: 'scope_unavailable',
+      })
+      expect(provider.save).not.toHaveBeenCalled()
+    } finally {
+      setItem.mockRestore()
+      source.dispose()
+    }
   })
 
   it('closes an active session when content-write authority is revoked', async () => {

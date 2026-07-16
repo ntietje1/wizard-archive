@@ -23,6 +23,7 @@ import {
   createBackendYjsPersistence,
   createLiveYjsDocumentSession,
   failedYjsSessionState,
+  YjsUpdateOutboxUnavailableError,
 } from './live-yjs-document-session'
 import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
@@ -154,16 +155,28 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       existing.apply(snapshot.update, version)
       return
     }
-    const session = new LiveCanvasSession(
-      decoded,
-      version,
-      this.campaignId,
-      resourceId,
-      this.memberId,
-      this.backend,
-      () => this.#store.set(resourceId, { status: 'ready', session }),
-      (result) => this.#fail(resourceId, session, result),
-    )
+    let session: LiveCanvasSession
+    try {
+      session = new LiveCanvasSession(
+        decoded,
+        version,
+        this.campaignId,
+        resourceId,
+        this.memberId,
+        this.backend,
+        () => this.#store.set(resourceId, { status: 'ready', session }),
+        (result) => this.#fail(resourceId, session, result),
+      )
+    } catch (error) {
+      decoded.destroy()
+      this.#store.set(
+        resourceId,
+        error instanceof YjsUpdateOutboxUnavailableError
+          ? { status: 'unavailable', reason: 'scope_unavailable' }
+          : { status: 'integrity_error', issue: 'content_corrupt' },
+      )
+      return
+    }
     this.#sessions.set(resourceId, session)
     this.#store.set(resourceId, { status: 'ready', session })
   }

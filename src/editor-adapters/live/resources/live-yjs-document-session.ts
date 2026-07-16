@@ -18,7 +18,6 @@ type LiveYjsDocumentSessionOptions = Readonly<{
   document: Y.Doc
   version: VersionStamp
   outbox: YjsUpdateOutbox
-  initialPendingUpdate?: Uint8Array | null
   persist(update: Uint8Array): Promise<PersistedYjsUpdate>
   changed(): void
   failed(result: RejectedYjsSave): void
@@ -30,6 +29,8 @@ const REMOTE_YJS_UPDATE = Symbol('remote-yjs-update')
 const YJS_SAVE_DELAY_MS = 250
 const YJS_SAVE_RETRY_DELAYS_MS = [250, 500, 1000, 2000] as const
 
+export class YjsUpdateOutboxUnavailableError extends Error {}
+
 class LiveYjsDocumentSession {
   readonly document: Y.Doc
   readonly #outbox: YjsUpdateOutbox
@@ -39,7 +40,6 @@ class LiveYjsDocumentSession {
   readonly #flushCompanion: NonNullable<LiveYjsDocumentSessionOptions['flushCompanion']>
   readonly #disposeCompanion: NonNullable<LiveYjsDocumentSessionOptions['disposeCompanion']>
   #version: VersionStamp
-  #unacknowledgedUpdate: Uint8Array | null = null
   #drainPromise: Promise<ContentSessionSaveResult> | null = null
   #lifecycle: 'closing' | 'destroyed' | 'open' = 'open'
   #pendingUpdate: Uint8Array | null = null
@@ -57,10 +57,9 @@ class LiveYjsDocumentSession {
     this.#disposeCompanion = options.disposeCompanion ?? (() => Promise.resolve())
 
     const recovered = this.#outbox.load()
-    if (recovered) Y.applyUpdate(this.document, recovered, REMOTE_YJS_UPDATE)
-    this.#pendingUpdate = mergeOptionalYjsUpdates(recovered, options.initialPendingUpdate ?? null)
-    this.#unacknowledgedUpdate = this.#pendingUpdate
-    if (this.#unacknowledgedUpdate) this.#outbox.replace(this.#unacknowledgedUpdate)
+    if (recovered.status === 'unavailable') throw new YjsUpdateOutboxUnavailableError()
+    if (recovered.update) Y.applyUpdate(this.document, recovered.update, REMOTE_YJS_UPDATE)
+    this.#pendingUpdate = recovered.update
     this.document.on('update', this.#onUpdate)
     if (this.#pendingUpdate) this.#scheduleSave()
   }
@@ -96,9 +95,12 @@ class LiveYjsDocumentSession {
 
   readonly #onUpdate = (update: Uint8Array, origin: unknown) => {
     if (origin === REMOTE_YJS_UPDATE || this.#lifecycle !== 'open') return
+    const accepted = this.#outbox.merge(update)
+    if (accepted.status === 'unavailable') {
+      this.#fail({ status: 'rejected', reason: 'scope_unavailable' })
+      return
+    }
     this.#pendingUpdate = mergeOptionalYjsUpdates(this.#pendingUpdate, update)
-    this.#unacknowledgedUpdate = mergeOptionalYjsUpdates(this.#unacknowledgedUpdate, update)
-    this.#outbox.replace(this.#unacknowledgedUpdate!)
     this.#scheduleSave()
   }
 
@@ -140,9 +142,13 @@ class LiveYjsDocumentSession {
       if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
         return this.#terminal!
       }
-      this.#unacknowledgedUpdate = this.#pendingUpdate
-      if (this.#unacknowledgedUpdate === null) this.#outbox.clear()
-      else this.#outbox.replace(this.#unacknowledgedUpdate)
+      const remaining = this.#pendingUpdate
+      const stored = remaining === null ? this.#outbox.clear() : this.#outbox.replace(remaining)
+      if (stored.status === 'unavailable') {
+        const unavailable = { status: 'rejected', reason: 'scope_unavailable' } as const
+        this.#fail(unavailable)
+        return unavailable
+      }
     }
     return { status: 'completed', version: this.#version }
   }
@@ -206,7 +212,7 @@ export function failedYjsSessionState(result: RejectedYjsSave): ContentUnavailab
   }
 }
 
-export function mergeOptionalYjsUpdates(
+function mergeOptionalYjsUpdates(
   first: Uint8Array | null,
   second: Uint8Array | null,
 ): Uint8Array | null {

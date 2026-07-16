@@ -38,11 +38,12 @@ import {
   createBackendYjsPersistence,
   createLiveYjsDocumentSession,
   failedYjsSessionState,
-  mergeOptionalYjsUpdates,
   yjsUpdateArrayBuffer,
+  YjsUpdateOutboxUnavailableError,
 } from './live-yjs-document-session'
 import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
+import type { YjsUpdateOutbox } from './yjs-update-outbox'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
@@ -63,9 +64,13 @@ type LocalCreate = {
   operationId: OperationId
   doc: Y.Doc
   initialUpdate: Uint8Array
-  pendingUpdate: Uint8Array | null
+  outbox: YjsUpdateOutbox
+  storageAvailable: boolean
   stop(): void
 }
+type LocalCreateStart =
+  | Readonly<{ status: 'ready'; create: LocalCreate }>
+  | Readonly<{ status: 'unavailable'; issue: 'content_corrupt' | 'scope_unavailable' }>
 type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
 
 function exportNoteDocument(document: Y.Doc): ContentExportResult {
@@ -108,7 +113,6 @@ class LiveNoteSession implements NoteSession {
     user: NoteCollaborationUser,
     changed: () => void,
     failed: (result: RejectedYjsSave) => void,
-    initialPendingUpdate: Uint8Array | null = null,
   ) {
     this.#liveAwareness = createLiveNoteAwareness(
       document,
@@ -118,17 +122,21 @@ class LiveNoteSession implements NoteSession {
       backend,
       changed,
     )
-    this.#session = createLiveYjsDocumentSession({
-      document,
-      version,
-      outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
-      initialPendingUpdate,
-      persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
-      changed,
-      failed,
-      flushCompanion: () => this.#liveAwareness.flush(),
-      disposeCompanion: () => this.#liveAwareness.dispose(),
-    })
+    try {
+      this.#session = createLiveYjsDocumentSession({
+        document,
+        version,
+        outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
+        persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
+        changed,
+        failed,
+        flushCompanion: () => this.#liveAwareness.flush(),
+        disposeCompanion: () => this.#liveAwareness.dispose(),
+      })
+    } catch (error) {
+      void this.#liveAwareness.dispose()
+      throw error
+    }
   }
 
   get version() {
@@ -206,7 +214,24 @@ class LiveNoteSessionSource implements NoteSessionSource {
       return invalidCreateDelivery()
     }
 
-    const create = existing ?? this.#beginCreate(envelope.operationId, local)
+    const started = existing
+      ? ({ status: 'ready', create: existing } as const)
+      : this.#beginCreate(resourceId, envelope.operationId, local)
+    if (started.status === 'unavailable') {
+      this.#setState(
+        resourceId,
+        started.issue === 'scope_unavailable'
+          ? { status: 'unavailable', reason: 'scope_unavailable' }
+          : { status: 'integrity_error', issue: 'content_corrupt' },
+      )
+      return {
+        status: 'not_committed',
+        retryable: false,
+        reason:
+          started.issue === 'scope_unavailable' ? 'transport_unavailable' : 'invalid_response',
+      }
+    }
+    const create = started.create
     this.#creates.set(resourceId, create)
     this.#setState(resourceId, {
       status: 'initializing',
@@ -240,7 +265,11 @@ class LiveNoteSessionSource implements NoteSessionSource {
       const version = await initialNoteContentVersion(create.initialUpdate)
       create.stop()
       this.#creates.delete(resourceId)
-      this.#setReady(resourceId, local, version, create.pendingUpdate)
+      if (!create.storageAvailable) {
+        local.destroy()
+        return delivery
+      }
+      this.#setReady(resourceId, local, version)
       return delivery
     } catch {
       return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
@@ -289,38 +318,51 @@ class LiveNoteSessionSource implements NoteSessionSource {
   }
 
   #removeLocal(resourceId: ResourceId): void {
-    this.#creates.get(resourceId)?.stop()
+    const create = this.#creates.get(resourceId)
+    create?.stop()
+    const cleared = create?.outbox.clear()
     this.#creates.delete(resourceId)
     this.#clearSession(resourceId)
-    this.#setState(resourceId, { status: 'loading' })
+    this.#setState(
+      resourceId,
+      cleared?.status === 'unavailable'
+        ? { status: 'unavailable', reason: 'scope_unavailable' }
+        : { status: 'loading' },
+    )
   }
 
-  #setReady(
-    resourceId: ResourceId,
-    document: Y.Doc,
-    version: NoteSession['version'],
-    pendingUpdate: Uint8Array | null = null,
-  ): void {
+  #setReady(resourceId: ResourceId, document: Y.Doc, version: NoteSession['version']): void {
     this.#clearSession(resourceId)
-    const session = new LiveNoteSession(
-      document,
-      version,
-      this.campaignId,
-      resourceId,
-      this.backend,
-      this.memberId,
-      this.user,
-      () => {
-        const current = this.#sessions.get(resourceId)
-        if (current) this.#setState(resourceId, { status: 'ready', session: current })
-      },
-      (result) => {
-        if (this.#sessions.get(resourceId)?.document !== document) return
-        this.#sessions.delete(resourceId)
-        this.#setState(resourceId, failedYjsSessionState(result))
-      },
-      pendingUpdate,
-    )
+    let session: LiveNoteSession
+    try {
+      session = new LiveNoteSession(
+        document,
+        version,
+        this.campaignId,
+        resourceId,
+        this.backend,
+        this.memberId,
+        this.user,
+        () => {
+          const current = this.#sessions.get(resourceId)
+          if (current) this.#setState(resourceId, { status: 'ready', session: current })
+        },
+        (result) => {
+          if (this.#sessions.get(resourceId)?.document !== document) return
+          this.#sessions.delete(resourceId)
+          this.#setState(resourceId, failedYjsSessionState(result))
+        },
+      )
+    } catch (error) {
+      document.destroy()
+      this.#setState(
+        resourceId,
+        error instanceof YjsUpdateOutboxUnavailableError
+          ? { status: 'unavailable', reason: 'scope_unavailable' }
+          : { status: 'integrity_error', issue: 'content_corrupt' },
+      )
+      return
+    }
     this.#sessions.set(resourceId, session)
     this.#setState(resourceId, { status: 'ready', session })
   }
@@ -334,19 +376,34 @@ class LiveNoteSessionSource implements NoteSessionSource {
     this.#store.set(resourceId, state)
   }
 
-  #beginCreate(operationId: OperationId, doc: Y.Doc): LocalCreate {
+  #beginCreate(resourceId: ResourceId, operationId: OperationId, doc: Y.Doc): LocalCreateStart {
+    const outbox = createYjsUpdateOutbox('note', this.campaignId, resourceId, this.memberId)
+    const recovered = outbox.load()
+    if (recovered.status === 'unavailable') {
+      return { status: 'unavailable', issue: 'scope_unavailable' }
+    }
+    const initialUpdate = Y.encodeStateAsUpdate(doc)
+    try {
+      if (recovered.update) Y.applyUpdate(doc, recovered.update)
+    } catch {
+      return { status: 'unavailable', issue: 'content_corrupt' }
+    }
     const create: LocalCreate = {
       operationId,
       doc,
-      initialUpdate: Y.encodeStateAsUpdate(doc),
-      pendingUpdate: null,
+      initialUpdate,
+      outbox,
+      storageAvailable: true,
       stop: () => doc.off('update', onUpdate),
     }
     const onUpdate = (update: Uint8Array) => {
-      create.pendingUpdate = mergeOptionalYjsUpdates(create.pendingUpdate, update)
+      if (outbox.merge(update).status === 'accepted') return
+      create.storageAvailable = false
+      create.stop()
+      this.#setState(resourceId, { status: 'unavailable', reason: 'scope_unavailable' })
     }
     doc.on('update', onUpdate)
-    return create
+    return { status: 'ready', create }
   }
 }
 
