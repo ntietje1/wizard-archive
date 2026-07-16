@@ -72,7 +72,7 @@ export type CanvasDocumentEdgeUpdate = Readonly<{
   zIndex?: number | undefined
 }>
 
-export type CanvasDocumentChangeReceipt = Readonly<{
+type CanvasDocumentChangeReceipt = Readonly<{
   nodesChanged: number
   edgesChanged: number
 }>
@@ -172,7 +172,13 @@ function parseEdgeUpdate(
   return parsed
 }
 
-export class CanvasDocumentController {
+export type CanvasDocumentController = CanvasDocumentControllerState
+
+export function createCanvasDocumentController(document: Y.Doc): CanvasDocumentController {
+  return new CanvasDocumentControllerState(document)
+}
+
+class CanvasDocumentControllerState {
   readonly #document: Y.Doc
   readonly #edgesMap: Y.Map<Y.Map<unknown>>
   readonly #historyListeners = new Set<() => void>()

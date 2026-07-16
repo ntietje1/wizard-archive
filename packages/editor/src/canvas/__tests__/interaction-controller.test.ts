@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import {
-  CanvasInteractionController,
   canvasToScreenPoint,
+  createCanvasInteractionController,
   getCanvasDrawingPoints,
   getVisualCanvasSelection,
   screenToCanvasPoint,
@@ -14,7 +14,7 @@ const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3
 
 describe('CanvasInteractionController selection', () => {
   it('keeps click and additive node-edge selection in one authoritative snapshot', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
 
     controller.selectNode(NODE_A, false)
     controller.selectNode(NODE_B, true)
@@ -38,7 +38,7 @@ describe('CanvasInteractionController selection', () => {
   })
 
   it('models selection preview as one valid discriminated interaction', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.selectNode(NODE_A, false)
     controller.beginSelection('marquee', 'add', 1, { x: 10, y: 20 })
 
@@ -68,7 +68,7 @@ describe('CanvasInteractionController selection', () => {
   })
 
   it('cancels previews on escape or tool change without changing committed selection', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.selectNode(NODE_A, false)
     controller.beginSelection('lasso', 'replace', 1, { x: 0, y: 0 })
     controller.updateSelection(
@@ -98,7 +98,7 @@ describe('CanvasInteractionController selection', () => {
   })
 
   it('prunes local committed and preview selection after document changes', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.setSelection({
       nodeIds: new Set([NODE_A, NODE_B]),
       edgeIds: new Set(['edge-a-b', 'edge-b-c']),
@@ -133,7 +133,7 @@ describe('CanvasInteractionController selection', () => {
 
 describe('CanvasInteractionController pointer activities', () => {
   it('owns freehand preview and returns one constrained final stroke', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.beginDrawing(3, { x: 0, y: 0 }, 0, {
       color: '#112233',
       size: 4,
@@ -166,7 +166,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('resamples tens of thousands of drawing events into one bounded stroke', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.beginDrawing(5, { x: 0, y: 0 }, 0.5, {
       color: '#112233',
       size: 4,
@@ -184,7 +184,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('bounds eraser trails and returns only the marked canonical node ids', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.beginErasing(8, { x: 0, y: 0 })
     for (let index = 1; index <= 20_000; index += 1) {
       controller.updateErasing(8, { x: index, y: index }, new Set([NODE_A, NODE_B]))
@@ -201,7 +201,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('keeps an edge draft local and commits only a valid canonical node-handle pair', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.beginConnection(9, { nodeId: NODE_A, handle: 'right' }, { x: 10, y: 20 })
     controller.updateConnection(9, { x: 100, y: 20 }, { nodeId: NODE_B, handle: 'left' })
     expect(controller.get().interaction).toMatchObject({
@@ -224,7 +224,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('keeps one canonical multi-node resize preview and commits its transform once', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     const initialBounds = { x: 0, y: 0, width: 480, height: 80 }
     const initialNodeBounds = new Map([
       [NODE_A, { x: 0, y: 0, width: 180, height: 80 }],
@@ -243,7 +243,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('previews a multi-node drag and commits only a non-zero delta', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.beginDrag(
       4,
       { x: 100, y: 80 },
@@ -267,7 +267,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('owns pan lifecycle and commits the resulting viewport once', () => {
-    const controller = new CanvasInteractionController({ x: 10, y: 20, zoom: 2 })
+    const controller = createCanvasInteractionController({ x: 10, y: 20, zoom: 2 })
     const committed = vi.fn()
     controller.subscribeViewportCommit(committed)
     controller.beginPan(7, { x: 100, y: 80 })
@@ -279,7 +279,7 @@ describe('CanvasInteractionController pointer activities', () => {
   })
 
   it('ends editing when the edited node disappears', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     controller.editNode(NODE_A)
     controller.reconcileDocument(new Set([NODE_B]), new Set())
     expect(controller.get().interaction).toEqual({ type: 'idle' })
@@ -289,7 +289,7 @@ describe('CanvasInteractionController pointer activities', () => {
 
 describe('CanvasInteractionController viewport', () => {
   it('normalizes viewport values and preserves a zoom center', () => {
-    const controller = new CanvasInteractionController({
+    const controller = createCanvasInteractionController({
       x: Number.NaN,
       y: Number.POSITIVE_INFINITY,
       zoom: 20,
@@ -312,7 +312,7 @@ describe('CanvasInteractionController viewport', () => {
   })
 
   it('publishes live viewport changes and persists only explicit commits', () => {
-    const controller = new CanvasInteractionController()
+    const controller = createCanvasInteractionController()
     const changed = vi.fn()
     const committed = vi.fn()
     controller.subscribe(changed)

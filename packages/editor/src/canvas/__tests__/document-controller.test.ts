@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
-import { CanvasDocumentController } from '../document-controller'
+import { createCanvasDocumentController } from '../document-controller'
+import type { CanvasDocumentChange } from '../document-controller'
 import {
   canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
@@ -38,7 +39,7 @@ function createController(
     nodes: content.nodes ?? [],
     edges: content.edges ?? [],
   })
-  const controller = new CanvasDocumentController(document)
+  const controller = createCanvasDocumentController(document)
   return { controller, document, ...getCanvasDocumentMaps(document) }
 }
 
@@ -177,11 +178,11 @@ describe('CanvasDocumentController', () => {
       edges: [],
     })
     const baseUpdate = Y.encodeStateAsUpdate(base)
-    const operation = (change: Parameters<CanvasDocumentController['apply']>[0]) => {
+    const operation = (change: CanvasDocumentChange) => {
       const document = new Y.Doc()
       Y.applyUpdate(document, baseUpdate)
       const vector = Y.encodeStateVector(document)
-      const controller = new CanvasDocumentController(document)
+      const controller = createCanvasDocumentController(document)
       controller.apply(change)
       controller.dispose()
       const update = Y.encodeStateAsUpdate(document, vector)
@@ -271,7 +272,7 @@ describe('CanvasDocumentController', () => {
     const baseUpdate = Y.encodeStateAsUpdate(base)
     const document = new Y.Doc()
     Y.applyUpdate(document, baseUpdate)
-    const controller = new CanvasDocumentController(document)
+    const controller = createCanvasDocumentController(document)
     controller.apply({
       type: 'update',
       nodes: [{ id: NODE_A, type: 'text', position: { x: 50, y: 25 } }],
@@ -280,7 +281,7 @@ describe('CanvasDocumentController', () => {
     const remote = new Y.Doc()
     Y.applyUpdate(remote, baseUpdate)
     const vector = Y.encodeStateVector(remote)
-    const remoteController = new CanvasDocumentController(remote)
+    const remoteController = createCanvasDocumentController(remote)
     remoteController.apply({
       type: 'update',
       nodes: [{ id: NODE_A, type: 'text', data: { backgroundColor: '#ff0000' } }],
@@ -312,7 +313,7 @@ describe('CanvasDocumentController', () => {
     const baseUpdate = Y.encodeStateAsUpdate(base)
     const document = new Y.Doc()
     Y.applyUpdate(document, baseUpdate)
-    const controller = new CanvasDocumentController(document)
+    const controller = createCanvasDocumentController(document)
     const remote = new Y.Doc()
     Y.applyUpdate(remote, baseUpdate)
     const remoteVector = Y.encodeStateVector(remote)

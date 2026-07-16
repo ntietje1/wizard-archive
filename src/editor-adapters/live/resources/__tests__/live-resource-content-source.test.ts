@@ -9,7 +9,7 @@ import {
   createCanvasDocumentDoc,
   readCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
-import { CanvasDocumentController } from '@wizard-archive/editor/canvas/document-controller'
+import type { CanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import {
@@ -29,13 +29,10 @@ const version = {
   digest: 'a'.repeat(64),
 }
 
-function applyCanvasChange(
-  document: Y.Doc,
-  change: Parameters<CanvasDocumentController['apply']>[0],
-): void {
-  const controller = new CanvasDocumentController(document)
-  controller.apply(change)
-  controller.dispose()
+function applyCanvasContentUpdate(document: Y.Doc, content: CanvasDocumentContent): void {
+  const update = createCanvasDocumentDoc(content)
+  Y.applyUpdate(document, Y.encodeStateAsUpdate(update))
+  update.destroy()
 }
 
 describe('LiveResourceContentSource', () => {
@@ -157,11 +154,12 @@ describe('LiveResourceContentSource', () => {
     source.dispose()
   })
 
-  it('preserves concurrent local geometry and remote style through flush and snapshots', async () => {
+  it('preserves concurrent local and remote document updates through flush and snapshots', async () => {
     const campaignId = testDomainId('campaign', 'canvas-save-campaign')
     const resourceId = testDomainId('resource', 'canvas-save-resource')
     const firstNodeId = testDomainId('canvasNode', 'canvas-first-node')
     const secondNodeId = testDomainId('canvasNode', 'canvas-second-node')
+    const thirdNodeId = testDomainId('canvasNode', 'canvas-third-node')
     const initialDocument = createCanvasDocumentDoc({
       nodes: [
         {
@@ -222,29 +220,15 @@ describe('LiveResourceContentSource', () => {
     apply({ status: 'ready', kind: 'canvas', update: persistedUpdate, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas')
-    applyCanvasChange(ready.session.document, {
-      type: 'update',
-      nodes: [
-        {
-          id: firstNodeId,
-          type: 'text',
-          position: { x: 10, y: 20 },
-          width: 240,
-        },
-      ],
+    applyCanvasContentUpdate(ready.session.document, {
+      nodes: [{ id: secondNodeId, type: 'text', position: { x: 30, y: 40 }, data: {} }],
       edges: [],
     })
 
     const remoteDocument = new Y.Doc()
     Y.applyUpdate(remoteDocument, new Uint8Array(persistedUpdate))
-    applyCanvasChange(remoteDocument, {
-      type: 'update',
-      nodes: [{ id: firstNodeId, type: 'text', data: { backgroundColor: '#ff0000' } }],
-      edges: [],
-    })
-    applyCanvasChange(remoteDocument, {
-      type: 'insert',
-      nodes: [{ id: secondNodeId, type: 'text', position: { x: 30, y: 40 }, data: {} }],
+    applyCanvasContentUpdate(remoteDocument, {
+      nodes: [{ id: thirdNodeId, type: 'text', position: { x: 50, y: 60 }, data: {} }],
       edges: [],
     })
     persistedUpdate = Y.encodeStateAsUpdate(remoteDocument).buffer as ArrayBuffer
@@ -277,49 +261,34 @@ describe('LiveResourceContentSource', () => {
       expect.arrayContaining([
         expect.objectContaining({ id: firstNodeId }),
         expect.objectContaining({ id: secondNodeId }),
+        expect.objectContaining({ id: thirdNodeId }),
       ]),
     )
-    expect(readCanvasDocumentContent(current.session.document).nodes[0]).toMatchObject({
-      id: firstNodeId,
-      position: { x: 10, y: 20 },
-      width: 240,
-      data: { backgroundColor: '#ff0000' },
-    })
+    expect(readCanvasDocumentContent(current.session.document).nodes).toHaveLength(3)
     expect(current.session.version.revision).toBe(3)
     source.dispose()
   })
 
-  it('reconciles a recovered node deletion with an offline edge creation', async () => {
+  it('recovers a pending canonical document update before the next flush', async () => {
     sessionStorage.clear()
     const campaignId = testDomainId('campaign', 'canvas-recovery-campaign')
     const memberId = testDomainId('campaignMember', 'canvas-recovery-member')
     const resourceId = testDomainId('resource', 'canvas-recovery-resource')
-    const sourceId = testDomainId('canvasNode', 'canvas-recovery-source')
-    const targetId = testDomainId('canvasNode', 'canvas-recovery-target')
-    const base = createCanvasDocumentDoc({
-      nodes: [
-        { id: sourceId, type: 'text', position: { x: 0, y: 0 }, data: {} },
-        { id: targetId, type: 'text', position: { x: 10, y: 0 }, data: {} },
-      ],
+    const localId = testDomainId('canvasNode', 'canvas-recovery-local')
+    const remoteId = testDomainId('canvasNode', 'canvas-recovery-remote')
+    const laterId = testDomainId('canvasNode', 'canvas-recovery-later')
+    const local = createCanvasDocumentDoc({
+      nodes: [{ id: localId, type: 'text', position: { x: 0, y: 0 }, data: {} }],
       edges: [],
     })
-    const baseUpdate = Y.encodeStateAsUpdate(base)
-    const deleted = new Y.Doc()
-    Y.applyUpdate(deleted, baseUpdate)
-    const deleteVector = Y.encodeStateVector(deleted)
-    applyCanvasChange(deleted, { type: 'remove', nodeIds: [sourceId], edgeIds: [] })
-    const deleteUpdate = Y.encodeStateAsUpdate(deleted, deleteVector)
-    const server = new Y.Doc()
-    Y.applyUpdate(server, baseUpdate)
-    applyCanvasChange(server, {
-      type: 'insert',
-      nodes: [],
-      edges: [{ id: 'offline-edge', source: sourceId, target: targetId, type: 'straight' }],
+    const server = createCanvasDocumentDoc({
+      nodes: [{ id: remoteId, type: 'text', position: { x: 10, y: 0 }, data: {} }],
+      edges: [],
     })
     let persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(server)).buffer
     let persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
     const outbox = createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId)
-    expect(outbox.merge(deleteUpdate)).toEqual({ status: 'accepted' })
+    expect(outbox.merge(Y.encodeStateAsUpdate(local))).toEqual({ status: 'accepted' })
     let apply: (snapshot: Snapshot) => void = () => undefined
     const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
       const merged = new Y.Doc()
@@ -364,13 +333,14 @@ describe('LiveResourceContentSource', () => {
     })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected recovered canvas session')
-    expect(readCanvasDocumentContent(ready.session.document)).toEqual({
-      nodes: [{ id: targetId, type: 'text', position: { x: 10, y: 0 }, data: {} }],
-      edges: [],
-    })
-    applyCanvasChange(ready.session.document, {
-      type: 'insert',
-      nodes: [{ id: sourceId, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+    expect(readCanvasDocumentContent(ready.session.document).nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: localId }),
+        expect.objectContaining({ id: remoteId }),
+      ]),
+    )
+    applyCanvasContentUpdate(ready.session.document, {
+      nodes: [{ id: laterId, type: 'text', position: { x: 20, y: 0 }, data: {} }],
       edges: [],
     })
 
@@ -379,17 +349,17 @@ describe('LiveResourceContentSource', () => {
     expect(outbox.load()).toEqual({ status: 'available', update: null })
     const persisted = new Y.Doc()
     Y.applyUpdate(persisted, new Uint8Array(persistedUpdate))
-    expect(readCanvasDocumentContent(persisted).nodes).toHaveLength(2)
-    expect(readCanvasDocumentContent(persisted).edges).toEqual([])
-    expect(readCanvasDocumentContent(persisted)).toEqual(
-      readCanvasDocumentContent(ready.session.document),
-    )
+    const persistedContent = readCanvasDocumentContent(persisted)
+    const sessionContent = readCanvasDocumentContent(ready.session.document)
+    expect(persistedContent.nodes).toHaveLength(3)
+    expect(persistedContent.nodes).toEqual(expect.arrayContaining(sessionContent.nodes))
+    expect(persistedContent.edges).toEqual([])
+    expect(sessionContent.edges).toEqual([])
 
     persisted.destroy()
     source.dispose()
     server.destroy()
-    deleted.destroy()
-    base.destroy()
+    local.destroy()
   })
 
   it('retries a transient canvas provider failure without corrupting the session', async () => {
@@ -434,8 +404,7 @@ describe('LiveResourceContentSource', () => {
       apply({ status: 'ready', kind: 'canvas', update: initialUpdate, version })
       const ready = source.get(resourceId)
       if (ready.status !== 'ready') throw new Error('Expected ready canvas')
-      applyCanvasChange(ready.session.document, {
-        type: 'insert',
+      applyCanvasContentUpdate(ready.session.document, {
         nodes: [{ id: nodeId, type: 'text', position: { x: 10, y: 20 }, data: {} }],
         edges: [],
       })

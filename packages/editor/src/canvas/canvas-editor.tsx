@@ -15,10 +15,16 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, PointerEvent, RefObject, WheelEvent } from 'react'
-import { CanvasDocumentController } from './document-controller'
+import { createCanvasDocumentController } from './document-controller'
+import type { CanvasDocumentController } from './document-controller'
 import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-contract'
-import { CanvasInteractionController, screenToCanvasPoint } from './interaction-controller'
-import type { CanvasInteractionSnapshot, CanvasPoint, CanvasTool } from './interaction-controller'
+import { createCanvasInteractionController, screenToCanvasPoint } from './interaction-controller'
+import type {
+  CanvasInteractionController,
+  CanvasInteractionSnapshot,
+  CanvasPoint,
+  CanvasTool,
+} from './interaction-controller'
 import { CanvasScene } from './canvas-scene'
 import { CanvasSelectionActions } from './canvas-selection-actions'
 import { CanvasSelectionProperties } from './canvas-selection-properties'
@@ -62,8 +68,8 @@ export function CanvasEditor({
   session: CanvasSession
   title: string
 }) {
-  const [documentController] = useState(() => new CanvasDocumentController(session.document))
-  const [interactionController] = useState(() => new CanvasInteractionController())
+  const [documentController] = useState(() => createCanvasDocumentController(session.document))
+  const [interactionController] = useState(createCanvasInteractionController)
   const surface = useRef<HTMLElement>(null)
   const content = useCanvasDocumentContent(documentController)
   const interaction = useSyncExternalStore(

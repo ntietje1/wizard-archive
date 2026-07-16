@@ -14,10 +14,10 @@ export type CanvasSelection = Readonly<{
   edgeIds: ReadonlySet<string>
 }>
 
-export type CanvasSelectionKind = 'lasso' | 'marquee'
-export type CanvasSelectionMode = 'add' | 'replace'
+type CanvasSelectionKind = 'lasso' | 'marquee'
+type CanvasSelectionMode = 'add' | 'replace'
 
-export type CanvasDrawStyle = Readonly<{
+type CanvasDrawStyle = Readonly<{
   color: string
   size: number
   opacity: number
@@ -42,13 +42,13 @@ export type CanvasResizeHandle =
   | 'bottom-left'
   | 'left'
 
-export type CanvasResizeCommit = Readonly<{
+type CanvasResizeCommit = Readonly<{
   initialBounds: CanvasBounds
   bounds: CanvasBounds
   initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
 }>
 
-export type CanvasInteraction =
+type CanvasInteraction =
   | Readonly<{ type: 'idle' }>
   | Readonly<{
       type: 'selecting'
@@ -398,7 +398,15 @@ export function canvasToScreenPoint(
   }
 }
 
-export class CanvasInteractionController {
+export type CanvasInteractionController = CanvasInteractionControllerState
+
+export function createCanvasInteractionController(
+  viewport: CanvasViewport = DEFAULT_CANVAS_VIEWPORT,
+): CanvasInteractionController {
+  return new CanvasInteractionControllerState(viewport)
+}
+
+class CanvasInteractionControllerState {
   readonly #listeners = new Set<() => void>()
   readonly #viewportCommitListeners = new Set<(viewport: CanvasViewport) => void>()
   #disposed = false
