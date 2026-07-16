@@ -325,15 +325,19 @@ export function readCanvasDocumentContent(doc: Y.Doc): {
 }
 
 export function parseCanvasDocumentContent(doc: Y.Doc): CanvasDocumentContent | null {
-  const content = readCanvasDocumentContent(doc)
-  const nodes = content.nodes.map(parseCanvasDocumentNode)
-  const edges = content.edges.map(parseCanvasDocumentEdge)
+  const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
+  const nodes = Array.from(nodesMap.entries(), ([key, value]) => {
+    const node = parseCanvasDocumentNode(value)
+    return node?.id === key ? node : null
+  })
+  const edges = Array.from(edgesMap.entries(), ([key, value]) => {
+    const edge = parseCanvasDocumentEdge(value)
+    return edge?.id === key ? edge : null
+  })
   if (nodes.some((node) => node === null) || edges.some((edge) => edge === null)) return null
   const typedNodes = nodes as Array<CanvasDocumentNode>
   const typedEdges = edges as Array<CanvasDocumentEdge>
   const nodeIds = new Set(typedNodes.map((node) => node.id))
-  if (nodeIds.size !== typedNodes.length) return null
-  if (new Set(typedEdges.map((edge) => edge.id)).size !== typedEdges.length) return null
   if (typedEdges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) return null
   return { nodes: typedNodes, edges: typedEdges }
 }
