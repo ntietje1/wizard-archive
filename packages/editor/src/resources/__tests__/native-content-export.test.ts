@@ -7,7 +7,7 @@ import {
 } from '../../canvas/native-document'
 import { noteDocumentToMarkdown } from '../../notes/document/markdown'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
-import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
+import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../domain-id'
 import { encodeWizardMapDocument, WIZARD_MAP_DOCUMENT_VERSION } from '../map-native-document'
 
 describe('native content exports', () => {
@@ -24,8 +24,52 @@ describe('native content exports', () => {
         {
           id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
           type: 'bulletListItem',
-          content: [{ type: 'text', text: 'Blue glass', styles: {} }],
-          children: [],
+          content: [{ type: 'text', text: 'Blue glass', styles: { bold: true } }],
+          children: [
+            {
+              id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+              type: 'checkListItem',
+              props: { checked: true },
+              content: [
+                {
+                  type: 'value',
+                  props: {
+                    valueId: generateUuidV7(),
+                    label: 'Armor',
+                    expressionSource: '12',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'codeBlock',
+          props: { language: 'typescript' },
+          content: [{ type: 'text', text: 'const armor = `12`', styles: {} }],
+        },
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'table',
+          content: {
+            type: 'tableContent',
+            columnWidths: [120, 120],
+            rows: [
+              {
+                cells: [
+                  { type: 'tableCell', content: [{ type: 'text', text: 'Name' }] },
+                  { type: 'tableCell', content: [{ type: 'text', text: 'Value' }] },
+                ],
+              },
+              {
+                cells: [
+                  { type: 'tableCell', content: [{ type: 'text', text: 'Armor' }] },
+                  { type: 'tableCell', content: [{ type: 'text', text: '12' }] },
+                ],
+              },
+            ],
+          },
         },
       ],
       NOTE_YJS_FRAGMENT,
@@ -33,7 +77,9 @@ describe('native content exports', () => {
 
     const markdown = noteDocumentToMarkdown(document)
     expect(markdown).toContain('## Tide ledger')
-    expect(markdown).toContain('* Blue glass')
+    expect(markdown).toContain('* **Blue glass**\n  - [x] Armor')
+    expect(markdown).toContain('```typescript\nconst armor = `12`\n```')
+    expect(markdown).toContain('| Name | Value |\n| --- | --- |\n| Armor | 12 |')
     document.destroy()
   })
 

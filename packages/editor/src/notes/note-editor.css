@@ -1,3 +1,5 @@
+@import '@blocknote/shadcn/style.css';
+
 .resource-note-editor .bn-container,
 .resource-note-editor .bn-editor {
   min-height: 100%;

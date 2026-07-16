@@ -9,6 +9,7 @@
     "**/*.css"
   ],
   "exports": {
+    "./style.css": "./dist/style.css",
     "./resources/resource-shell": {
       "types": "./dist/resources/resource-shell.d.mts",
       "default": "./dist/resources/resource-shell.mjs"

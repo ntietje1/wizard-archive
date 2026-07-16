@@ -5,7 +5,6 @@ import {
   useCreateBlockNote,
 } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import '@blocknote/shadcn/style.css'
 import { Sigma } from 'lucide-react'
 import { useEffect } from 'react'
 import type * as Y from 'yjs'

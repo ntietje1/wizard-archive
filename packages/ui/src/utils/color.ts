@@ -1,10 +1,5 @@
 import Color from 'color'
 
-interface NamedColorOption {
-  color: string
-  label: string
-}
-
 export function getContrastColor(hexColor: string): string {
   let hex = hexColor.trim().replace('#', '')
   if (hex.length === 3) {
@@ -20,44 +15,6 @@ export function getContrastColor(hexColor: string): string {
   const luminance = 0.2126 * toLinear(rRaw) + 0.7152 * toLinear(gRaw) + 0.0722 * toLinear(bRaw)
   return luminance > 0.179 ? '#000000' : '#ffffff'
 }
-
-export const BASE_TEXT_COLORS: ReadonlyArray<NamedColorOption> = [
-  { color: 'var(--foreground)', label: 'Default' },
-  { color: 'var(--border)', label: 'Grey' },
-  { color: 'var(--t-brown)', label: 'Brown' },
-  { color: 'var(--t-red)', label: 'Red' },
-  { color: 'var(--t-orange)', label: 'Orange' },
-  { color: 'var(--t-yellow)', label: 'Yellow' },
-  { color: 'var(--t-green)', label: 'Green' },
-  { color: 'var(--t-blue)', label: 'Blue' },
-  { color: 'var(--t-purple)', label: 'Purple' },
-  { color: 'var(--t-pink)', label: 'Pink' },
-]
-
-export const BASE_STROKE_COLORS: ReadonlyArray<NamedColorOption> = [
-  { color: 'var(--background)', label: 'Primary' },
-  { color: 'var(--border)', label: 'Border' },
-  { color: 'var(--foreground)', label: 'Reverse primary' },
-  { color: 'var(--t-red)', label: 'Red' },
-  { color: 'var(--t-orange)', label: 'Orange' },
-  { color: 'var(--t-yellow)', label: 'Yellow' },
-  { color: 'var(--t-green)', label: 'Green' },
-  { color: 'var(--t-blue)', label: 'Blue' },
-  { color: 'var(--t-purple)', label: 'Purple' },
-  { color: 'var(--t-pink)', label: 'Pink' },
-]
-
-export const BASE_BG_COLORS: ReadonlyArray<NamedColorOption> = [
-  { color: 'var(--background)', label: 'Primary' },
-  { color: 'var(--foreground)', label: 'Reverse primary' },
-  { color: 'var(--bg-red)', label: 'Red' },
-  { color: 'var(--bg-orange)', label: 'Orange' },
-  { color: 'var(--bg-yellow)', label: 'Yellow' },
-  { color: 'var(--bg-green)', label: 'Green' },
-  { color: 'var(--bg-blue)', label: 'Blue' },
-  { color: 'var(--bg-purple)', label: 'Purple' },
-  { color: 'var(--bg-pink)', label: 'Pink' },
-]
 
 const CSS_VARIABLE_REFERENCE_PATTERN = /^var\(\s*(--[^),\s]+)\s*(?:,\s*[^)]+)?\)$/
 

@@ -1,14 +1,52 @@
-import {
-  BASE_BG_COLORS,
-  BASE_STROKE_COLORS,
-  BASE_TEXT_COLORS,
-} from '@wizard-archive/ui/utils/color'
 import type { KeyboardEvent } from 'react'
 import type { CanvasDocumentController } from './document-controller'
 import type { CanvasDocumentContent, CanvasEdgeType } from './document-contract'
 import type { CanvasInteractionSnapshot } from './interaction-controller'
 import { createCanvasPropertyChange, resolveCanvasSharedValue } from './canvas-properties'
 import type { CanvasSharedValue } from './canvas-properties'
+
+interface CanvasColorOption {
+  color: string
+  label: string
+}
+
+const BASE_TEXT_COLORS: ReadonlyArray<CanvasColorOption> = [
+  { color: 'var(--foreground)', label: 'Default' },
+  { color: 'var(--border)', label: 'Grey' },
+  { color: 'var(--t-brown)', label: 'Brown' },
+  { color: 'var(--t-red)', label: 'Red' },
+  { color: 'var(--t-orange)', label: 'Orange' },
+  { color: 'var(--t-yellow)', label: 'Yellow' },
+  { color: 'var(--t-green)', label: 'Green' },
+  { color: 'var(--t-blue)', label: 'Blue' },
+  { color: 'var(--t-purple)', label: 'Purple' },
+  { color: 'var(--t-pink)', label: 'Pink' },
+]
+
+const BASE_STROKE_COLORS: ReadonlyArray<CanvasColorOption> = [
+  { color: 'var(--background)', label: 'Primary' },
+  { color: 'var(--border)', label: 'Border' },
+  { color: 'var(--foreground)', label: 'Reverse primary' },
+  { color: 'var(--t-red)', label: 'Red' },
+  { color: 'var(--t-orange)', label: 'Orange' },
+  { color: 'var(--t-yellow)', label: 'Yellow' },
+  { color: 'var(--t-green)', label: 'Green' },
+  { color: 'var(--t-blue)', label: 'Blue' },
+  { color: 'var(--t-purple)', label: 'Purple' },
+  { color: 'var(--t-pink)', label: 'Pink' },
+]
+
+const BASE_BG_COLORS: ReadonlyArray<CanvasColorOption> = [
+  { color: 'var(--background)', label: 'Primary' },
+  { color: 'var(--foreground)', label: 'Reverse primary' },
+  { color: 'var(--bg-red)', label: 'Red' },
+  { color: 'var(--bg-orange)', label: 'Orange' },
+  { color: 'var(--bg-yellow)', label: 'Yellow' },
+  { color: 'var(--bg-green)', label: 'Green' },
+  { color: 'var(--bg-blue)', label: 'Blue' },
+  { color: 'var(--bg-purple)', label: 'Purple' },
+  { color: 'var(--bg-pink)', label: 'Pink' },
+]
 
 export function CanvasSelectionProperties({
   canEdit,
@@ -133,7 +171,7 @@ function CanvasColorSelect({
 }: {
   label: string
   onChange: (value: string) => void
-  options: ReadonlyArray<Readonly<{ color: string; label: string }>>
+  options: ReadonlyArray<CanvasColorOption>
   value: CanvasSharedValue<string>
 }) {
   if (value.state === 'unavailable') return null

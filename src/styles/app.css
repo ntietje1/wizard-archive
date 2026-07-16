@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@wizard-archive/editor/style.css';
 
 @font-face {
   font-family: 'Inter';
