@@ -128,7 +128,7 @@ function createScopedLiveResourceRuntime(
         return subscribeToWatch(watch, apply)
       },
     },
-    undo.begin,
+    undo.beginRecording,
   )
   const discardUpload = async (sessionId: Id<'fileStorage'>) => {
     await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
@@ -178,7 +178,7 @@ function createScopedLiveResourceRuntime(
       replace: (args) => convex.action(api.resources.actions.replaceFileContent, args),
       upload: uploadFile,
     },
-    undo.begin,
+    undo.beginRecording,
   )
   const maps = createLiveMapSessionSource(
     currentScope.campaignId,
@@ -208,7 +208,7 @@ function createScopedLiveResourceRuntime(
       replace: (args) => convex.action(api.resources.actions.replaceMapImage, args),
       upload: uploadFile,
     },
-    undo.begin,
+    undo.beginRecording,
   )
   const canvases = createLiveCanvasSessionSource(
     currentScope.campaignId,
@@ -232,7 +232,7 @@ function createScopedLiveResourceRuntime(
       save: (args) => convex.mutation(api.resources.mutations.saveCanvasContent, args),
       refresh,
     },
-    undo.begin,
+    undo.beginRecording,
   )
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
   const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, base.applyProjection, {

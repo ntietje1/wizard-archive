@@ -25,7 +25,7 @@ import type {
   MapSessionSource,
   MapSessionState,
 } from '@wizard-archive/editor/resources/content-session-contract'
-import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
+import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import { encodeWizardMapDocument } from '@wizard-archive/editor/resources/map-native-document'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
@@ -74,7 +74,7 @@ type MapStore = ReturnType<typeof createResourceWatchStore<MapSnapshot, MapSessi
 export function createLiveMapSessionSource(
   campaignId: CampaignId,
   backend: LiveMapBackend,
-  beginCreate: () => ResourceHistoryRecording,
+  beginCreateUndo: () => ResourceUndoRecording,
 ): MapSessionSource {
   const sessions = new Map<ResourceId, LiveMapSession>()
   let store: MapStore
@@ -109,7 +109,7 @@ export function createLiveMapSessionSource(
 
   return {
     create: async (envelope) =>
-      await createLiveFixedContentResource(campaignId, envelope, backend, beginCreate),
+      await createLiveFixedContentResource(campaignId, envelope, backend, beginCreateUndo),
     dispose: () => {
       store.dispose()
       for (const session of sessions.values()) session.dispose()

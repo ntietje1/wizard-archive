@@ -25,7 +25,7 @@ export interface ResourceUndoHistory {
   redo(): Promise<CommandDelivery<ResourceCompensationResult>>
 }
 
-export interface ResourceHistoryRecording {
+export interface ResourceUndoRecording {
   completed(receipt: ResourceCommandReceipt): void
   abandon(): void
 }
@@ -146,7 +146,7 @@ export function createResourceUndoHistory(
     undo: () => execute('undo'),
     redo: () => execute('redo'),
   }
-  const begin = () => {
+  const beginRecording = () => {
     let active = true
     return {
       abandon: () => {
@@ -157,19 +157,19 @@ export function createResourceUndoHistory(
         active = false
         recordCompleted(receipt)
       },
-    } satisfies ResourceHistoryRecording
+    } satisfies ResourceUndoRecording
   }
   return {
-    begin,
+    beginRecording,
     history,
     structure: {
       execute: async (envelope: CommandEnvelope<ResourceStructureCommand>) => {
-        const recording = begin()
+        const undoRecording = beginRecording()
         const delivery = await structure.execute(envelope)
         if (delivery.status === 'received' && delivery.result.status === 'completed') {
-          recording.completed(delivery.result.receipt)
+          undoRecording.completed(delivery.result.receipt)
         } else if (delivery.status !== 'indeterminate') {
-          recording.abandon()
+          undoRecording.abandon()
         }
         return delivery
       },

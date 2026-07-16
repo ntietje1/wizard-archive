@@ -25,7 +25,7 @@ import type {
   CommandEnvelope,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
-import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
+import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import { createResourceWatchStore } from './resource-watch-store'
 import {
   deliverExpectedCreateResult,
@@ -170,7 +170,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
     private readonly memberId: CampaignMemberId,
     private readonly user: CollaborationUser,
     private readonly backend: LiveNoteContentBackend,
-    private readonly beginCreate: () => ResourceHistoryRecording,
+    private readonly beginCreateUndo: () => ResourceUndoRecording,
   ) {
     this.#store = createResourceWatchStore<NoteSnapshot, NoteSessionState>(
       backend.watch,
@@ -207,7 +207,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
     const started = existing
       ? ({ status: 'ready', create: existing } as const)
-      : this.#beginCreate(resourceId, envelope.operationId, local)
+      : this.#startLocalCreate(resourceId, envelope.operationId, local)
     if (started.status === 'unavailable') {
       this.#setState(
         resourceId,
@@ -229,7 +229,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       operationId: envelope.operationId,
       local,
     })
-    const recording = this.beginCreate()
+    const undoRecording = this.beginCreateUndo()
     try {
       const delivery = deliverExpectedCreateResult(
         readLiveStructureResult(
@@ -247,12 +247,12 @@ class LiveNoteSessionSource implements NoteSessionSource {
         resourceId,
       )
       if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
-        recording.abandon()
+        undoRecording.abandon()
         this.#removeLocal(resourceId)
         return delivery
       }
       await this.backend.refresh(resourceId, envelope.command.parentId)
-      recording.completed(delivery.result.receipt)
+      undoRecording.completed(delivery.result.receipt)
       const version = await initialNoteContentVersion(create.initialUpdate)
       create.stop()
       this.#creates.delete(resourceId)
@@ -367,7 +367,11 @@ class LiveNoteSessionSource implements NoteSessionSource {
     this.#store.set(resourceId, state)
   }
 
-  #beginCreate(resourceId: ResourceId, operationId: OperationId, doc: Y.Doc): LocalCreateStart {
+  #startLocalCreate(
+    resourceId: ResourceId,
+    operationId: OperationId,
+    doc: Y.Doc,
+  ): LocalCreateStart {
     const outbox = createYjsUpdateOutbox('note', this.campaignId, resourceId, this.memberId)
     const recovered = outbox.load()
     if (recovered.status === 'unavailable') {
@@ -403,7 +407,7 @@ export function createLiveNoteContentSource(
   memberId: CampaignMemberId,
   user: CollaborationUser,
   backend: LiveNoteContentBackend,
-  beginCreate: () => ResourceHistoryRecording,
+  beginCreateUndo: () => ResourceUndoRecording,
 ) {
-  return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreate)
+  return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreateUndo)
 }

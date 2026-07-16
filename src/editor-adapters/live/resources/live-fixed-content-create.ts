@@ -11,7 +11,7 @@ import type {
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
-import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
+import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import {
   deliverExpectedCreateResult,
   readLiveStructureResult,
@@ -31,14 +31,14 @@ export async function finalizeLiveContentCreate(
   resourceId: ResourceId,
   parentId: ResourceId | null,
   backend: Pick<LiveFixedContentCreateBackend, 'refresh'>,
-  recording: ResourceHistoryRecording,
+  undoRecording: ResourceUndoRecording,
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
   if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
-    recording.abandon()
+    undoRecording.abandon()
     return delivery
   }
   await backend.refresh(resourceId, parentId)
-  recording.completed(delivery.result.receipt)
+  undoRecording.completed(delivery.result.receipt)
   return delivery
 }
 
@@ -46,12 +46,12 @@ export async function createLiveFixedContentResource(
   campaignId: CampaignId,
   envelope: CommandEnvelope<CreateMapResourceCommand | CreateCanvasResourceCommand>,
   backend: LiveFixedContentCreateBackend,
-  beginCreate: () => ResourceHistoryRecording,
+  beginCreateUndo: () => ResourceUndoRecording,
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
   if (envelope.campaignId !== campaignId) {
     return { status: 'received', result: { status: 'rejected', reason: 'invalid_command' } }
   }
-  const recording = beginCreate()
+  const undoRecording = beginCreateUndo()
   try {
     const delivery = deliverExpectedCreateResult(
       readLiveStructureResult(
@@ -72,10 +72,10 @@ export async function createLiveFixedContentResource(
       envelope.command.resourceId,
       envelope.command.parentId,
       backend,
-      recording,
+      undoRecording,
     )
   } catch {
-    recording.abandon()
+    undoRecording.abandon()
     return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
   }
 }

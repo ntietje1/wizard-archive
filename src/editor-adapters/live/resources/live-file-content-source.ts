@@ -21,7 +21,7 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
-import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
+import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import { finalizeLiveContentCreate } from './live-fixed-content-create'
 import {
   deliverExpectedCreateResult,
@@ -109,7 +109,7 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
-  beginCreate: () => ResourceHistoryRecording,
+  beginCreateUndo: () => ResourceUndoRecording,
 ): FileContentSource {
   const content = new LiveFileContentStateSource(backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
@@ -154,7 +154,7 @@ export function createLiveFileContentSource(
       ) {
         return invalidCreateDelivery()
       }
-      const recording = beginCreate()
+      const undoRecording = beginCreateUndo()
       let current = existing
       try {
         if (!current) {
@@ -189,7 +189,7 @@ export function createLiveFileContentSource(
           envelope.command.resourceId,
           envelope.command.parentId,
           backend,
-          recording,
+          undoRecording,
         )
       } catch {
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }

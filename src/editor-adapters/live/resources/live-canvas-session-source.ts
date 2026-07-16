@@ -18,7 +18,7 @@ import type {
   CampaignMemberId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceHistoryRecording } from '@wizard-archive/editor/resources/undo-history'
+import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { createResourceWatchStore } from './resource-watch-store'
@@ -127,7 +127,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     private readonly memberId: CampaignMemberId,
     private readonly user: CollaborationUser,
     private readonly backend: LiveCanvasBackend,
-    private readonly beginCreate: () => ResourceHistoryRecording,
+    private readonly beginCreateUndo: () => ResourceUndoRecording,
   ) {
     this.#store = createResourceWatchStore<CanvasSnapshot, CanvasSessionState>(
       backend.watch,
@@ -164,7 +164,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   }
 
   create: CanvasSessionSource['create'] = (envelope) =>
-    createLiveFixedContentResource(this.campaignId, envelope, this.backend, this.beginCreate)
+    createLiveFixedContentResource(this.campaignId, envelope, this.backend, this.beginCreateUndo)
 
   dispose(): void {
     this.#store.dispose()
@@ -267,7 +267,7 @@ export function createLiveCanvasSessionSource(
   memberId: CampaignMemberId,
   user: CollaborationUser,
   backend: LiveCanvasBackend,
-  beginCreate: () => ResourceHistoryRecording,
+  beginCreateUndo: () => ResourceUndoRecording,
 ): CanvasSessionSource {
-  return new LiveCanvasSessionSource(campaignId, memberId, user, backend, beginCreate)
+  return new LiveCanvasSessionSource(campaignId, memberId, user, backend, beginCreateUndo)
 }
