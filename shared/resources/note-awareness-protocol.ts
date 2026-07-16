@@ -6,7 +6,6 @@ import {
   isUuidV7,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
-import type { NoteCollaborationUser } from '@wizard-archive/editor/resources/content-session-contract'
 
 export const NOTE_AWARENESS_TTL_MS = 30_000
 export const MAX_NOTE_AWARENESS_CLIENTS = 256
@@ -23,9 +22,14 @@ const COLLABORATION_COLORS = [
   '#be5046',
 ] as const
 
+type NoteAwarenessUser = Readonly<{
+  name: string
+  color: string
+}>
+
 type AwarenessState = Record<string, unknown> & {
   memberId: CampaignMemberId
-  user: NoteCollaborationUser
+  user: NoteAwarenessUser
 }
 
 type DecodedAwarenessUpdate = Readonly<{
@@ -52,7 +56,7 @@ export function authenticateNoteAwarenessUpdate(
   update: ArrayBuffer,
   claimedClientId: number,
   memberId: CampaignMemberId,
-  user: NoteCollaborationUser,
+  user: NoteAwarenessUser,
 ):
   | { status: 'accepted'; update: ArrayBuffer }
   | { status: 'rejected'; reason: NoteAwarenessUpdateRejection } {
@@ -137,7 +141,7 @@ function encodeWireUpdate(update: {
   return encoding.toUint8Array(encoder)
 }
 
-function isCollaborationUser(value: unknown): value is NoteCollaborationUser {
+function isCollaborationUser(value: unknown): value is NoteAwarenessUser {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const user = value as Record<string, unknown>
   return typeof user.name === 'string' && typeof user.color === 'string'

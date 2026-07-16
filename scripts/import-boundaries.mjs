@@ -36,7 +36,11 @@ const backendSafeEditorPackageSpecifiers = new Set(
     (subpath) => `${editorPackageName}${subpath.slice(1)}`,
   ),
 )
-const editorAdapterRootSpecifiers = new Set(['@wizard-archive/editor'])
+const publicEditorPackageSpecifiers = new Set(
+  Object.keys(editorPackageJson.exports).map((subpath) =>
+    subpath === '.' ? editorPackageName : `${editorPackageName}${subpath.slice(1)}`,
+  ),
+)
 
 function normalizedRelativePath(root, filePath) {
   return path.relative(root, filePath).split(path.sep).join('/')
@@ -267,8 +271,7 @@ function editorPackageBoundaryViolation(
 function editorAdapterBoundaryViolation(filePath, source, index, specifier, kind) {
   if (!filePath.startsWith('src/editor-adapters/')) return null
   if (specifier !== editorPackageName && !specifier.startsWith(`${editorPackageName}/`)) return null
-  if (editorAdapterRootSpecifiers.has(specifier)) return null
-  if (backendSafeEditorPackageSpecifiers.has(specifier)) return null
+  if (publicEditorPackageSpecifiers.has(specifier)) return null
 
   return importViolation(
     filePath,

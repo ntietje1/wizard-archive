@@ -251,13 +251,14 @@ describe('import boundary checks', () => {
     ])
   })
 
-  it('allows the editor root and backend-safe leaf contracts', () => {
+  it('allows editor adapters to import declared public package entries', () => {
     expect(
       analyzeImportBoundaries([
         {
           filePath: 'src/editor-adapters/live/example.ts',
           source: [
-            "import { WizardEditor } from '@wizard-archive/editor'",
+            "import { ResourceShell } from '@wizard-archive/editor/resources/resource-shell'",
+            "import { noteDocumentToMarkdown } from '@wizard-archive/editor/notes/document-markdown'",
             "import type { WizardEditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'",
             "import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'",
           ].join('\n'),
@@ -272,6 +273,7 @@ describe('import boundary checks', () => {
         {
           filePath: 'src/editor-adapters/live/example.ts',
           source: [
+            "import { WizardEditor } from '@wizard-archive/editor'",
             "import { createExperimentalRuntime } from '@wizard-archive/editor/experimental/runtime'",
             "import { WorkspaceRuntimeHost } from '@wizard-archive/editor/workspace/runtime-host'",
             "import type { WorkspaceRuntime } from '@wizard-archive/editor/workspace/runtime'",
@@ -282,12 +284,13 @@ describe('import boundary checks', () => {
         },
       ]),
     ).toEqual([
-      'src/editor-adapters/live/example.ts:1 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/experimental/runtime',
-      'src/editor-adapters/live/example.ts:2 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/workspace/runtime-host',
-      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/runtime',
-      'src/editor-adapters/live/example.ts:4 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/game-maps',
-      'src/editor-adapters/live/example.ts:5 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/notes',
-      'src/editor-adapters/live/example.ts:6 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/adapter',
+      'src/editor-adapters/live/example.ts:1 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor',
+      'src/editor-adapters/live/example.ts:2 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/experimental/runtime',
+      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/workspace/runtime-host',
+      'src/editor-adapters/live/example.ts:4 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/runtime',
+      'src/editor-adapters/live/example.ts:5 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/game-maps',
+      'src/editor-adapters/live/example.ts:6 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/notes',
+      'src/editor-adapters/live/example.ts:7 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/adapter',
     ])
   })
 
