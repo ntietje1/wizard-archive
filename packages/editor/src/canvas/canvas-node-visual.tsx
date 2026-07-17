@@ -9,6 +9,7 @@ import { canvasEmbedLabel } from './canvas-embed-label'
 export function CanvasNodeVisual({
   editing,
   embed,
+  exclusivelySelected,
   node,
   onFinishEditing,
   onSaveContent,
@@ -17,6 +18,7 @@ export function CanvasNodeVisual({
 }: {
   editing: boolean
   embed?: ReactNode
+  exclusivelySelected: boolean
   node: CanvasDocumentNode
   onFinishEditing: () => void
   onSaveContent: (content: CanvasTextDocument) => void
@@ -66,7 +68,7 @@ export function CanvasNodeVisual({
   if (node.type === 'embed') {
     return (
       <div
-        className="relative size-full overflow-hidden rounded-md border bg-card text-sm shadow-sm"
+        className={`relative size-full overflow-hidden rounded-md border bg-card text-sm shadow-sm ${exclusivelySelected ? 'nowheel' : ''}`}
         style={sharedStyle}
       >
         {embed ?? (
@@ -81,6 +83,7 @@ export function CanvasNodeVisual({
     <CanvasTextEditor
       content={node.data.content}
       editing={editing}
+      exclusivelySelected={exclusivelySelected}
       onChange={onSaveContent}
       onFinish={onFinishEditing}
       selected={selected}

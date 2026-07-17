@@ -92,6 +92,7 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
             >
               <CanvasNodeVisual
                 editing={false}
+                exclusivelySelected={false}
                 node={node}
                 onFinishEditing={ignore}
                 onSaveContent={ignore}

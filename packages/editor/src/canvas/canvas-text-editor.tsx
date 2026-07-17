@@ -13,6 +13,7 @@ import './canvas-text-editor.css'
 export function CanvasTextEditor({
   content,
   editing,
+  exclusivelySelected,
   onChange,
   onFinish,
   selected,
@@ -20,6 +21,7 @@ export function CanvasTextEditor({
 }: {
   content: CanvasTextDocument | undefined
   editing: boolean
+  exclusivelySelected: boolean
   onChange: (content: CanvasTextDocument) => void
   onFinish: () => void
   selected: boolean
@@ -68,7 +70,7 @@ export function CanvasTextEditor({
 
   return (
     <div
-      className={`canvas-text-editor size-full overflow-auto rounded-md border bg-card text-sm outline-none ${editing ? 'nowheel nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
+      className={`canvas-text-editor size-full overflow-auto rounded-md border bg-card text-sm outline-none ${exclusivelySelected ? 'nowheel' : ''} ${editing ? 'nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
       style={style}
       onKeyDownCapture={editing ? (event) => finishCanvasTextEditing(event, onFinish) : undefined}
       onPointerDown={editing ? (event) => event.stopPropagation() : undefined}

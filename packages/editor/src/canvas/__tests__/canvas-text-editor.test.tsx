@@ -36,6 +36,7 @@ describe('CanvasTextEditor', () => {
       <CanvasTextEditor
         content={content}
         editing={false}
+        exclusivelySelected
         onChange={onChange}
         onFinish={onFinish}
         selected
@@ -60,6 +61,7 @@ describe('CanvasTextEditor', () => {
       <CanvasTextEditor
         content={content}
         editing
+        exclusivelySelected
         onChange={onChange}
         onFinish={onFinish}
         selected

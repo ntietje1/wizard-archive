@@ -237,6 +237,135 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('narrows a multi-selection on click and activates text on the same double-click', async () => {
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: NODE_B, type: 'text', position: { x: 240, y: 0 }, data: {} },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Activation board" />,
+    )
+    const nodes = screen.getAllByTestId('canvas-node')
+    installPointerCapture(screen.getByTestId('canvas-surface'))
+    nodes.forEach(installPointerCapture)
+
+    fireEvent.pointerDown(nodes[0], { button: 0, pointerId: 31 })
+    fireEvent.pointerUp(nodes[0], { pointerId: 31 })
+    fireEvent.pointerDown(nodes[1], { button: 0, ctrlKey: true, pointerId: 32 })
+    expect(nodes[0]).toHaveAttribute('data-selected', 'true')
+    expect(nodes[1]).toHaveAttribute('data-selected', 'true')
+    expect(nodes[0].querySelector('.canvas-text-editor')).not.toHaveClass('nowheel')
+
+    fireEvent.pointerDown(nodes[0], { button: 0, pointerId: 33 })
+    fireEvent.pointerUp(nodes[0], { pointerId: 33 })
+    expect(nodes[0]).toHaveAttribute('data-selected', 'true')
+    expect(nodes[1]).toHaveAttribute('data-selected', 'false')
+    expect(nodes[0].querySelector('.canvas-text-editor')).toHaveClass('nowheel')
+
+    fireEvent.pointerDown(nodes[1], { button: 0, pointerId: 34 })
+    fireEvent.pointerUp(nodes[1], { pointerId: 34 })
+    fireEvent.pointerDown(nodes[1], { button: 0, pointerId: 35 })
+    fireEvent.pointerUp(nodes[1], { pointerId: 35 })
+    fireEvent.doubleClick(nodes[1])
+    expect(screen.getAllByRole('textbox', { name: 'Canvas text' })[1]).toHaveAttribute(
+      'contenteditable',
+      'true',
+    )
+
+    view.unmount()
+    session.dispose()
+  })
+
+  it('captures canvas undo before a selected read-only text child can consume it', async () => {
+    const session = await createSession({
+      nodes: [{ id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="History board" />,
+    )
+    const node = screen.getByTestId('canvas-node')
+    installPointerCapture(screen.getByTestId('canvas-surface'))
+    installPointerCapture(node)
+
+    fireEvent.pointerDown(node, {
+      button: 0,
+      buttons: 1,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 36,
+    })
+    fireEvent.pointerMove(node, {
+      buttons: 1,
+      clientX: 50,
+      clientY: 30,
+      pointerId: 36,
+    })
+    fireEvent.pointerUp(node, { clientX: 50, clientY: 30, pointerId: 36 })
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 40, y: 20 },
+    })
+    expect(node).toHaveAttribute('data-selected', 'true')
+
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Canvas text' }), {
+      key: 'z',
+      ctrlKey: true,
+    })
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 0, y: 0 },
+    })
+
+    view.unmount()
+    session.dispose()
+  })
+
+  it('activates an embedded note with the same double-click and exclusive-scroll rules', async () => {
+    const session = await createSession({
+      nodes: [{ id: NODE_A, type: 'embed', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+    })
+    const view = render(
+      <ProductionCanvasEditor
+        canEdit
+        renderEmbed={({ editing, onEdit }) => (
+          <div
+            className="size-full overflow-auto"
+            data-editing={editing}
+            data-testid="embedded-note"
+            onDoubleClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onEdit()
+            }}
+          />
+        )}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Embedded note board"
+      />,
+    )
+    const node = screen.getByTestId('canvas-node')
+    const embeddedNote = screen.getByTestId('embedded-note')
+    installPointerCapture(screen.getByTestId('canvas-surface'))
+    installPointerCapture(node)
+
+    fireEvent.pointerDown(embeddedNote, { button: 0, pointerId: 37 })
+    fireEvent.pointerUp(embeddedNote, { pointerId: 37 })
+    fireEvent.pointerDown(embeddedNote, { button: 0, pointerId: 38 })
+    fireEvent.pointerUp(embeddedNote, { pointerId: 38 })
+    fireEvent.doubleClick(embeddedNote)
+
+    expect(node).toHaveAttribute('data-selected', 'true')
+    expect(embeddedNote).toHaveAttribute('data-editing', 'true')
+    expect(embeddedNote.closest('.nowheel')).not.toBeNull()
+
+    view.unmount()
+    session.dispose()
+  })
+
   it('restores pane, node, edge, arrange, reorder, and clipboard context actions', async () => {
     const session = await createSession({
       nodes: [

@@ -138,6 +138,9 @@ export function CanvasScene({
             node={node}
             onOpenContextMenu={onOpenContextMenu}
             renderEmbed={renderEmbed}
+            exclusivelySelected={
+              visualSelection.nodeIds.size === 1 && visualSelection.nodeIds.has(node.id)
+            }
             selected={visualSelection.nodeIds.has(node.id)}
             showSelectionIndicator={
               visualSelection.nodeIds.has(node.id) &&
@@ -202,6 +205,7 @@ function CanvasNode({
   node,
   onOpenContextMenu,
   renderEmbed,
+  exclusivelySelected,
   selected,
   showSelectionIndicator,
   surface,
@@ -214,6 +218,7 @@ function CanvasNode({
   node: CanvasDocumentNode
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   renderEmbed: CanvasEmbedRenderer
+  exclusivelySelected: boolean
   selected: boolean
   showSelectionIndicator: boolean
   surface: RefObject<HTMLElement | null>
@@ -279,6 +284,7 @@ function CanvasNode({
           interaction.viewport,
           documentController,
           interactionController,
+          node.id,
           surface,
         )
       }
@@ -286,6 +292,7 @@ function CanvasNode({
     >
       <CanvasNodeVisual
         editing={editing}
+        exclusivelySelected={exclusivelySelected}
         embed={
           node.type === 'embed'
             ? renderEmbed({
@@ -448,18 +455,19 @@ function commitNodeDrag(
   viewport: CanvasViewport,
   documentController: CanvasDocumentController,
   interactionController: CanvasInteractionController,
+  nodeId: CanvasNodeId,
   surface: RefObject<HTMLElement | null>,
 ) {
-  if (!canEdit) {
-    interactionController.cancelInteraction()
-    return
-  }
-  updateNodeDrag(event, viewport, interactionController, surface)
-  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+  const captured = event.currentTarget.hasPointerCapture(event.pointerId)
+  if (canEdit && captured) {
+    updateNodeDrag(event, viewport, interactionController, surface)
     event.currentTarget.releasePointerCapture(event.pointerId)
   }
   const positions = interactionController.commitDrag(event.pointerId)
-  if (!positions) return
+  if (!positions) {
+    if (!event.metaKey && !event.ctrlKey) interactionController.selectNode(nodeId, false)
+    return
+  }
   const nodes: Array<CanvasDocumentNodeUpdate> = []
   for (const candidate of documentController.read().nodes) {
     const position = positions.get(candidate.id)

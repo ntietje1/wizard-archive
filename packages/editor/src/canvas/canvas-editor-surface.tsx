@@ -207,7 +207,7 @@ export function CanvasEditorSurface({
       data-workspace-mode={canEdit ? 'editor' : 'viewer'}
       role="application"
       tabIndex={0}
-      onKeyDown={handleKeyboard}
+      onKeyDownCapture={handleKeyboard}
     >
       <CanvasToolbar
         canEdit={canEdit}
