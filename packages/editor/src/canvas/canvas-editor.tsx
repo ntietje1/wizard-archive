@@ -32,7 +32,6 @@ export type CanvasEmbedRenderer = (props: {
   activation: BlockNoteActivation | null
   editing: boolean
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
-  onEdit: (point: Readonly<{ x: number; y: number }> | null) => void
   zoom: number
 }) => ReactNode
 

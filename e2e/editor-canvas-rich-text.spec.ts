@@ -1,6 +1,71 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('canvas rich text', () => {
+  test('places text and embedded-note carets at the double-click point', async ({ page }) => {
+    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
+    const canvas = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
+    await expect(canvas).toBeVisible()
+
+    await canvas.getByRole('button', { name: 'Text' }).click()
+    const surface = canvas.getByRole('region', { name: 'Canvas surface' })
+    const surfaceBox = await surface.boundingBox()
+    if (!surfaceBox) throw new Error('Canvas surface is not visible')
+    await page.mouse.click(surfaceBox.x + 700, surfaceBox.y + 420)
+    const textNode = canvas.getByTestId('canvas-node').last()
+    const textEditor = textNode.getByRole('textbox', { name: 'Canvas text' })
+    await textEditor.fill('Alpha beta gamma')
+    await textEditor.press('Escape')
+    const textLine = textEditor.locator('.bn-inline-content').first()
+    const textLineBox = await textLine.boundingBox()
+    if (!textLineBox) throw new Error('Canvas text line is not visible')
+    await textLine.dblclick({ position: { x: textLineBox.width - 2, y: textLineBox.height / 2 } })
+    await page.keyboard.type('!')
+    await expect(textEditor).toContainText('Alpha beta gamma!')
+
+    await textEditor.press('Escape')
+    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'The Lantern Market', exact: true })
+      .dragTo(surface, { targetPosition: { x: 420, y: 280 } })
+    const noteEditor = canvas
+      .getByRole('textbox', { name: 'The Lantern Market embedded note' })
+      .last()
+    await expect(noteEditor).toBeVisible()
+    const noteLine = noteEditor.locator('.bn-inline-content').first()
+    const originalNoteText = await noteLine.textContent()
+    const noteTarget = await noteLine.evaluate((element) => {
+      const text = element.firstChild
+      if (!(text instanceof Text) || text.length === 0) throw new Error('Expected note text')
+      const range = document.createRange()
+      range.setStart(text, text.length - 1)
+      range.setEnd(text, text.length)
+      const character = range.getBoundingClientRect()
+      const line = element.getBoundingClientRect()
+      return {
+        nativeOffset: document.caretPositionFromPoint(
+          character.right - 1,
+          character.top + character.height / 2,
+        )?.offset,
+        position: {
+          x: character.right - line.left - 1,
+          y: character.top - line.top + character.height / 2,
+        },
+      }
+    })
+    expect(noteTarget.nativeOffset).toBe(originalNoteText?.length)
+    await noteLine.dblclick({ position: noteTarget.position })
+    await expect
+      .poll(() =>
+        noteLine.evaluate(() => {
+          const selection = window.getSelection()
+          return selection?.anchorOffset ?? -1
+        }),
+      )
+      .toBe(originalNoteText?.length)
+    await page.keyboard.type('!')
+    await expect(noteLine).toHaveText(`${originalNoteText}!`)
+  })
+
   test('formats canonical text and preserves it across editor and resource lifecycles', async ({
     page,
   }) => {

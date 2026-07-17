@@ -25,6 +25,7 @@ type NoteEditorProps = {
   activation?: BlockNoteActivation
   collaboration?: ContentCollaboration
   document: Y.Doc
+  formattingToolbar?: boolean
   headingNavigationRef?: NoteHeadingNavigationRef
   label: string
   scroll: NoteScrollBehavior
@@ -112,7 +113,10 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         event.stopPropagation()
       }}
     >
-      <NoteFormattingToolbar editor={editor} visible={editable} />
+      <NoteFormattingToolbar
+        editor={editor}
+        visible={editable && props.formattingToolbar !== false}
+      />
       <ScrollArea
         className="min-h-0 flex-1"
         contentClassName="note-editor-scroll-content"

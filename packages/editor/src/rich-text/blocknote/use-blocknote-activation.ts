@@ -41,7 +41,10 @@ export function useBlockNoteActivation(
       if (!focused) console.warn('BlockNote editor activation failed')
     }
 
-    frame = requestAnimationFrame(activate)
+    // BlockNote applies its own editable focus on the first frame.
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(activate)
+    })
     return () => {
       cancelled = true
       cancelAnimationFrame(frame)

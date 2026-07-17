@@ -8,10 +8,13 @@ test.describe('canvas viewport parity', () => {
     const { editor, nodes, surface, viewport } = await openDemoCanvas(page)
     const surfaceBox = await visibleBox(surface)
     const viewportStyle = () => viewport.getAttribute('style')
+    const gridSize = () => surface.evaluate((element) => element.style.backgroundSize)
 
     const initial = await viewportStyle()
+    const initialGridSize = await gridSize()
     await editor.getByRole('button', { name: 'Zoom in' }).click()
     await expect.poll(viewportStyle).not.toBe(initial)
+    await expect.poll(gridSize).not.toBe(initialGridSize)
 
     const nodeBox = await visibleBox(nodes.first())
     await nodes.first().dragTo(surface, {

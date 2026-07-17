@@ -489,16 +489,12 @@ describe('CanvasEditor', () => {
     const view = render(
       <ProductionCanvasEditor
         canEdit
-        renderEmbed={({ editing, onEdit }) => (
+        renderEmbed={({ editing }) => (
           <div
             className="size-full overflow-auto"
+            data-canvas-editable-embed={!editing}
             data-editing={editing}
             data-testid="embedded-note"
-            onDoubleClick={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onEdit(null)
-            }}
           />
         )}
         resourceId={RESOURCE_ID}

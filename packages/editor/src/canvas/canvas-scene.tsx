@@ -277,7 +277,11 @@ function CanvasNode({
         opacity: erasing ? 0.35 : undefined,
       }}
       onDoubleClickCapture={(event) => {
-        if (!canEdit || tool !== 'select' || node.type !== 'text') return
+        const activatesText = node.type === 'text'
+        const activatesEmbed =
+          node.type === 'embed' &&
+          event.currentTarget.querySelector('[data-canvas-editable-embed="true"]') !== null
+        if (!canEdit || tool !== 'select' || (!activatesText && !activatesEmbed)) return
         event.preventDefault()
         event.stopPropagation()
         interactionController.selectNode(node.id, false)
@@ -329,7 +333,6 @@ function CanvasNode({
                   : null,
                 editing,
                 node,
-                onEdit: (point) => interactionController.editNode(node.id, point ?? null),
                 zoom: viewport.zoom,
               })
             : undefined

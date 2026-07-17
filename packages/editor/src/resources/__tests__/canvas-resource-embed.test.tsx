@@ -1,5 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
@@ -100,7 +100,6 @@ describe('CanvasResourceEmbed', () => {
       ensureResource: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
       ensureCollection: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
     } satisfies ResourceIndexLoader
-    const onEdit = vi.fn()
     const createEditor = vi.spyOn(BlockNoteEditor, 'create')
     const node = {
       id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
@@ -124,7 +123,6 @@ describe('CanvasResourceEmbed', () => {
         maps={maps}
         node={node}
         notes={notes}
-        onEdit={onEdit}
         zoom={2}
       />,
     )
@@ -140,8 +138,7 @@ describe('CanvasResourceEmbed', () => {
     expect(editor.closest('[data-slot="scroll-area"]')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Harbor ledger' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Supplies: 6 * 3' })).toBeVisible()
-    fireEvent.doubleClick(editor, { clientX: 120, clientY: 85 })
-    expect(onEdit).toHaveBeenCalledWith({ x: 120, y: 85 })
+    expect(editor.closest('[data-canvas-editable-embed="true"]')).toBeInTheDocument()
 
     view.rerender(
       <CanvasResourceEmbed
@@ -154,7 +151,6 @@ describe('CanvasResourceEmbed', () => {
         maps={maps}
         node={node}
         notes={notes}
-        onEdit={onEdit}
       />,
     )
 
@@ -263,7 +259,6 @@ describe('CanvasResourceEmbed', () => {
           },
         }}
         notes={notes}
-        onEdit={vi.fn()}
       />,
     )
 

@@ -39,17 +39,39 @@ function getSelectionNearestPoint(view: EditorView, point: BlockNoteEditorFocusP
 }
 
 function getSelectionAtPoint(view: EditorView, point: BlockNoteEditorFocusPoint) {
-  let position: number | null = null
-  try {
-    const result = view.posAtCoords({ left: point.x, top: point.y })
-    position = typeof result?.pos === 'number' ? result.pos : null
-  } catch {
-    return null
-  }
+  const position = getPositionAtPoint(view, point)
   if (position === null) return null
 
   try {
     return TextSelection.near(view.state.doc.resolve(position))
+  } catch {
+    return null
+  }
+}
+
+function getPositionAtPoint(view: EditorView, point: BlockNoteEditorFocusPoint) {
+  const nativePosition = getNativeCaretPosition(point)
+  if (nativePosition && view.dom.contains(nativePosition.node)) {
+    try {
+      return view.posAtDOM(nativePosition.node, nativePosition.offset)
+    } catch {
+      // ProseMirror's coordinate resolver remains the authoritative fallback.
+    }
+  }
+  try {
+    const result = view.posAtCoords({ left: point.x, top: point.y })
+    return typeof result?.pos === 'number' ? result.pos : null
+  } catch {
+    return null
+  }
+}
+
+function getNativeCaretPosition(point: BlockNoteEditorFocusPoint) {
+  try {
+    const position = document.caretPositionFromPoint?.(point.x, point.y)
+    if (position) return { node: position.offsetNode, offset: position.offset }
+    const range = document.caretRangeFromPoint?.(point.x, point.y)
+    return range ? { node: range.startContainer, offset: range.startOffset } : null
   } catch {
     return null
   }

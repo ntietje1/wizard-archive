@@ -34,7 +34,6 @@ export function CanvasResourceEmbed({
   maps,
   node,
   notes,
-  onEdit,
   zoom = 1,
 }: {
   activation: BlockNoteActivation | null
@@ -46,7 +45,6 @@ export function CanvasResourceEmbed({
   maps: MapSessionSource
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
   notes: NoteSessionSource
-  onEdit: (point: Readonly<{ x: number; y: number }> | null) => void
   zoom?: number
 }) {
   const resourceId =
@@ -91,7 +89,6 @@ export function CanvasResourceEmbed({
           editing={editing}
           label={`${resource.value.title} embedded note`}
           notes={notes}
-          onEdit={onEdit}
           resourceId={resource.value.id}
         />
       </CanvasEmbedFrame>
@@ -223,7 +220,6 @@ function CanvasNoteResourceEmbed({
   editing,
   label,
   notes,
-  onEdit,
   resourceId,
 }: {
   activation: BlockNoteActivation | null
@@ -231,7 +227,6 @@ function CanvasNoteResourceEmbed({
   editing: boolean
   label: string
   notes: NoteSessionSource
-  onEdit: (point: Readonly<{ x: number; y: number }> | null) => void
   resourceId: ResourceId
 }) {
   const state = useContentSnapshot(notes, resourceId)
@@ -239,10 +234,11 @@ function CanvasNoteResourceEmbed({
     return <span className="p-3">Note unavailable</span>
   }
   return (
-    <CanvasNoteSurface canEdit={canEdit} editing={editing} onEdit={onEdit}>
+    <CanvasNoteSurface canEdit={canEdit} editing={editing}>
       <NoteSessionEditor
         activation={editing ? (activation ?? undefined) : undefined}
         canEdit={editing}
+        formattingToolbar={false}
         label={label}
         scroll={EPHEMERAL_NOTE_SCROLL}
         state={state}
@@ -255,25 +251,15 @@ function CanvasNoteSurface({
   canEdit,
   children,
   editing,
-  onEdit,
 }: {
   canEdit: boolean
   children: ReactNode
   editing: boolean
-  onEdit: (point: Readonly<{ x: number; y: number }> | null) => void
 }) {
   return (
     <div
       className="flex size-full min-h-0 flex-col overflow-hidden text-left"
-      onDoubleClick={
-        canEdit && !editing
-          ? (event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onEdit({ x: event.clientX, y: event.clientY })
-            }
-          : undefined
-      }
+      data-canvas-editable-embed={canEdit && !editing}
     >
       {children}
     </div>

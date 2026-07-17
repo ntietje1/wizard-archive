@@ -12,6 +12,7 @@ type RenderableNoteSessionState = Extract<
 export function NoteSessionEditor({
   canEdit,
   activation,
+  formattingToolbar,
   headingNavigationRef,
   label,
   scroll,
@@ -19,6 +20,7 @@ export function NoteSessionEditor({
 }: {
   canEdit: boolean
   activation?: BlockNoteActivation
+  formattingToolbar?: boolean
   headingNavigationRef?: NoteHeadingNavigationRef
   label: string
   scroll: NoteScrollBehavior
@@ -29,6 +31,7 @@ export function NoteSessionEditor({
       <NoteEditor
         document={state.local}
         activation={activation}
+        formattingToolbar={formattingToolbar}
         headingNavigationRef={headingNavigationRef}
         label={label}
         mode="edit"
@@ -38,6 +41,7 @@ export function NoteSessionEditor({
     ) : (
       <NoteEditor
         document={state.local}
+        formattingToolbar={formattingToolbar}
         headingNavigationRef={headingNavigationRef}
         label={label}
         mode="view"
@@ -50,6 +54,7 @@ export function NoteSessionEditor({
       collaboration={state.session.collaboration}
       activation={activation}
       document={state.session.document}
+      formattingToolbar={formattingToolbar}
       headingNavigationRef={headingNavigationRef}
       label={label}
       mode="edit"
@@ -61,6 +66,7 @@ export function NoteSessionEditor({
     <NoteEditor
       collaboration={state.session.collaboration}
       document={state.session.document}
+      formattingToolbar={formattingToolbar}
       headingNavigationRef={headingNavigationRef}
       label={label}
       mode="view"

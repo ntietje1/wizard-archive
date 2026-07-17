@@ -192,7 +192,7 @@ function CanvasViewport({
         actions,
         parentId: resource.displayParentId,
       })}
-      renderEmbed={({ activation, editing, node, onEdit, zoom }) => (
+      renderEmbed={({ activation, editing, node, zoom }) => (
         <CanvasResourceEmbed
           activation={activation}
           canEdit={canEdit}
@@ -203,7 +203,6 @@ function CanvasViewport({
           maps={runtime.content.maps}
           node={node}
           notes={runtime.content.notes}
-          onEdit={onEdit}
           zoom={zoom}
         />
       )}
