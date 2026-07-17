@@ -200,6 +200,7 @@ function CanvasViewport({
           editing={editing}
           index={runtime.resources.index}
           loader={runtime.resources.loader}
+          maps={runtime.content.maps}
           node={node}
           notes={runtime.content.notes}
           onEdit={onEdit}

@@ -5,8 +5,12 @@ import * as Y from 'yjs'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { CanvasResourceEmbed } from '../workspace/canvas-resource-embed'
 import { createInMemoryNoteSession } from '../in-memory-note-session'
-import type { CanvasPreviewSource, NoteSessionSource } from '../content-session-contract'
-import { initialVersion, sha256Digest } from '../component-version'
+import type {
+  CanvasPreviewSource,
+  MapSessionSource,
+  NoteSessionSource,
+} from '../content-session-contract'
+import { assertSha256Digest, initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import type { ResourceIndexLoader, ResourceProjectionScope } from '../resource-index-contract'
@@ -63,6 +67,13 @@ describe('CanvasResourceEmbed', () => {
       get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
       subscribe: () => () => {},
     } satisfies CanvasPreviewSource
+    const maps = {
+      get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+      subscribe: () => () => {},
+      export: () => ({ status: 'loading' as const }),
+      create: () => Promise.reject(new Error('Not used')),
+      dispose: () => {},
+    } satisfies MapSessionSource
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
     index.replaceSnapshot({
       scope,
@@ -110,6 +121,7 @@ describe('CanvasResourceEmbed', () => {
         editing={false}
         index={index}
         loader={loader}
+        maps={maps}
         node={node}
         notes={notes}
         onEdit={onEdit}
@@ -139,6 +151,7 @@ describe('CanvasResourceEmbed', () => {
         editing
         index={index}
         loader={loader}
+        maps={maps}
         node={node}
         notes={notes}
         onEdit={onEdit}
@@ -154,5 +167,108 @@ describe('CanvasResourceEmbed', () => {
     createEditor.mockRestore()
     view.unmount()
     session.dispose()
+  })
+
+  it('renders a complete canonical folder collection instead of a placeholder', () => {
+    const folderId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const childId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const scope = {
+      campaignId,
+      actorId,
+      projection: 'dm',
+      schema: RESOURCE_INDEX_SCHEMA,
+    } satisfies ResourceProjectionScope
+    const version = initialVersion(assertSha256Digest('a'.repeat(64)))
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('folder'),
+      resources: [
+        {
+          id: folderId,
+          campaignId,
+          displayParentId: null,
+          kind: 'folder',
+          title: canonicalizeResourceTitle('Documents'),
+          icon: null,
+          color: null,
+          lifecycle: 'active',
+          metadataVersion: version,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        {
+          id: childId,
+          campaignId,
+          displayParentId: folderId,
+          kind: 'note',
+          title: canonicalizeResourceTitle('Quest log'),
+          icon: null,
+          color: null,
+          lifecycle: 'active',
+          metadataVersion: version,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      missingResourceIds: [],
+      collections: [
+        {
+          query: { parentId: folderId, lifecycle: 'active' },
+          resourceIds: [childId],
+          complete: true,
+        },
+      ],
+    })
+    const loader = {
+      ensureResource: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
+      ensureCollection: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
+    } satisfies ResourceIndexLoader
+    const unavailable = {
+      get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+      subscribe: () => () => {},
+    }
+    const notes = {
+      ...unavailable,
+      export: () => ({ status: 'loading' as const }),
+      create: () => Promise.reject(new Error('Not used')),
+      dispose: () => {},
+    } satisfies NoteSessionSource
+    const maps = {
+      ...unavailable,
+      export: () => ({ status: 'loading' as const }),
+      create: () => Promise.reject(new Error('Not used')),
+      dispose: () => {},
+    } satisfies MapSessionSource
+    render(
+      <CanvasResourceEmbed
+        activation={null}
+        canEdit
+        canvases={unavailable}
+        editing={false}
+        index={index}
+        loader={loader}
+        maps={maps}
+        node={{
+          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          data: {
+            destination: {
+              kind: 'internal',
+              target: { kind: 'resource', resourceId: folderId },
+            },
+          },
+        }}
+        notes={notes}
+        onEdit={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent('Documents')
+    expect(screen.getByText('Quest log')).toBeVisible()
+    expect(loader.ensureCollection).not.toHaveBeenCalled()
   })
 })

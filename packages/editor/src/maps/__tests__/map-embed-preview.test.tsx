@@ -1,0 +1,61 @@
+import { render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { MapEmbedPreview } from '../map-embed-preview'
+import type { MapSession } from '../../resources/content-session-contract'
+import { assertSha256Digest, initialVersion } from '../../resources/component-version'
+
+afterEach(() => vi.restoreAllMocks())
+
+describe('MapEmbedPreview', () => {
+  it('loads the canonical base map image into a read-only embed', async () => {
+    const createObjectUrl = vi.fn(() => 'blob:map-preview')
+    const revokeObjectUrl = vi.fn()
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl })
+    const loadImage = vi.fn(() =>
+      Promise.resolve({
+        status: 'ready' as const,
+        bytes: Uint8Array.of(1, 2, 3),
+        extension: 'png',
+        mediaType: 'image/png',
+      }),
+    )
+    const session = mapSession(loadImage)
+    const view = render(<MapEmbedPreview session={session} title="Harbor map" />)
+
+    expect(await screen.findByRole('img', { name: 'Harbor map' })).toHaveAttribute(
+      'src',
+      'blob:map-preview',
+    )
+    expect(loadImage).toHaveBeenCalledWith(null)
+    expect(createObjectUrl).toHaveBeenCalledOnce()
+
+    view.unmount()
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:map-preview')
+  })
+})
+
+function mapSession(loadImage: MapSession['loadImage']): MapSession {
+  return {
+    content: {
+      image: {
+        status: 'attached',
+        byteSize: 3,
+        digest: assertSha256Digest('a'.repeat(64)),
+        mediaType: 'image/png',
+      },
+      layers: [],
+      pins: [],
+    },
+    version: initialVersion(assertSha256Digest('b'.repeat(64))),
+    awareness: { status: 'unavailable' },
+    execute: vi.fn(() =>
+      Promise.resolve({ status: 'rejected' as const, reason: 'unauthorized' as const }),
+    ),
+    loadImage,
+    replaceImage: vi.fn(() =>
+      Promise.resolve({ status: 'rejected' as const, reason: 'unauthorized' as const }),
+    ),
+    dispose: vi.fn(),
+  }
+}
