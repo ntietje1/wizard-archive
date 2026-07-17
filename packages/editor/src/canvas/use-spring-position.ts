@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { stepSpringPosition } from './spring-position'
 import type { MutableSpringState, SpringPosition } from './spring-position'
 
@@ -7,28 +7,8 @@ export function useSpringPosition(
   elementRef: React.RefObject<HTMLElement | null>,
 ) {
   const state = useRef<MutableSpringState | null>(null)
-  const targetRef = useRef(target)
-  const previousTime = useRef(0)
-  const frame = useRef(0)
-  const running = useRef(false)
-  const animate = useRef<(time: number) => void>(() => undefined)
   const targetX = target.x
   const targetY = target.y
-  targetRef.current = target
-
-  animate.current = (time) => {
-    const current = state.current
-    if (!current) return
-    const elapsed = (time - (previousTime.current || time)) / 1000
-    previousTime.current = time
-    const settled = stepSpringPosition(current, targetRef.current, elapsed)
-    setElementPosition(elementRef.current, current.position)
-    if (settled) {
-      running.current = false
-      return
-    }
-    frame.current = requestAnimationFrame(animate.current)
-  }
 
   useLayoutEffect(() => {
     if (!state.current) {
@@ -38,19 +18,21 @@ export function useSpringPosition(
       }
       setElementPosition(elementRef.current, { x: targetX, y: targetY })
     }
-    if (running.current) return
-    running.current = true
-    previousTime.current = performance.now()
-    frame.current = requestAnimationFrame(animate.current)
+    const destination = { x: targetX, y: targetY }
+    let previousTime = performance.now()
+    let frame = 0
+    const animate = (time: number) => {
+      const current = state.current
+      if (!current) return
+      const elapsed = (time - previousTime) / 1000
+      previousTime = time
+      const settled = stepSpringPosition(current, destination, elapsed)
+      setElementPosition(elementRef.current, current.position)
+      if (!settled) frame = requestAnimationFrame(animate)
+    }
+    frame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(frame)
   }, [elementRef, targetX, targetY])
-
-  useEffect(
-    () => () => {
-      running.current = false
-      cancelAnimationFrame(frame.current)
-    },
-    [],
-  )
 }
 
 function setElementPosition(element: HTMLElement | null, position: SpringPosition) {

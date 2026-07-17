@@ -10,6 +10,12 @@ import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 const EMBED_SIZE = { width: 320, height: 240 }
 const STACK_OFFSET = 20
 
+function clearCanvasDropTarget(event: DragEvent<HTMLElement>) {
+  const nextTarget = event.relatedTarget
+  if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
+  delete event.currentTarget.dataset.dropTarget
+}
+
 export function useCanvasDropTarget({
   canEdit,
   documentController,
@@ -44,14 +50,8 @@ export function useCanvasDropTarget({
     event.currentTarget.dataset.dropTarget = 'true'
   }
 
-  const clear = (event: DragEvent<HTMLElement>) => {
-    const nextTarget = event.relatedTarget
-    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
-    delete event.currentTarget.dataset.dropTarget
-  }
-
   const onDrop = (event: DragEvent<HTMLElement>) => {
-    clear(event)
+    clearCanvasDropTarget(event)
     if (!drop || !canResolve(event.dataTransfer)) return
     event.preventDefault()
     event.stopPropagation()
@@ -93,5 +93,10 @@ export function useCanvasDropTarget({
     })
   }
 
-  return { onDragEnter: mark, onDragOver: mark, onDragLeave: clear, onDrop }
+  return {
+    onDragEnter: mark,
+    onDragOver: mark,
+    onDragLeave: clearCanvasDropTarget,
+    onDrop,
+  }
 }
