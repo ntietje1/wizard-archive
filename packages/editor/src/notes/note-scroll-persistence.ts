@@ -36,12 +36,17 @@ export function useNoteScrollPersistence(
       restoreFrame = requestAnimationFrame(restorePosition)
     }
     if (restoring) restoreFrame = requestAnimationFrame(restorePosition)
+    let pendingScrollTop: number | null = null
     let saveTimeout: ReturnType<typeof setTimeout> | null = null
     const savePosition = () => {
       if (restoring) return
       if (saveTimeout !== null) clearTimeout(saveTimeout)
+      pendingScrollTop = viewport.scrollTop
       saveTimeout = setTimeout(() => {
-        saveNoteScrollTop(campaignId, resourceId, viewport.scrollTop)
+        const scrollTop = pendingScrollTop
+        pendingScrollTop = null
+        saveTimeout = null
+        if (scrollTop !== null) saveNoteScrollTop(campaignId, resourceId, scrollTop)
       }, NOTE_SCROLL_SAVE_DELAY_MS)
     }
 
@@ -49,7 +54,12 @@ export function useNoteScrollPersistence(
     return () => {
       viewport.removeEventListener('scroll', savePosition)
       if (restoreFrame !== null) cancelAnimationFrame(restoreFrame)
-      if (saveTimeout !== null) clearTimeout(saveTimeout)
+      if (saveTimeout !== null) {
+        clearTimeout(saveTimeout)
+        if (pendingScrollTop !== null) {
+          saveNoteScrollTop(campaignId, resourceId, pendingScrollTop)
+        }
+      }
     }
   }, [campaignId, resourceId, viewport])
 }

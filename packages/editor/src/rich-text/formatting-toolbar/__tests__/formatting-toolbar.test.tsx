@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vite-plus/test'
@@ -607,6 +608,123 @@ describe('RichTextFormattingToolbar', () => {
         .getByRole('button', { name: 'Text color' })
         .querySelector(`[data-text-color="${DEFAULT_RICH_TEXT_COLOR_VALUE.color}"]`),
     ).toBeInTheDocument()
+  })
+
+  it('keeps one subscription pair across same-editor rerenders', () => {
+    const editor = createEditor({
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+    const toolbar = (
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={editor as never}
+        mode="full"
+        visible
+      />
+    )
+    const { rerender } = render(toolbar)
+
+    rerender(toolbar)
+
+    expect(editor.onSelectionChange).toHaveBeenCalledTimes(1)
+    expect(editor.onChange).toHaveBeenCalledTimes(1)
+    expect(editor.getSubscriptionCounts()).toEqual({ change: 1, selection: 1 })
+  })
+
+  it('keeps exactly one active subscription pair in Strict Mode', () => {
+    const editor = createEditor({
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+
+    const { unmount } = render(
+      <StrictMode>
+        <RichTextFormattingToolbar
+          ariaLabel="Test formatting toolbar"
+          editor={editor as never}
+          mode="full"
+          visible
+        />
+      </StrictMode>,
+    )
+
+    expect(editor.getSubscriptionCounts()).toEqual({ change: 1, selection: 1 })
+    unmount()
+    expect(editor.getSubscriptionCounts()).toEqual({ change: 0, selection: 0 })
+  })
+
+  it('moves subscriptions when the editor changes', () => {
+    const firstEditor = createEditor({
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+    const secondEditor = createEditor({
+      selectedBlocks: [createParagraphBlock('paragraph-2', { textAlignment: 'left' })],
+    })
+    const { rerender } = render(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={firstEditor as never}
+        mode="full"
+        visible
+      />,
+    )
+
+    rerender(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={secondEditor as never}
+        mode="full"
+        visible
+      />,
+    )
+
+    expect(firstEditor.getSubscriptionCounts()).toEqual({ change: 0, selection: 0 })
+    expect(secondEditor.getSubscriptionCounts()).toEqual({ change: 1, selection: 1 })
+  })
+
+  it('subscribes only while the toolbar is visible and editable', () => {
+    const editor = createEditor({
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+    const { rerender } = render(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={editor as never}
+        mode="full"
+        visible
+      />,
+    )
+
+    rerender(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={editor as never}
+        mode="full"
+        visible={false}
+      />,
+    )
+    expect(editor.getSubscriptionCounts()).toEqual({ change: 0, selection: 0 })
+
+    editor.isEditable = false
+    rerender(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={editor as never}
+        mode="full"
+        visible
+      />,
+    )
+    expect(editor.getSubscriptionCounts()).toEqual({ change: 0, selection: 0 })
+
+    editor.isEditable = true
+    rerender(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={editor as never}
+        mode="full"
+        visible
+      />,
+    )
+    expect(editor.getSubscriptionCounts()).toEqual({ change: 1, selection: 1 })
   })
 
   it('does not carry a stored selection snapshot across editor swaps', () => {

@@ -115,11 +115,15 @@ test.describe('editor shell', () => {
     }
 
     const viewport = page.locator('.resource-note-editor [data-slot="scroll-area-viewport"]')
-    await viewport.evaluate((element) => {
+    const expectedScrollTop = await viewport.evaluate((element) => {
       element.scrollTop = element.scrollHeight
+      const scrollTop = element.scrollTop
       element.dispatchEvent(new Event('scroll'))
+      return scrollTop
     })
-    await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    expect(expectedScrollTop).toBeGreaterThan(0)
+    await page.getByRole('button', { name: 'Blue-glass Invoice' }).click()
+    await expect(page.getByRole('heading', { name: 'Blue-glass Invoice' })).toBeVisible()
     await expect
       .poll(() =>
         page.evaluate(() => {
@@ -131,20 +135,16 @@ test.describe('editor shell', () => {
               break
             }
           }
-          if (!key) return 0
-          const value: unknown = JSON.parse(window.localStorage.getItem(key) ?? '0')
-          return typeof value === 'number' ? value : 0
+          return key ? JSON.parse(window.localStorage.getItem(key) ?? '0') : 0
         }),
       )
-      .toBeGreaterThan(0)
-
-    await page.getByRole('button', { name: 'Blue-glass Invoice' }).click()
+      .toBe(expectedScrollTop)
     await page.getByRole('button', { name: 'The Lantern Market' }).click()
     const restoredViewport = page.locator(
       '.resource-note-editor [data-slot="scroll-area-viewport"]',
     )
     await expect
       .poll(() => restoredViewport.evaluate((element) => element.scrollTop))
-      .toBeGreaterThan(0)
+      .toBe(expectedScrollTop)
   })
 })

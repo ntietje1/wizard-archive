@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
@@ -48,6 +49,39 @@ describe('useNoteScrollPersistence', () => {
     })
 
     expect(window.localStorage.getItem(storageKey)).toBe('180')
+  })
+
+  it('flushes the latest pending position when the viewport detaches', () => {
+    vi.useFakeTimers()
+    const viewport = document.createElement('div')
+    const { unmount } = renderHook(() => useNoteScrollPersistence(behavior, viewport))
+
+    act(() => {
+      viewport.scrollTop = 180
+      viewport.dispatchEvent(new Event('scroll'))
+      viewport.scrollTop = 320
+      viewport.dispatchEvent(new Event('scroll'))
+      viewport.scrollTop = 0
+      unmount()
+    })
+
+    expect(window.localStorage.getItem(storageKey)).toBe('320')
+    void act(() => vi.advanceTimersByTime(150))
+    expect(window.localStorage.getItem(storageKey)).toBe('320')
+  })
+
+  it('does not save a restored position during Strict Mode cleanup', () => {
+    window.localStorage.setItem(storageKey, JSON.stringify(240))
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    const viewport = document.createElement('div')
+
+    const { unmount } = renderHook(() => useNoteScrollPersistence(behavior, viewport), {
+      wrapper: StrictMode,
+    })
+    unmount()
+
+    expect(viewport.scrollTop).toBe(240)
+    expect(setItem).not.toHaveBeenCalled()
   })
 
   it('leaves embedded note surfaces ephemeral', () => {

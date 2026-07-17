@@ -79,6 +79,12 @@ export function createFormattingToolbarTestEditor({
       blockCutAtStart: undefined,
       blocks: currentSelectedCutBlocks,
     })),
+    getSubscriptionCounts() {
+      return {
+        change: changeListeners.size,
+        selection: selectionListeners.size,
+      }
+    },
     getTextCursorPosition: vi.fn(() => ({
       block: currentSelectedBlocks[0],
       nextBlock: undefined,

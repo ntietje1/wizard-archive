@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   EMPTY_TOOLBAR_SNAPSHOT,
   getVisibleToolbarSnapshot,
@@ -174,30 +174,35 @@ export function useFormattingToolbarSnapshot({
   const snapshotRef = useRef<ToolbarSnapshot>(EMPTY_TOOLBAR_SNAPSHOT)
   const onSelectionChangedRef = useRef(onSelectionChanged)
   const onSelectionSnapshotRef = useRef(onSelectionSnapshot)
+  const editorEditable = editor?.isEditable ?? false
 
   useEffect(() => {
     onSelectionChangedRef.current = onSelectionChanged
     onSelectionSnapshotRef.current = onSelectionSnapshot
   }, [onSelectionChanged, onSelectionSnapshot])
 
-  const subscribe = (onStoreChange: () => void) => {
-    if (!editor || !visible || !editor.isEditable) {
-      return () => undefined
-    }
+  // useSyncExternalStore resubscribes when this identity changes, including in non-compiler builds.
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!editor || !visible || !editorEditable) {
+        return () => undefined
+      }
 
-    const unsubscribeSelection = editor.onSelectionChange(() => {
-      const selectionSnapshot = captureBlockNoteSelection(editor)
-      onSelectionSnapshotRef.current(selectionSnapshot)
-      onSelectionChangedRef.current(selectionSnapshot)
-      onStoreChange()
-    })
-    const unsubscribeChange = editor.onChange(onStoreChange)
+      const unsubscribeSelection = editor.onSelectionChange(() => {
+        const selectionSnapshot = captureBlockNoteSelection(editor)
+        onSelectionSnapshotRef.current(selectionSnapshot)
+        onSelectionChangedRef.current(selectionSnapshot)
+        onStoreChange()
+      })
+      const unsubscribeChange = editor.onChange(onStoreChange)
 
-    return () => {
-      unsubscribeSelection()
-      unsubscribeChange()
-    }
-  }
+      return () => {
+        unsubscribeSelection()
+        unsubscribeChange()
+      }
+    },
+    [editor, editorEditable, visible],
+  )
 
   return useSyncExternalStore(
     subscribe,
