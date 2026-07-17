@@ -6,6 +6,7 @@ import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { useResolvedTheme } from '@wizard-archive/ui/theme/context'
 import type { ContentCollaboration } from '../resources/content-session-contract'
 import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
+import { NoteFormattingToolbar } from './note-formatting-toolbar'
 import { noteEditorSchema } from './note-editor-schema'
 import { NoteValueRuntimeProvider } from './values/runtime-context'
 import { noteValueTransferExtension } from './values/value-transfer'
@@ -78,6 +79,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         event.stopPropagation()
       }}
     >
+      <NoteFormattingToolbar editor={editor} visible={editable} />
       <ScrollArea className="min-h-0 flex-1" contentClassName="note-editor-scroll-content">
         <div className="note-editor-fill-height">
           <div className="note-editor-surface">
@@ -86,7 +88,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
                 <BlockNoteView
                   editable={editable}
                   editor={editor}
-                  formattingToolbar={editable}
+                  formattingToolbar={false}
                   linkToolbar={false}
                   sideMenu={editable}
                   slashMenu={false}

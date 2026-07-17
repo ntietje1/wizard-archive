@@ -2,6 +2,24 @@ import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 
 test.describe('note authoring mechanics', () => {
+  test('keeps the reference formatting toolbar active without losing the editor selection', async ({
+    page,
+  }) => {
+    const editor = await openNoteEditor(page)
+    const toolbar = page.getByRole('toolbar', { name: 'Note formatting toolbar' })
+    await expect(toolbar).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Block type' })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Text color' })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Highlight color' })).toBeVisible()
+
+    await appendParagraph(page, editor)
+    await toolbar.getByRole('button', { name: 'Bold' }).click()
+    await page.keyboard.type('Toolbar bold passage')
+    await toolbar.getByRole('button', { name: 'Bold' }).click()
+
+    await expect(editor.locator('strong', { hasText: 'Toolbar bold passage' })).toBeVisible()
+  })
+
   test('applies inline keyboard formatting', async ({ page }) => {
     const editor = await openNoteEditor(page)
 

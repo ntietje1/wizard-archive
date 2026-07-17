@@ -52,6 +52,7 @@ test.describe('canonical note values', () => {
 
     await page.getByRole('button', { name: 'Viewer' }).click()
     await expect(page.getByText('Viewer mode — editing is disabled')).toBeVisible()
+    await expect(page.getByRole('toolbar', { name: 'Note formatting toolbar' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Armor: 7' })).toBeVisible()
     await page.getByRole('button', { name: 'Armor: 7' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
