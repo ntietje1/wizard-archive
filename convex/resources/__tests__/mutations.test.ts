@@ -262,25 +262,25 @@ describe('resource structure commands', () => {
     expect(await storedParentIds(laterChild)).toEqual([rootId])
   })
 
-  it('atomically creates a file resource from one owned upload', async () => {
+  it('atomically creates a signature-classified file without inspecting its payload', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    const bytes = new TextEncoder().encode('uploaded bytes')
+    const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const metadata = {
-      classification: 'inert_file' as const,
+      classification: 'viewable_image' as const,
       byteSize: bytes.byteLength,
-      detectedFormat: null,
-      extension: 'txt',
-      mediaType: 'application/octet-stream',
-      viewerUnavailableReason: 'unsupported_format' as const,
+      detectedFormat: 'png',
+      extension: 'png',
+      mediaType: 'image/png',
+      viewerUnavailableReason: null,
     }
     const upload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([bytes]),
-      'evidence.txt',
+      new Blob([bytes], { type: 'image/png' }),
+      'evidence.png',
     )
 
     const result = await asDm(campaign).action(api.resources.actions.createFileResource, {
@@ -291,7 +291,7 @@ describe('resource structure commands', () => {
         resourceId,
         kind: 'file',
         parentId: null,
-        title: 'evidence.txt',
+        title: 'evidence.png',
         icon: null,
         color: null,
       },
@@ -311,7 +311,7 @@ describe('resource structure commands', () => {
           resourceId,
           kind: 'file',
           parentId: null,
-          title: 'evidence.txt',
+          title: 'evidence.png',
           icon: null,
           color: null,
         },
@@ -321,8 +321,8 @@ describe('resource structure commands', () => {
     const conflictingUpload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([bytes]),
-      'evidence.txt',
+      new Blob([bytes], { type: 'image/png' }),
+      'evidence.png',
     )
     await expect(
       asDm(campaign).action(api.resources.actions.createFileResource, {
@@ -333,7 +333,7 @@ describe('resource structure commands', () => {
           resourceId,
           kind: 'file',
           parentId: null,
-          title: 'evidence.txt',
+          title: 'evidence.png',
           icon: null,
           color: null,
         },

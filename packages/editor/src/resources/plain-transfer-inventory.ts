@@ -7,16 +7,13 @@ import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceKind, ResourceTitle } from './resource-record'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE, canonicalizeResourceTitle } from './resource-record'
 import { classifyResourceSource } from './resource-source-classifier'
-import type {
-  ResourceSourceClassification,
-  ResourceSourceInspection,
-} from './resource-source-classifier'
+import type { ResourceSourceClassification } from './resource-source-classifier'
 import { createSourcePathAlias, normalizeSourcePath } from './source-path-alias'
 import type { SourcePathAlias } from './resource-catalog-contract'
 import { TRANSFER_JOB_REQUEST_VERSION } from './transfer-job-contract'
 import type { PlainTransferJobRequest, TransferSourceDescriptor } from './transfer-job-contract'
 
-export const PLAIN_TRANSFER_INVENTORY_VERSION = 'plain-transfer-inventory-v2' as const
+export const PLAIN_TRANSFER_INVENTORY_VERSION = 'plain-transfer-inventory-v3' as const
 export const PLAIN_TRANSFER_LIMITS = {
   maxEntries: MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
   maxPathDepth: 64,
@@ -31,7 +28,6 @@ export type PlainTransferSourceEntry =
       path: string
       type: 'file'
       bytes: Uint8Array
-      inspection?: ResourceSourceInspection
     }>
 
 export type PlainTransferInventoryContent =
@@ -94,7 +90,6 @@ type CanonicalEntry = Readonly<{
   path: string
   type: PlainTransferSourceEntry['type']
   bytes: Uint8Array | null
-  inspection?: ResourceSourceInspection
 }>
 
 type PlacedEntry = CanonicalEntry & Readonly<{ placedPath: string }>
@@ -132,7 +127,7 @@ async function digestCanonicalEntries(
     const bytesDigest = entry.bytes ? await sha256Digest(entry.bytes) : ''
     parts.push(
       encoder.encode(
-        `entry\0${entry.source.id}\0${entry.path}\0${entry.type}\0${entry.bytes?.byteLength ?? 0}\0${bytesDigest}\0${canonicalJson(entry.inspection ?? null)}`,
+        `entry\0${entry.source.id}\0${entry.path}\0${entry.type}\0${entry.bytes?.byteLength ?? 0}\0${bytesDigest}`,
       ),
     )
   }
@@ -366,7 +361,6 @@ function canonicalEntries(
         path,
         type: entry.type,
         bytes: entry.type === 'file' ? entry.bytes : null,
-        ...(entry.type === 'file' && entry.inspection ? { inspection: entry.inspection } : {}),
       })
     }
   } catch {
@@ -551,15 +545,6 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0
 }
 
-function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value)
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
-  const entries = Object.entries(value as Readonly<Record<string, unknown>>).sort(
-    ([left], [right]) => compareText(left, right),
-  )
-  return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(',')}}`
-}
-
 function resourceKey(entry: Pick<PlacedEntry, 'source' | 'placedPath'>, path = entry.placedPath) {
   return `${entry.source.id}\0${path}`
 }
@@ -569,7 +554,6 @@ function classifyEntry(entry: PlacedEntry): ResourceSourceClassification | null 
   return classifyResourceSource({
     bytes: entry.bytes!,
     fileName: pathBasename(entry.path),
-    ...(entry.inspection ? { inspection: entry.inspection } : {}),
   })
 }
 

@@ -7,11 +7,6 @@ import type {
 
 export const MAX_RESOURCE_SOURCE_BYTES = 100 * 1024 * 1024
 export const MAX_NOTE_SOURCE_BYTES = 10 * 1024 * 1024
-export const MAX_VIEWABLE_IMAGE_DIMENSION = 16_384
-export const MAX_VIEWABLE_IMAGE_FRAME_PIXELS = 100_000_000
-export const MAX_VIEWABLE_IMAGE_FRAMES = 500
-export const MAX_VIEWABLE_IMAGE_ANIMATION_PIXELS = 500_000_000
-export const MAX_VIEWABLE_PDF_PAGES = 2_000
 
 export const RESOURCE_SOURCE_REJECTION = {
   entryTooLarge: 'entry_too_large',
@@ -19,59 +14,6 @@ export const RESOURCE_SOURCE_REJECTION = {
 
 export type ResourceSourceRejection =
   (typeof RESOURCE_SOURCE_REJECTION)[keyof typeof RESOURCE_SOURCE_REJECTION]
-
-export type NoteSourceInspection =
-  | { readonly status: 'safe' }
-  | {
-      readonly status: 'unavailable'
-      readonly reason: 'note_complexity' | 'parser_timeout'
-    }
-
-export type ImageSourceInspection =
-  | {
-      readonly status: 'valid'
-      readonly format: 'png' | 'jpeg' | 'gif' | 'webp'
-      readonly width: number
-      readonly height: number
-      readonly frameCount: number
-      readonly totalDecodedPixels: number
-      readonly canonicalOrientation: boolean
-    }
-  | {
-      readonly status: 'unavailable'
-      readonly reason: Extract<
-        FileViewerUnavailableReason,
-        'malformed' | 'limit_exceeded' | 'parser_timeout' | 'decoder_limit'
-      >
-    }
-
-export type PdfSourceInspection =
-  | {
-      readonly status: 'valid'
-      readonly encrypted: false
-      readonly pageCount: number
-      readonly firstPageWidth: number
-      readonly firstPageHeight: number
-      readonly metadataReadable: true
-    }
-  | {
-      readonly status: 'unavailable'
-      readonly reason: Extract<
-        FileViewerUnavailableReason,
-        'malformed' | 'encrypted' | 'limit_exceeded' | 'parser_timeout'
-      >
-    }
-
-export type IsoBmffSourceInspection =
-  | { readonly status: 'valid'; readonly media: 'audio' | 'video' }
-  | { readonly status: 'unavailable'; readonly reason: 'malformed' | 'parser_timeout' }
-
-export type ResourceSourceInspection = Readonly<{
-  note?: NoteSourceInspection
-  image?: ImageSourceInspection
-  pdf?: PdfSourceInspection
-  isoBmff?: IsoBmffSourceInspection
-}>
 
 export type ClassifiedNoteSource = Readonly<{
   classification: 'note'
@@ -122,11 +64,9 @@ type DetectedFormat =
 export function classifyResourceSource({
   bytes,
   fileName,
-  inspection = {},
 }: {
   bytes: Uint8Array
   fileName: string
-  inspection?: ResourceSourceInspection
 }): ResourceSourceClassification {
   const byteSize = bytes.byteLength
   if (byteSize > MAX_RESOURCE_SOURCE_BYTES) {
@@ -135,7 +75,7 @@ export function classifyResourceSource({
 
   const extension = canonicalFileExtension(fileName)
   if (extension !== null && NOTE_EXTENSIONS.has(extension)) {
-    const note = classifyNoteSource(bytes, extension, inspection.note)
+    const note = classifyNoteSource(bytes, extension)
     if (note.classification === 'note') return note
     return inertFile(byteSize, extension, null, note.reason)
   }
@@ -146,9 +86,15 @@ export function classifyResourceSource({
     case 'jpeg':
     case 'gif':
     case 'webp':
-      return classifyImage(byteSize, extension, detectedFormat, inspection.image)
+      return viewableFile(
+        byteSize,
+        extension,
+        detectedFormat,
+        detectedFormat === 'jpeg' ? 'image/jpeg' : `image/${detectedFormat}`,
+        FILE_CLASSIFICATION.image,
+      )
     case 'pdf':
-      return classifyPdf(byteSize, extension, inspection.pdf)
+      return viewableFile(byteSize, extension, 'pdf', 'application/pdf', FILE_CLASSIFICATION.pdf)
     case 'mp3':
       return viewableFile(byteSize, extension, 'mp3', 'audio/mpeg', FILE_CLASSIFICATION.audio)
     case 'wav':
@@ -158,7 +104,7 @@ export function classifyResourceSource({
     case 'aac_adts':
       return viewableFile(byteSize, extension, 'aac_adts', 'audio/aac', FILE_CLASSIFICATION.audio)
     case 'mp4':
-      return classifyIsoBmff(byteSize, extension, inspection.isoBmff)
+      return viewableFile(byteSize, extension, 'mp4', 'video/mp4', FILE_CLASSIFICATION.video)
     case 'webm':
       return viewableFile(byteSize, extension, 'webm', 'video/webm', FILE_CLASSIFICATION.video)
     case null:
@@ -176,7 +122,6 @@ export function classifyResourceSource({
 export function classifyFileResourceSource(input: {
   bytes: Uint8Array
   fileName: string
-  inspection?: ResourceSourceInspection
 }): FileOwnedMetadata | RejectedResourceSource {
   const classified = classifyResourceSource(input)
   if (classified.classification === 'rejected') return classified
@@ -213,7 +158,6 @@ export function canonicalFileExtension(fileName: string): string | null {
 function classifyNoteSource(
   bytes: Uint8Array,
   extension: string,
-  inspection: NoteSourceInspection | undefined,
 ): ClassifiedNoteSource | { classification: 'file'; reason: FileViewerUnavailableReason } {
   if (bytes.byteLength > MAX_NOTE_SOURCE_BYTES) {
     return { classification: 'file', reason: FILE_VIEWER_UNAVAILABLE_REASON.noteSizeLimit }
@@ -231,15 +175,6 @@ function classifyNoteSource(
   } catch {
     return { classification: 'file', reason: FILE_VIEWER_UNAVAILABLE_REASON.invalidUtf8 }
   }
-  if (!inspection || inspection.status === 'unavailable') {
-    return {
-      classification: 'file',
-      reason:
-        inspection?.reason === 'parser_timeout'
-          ? FILE_VIEWER_UNAVAILABLE_REASON.parserTimeout
-          : FILE_VIEWER_UNAVAILABLE_REASON.noteComplexity,
-    }
-  }
   return {
     classification: 'note',
     byteSize: bytes.byteLength,
@@ -247,101 +182,6 @@ function classifyNoteSource(
     text,
     removedUtf8Bom,
   }
-}
-
-function classifyImage(
-  byteSize: number,
-  extension: string | null,
-  format: Extract<DetectedFormat, 'png' | 'jpeg' | 'gif' | 'webp'>,
-  inspection: ImageSourceInspection | undefined,
-): FileOwnedMetadata {
-  if (!inspection) {
-    return inertFile(byteSize, extension, format, FILE_VIEWER_UNAVAILABLE_REASON.malformed)
-  }
-  if (inspection.status === 'unavailable') {
-    return inertFile(byteSize, extension, format, inspection.reason)
-  }
-  if (inspection.format !== format) {
-    return inertFile(byteSize, extension, format, FILE_VIEWER_UNAVAILABLE_REASON.malformed)
-  }
-  if (!imageInspectionWithinLimits(inspection)) {
-    return inertFile(byteSize, extension, format, FILE_VIEWER_UNAVAILABLE_REASON.limitExceeded)
-  }
-  if (format === 'jpeg' && !inspection.canonicalOrientation) {
-    return inertFile(byteSize, extension, format, FILE_VIEWER_UNAVAILABLE_REASON.unsupportedFormat)
-  }
-  const mediaType = format === 'jpeg' ? 'image/jpeg' : `image/${format}`
-  return viewableFile(byteSize, extension, format, mediaType, FILE_CLASSIFICATION.image)
-}
-
-function imageInspectionWithinLimits(
-  inspection: Extract<ImageSourceInspection, { status: 'valid' }>,
-): boolean {
-  const framePixels = inspection.width * inspection.height
-  return (
-    safeIntegerInRange(inspection.width, 1, MAX_VIEWABLE_IMAGE_DIMENSION) &&
-    safeIntegerInRange(inspection.height, 1, MAX_VIEWABLE_IMAGE_DIMENSION) &&
-    framePixels <= MAX_VIEWABLE_IMAGE_FRAME_PIXELS &&
-    safeIntegerInRange(inspection.frameCount, 1, MAX_VIEWABLE_IMAGE_FRAMES) &&
-    safeIntegerInRange(
-      inspection.totalDecodedPixels,
-      framePixels,
-      MAX_VIEWABLE_IMAGE_ANIMATION_PIXELS,
-    )
-  )
-}
-
-function safeIntegerInRange(value: number, minimum: number, maximum: number): boolean {
-  return Number.isSafeInteger(value) && value >= minimum && value <= maximum
-}
-
-function classifyPdf(
-  byteSize: number,
-  extension: string | null,
-  inspection: PdfSourceInspection | undefined,
-): FileOwnedMetadata {
-  if (!inspection || inspection.status === 'unavailable') {
-    return inertFile(
-      byteSize,
-      extension,
-      'pdf',
-      inspection?.reason ?? FILE_VIEWER_UNAVAILABLE_REASON.malformed,
-    )
-  }
-  if (
-    inspection.encrypted !== false ||
-    inspection.metadataReadable !== true ||
-    !Number.isSafeInteger(inspection.pageCount) ||
-    inspection.pageCount < 1 ||
-    inspection.pageCount > MAX_VIEWABLE_PDF_PAGES ||
-    !Number.isFinite(inspection.firstPageWidth) ||
-    !Number.isFinite(inspection.firstPageHeight) ||
-    inspection.firstPageWidth <= 0 ||
-    inspection.firstPageHeight <= 0
-  ) {
-    return inertFile(byteSize, extension, 'pdf', FILE_VIEWER_UNAVAILABLE_REASON.limitExceeded)
-  }
-  return viewableFile(byteSize, extension, 'pdf', 'application/pdf', FILE_CLASSIFICATION.pdf)
-}
-
-function classifyIsoBmff(
-  byteSize: number,
-  extension: string | null,
-  inspection: IsoBmffSourceInspection | undefined,
-): FileOwnedMetadata {
-  if (!inspection || inspection.status === 'unavailable') {
-    return inertFile(
-      byteSize,
-      extension,
-      'mp4',
-      inspection?.reason === 'parser_timeout'
-        ? FILE_VIEWER_UNAVAILABLE_REASON.parserTimeout
-        : FILE_VIEWER_UNAVAILABLE_REASON.malformed,
-    )
-  }
-  return inspection.media === 'audio'
-    ? viewableFile(byteSize, extension, 'mp4', 'audio/mp4', FILE_CLASSIFICATION.audio)
-    : viewableFile(byteSize, extension, 'mp4', 'video/mp4', FILE_CLASSIFICATION.video)
 }
 
 function viewableFile(

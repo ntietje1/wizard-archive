@@ -11,15 +11,9 @@ export type FileClassification = (typeof FILE_CLASSIFICATION)[keyof typeof FILE_
 export const FILE_VIEWER_UNAVAILABLE_REASON = {
   empty: 'empty_file',
   unsupportedFormat: 'unsupported_format',
-  malformed: 'malformed',
-  encrypted: 'encrypted',
-  limitExceeded: 'limit_exceeded',
-  parserTimeout: 'parser_timeout',
-  decoderLimit: 'decoder_limit',
   invalidUtf8: 'invalid_utf8',
   nulByte: 'nul_byte',
   noteSizeLimit: 'note_size_limit',
-  noteComplexity: 'note_complexity',
 } as const
 
 export type FileViewerUnavailableReason =

@@ -32,7 +32,7 @@ describe('plain transfer inventory', () => {
     )
     const binary = result.inventory.resources.find((resource) => resource.sourcePath === 'map.bin')
     expect(result.inventory).toMatchObject({
-      version: 'plain-transfer-inventory-v2',
+      version: 'plain-transfer-inventory-v3',
       sourceDigest: request.sourceDigest,
     })
     expect(notes).toMatchObject({ kind: 'folder', parentId: null, sourcePath: 'Notes' })
@@ -369,7 +369,6 @@ function markdown(sourceId: string, path: string, text: string): PlainTransferSo
     path,
     type: 'file',
     bytes: encoder.encode(text),
-    inspection: { note: { status: 'safe' } },
   }
 }
 

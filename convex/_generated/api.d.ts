@@ -64,7 +64,6 @@ import type * as resources_functions_executeBookmarkCommand from "../resources/f
 import type * as resources_functions_executeMapContentCommand from "../resources/functions/executeMapContentCommand.js";
 import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
-import type * as resources_functions_fileSourceInspection from "../resources/functions/fileSourceInspection.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
 import type * as resources_functions_loadFileDownload from "../resources/functions/loadFileDownload.js";
 import type * as resources_functions_loadMapImage from "../resources/functions/loadMapImage.js";
@@ -189,7 +188,6 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/executeMapContentCommand": typeof resources_functions_executeMapContentCommand;
   "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
   "resources/functions/fileContent": typeof resources_functions_fileContent;
-  "resources/functions/fileSourceInspection": typeof resources_functions_fileSourceInspection;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
   "resources/functions/loadFileDownload": typeof resources_functions_loadFileDownload;
   "resources/functions/loadMapImage": typeof resources_functions_loadMapImage;

@@ -362,7 +362,7 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
-  it('creates uploaded files through the file content owner and canonical structure command', async () => {
+  it('creates signature-classified files through the canonical local content owner', async () => {
     const snapshot = emptySnapshot()
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const core = createInMemoryEditorRuntime({
@@ -375,7 +375,7 @@ describe('createInMemoryEditorRuntime', () => {
       snapshot,
       navigation: navigation(),
     })
-    const bytes = new TextEncoder().encode('plain text')
+    const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const delivery = await core.runtime.content.files.create(
       {
         campaignId: snapshot.campaignId,
@@ -385,12 +385,12 @@ describe('createInMemoryEditorRuntime', () => {
           resourceId,
           kind: 'file',
           parentId: null,
-          title: canonicalizeResourceTitle('notes.txt'),
+          title: canonicalizeResourceTitle('image.png'),
           icon: null,
           color: null,
         },
       },
-      { bytes, fileName: 'notes.txt' },
+      { bytes, fileName: 'image.png' },
     )
 
     expect(delivery).toMatchObject({ status: 'received', result: { status: 'completed' } })
@@ -399,17 +399,19 @@ describe('createInMemoryEditorRuntime', () => {
       content: {
         attachment: 'attached',
         byteSize: bytes.byteLength,
-        extension: 'txt',
-        classification: 'inert_file',
-        viewerUnavailableReason: 'unsupported_format',
+        extension: 'png',
+        classification: 'viewable_image',
+        detectedFormat: 'png',
+        mediaType: 'image/png',
+        viewerUnavailableReason: null,
       },
       version: { revision: 1 },
     })
     const exported = await core.runtime.content.files.export(resourceId)
     expect(exported).toMatchObject({
       status: 'ready',
-      extension: 'txt',
-      mediaType: 'application/octet-stream',
+      extension: 'png',
+      mediaType: 'image/png',
     })
     expect(exported.status === 'ready' ? Array.from(exported.bytes) : null).toEqual(
       Array.from(bytes),

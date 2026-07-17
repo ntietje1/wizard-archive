@@ -320,16 +320,8 @@ function fileUnavailableDescription(
   switch (reason) {
     case 'empty_file':
       return 'This file is empty.'
-    case 'malformed':
-    case 'encrypted':
-      return 'This file cannot be previewed safely.'
-    case 'limit_exceeded':
-    case 'decoder_limit':
     case 'note_size_limit':
-    case 'note_complexity':
       return 'This file is too large or complex to preview.'
-    case 'parser_timeout':
-      return 'The preview could not be prepared in time.'
     case 'invalid_utf8':
     case 'nul_byte':
     case 'unsupported_format':

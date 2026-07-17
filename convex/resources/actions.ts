@@ -1,5 +1,3 @@
-'use node'
-
 import { v } from 'convex/values'
 import type { Infer } from 'convex/values'
 import {
@@ -8,7 +6,6 @@ import {
 } from '@wizard-archive/editor/resources/content-version'
 import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
-import type { ResourceSourceInspection } from '@wizard-archive/editor/resources/source-classifier'
 import { action } from '../_generated/server'
 import type { ActionCtx } from '../_generated/server'
 import { internal } from '../_generated/api'
@@ -22,7 +19,6 @@ import {
 } from './schema'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { validateFileUpload } from '../../shared/storage/validation'
-import { inspectFileSource } from './functions/fileSourceInspection'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredFileUpload = Readonly<{
@@ -31,7 +27,7 @@ type StoredFileUpload = Readonly<{
   storageId: Id<'_storage'>
 }>
 
-type InspectedFileUpload = Readonly<{
+type ClassifiedFileUpload = Readonly<{
   bytes: Uint8Array
   metadata: Exclude<ReturnType<typeof classifyFileResourceSource>, { classification: 'rejected' }>
   upload: StoredFileUpload
@@ -59,40 +55,19 @@ async function loadFileUpload(
   return { bytes, upload }
 }
 
-async function loadInspectedFileUpload(
+async function loadClassifiedFileUpload(
   ctx: ActionCtx,
   campaignId: string,
   uploadSessionId: Id<'fileStorage'>,
-): Promise<InspectedFileUpload | null> {
+): Promise<ClassifiedFileUpload | null> {
   const loaded = await loadFileUpload(ctx, campaignId, uploadSessionId)
   if (!loaded) return null
   const { bytes, upload } = loaded
-  const preliminary = classifyFileResourceSource({ bytes, fileName: upload.originalFileName })
-  if (preliminary.classification === 'rejected') return null
-  const inspection = await inspectSupportedFileSource(bytes, preliminary.detectedFormat)
   const metadata = classifyFileResourceSource({
     bytes,
     fileName: upload.originalFileName,
-    inspection,
   })
   return metadata.classification === 'rejected' ? null : { bytes, metadata, upload }
-}
-
-async function inspectSupportedFileSource(
-  bytes: Uint8Array,
-  format: string | null,
-): Promise<ResourceSourceInspection> {
-  if (
-    format !== 'png' &&
-    format !== 'jpeg' &&
-    format !== 'gif' &&
-    format !== 'webp' &&
-    format !== 'pdf' &&
-    format !== 'mp4'
-  ) {
-    return {}
-  }
-  return await inspectFileSource(bytes, format)
 }
 
 export const createFileResource = action({
@@ -104,7 +79,7 @@ export const createFileResource = action({
   },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
-    const upload = await loadInspectedFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    const upload = await loadClassifiedFileUpload(ctx, args.campaignId, args.uploadSessionId)
     if (!upload) {
       return { status: 'rejected', reason: 'invalid_command' }
     }
@@ -130,7 +105,7 @@ export const replaceFileContent = action({
   },
   returns: fileContentReplaceResultValidator,
   handler: async (ctx, args): Promise<StoredFileContentReplaceResult> => {
-    const upload = await loadInspectedFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    const upload = await loadClassifiedFileUpload(ctx, args.campaignId, args.uploadSessionId)
     if (!upload) return { status: 'rejected', reason: 'invalid_file' }
     return await ctx.runMutation(internal.resources.mutations.commitFileContentReplacement, {
       campaignId: upload.upload.campaignId,
@@ -155,7 +130,7 @@ export const replaceMapImage = action({
   },
   returns: mapContentMutationResultValidator,
   handler: async (ctx, args): Promise<StoredMapContentMutationResult> => {
-    const upload = await loadInspectedFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    const upload = await loadClassifiedFileUpload(ctx, args.campaignId, args.uploadSessionId)
     if (!upload) return { status: 'rejected', reason: 'invalid_command' }
     return await ctx.runMutation(internal.resources.mutations.commitMapImageReplacement, {
       campaignId: upload.upload.campaignId,
