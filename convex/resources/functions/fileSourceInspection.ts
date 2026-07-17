@@ -1,13 +1,9 @@
 'use node'
 
 import sharp from 'sharp'
-import { PDFDocument, ParseSpeeds } from 'pdf-lib'
-import { createFile, MP4BoxBuffer } from 'mp4box'
 import { MAX_VIEWABLE_IMAGE_ANIMATION_PIXELS } from '@wizard-archive/editor/resources/source-classifier'
 import type {
   ImageSourceInspection,
-  IsoBmffSourceInspection,
-  PdfSourceInspection,
   ResourceSourceInspection,
 } from '@wizard-archive/editor/resources/source-classifier'
 
@@ -27,9 +23,9 @@ export async function inspectFileSource(
     case 'webp':
       return { image: await inspectImage(bytes, format) }
     case 'pdf':
-      return { pdf: await inspectPdf(bytes) }
+      return { pdf: { status: 'unavailable', reason: 'parser_timeout' } }
     case 'mp4':
-      return { isoBmff: inspectIsoBmff(bytes) }
+      return { isoBmff: { status: 'unavailable', reason: 'parser_timeout' } }
   }
 }
 
@@ -80,66 +76,4 @@ function imageUnavailable(
   reason: Extract<ImageSourceInspection, { status: 'unavailable' }>['reason'],
 ): ImageSourceInspection {
   return { status: 'unavailable', reason }
-}
-
-async function inspectPdf(bytes: Uint8Array): Promise<PdfSourceInspection> {
-  try {
-    const document = await PDFDocument.load(bytes, {
-      capNumbers: true,
-      ignoreEncryption: false,
-      parseSpeed: ParseSpeeds.Fastest,
-      throwOnInvalidObject: true,
-      updateMetadata: false,
-    })
-    const pageCount = document.getPageCount()
-    if (pageCount < 1) return { status: 'unavailable', reason: 'malformed' }
-    const { width, height } = document.getPage(0).getSize()
-    if (!(width > 0) || !(height > 0)) {
-      return { status: 'unavailable', reason: 'malformed' }
-    }
-    document.getTitle()
-    return {
-      status: 'valid',
-      encrypted: false,
-      pageCount,
-      firstPageWidth: width,
-      firstPageHeight: height,
-      metadataReadable: true,
-    }
-  } catch (error) {
-    return {
-      status: 'unavailable',
-      reason:
-        error instanceof Error &&
-        error.message.startsWith('Input document to `PDFDocument.load` is encrypted.')
-          ? 'encrypted'
-          : 'malformed',
-    }
-  }
-}
-
-function inspectIsoBmff(bytes: Uint8Array): IsoBmffSourceInspection {
-  const file = createFile()
-  let failed = false
-  file.onError = () => {
-    failed = true
-  }
-  try {
-    file.appendBuffer(MP4BoxBuffer.fromArrayBuffer(bytes.slice().buffer, 0), true)
-    file.flush()
-  } catch {
-    failed = true
-  }
-  const info = file.getInfo()
-  if (
-    failed ||
-    !info.hasMoov ||
-    info.tracks.some((track) => /^(enca|encv|drmi|drms)/.test(track.codec))
-  ) {
-    return { status: 'unavailable', reason: 'malformed' }
-  }
-  if (info.videoTracks.length > 0) return { status: 'valid', media: 'video' }
-  return info.audioTracks.length > 0
-    ? { status: 'valid', media: 'audio' }
-    : { status: 'unavailable', reason: 'malformed' }
 }

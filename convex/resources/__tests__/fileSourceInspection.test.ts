@@ -71,7 +71,7 @@ describe('file source inspection', () => {
     })
   })
 
-  it('reads PDF page count and first-page dimensions without exposing parser state', async () => {
+  it('keeps PDF parsing out of the action runtime without terminating isolation', async () => {
     const document = await PDFDocument.create()
     document.addPage([612, 792])
     document.addPage([400, 400])
@@ -79,48 +79,35 @@ describe('file source inspection', () => {
     const inspection = await inspectFileSource(bytes, 'pdf')
 
     expect(inspection).toEqual({
-      pdf: {
-        status: 'valid',
-        encrypted: false,
-        pageCount: 2,
-        firstPageWidth: 612,
-        firstPageHeight: 792,
-        metadataReadable: true,
-      },
+      pdf: { status: 'unavailable', reason: 'parser_timeout' },
     })
     expect(classifyFileResourceSource({ bytes, fileName: 'rules.pdf', inspection })).toMatchObject({
-      classification: 'viewable_pdf',
-      mediaType: 'application/pdf',
+      classification: 'inert_file',
+      viewerUnavailableReason: 'parser_timeout',
     })
   })
 
-  it('keeps encrypted and malformed PDFs inert', async () => {
+  it('does not start PDF work for encrypted or adversarial input', async () => {
     const document = await PDFDocument.create()
     document.addPage()
     const bytes = await document.save()
 
     await expect(inspectFileSource(encryptedPdf(), 'pdf')).resolves.toEqual({
-      pdf: { status: 'unavailable', reason: 'encrypted' },
+      pdf: { status: 'unavailable', reason: 'parser_timeout' },
     })
     await expect(inspectFileSource(bytes.subarray(0, 12), 'pdf')).resolves.toEqual({
-      pdf: { status: 'unavailable', reason: 'malformed' },
+      pdf: { status: 'unavailable', reason: 'parser_timeout' },
     })
   })
 
-  it('distinguishes MP4 audio and video tracks and rejects untyped or encrypted containers', async () => {
-    await expect(inspectFileSource(mp4('video'), 'mp4')).resolves.toEqual({
-      isoBmff: { status: 'valid', media: 'video' },
-    })
-    await expect(inspectFileSource(mp4('audio'), 'mp4')).resolves.toEqual({
-      isoBmff: { status: 'valid', media: 'audio' },
-    })
-    await expect(inspectFileSource(mp4('unknown'), 'mp4')).resolves.toEqual({
-      isoBmff: { status: 'unavailable', reason: 'malformed' },
-    })
-    await expect(inspectFileSource(mp4('encrypted-video'), 'mp4')).resolves.toEqual({
-      isoBmff: { status: 'unavailable', reason: 'malformed' },
-    })
-  })
+  it.each(['video', 'audio', 'unknown', 'encrypted-video'] as const)(
+    'does not start MP4 work for %s input',
+    async (fixture) => {
+      await expect(inspectFileSource(mp4(fixture), 'mp4')).resolves.toEqual({
+        isoBmff: { status: 'unavailable', reason: 'parser_timeout' },
+      })
+    },
+  )
 })
 
 type ImageFormat = 'jpeg' | 'png' | 'webp'
