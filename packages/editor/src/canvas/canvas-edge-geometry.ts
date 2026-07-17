@@ -9,6 +9,7 @@ import type { CanvasNodeId } from '../resources/domain-id'
 import { createCanvasBoundsIndex } from './bounds-index'
 import type { CanvasBounds } from './canvas-bounds'
 import { resolveCanvasEdgeStyle } from './canvas-edge-style'
+import { canvasStepPoints } from './canvas-step-geometry'
 
 const MIN_BEZIER_SEGMENTS = 24
 const MAX_BEZIER_SEGMENTS = 160
@@ -69,7 +70,13 @@ export function canvasEdgePath(
 ): string | null {
   const endpoints = edgeEndpoints(edge, nodesById)
   return endpoints
-    ? canvasPathBetween(edge.type, endpoints.source, endpoints.target, endpoints.handles)
+    ? canvasPathBetween(
+        edge.type,
+        endpoints.source,
+        endpoints.target,
+        endpoints.handles,
+        endpoints.bounds,
+      )
     : null
 }
 
@@ -81,7 +88,15 @@ export function canvasEdgePolyline(
   if (!endpoints) return null
   const { source, target } = endpoints
   if (edge.type === 'straight') return [source, target]
-  if (edge.type === 'step') return stepPoints(source, target, endpoints.handles.source)
+  if (edge.type === 'step') {
+    return canvasStepPoints(
+      source,
+      target,
+      endpoints.handles.source,
+      endpoints.handles.target,
+      endpoints.bounds,
+    )
+  }
   const { sourceControl, targetControl } = bezierControls(source, target, endpoints.handles)
   const segments = bezierSegments(source, sourceControl, targetControl, target)
   return Array.from({ length: segments + 1 }, (_, index) =>
@@ -129,10 +144,16 @@ export function canvasConnectionPreviewPath(
   const targetNode = target ? nodesById.get(target.nodeId) : null
   const targetPoint =
     target && targetNode ? canvasNodeHandlePoint(targetNode, target.handle) : current
-  return canvasPathBetween(type, sourcePoint, targetPoint, {
-    source: source.handle,
-    target: target?.handle ?? oppositeHandle(source.handle),
-  })
+  return canvasPathBetween(
+    type,
+    sourcePoint,
+    targetPoint,
+    {
+      source: source.handle,
+      target: target?.handle ?? oppositeHandle(source.handle),
+    },
+    targetNode ? { source: nodeBounds(sourceNode), target: nodeBounds(targetNode) } : undefined,
+  )
 }
 
 export function canvasNodeHandlePoint(
@@ -166,6 +187,7 @@ function edgeEndpoints(
     source: canvasNodeHandlePoint(sourceNode, sourceHandle),
     target: canvasNodeHandlePoint(targetNode, targetHandle),
     handles: { source: sourceHandle, target: targetHandle },
+    bounds: { source: nodeBounds(sourceNode), target: nodeBounds(targetNode) },
   }
 }
 
@@ -177,10 +199,17 @@ function canvasPathBetween(
     source: CanvasConnectionHandle | null
     target: CanvasConnectionHandle | null
   }>,
+  bounds?: Readonly<{ source: CanvasBounds; target: CanvasBounds }>,
 ): string {
   if (type === 'straight') return `M ${source.x} ${source.y} L ${target.x} ${target.y}`
   if (type === 'step') {
-    return stepPoints(source, target, handles.source)
+    return canvasStepPoints(
+      source,
+      target,
+      handles.source ?? 'right',
+      handles.target ?? 'left',
+      bounds,
+    )
       .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
       .join(' ')
   }
@@ -194,28 +223,25 @@ function edgeBoundsPoints(
 ): ReadonlyArray<CanvasPoint> {
   if (type === 'straight') return [endpoints.source, endpoints.target]
   if (type === 'step') {
-    return stepPoints(endpoints.source, endpoints.target, endpoints.handles.source)
+    return canvasStepPoints(
+      endpoints.source,
+      endpoints.target,
+      endpoints.handles.source,
+      endpoints.handles.target,
+      endpoints.bounds,
+    )
   }
   const controls = bezierControls(endpoints.source, endpoints.target, endpoints.handles)
   return [endpoints.source, controls.sourceControl, controls.targetControl, endpoints.target]
 }
 
-function stepPoints(
-  source: CanvasPoint,
-  target: CanvasPoint,
-  sourceHandle: CanvasConnectionHandle | null,
-): ReadonlyArray<CanvasPoint> {
-  if (sourceHandle === 'top' || sourceHandle === 'bottom') {
-    const middleY = (source.y + target.y) / 2
-    return [source, { x: source.x, y: middleY }, { x: target.x, y: middleY }, target]
-  }
-  const middleX = (source.x + target.x) / 2
-  return [source, { x: middleX, y: source.y }, { x: middleX, y: target.y }, target]
-}
-
 function nodeCenter(node: CanvasDocumentNode): CanvasPoint {
   const size = canvasNodeSize(node)
   return { x: node.position.x + size.width / 2, y: node.position.y + size.height / 2 }
+}
+
+function nodeBounds(node: CanvasDocumentNode): CanvasBounds {
+  return { ...node.position, ...canvasNodeSize(node) }
 }
 
 function inferConnectionHandles(

@@ -131,6 +131,85 @@ describe('canvas edge geometry', () => {
     expect(longestSegment(long ?? [])).toBeLessThanOrEqual(80)
   })
 
+  it('routes facing and mixed step handles through reference-length stubs', () => {
+    const source = canvasNode(NODE_A, 0, 0)
+    const facingTarget = canvasNode(NODE_B, 220, 80)
+    const mixedTarget = canvasNode(NODE_B, 160, 160)
+
+    expect(
+      canvasEdgePolyline(
+        {
+          id: 'facing-step',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'right',
+          targetHandle: 'left',
+          type: 'step',
+        },
+        new Map([
+          [source.id, source],
+          [facingTarget.id, facingTarget],
+        ]),
+      ),
+    ).toEqual([
+      { x: 100, y: 50 },
+      { x: 148, y: 50 },
+      { x: 160, y: 50 },
+      { x: 160, y: 130 },
+      { x: 172, y: 130 },
+      { x: 220, y: 130 },
+    ])
+    expect(
+      canvasEdgePolyline(
+        {
+          id: 'mixed-step',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'right',
+          targetHandle: 'top',
+          type: 'step',
+        },
+        new Map([
+          [source.id, source],
+          [mixedTarget.id, mixedTarget],
+        ]),
+      ),
+    ).toEqual([
+      { x: 100, y: 50 },
+      { x: 148, y: 50 },
+      { x: 148, y: 112 },
+      { x: 210, y: 112 },
+      { x: 210, y: 160 },
+    ])
+  })
+
+  it('relaxes step stubs when the closest split would cross an endpoint node', () => {
+    const source = { ...canvasNode(NODE_A, 0, 0), width: 200 }
+    const target = canvasNode(NODE_B, 180, 0)
+
+    expect(
+      canvasEdgePolyline(
+        {
+          id: 'overlapping-step',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'bottom',
+          targetHandle: 'top',
+          type: 'step',
+        },
+        new Map([
+          [source.id, source],
+          [target.id, target],
+        ]),
+      ),
+    ).toEqual([
+      { x: 100, y: 100 },
+      { x: 100, y: 50 },
+      { x: 230, y: 50 },
+      { x: 230, y: 0 },
+    ])
+  })
+
   it('bounds routed geometry with its complete rendered stroke extent', () => {
     expect(
       canvasEdgeBounds(
