@@ -9,8 +9,8 @@ export const CANVAS_ARRANGE_ACTIONS = [
   { id: 'alignTop', label: 'Align top', minimumNodes: 2 },
   { id: 'alignBottom', label: 'Align bottom', minimumNodes: 2 },
   { id: 'alignCenter', label: 'Align centers', minimumNodes: 2 },
-  { id: 'alignVertical', label: 'Align vertical centers', minimumNodes: 2 },
-  { id: 'alignHorizontal', label: 'Align horizontal centers', minimumNodes: 2 },
+  { id: 'alignCenterX', label: 'Align horizontal centers', minimumNodes: 2 },
+  { id: 'alignCenterY', label: 'Align vertical centers', minimumNodes: 2 },
   { id: 'distributeHorizontal', label: 'Distribute horizontally', minimumNodes: 3 },
   { id: 'distributeVertical', label: 'Distribute vertically', minimumNodes: 3 },
   { id: 'flipHorizontal', label: 'Flip horizontally', minimumNodes: 2 },
@@ -65,9 +65,9 @@ function arrangeCanvasNodes(
           return [node.id, { x: node.position.x, y: bottom - bounds.height }]
         case 'alignCenter':
           return [node.id, { x: centerX - bounds.width / 2, y: centerY - bounds.height / 2 }]
-        case 'alignVertical':
+        case 'alignCenterX':
           return [node.id, { x: centerX - bounds.width / 2, y: node.position.y }]
-        case 'alignHorizontal':
+        case 'alignCenterY':
           return [node.id, { x: node.position.x, y: centerY - bounds.height / 2 }]
         case 'flipHorizontal':
           return [

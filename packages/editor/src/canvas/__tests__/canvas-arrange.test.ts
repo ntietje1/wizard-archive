@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { createCanvasArrangeChange } from '../canvas-arrange'
+import { CANVAS_ARRANGE_ACTIONS, createCanvasArrangeChange } from '../canvas-arrange'
 import type { CanvasDocumentChange } from '../document-controller'
 import type { CanvasDocumentContent, CanvasDocumentNode } from '../document-contract'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
@@ -20,6 +20,15 @@ const SELECTION = { nodeIds: new Set([NODE_A, NODE_B, NODE_C]), edgeIds: new Set
 type CanvasArrangeAction = Parameters<typeof createCanvasArrangeChange>[2]
 
 describe('canvas arrange geometry', () => {
+  it('names center alignment by the axis it changes', () => {
+    expect(CANVAS_ARRANGE_ACTIONS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'alignCenterX', label: 'Align horizontal centers' }),
+        expect.objectContaining({ id: 'alignCenterY', label: 'Align vertical centers' }),
+      ]),
+    )
+  })
+
   it.each([
     [
       'alignLeft',
@@ -62,7 +71,7 @@ describe('canvas arrange geometry', () => {
       ],
     ],
     [
-      'alignVertical',
+      'alignCenterX',
       [
         [40, 10],
         [30, 50],
@@ -70,7 +79,7 @@ describe('canvas arrange geometry', () => {
       ],
     ],
     [
-      'alignHorizontal',
+      'alignCenterY',
       [
         [30, 35],
         [10, 30],
