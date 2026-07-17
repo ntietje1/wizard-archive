@@ -349,7 +349,12 @@ async function loadMap(
   apply: (resourceId: ResourceId, snapshot: MapSnapshot) => void,
   store: MapStore,
 ): Promise<MapSessionState> {
-  apply(resourceId, await backend.load(resourceId))
+  const before = store.get(resourceId)
+  if (before.status === 'ready') return before
+  const snapshot = await backend.load(resourceId)
+  const current = store.get(resourceId)
+  if (current !== before) return current
+  apply(resourceId, snapshot)
   return store.get(resourceId)
 }
 

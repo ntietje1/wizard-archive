@@ -119,6 +119,8 @@ type DetectedFormat =
   | 'aac_adts'
   | 'webm'
 
+export type DetectedImageSourceFormat = Extract<DetectedFormat, 'gif' | 'jpeg' | 'png' | 'webp'>
+
 export function classifyResourceSource({
   bytes,
   fileName,
@@ -208,6 +210,13 @@ export function canonicalFileExtension(fileName: string): string | null {
   if (separator <= 0 || separator === baseName.length - 1) return null
   const extension = baseName.slice(separator + 1)
   return VALID_EXTENSION.test(extension) ? extension : null
+}
+
+export function detectImageSourceFormat(bytes: Uint8Array): DetectedImageSourceFormat | null {
+  const format = detectFormat(bytes)
+  return format === 'png' || format === 'jpeg' || format === 'gif' || format === 'webp'
+    ? format
+    : null
 }
 
 function classifyNoteSource(

@@ -51,6 +51,52 @@ describe('LiveMapSessionSource', () => {
     source.dispose()
   })
 
+  it('does not let a stale explicit load regress a newer authoritative watch state', async () => {
+    const resourceId = testDomainId('resource', 'map-load-sequencing')
+    const campaignId = testDomainId('campaign', 'map-load-sequencing')
+    const version = {
+      scheme: 'authoritative-revision-v1' as const,
+      revision: 2,
+      digest: 'a'.repeat(64),
+    }
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    let resolveLoad!: (snapshot: Snapshot) => void
+    const source = createLiveMapSessionSource(
+      campaignId,
+      {
+        load: () => new Promise((resolve) => (resolveLoad = resolve)),
+        watch: (_resourceId, update) => {
+          apply = update
+          return () => undefined
+        },
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        execute: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload: vi.fn(),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+    source.subscribe(resourceId, () => undefined)
+    const exported = source.export(resourceId)
+    apply({
+      status: 'ready',
+      content: { image: { status: 'unattached' }, layers: [], pins: [] },
+      version,
+    })
+    const ready = source.get(resourceId)
+    resolveLoad({ status: 'initializing', operationId: testDomainId('operation', 'stale-load') })
+
+    await expect(exported).resolves.toMatchObject({ status: 'ready', extension: 'wizardmap' })
+    expect(source.get(resourceId)).toEqual(ready)
+
+    apply({ status: 'unavailable', reason: 'unauthorized' })
+    expect(source.get(resourceId)).toEqual({ status: 'unavailable', reason: 'unauthorized' })
+    source.dispose()
+  })
+
   it('rejects a completed create with the wrong receipt identity', async () => {
     const campaignId = testDomainId('campaign', 'map-create-campaign')
     const resourceId = testDomainId('resource', 'map-create-resource')

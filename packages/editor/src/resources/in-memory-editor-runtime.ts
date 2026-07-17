@@ -47,7 +47,8 @@ import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtim
 import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
-import { classifyFileResourceSource } from './resource-source-classifier'
+import { classifyFileResourceSource, MAX_RESOURCE_SOURCE_BYTES } from './resource-source-classifier'
+import type { ImageSourceInspection } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
 import {
   applyWorkspacePreferenceChange,
@@ -127,6 +128,7 @@ export type InMemoryEditorRuntimeInput = Readonly<{
   content?: InMemoryEditorContent
   navigation: ResourceNavigation
   now?: () => number
+  inspectMapImage?: (source: FileResourceSource) => Promise<ImageSourceInspection>
 }>
 
 class InMemoryNoteSessionSource
@@ -406,6 +408,16 @@ class InMemoryMapSessionSource
 {
   readonly #sessions = new Map<ResourceId, InMemoryMapSession>()
 
+  constructor(
+    initialState: MapSessionState,
+    campaignId: CampaignId,
+    executeStructure: ResourceStructureCommandGateway['execute'],
+    private readonly isActiveResource: (resourceId: ResourceId) => boolean,
+    private readonly inspectImage: (source: FileResourceSource) => Promise<ImageSourceInspection>,
+  ) {
+    super(initialState, campaignId, executeStructure)
+  }
+
   async create(
     envelope: CommandEnvelope<CreateMapResourceCommand>,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
@@ -431,9 +443,17 @@ class InMemoryMapSessionSource
     images: ReadonlyArray<MapImageBytes>,
   ): void {
     this.#sessions.get(resourceId)?.dispose()
-    const session = new InMemoryMapSession(resourceId, content, version, images, () => {
-      this.set(resourceId, { status: 'ready', session })
-    })
+    const session = new InMemoryMapSession(
+      resourceId,
+      content,
+      version,
+      images,
+      this.isActiveResource,
+      this.inspectImage,
+      () => {
+        this.set(resourceId, { status: 'ready', session })
+      },
+    )
     this.#sessions.set(resourceId, session)
     this.set(resourceId, { status: 'ready', session })
   }
@@ -470,6 +490,8 @@ class InMemoryMapSession implements MapSession {
     private currentContent: MapResourceContent,
     private currentVersion: VersionStamp,
     images: ReadonlyArray<MapImageBytes>,
+    private readonly isActiveResource: (resourceId: ResourceId) => boolean,
+    private readonly inspectImage: (source: FileResourceSource) => Promise<ImageSourceInspection>,
     private readonly publish: () => void,
   ) {
     for (const image of images) this.#images.set(image.layerId, Uint8Array.from(image.bytes))
@@ -485,6 +507,16 @@ class InMemoryMapSession implements MapSession {
 
   async execute(command: MapContentCommand) {
     if (this.#disposed) return { status: 'rejected' as const, reason: 'resource_missing' as const }
+    if (
+      command.type === 'createPins' &&
+      command.pins.some(
+        (pin) =>
+          pin.destination.kind === 'internal' &&
+          !this.isActiveResource(pin.destination.target.resourceId),
+      )
+    ) {
+      return { status: 'rejected' as const, reason: 'target_missing' as const }
+    }
     const transition = transitionMapContent(this.resourceId, this.currentContent, command)
     if (transition.status === 'rejected') return transition
     const version = await this.#nextVersion(transition.content)
@@ -526,7 +558,13 @@ class InMemoryMapSession implements MapSession {
     if (!versionStampEquals(expectedVersion, this.currentVersion)) {
       return { status: 'rejected' as const, reason: 'version_conflict' as const }
     }
-    const metadata = classifyFileResourceSource(source)
+    if (source.bytes.byteLength > MAX_RESOURCE_SOURCE_BYTES) {
+      return { status: 'rejected' as const, reason: 'invalid_image' as const }
+    }
+    const metadata = classifyFileResourceSource({
+      ...source,
+      inspection: { image: await this.inspectImage(source) },
+    })
     if (metadata.classification !== 'viewable_image') {
       return { status: 'rejected' as const, reason: 'invalid_image' as const }
     }
@@ -684,6 +722,8 @@ export function createInMemoryEditorRuntime({
   content = {},
   navigation,
   now,
+  inspectMapImage = () =>
+    Promise.resolve({ status: 'unavailable' as const, reason: 'decoder_limit' as const }),
   scope,
   snapshot,
 }: InMemoryEditorRuntimeInput): Readonly<{ runtime: EditorRuntime; dispose(): void }> {
@@ -701,8 +741,16 @@ export function createInMemoryEditorRuntime({
   const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const maps = new InMemoryMapSessionSource({ status: 'loading' }, scope.campaignId, (envelope) =>
-    executeStructure(envelope),
+  let currentCatalogSnapshot = () => snapshot
+  const maps = new InMemoryMapSessionSource(
+    { status: 'loading' },
+    scope.campaignId,
+    (envelope) => executeStructure(envelope),
+    (resourceId) =>
+      currentCatalogSnapshot().resources.some(
+        (resource) => resource.id === resourceId && resource.lifecycle.state === 'active',
+      ),
+    inspectMapImage,
   )
   for (const entry of content.maps ?? []) {
     maps.setReady(entry.resourceId, entry.content, entry.version, entry.images)
@@ -722,6 +770,7 @@ export function createInMemoryEditorRuntime({
     contentCopy: createInMemoryContentCopyPlanner(kinds, { notes, files, maps, canvases }),
     ...(now ? { now } : {}),
   })
+  currentCatalogSnapshot = resources.catalogSnapshot
   const structureWithKindIndex: ResourceStructureCommandGateway = {
     execute: async (envelope) => {
       const createWasKnown =

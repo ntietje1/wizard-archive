@@ -239,6 +239,139 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
+  it('uses current catalog targets and inspected bytes for local map mutations', async () => {
+    const empty = emptySnapshot()
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const activeTargetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const trashedTargetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const missingTargetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const version = initialVersion(await sha256Digest(new Uint8Array([1])))
+    const resource = (
+      id: ResourceRecord['id'],
+      kind: ResourceRecord['kind'],
+      lifecycle: ResourceRecord['lifecycle'],
+    ): ResourceRecord => ({
+      id,
+      campaignId: empty.campaignId,
+      parentId: null,
+      kind,
+      title: canonicalizeResourceTitle(kind),
+      icon: null,
+      color: null,
+      lifecycle,
+      metadataVersion: version,
+      created: { at: 1, by: actorId },
+      updated: { at: 1, by: actorId },
+    })
+    const snapshot = {
+      ...empty,
+      resources: [
+        resource(mapId, 'map', { state: 'active' }),
+        resource(activeTargetId, 'note', { state: 'active' }),
+        resource(trashedTargetId, 'note', {
+          state: 'trashed',
+          at: 2,
+          by: actorId,
+        }),
+      ],
+    }
+    const core = createInMemoryEditorRuntime({
+      scope: {
+        campaignId: snapshot.campaignId,
+        actorId,
+        projection: 'dm',
+        schema: RESOURCE_INDEX_SCHEMA,
+      },
+      snapshot,
+      content: {
+        maps: [
+          {
+            resourceId: mapId,
+            content: { image: { status: 'unattached' }, layers: [], pins: [] },
+            version,
+            images: [],
+          },
+        ],
+      },
+      inspectMapImage: () =>
+        Promise.resolve({
+          status: 'valid',
+          format: 'png',
+          width: 2,
+          height: 3,
+          frameCount: 1,
+          totalDecodedPixels: 6,
+          canonicalOrientation: true,
+        }),
+      navigation: navigation(),
+    })
+    await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
+    const state = core.runtime.content.maps.get(mapId)
+    if (state.status !== 'ready') throw new TypeError('Expected a ready map')
+    const createPin = (targetId: ResourceRecord['id']) =>
+      state.session.execute({
+        type: 'createPins',
+        pins: [
+          {
+            id: generateDomainId(DOMAIN_ID_KIND.mapPin),
+            destination: { kind: 'internal', target: { kind: 'resource', resourceId: targetId } },
+            layerId: null,
+            x: 10,
+            y: 20,
+          },
+        ],
+      })
+
+    await expect(createPin(missingTargetId)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'target_missing',
+    })
+    await expect(createPin(trashedTargetId)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'target_missing',
+    })
+    await expect(createPin(mapId)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'invalid_command',
+    })
+    await expect(createPin(activeTargetId)).resolves.toMatchObject({ status: 'completed' })
+    await expect(createPin(activeTargetId)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'invalid_command',
+    })
+    if (core.runtime.resources.structure.status !== 'available') {
+      throw new TypeError('Expected editable structure')
+    }
+    const trash = await core.runtime.resources.structure.value.execute({
+      campaignId: snapshot.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'trash', resourceIds: [activeTargetId] },
+    })
+    expect(trash).toMatchObject({ status: 'received', result: { status: 'completed' } })
+    await expect(createPin(activeTargetId)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'target_missing',
+    })
+
+    const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    await expect(
+      state.session.replaceImage(null, state.session.version, {
+        bytes,
+        fileName: 'map.png',
+      }),
+    ).resolves.toMatchObject({
+      status: 'completed',
+      content: { image: { status: 'attached', byteSize: bytes.byteLength } },
+    })
+    await expect(state.session.loadImage(null)).resolves.toMatchObject({
+      status: 'ready',
+      bytes,
+      mediaType: 'image/png',
+    })
+    core.dispose()
+  })
+
   it('creates uploaded files through the file content owner and canonical structure command', async () => {
     const snapshot = emptySnapshot()
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
