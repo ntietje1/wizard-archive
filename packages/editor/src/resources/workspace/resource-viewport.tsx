@@ -35,6 +35,7 @@ import { CanvasEditor } from '../../canvas/canvas-editor'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasPreviewSource } from '../content-session-contract'
 import { CanvasResourceEmbed } from './canvas-resource-embed'
+import { createWorkspaceCanvasDropResolver } from './workspace-canvas-drop'
 import { FileViewer } from '../../files/file-viewer'
 import { MapViewer } from '../../maps/map-viewer'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
@@ -110,7 +111,9 @@ export function ResourceViewport({
         />
       )
     case 'canvas':
-      return <CanvasViewport canEdit={canEdit} resource={resource} runtime={runtime} />
+      return (
+        <CanvasViewport actions={actions} canEdit={canEdit} resource={resource} runtime={runtime} />
+      )
   }
 }
 
@@ -169,10 +172,12 @@ function FileViewport({
 }
 
 function CanvasViewport({
+  actions,
   canEdit,
   resource,
   runtime,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
@@ -183,6 +188,10 @@ function CanvasViewport({
     <CanvasEditor
       key={`${resource.id}:${state.session.document.guid}`}
       canEdit={canEdit}
+      drop={createWorkspaceCanvasDropResolver({
+        actions,
+        parentId: resource.displayParentId,
+      })}
       renderEmbed={({ editing, node, onEdit }) => (
         <CanvasResourceEmbed
           canEdit={canEdit}

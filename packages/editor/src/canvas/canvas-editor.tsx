@@ -6,14 +6,25 @@ import { createCanvasInteractionController } from './interaction-controller'
 import type { CanvasSession } from '../resources/content-session-contract'
 import type { CanvasDocumentNode } from './document-contract'
 import type { ResourceId } from '../resources/domain-id'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
+  drop?: CanvasDropResolver
   renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   session: CanvasSession
   title: string
+}>
+
+export type CanvasDropResolver = Readonly<{
+  canResolve(dataTransfer: Pick<DataTransfer, 'types'>): boolean
+  resolve(
+    dataTransfer: DataTransfer,
+    maximumDestinations: number,
+    signal: AbortSignal,
+  ): Promise<ReadonlyArray<AuthoredDestination>>
 }>
 
 export type CanvasEmbedRenderer = (props: {
@@ -37,6 +48,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
       canEdit={props.canEdit}
       collaboration={props.session.collaboration}
       documentController={runtime.documentController}
+      drop={props.drop ?? null}
       interactionController={runtime.interactionController}
       interactionRenderStore={runtime.interactionRenderStore}
       renderEmbed={props.renderEmbed}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { StrictMode } from 'react'
 import type { ComponentProps } from 'react'
@@ -11,6 +11,7 @@ import { initialVersion, sha256Digest } from '../../resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createInMemoryCanvasSession } from '../../resources/in-memory-canvas-session'
 import { createCanvasTextDocument } from '../text/model'
+import { parseSafeHttpsUrl } from '../../resources/authored-destination-contract'
 
 const RESOURCE_ID = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-444444444444')
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -62,6 +63,78 @@ describe('CanvasEditor', () => {
 
     fireEvent.pointerLeave(surface)
     expect(session.collaboration.provider.awareness.getLocalState()).toMatchObject({ cursor: null })
+
+    view.unmount()
+    session.dispose()
+  })
+
+  it('places resolved internal and external drops at the canvas pointer location', async () => {
+    const session = await createSession()
+    const externalUrl = parseSafeHttpsUrl('https://example.com/reference')!
+    const view = render(
+      <ProductionCanvasEditor
+        canEdit
+        drop={{
+          canResolve: () => true,
+          resolve: () =>
+            Promise.resolve([
+              {
+                kind: 'internal',
+                target: { kind: 'resource', resourceId: RESOURCE_ID },
+              },
+              { kind: 'externalUrl', url: externalUrl },
+            ]),
+        }}
+        renderEmbed={() => null}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Drop board"
+      />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    const dataTransfer = {
+      dropEffect: 'none',
+      types: ['application/example'],
+    } as unknown as DataTransfer
+
+    fireEvent.dragEnter(surface, { dataTransfer })
+    expect(surface).toHaveAttribute('data-drop-target', 'true')
+    expect(dataTransfer.dropEffect).toBe('copy')
+    const dropEvent = createEvent.drop(surface, { dataTransfer })
+    Object.defineProperties(dropEvent, {
+      clientX: { value: 120 },
+      clientY: { value: 90 },
+    })
+    fireEvent(surface, dropEvent)
+
+    await waitFor(() => {
+      expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(2)
+    })
+    expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
+      {
+        type: 'embed',
+        position: { x: 120, y: 90 },
+        width: 320,
+        height: 240,
+        data: {
+          destination: {
+            kind: 'internal',
+            target: { kind: 'resource', resourceId: RESOURCE_ID },
+          },
+        },
+      },
+      {
+        type: 'embed',
+        position: { x: 140, y: 110 },
+        data: { destination: { kind: 'externalUrl', url: externalUrl } },
+      },
+    ])
+    expect(surface).not.toHaveAttribute('data-drop-target')
+    expect(
+      screen
+        .getAllByTestId('canvas-node')
+        .every((node) => node.getAttribute('data-selected') === 'true'),
+    ).toBe(true)
 
     view.unmount()
     session.dispose()

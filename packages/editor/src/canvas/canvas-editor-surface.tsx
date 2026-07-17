@@ -23,9 +23,10 @@ import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
 import type { ContentCollaboration } from '../resources/content-session-contract'
-import type { CanvasEmbedRenderer } from './canvas-editor'
+import type { CanvasDropResolver, CanvasEmbedRenderer } from './canvas-editor'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
 import { useCanvasSurface } from './use-canvas-surface'
+import { useCanvasDropTarget } from './canvas-drop-target'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
 const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
@@ -42,6 +43,7 @@ type CanvasEditorSurfaceProps = Readonly<{
   canEdit: boolean
   collaboration: ContentCollaboration
   documentController: CanvasDocumentController
+  drop: CanvasDropResolver | null
   interactionController: CanvasInteractionController
   interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
   renderEmbed: CanvasEmbedRenderer
@@ -53,6 +55,7 @@ export function CanvasEditorSurface({
   canEdit,
   collaboration,
   documentController,
+  drop,
   interactionController,
   interactionRenderStore,
   renderEmbed,
@@ -69,6 +72,12 @@ export function CanvasEditorSurface({
     interactionRenderStore.get,
   )
   const history = useCanvasHistoryState(documentController)
+  const dropTarget = useCanvasDropTarget({
+    canEdit,
+    documentController,
+    drop,
+    interactionController,
+  })
 
   useEffect(() => {
     interactionController.reconcileDocument(
@@ -240,10 +249,14 @@ export function CanvasEditorSurface({
       <section
         ref={attachSurface}
         aria-label="Canvas surface"
-        className={`relative z-0 size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
+        className={`relative z-0 size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring ${canvasToolCursor(interaction.tool)}`}
         data-tool={interaction.tool}
         data-testid="canvas-surface"
         tabIndex={-1}
+        onDragEnter={dropTarget.onDragEnter}
+        onDragOver={dropTarget.onDragOver}
+        onDragLeave={dropTarget.onDragLeave}
+        onDrop={dropTarget.onDrop}
         onContextMenu={(event) => {
           event.preventDefault()
           setContextMenu({ kind: 'pane', ...canvasMenuPosition(event) })
