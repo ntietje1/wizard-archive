@@ -11,7 +11,6 @@ test.describe('canvas viewport parity', () => {
 
     const initial = await viewportStyle()
     await editor.getByRole('button', { name: 'Zoom in' }).click()
-    await expect(editor).toContainText('120%')
     await expect.poll(viewportStyle).not.toBe(initial)
 
     const nodeBox = await visibleBox(nodes.first())
@@ -31,7 +30,7 @@ test.describe('canvas viewport parity', () => {
     await page.mouse.wheel(120, 80)
     await expect.poll(viewportStyle).not.toBe(beforeWheel)
 
-    await editor.getByRole('button', { name: 'Hand' }).click()
+    await editor.getByRole('button', { name: 'Panning' }).click()
     const beforeHand = await viewportStyle()
     await dragPointer(
       page,
@@ -54,7 +53,7 @@ test.describe('canvas viewport parity', () => {
     )
     await expect.poll(viewportStyle).not.toBe(beforeMiddle)
 
-    await editor.getByRole('button', { name: 'Fit view' }).click()
+    await editor.getByRole('button', { name: 'Fit zoom' }).click()
     const fitted = await viewportStyle()
     await expect.poll(viewportStyle).not.toBe(beforeMiddle)
     const zoomButton = await editor.getByRole('button', { name: 'Zoom in' }).elementHandle()

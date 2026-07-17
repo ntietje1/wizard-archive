@@ -97,7 +97,7 @@ test.describe('canvas performance smoke', () => {
     await expect.poll(() => viewport.getAttribute('style')).not.toBe(viewportBeforePan)
     await expect(nodes).toHaveCount(0)
 
-    await editor.getByRole('button', { name: 'Fit view' }).click()
+    await editor.getByRole('button', { name: 'Fit zoom' }).click()
     await expect(nodes).toHaveCount(512)
     const fittedBounds = await visibleBox(surface)
 
@@ -230,7 +230,7 @@ test.describe('canvas performance smoke', () => {
     await page.keyboard.press('Control+d')
     await expect(strokes).toHaveCount(512)
     await page.keyboard.press('Escape')
-    await editor.getByRole('button', { name: 'Fit view' }).click()
+    await editor.getByRole('button', { name: 'Fit zoom' }).click()
     const strokeBox = await visibleBox(strokes.first())
     await editor.getByRole('button', { name: 'Eraser' }).click()
     evidence.push(

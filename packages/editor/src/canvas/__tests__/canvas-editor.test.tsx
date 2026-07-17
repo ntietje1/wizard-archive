@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { StrictMode } from 'react'
 import type { ComponentProps } from 'react'
@@ -109,6 +109,35 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('preserves the reference toolbar order and viewport controls', async () => {
+    const session = await createSession()
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Toolbar board" />,
+    )
+
+    const mainToolbar = screen.getByRole('toolbar', { name: 'Canvas main toolbar' })
+    expect(
+      within(mainToolbar)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label')),
+    ).toEqual(['Pointer', 'Panning', 'Lasso select', 'Draw', 'Eraser', 'Text', 'Edges'])
+    expect(
+      within(mainToolbar)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['1', '2', '3', '4', '5', '6', '7'])
+
+    const viewportToolbar = screen.getByRole('toolbar', { name: 'Canvas viewport controls' })
+    expect(
+      within(viewportToolbar)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label')),
+    ).toEqual(['Zoom in', 'Zoom out', 'Fit zoom', 'Undo', 'Redo'])
+
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders document content without editor tools in viewer mode', async () => {
     const session = await createSession({
       nodes: [
@@ -131,7 +160,7 @@ describe('CanvasEditor', () => {
     expect(screen.getByTestId('canvas-edge')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Fit view' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Fit zoom' })).toBeVisible()
     view.unmount()
     session.dispose()
   })
