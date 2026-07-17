@@ -52,10 +52,15 @@ export function CanvasNodeVisual({
     )
   }
   const sharedStyle = {
-    color: node.data.textColor ?? undefined,
-    backgroundColor: node.data.backgroundColor ?? undefined,
-    opacity: node.data.backgroundOpacity ?? undefined,
-    borderColor: node.data.borderStroke ?? undefined,
+    color: node.data.textColor ?? 'var(--foreground)',
+    backgroundColor: resolveCanvasNodePaint(
+      node.data.backgroundColor ?? 'var(--background)',
+      node.data.backgroundOpacity ?? 100,
+    ),
+    borderColor: resolveCanvasNodePaint(
+      node.data.borderStroke ?? 'var(--border)',
+      node.data.borderOpacity ?? 100,
+    ),
     borderWidth: node.data.borderWidth ?? 1,
   }
   if (node.type === 'embed') {
@@ -82,4 +87,10 @@ export function CanvasNodeVisual({
       style={sharedStyle}
     />
   )
+}
+
+function resolveCanvasNodePaint(color: string | null | undefined, opacity: number) {
+  if (!color || opacity <= 0) return 'transparent'
+  if (opacity >= 100) return color
+  return `color-mix(in srgb, ${color} ${opacity}%, transparent)`
 }

@@ -216,8 +216,17 @@ describe('CanvasEditor', () => {
     fireEvent.keyDown(shell, { key: 'y', ctrlKey: true })
     expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(6)
 
-    fireEvent.keyDown(shell, { key: 'a', ctrlKey: true })
-    fireEvent.keyDown(screen.getByRole('spinbutton', { name: 'Border width' }), {
+    const firstNode = screen.getAllByTestId('canvas-node')[0]!
+    installPointerCapture(screen.getByTestId('canvas-surface'))
+    installPointerCapture(firstNode)
+    fireEvent.pointerDown(firstNode, {
+      button: 0,
+      clientX: 20,
+      clientY: 20,
+      pointerId: 40,
+    })
+    fireEvent.pointerUp(firstNode, { clientX: 20, clientY: 20, pointerId: 40 })
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Stroke size input' }), {
       key: 'Backspace',
     })
     expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(6)
@@ -857,9 +866,11 @@ describe('CanvasEditor', () => {
       pointerId: 20,
     })
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Arrange selection' }), {
-      target: { value: 'alignLeft' },
+    fireEvent.contextMenu(nodes[0]!, {
+      clientX: 120,
+      clientY: 20,
     })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Align left' }))
     expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
       { position: { x: 0, y: 0 } },
       { position: { x: 0, y: 100 } },
@@ -869,9 +880,7 @@ describe('CanvasEditor', () => {
       position: { x: 100, y: 0 },
     })
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Layer selection' }), {
-      target: { value: 'bringToFront' },
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'Bring to front' }))
     expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '2' })
     expect(nodes[0]).toHaveStyle({ zIndex: '4' })
     expect(readCanvasDocumentContent(session.document)).toMatchObject({
@@ -926,7 +935,7 @@ describe('CanvasEditor', () => {
       pointerId: 22,
     })
 
-    const borderWidth = screen.getByRole('spinbutton', { name: 'Border width' })
+    const borderWidth = screen.getByRole('textbox', { name: 'Stroke size input' })
     expect(borderWidth).toHaveAttribute('placeholder', '--')
     fireEvent.change(borderWidth, { target: { value: '5' } })
     fireEvent.blur(borderWidth)
@@ -937,9 +946,11 @@ describe('CanvasEditor', () => {
     expect(nodes[0].firstElementChild).toHaveStyle({ borderWidth: '5px' })
     expect(nodes[1].firstElementChild).toHaveStyle({ borderWidth: '5px' })
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Fill color' }), {
-      target: { value: 'var(--bg-blue)' },
-    })
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Fill' })).getByRole('button', {
+        name: 'Select Blue color',
+      }),
+    )
     expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
       { data: { backgroundColor: 'var(--bg-blue)', borderWidth: 5 } },
       { data: { backgroundColor: 'var(--bg-blue)', borderWidth: 5 } },

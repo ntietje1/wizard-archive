@@ -70,6 +70,28 @@ describe('canvas properties', () => {
       ],
       edges: [],
     })
+    expect(
+      createCanvasPropertyChange(
+        CONTENT,
+        { nodeIds: new Set([NODE_A, NODE_B]), edgeIds: new Set() },
+        { property: 'border', value: { color: 'var(--t-red)', opacity: 40 } },
+      ),
+    ).toEqual({
+      type: 'update',
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          data: { borderStroke: 'var(--t-red)', borderOpacity: 40 },
+        },
+        {
+          id: NODE_B,
+          type: 'embed',
+          data: { borderStroke: 'var(--t-red)', borderOpacity: 40 },
+        },
+      ],
+      edges: [],
+    })
   })
 
   it('fans line properties across strokes and edges with their canonical units', () => {
@@ -82,11 +104,20 @@ describe('canvas properties', () => {
       edges: [{ id: 'edge-a-b', style: { strokeWidth: 7 } }],
     })
     expect(
-      createCanvasPropertyChange(CONTENT, selection, { property: 'lineOpacity', value: 80 }),
+      createCanvasPropertyChange(CONTENT, selection, {
+        property: 'linePaint',
+        value: { color: 'var(--t-blue)', opacity: 80 },
+      }),
     ).toEqual({
       type: 'update',
-      nodes: [{ id: STROKE, type: 'stroke', data: { opacity: 80 } }],
-      edges: [{ id: 'edge-a-b', style: { opacity: 0.8 } }],
+      nodes: [
+        {
+          id: STROKE,
+          type: 'stroke',
+          data: { color: 'var(--t-blue)', opacity: 80 },
+        },
+      ],
+      edges: [{ id: 'edge-a-b', style: { stroke: 'var(--t-blue)', opacity: 0.8 } }],
     })
   })
 
@@ -101,6 +132,19 @@ describe('canvas properties', () => {
     })
     expect(
       createCanvasPropertyChange(CONTENT, selection, { property: 'edgeType', value: 'straight' }),
+    ).toBeNull()
+    expect(
+      createCanvasPropertyChange(
+        {
+          nodes: [{ id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+          edges: [],
+        },
+        { nodeIds: new Set([NODE_A]), edgeIds: new Set() },
+        {
+          property: 'fill',
+          value: { color: 'var(--background)', opacity: 100 },
+        },
+      ),
     ).toBeNull()
   })
 })

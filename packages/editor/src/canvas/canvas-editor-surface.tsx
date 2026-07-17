@@ -14,10 +14,8 @@ import type { CanvasPoint, CanvasSelection, CanvasTool } from './interaction-typ
 import { CanvasScene } from './canvas-scene'
 import { CanvasContextMenu } from './canvas-context-menu'
 import type { CanvasContextMenuRequest } from './canvas-context-menu'
-import { CanvasSelectionActions } from './canvas-selection-actions'
-import { CanvasSelectionProperties } from './canvas-selection-properties'
 import { CanvasToolbar } from './canvas-toolbar'
-import { CanvasToolProperties } from './canvas-tool-properties'
+import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { canvasStrokeBounds } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
@@ -220,22 +218,12 @@ export function CanvasEditorSurface({
         interactionController={interactionController}
         surface={surface}
       />
-      <CanvasToolProperties
+      <CanvasConditionalToolbar
         canEdit={canEdit}
+        content={content}
+        documentController={documentController}
         interaction={interaction}
         interactionController={interactionController}
-      />
-      <CanvasSelectionActions
-        canEdit={canEdit}
-        content={content}
-        documentController={documentController}
-        interaction={interaction}
-      />
-      <CanvasSelectionProperties
-        canEdit={canEdit}
-        content={content}
-        documentController={documentController}
-        interaction={interaction}
       />
       {contextMenu && (
         <CanvasContextMenu

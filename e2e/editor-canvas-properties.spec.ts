@@ -33,14 +33,16 @@ test.describe('canvas properties and arrangement', () => {
     const { editor, nodes } = await openDemoCanvas(page)
     const initialStyle = await nodeSurfaceStyle(nodes.first())
     await nodes.first().click({ position: { x: 20, y: 20 } })
-    const properties = editor.getByRole('toolbar', { name: 'Canvas selection properties' })
-    await properties.getByRole('combobox', { name: 'Fill color' }).selectOption({
-      label: 'Fill: Blue',
-    })
-    await properties.getByRole('combobox', { name: 'Border color' }).selectOption({
-      label: 'Border: Red',
-    })
-    const borderWidth = properties.getByRole('spinbutton', { name: 'Border width' })
+    const properties = editor.getByRole('toolbar', { name: 'Canvas conditional toolbar' })
+    await properties
+      .getByRole('group', { name: 'Fill' })
+      .getByRole('button', { name: 'Select Blue color' })
+      .click()
+    await properties
+      .getByRole('group', { name: 'Stroke' })
+      .getByRole('button', { name: 'Select Red color' })
+      .click()
+    const borderWidth = properties.getByRole('textbox', { name: 'Stroke size input' })
     await borderWidth.fill('6')
     await borderWidth.press('Enter')
 
@@ -50,10 +52,10 @@ test.describe('canvas properties and arrangement', () => {
       .not.toBe(initialStyle.borderColor)
 
     await nodes.last().click({ modifiers: ['Control'], position: { x: 100, y: 140 } })
-    await expect(properties.getByRole('combobox', { name: 'Fill color' })).toHaveValue('')
-    await properties.getByRole('combobox', { name: 'Fill color' }).selectOption({
-      label: 'Fill: Red',
-    })
+    await expect(properties.getByRole('group', { name: 'Fill' })).toHaveCount(0)
+    await expect(borderWidth).toHaveAttribute('placeholder', '--')
+    await borderWidth.fill('5')
+    await borderWidth.press('Enter')
     await expect
       .poll(async () => {
         const [first, last] = await Promise.all([
@@ -61,16 +63,17 @@ test.describe('canvas properties and arrangement', () => {
           nodeSurfaceStyle(nodes.last()),
         ])
         return {
-          changed: first.backgroundColor !== initialStyle.backgroundColor,
-          shared: first.backgroundColor === last.backgroundColor,
+          changed: first.borderWidth !== initialStyle.borderWidth,
+          shared: first.borderWidth === last.borderWidth,
         }
       })
       .toEqual({ changed: true, shared: true })
     const persistedStyle = await nodeSurfaceStyle(nodes.first())
 
-    await editor
-      .getByRole('combobox', { name: 'Arrange selection' })
-      .selectOption({ label: 'Align left' })
+    await nodes.last().click({ button: 'right', position: { x: 100, y: 140 } })
+    const menu = page.getByRole('menu', { name: 'Canvas actions' })
+    await menu.getByRole('menuitem', { name: 'Arrange' }).hover()
+    await page.getByRole('menuitem', { name: 'Align left' }).click()
     await expect
       .poll(async () => {
         const transforms = await Promise.all(
@@ -91,17 +94,20 @@ test.describe('canvas properties and arrangement', () => {
     const { edges, editor } = await openDemoCanvas(page)
     const beforePath = await edges.first().locator('path').last().getAttribute('d')
     await edges.first().dispatchEvent('pointerdown', { button: 0 })
-    const properties = editor.getByRole('toolbar', { name: 'Canvas selection properties' })
-    await properties.getByRole('combobox', { name: 'Edge type' }).selectOption('step')
-    await properties.getByRole('combobox', { name: 'Line color' }).selectOption({
-      label: 'Line: Blue',
-    })
-    const width = properties.getByRole('spinbutton', { name: 'Line width' })
+    const properties = editor.getByRole('toolbar', { name: 'Canvas conditional toolbar' })
+    await properties.getByRole('button', { name: 'Change edge type to Step' }).click()
+    const stroke = properties.getByRole('group', { name: 'Stroke' })
+    await stroke.getByRole('button', { name: 'Select Blue color' }).click()
+    const width = properties.getByRole('textbox', { name: 'Stroke size input' })
     await width.fill('7')
     await width.press('Enter')
-    const opacity = properties.getByRole('spinbutton', { name: 'Line opacity' })
-    await opacity.fill('40')
-    await opacity.press('Enter')
+    await stroke.getByRole('button', { name: 'Open color picker' }).click()
+    const opacityTrack = page.getByTestId('opacity-track')
+    const opacityBounds = await visibleBox(opacityTrack)
+    await page.mouse.click(
+      opacityBounds.x + opacityBounds.width * 0.4,
+      opacityBounds.y + opacityBounds.height / 2,
+    )
 
     const visiblePath = edges.first().locator('path').last()
     await expect(visiblePath).not.toHaveAttribute('d', beforePath ?? '')
