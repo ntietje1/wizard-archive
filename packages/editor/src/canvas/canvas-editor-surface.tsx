@@ -218,7 +218,7 @@ export function CanvasEditorSurface({
   return (
     <div
       aria-label={`${title} canvas editor`}
-      className="canvas-editor-shell relative min-h-0 flex-1 overflow-hidden bg-background outline-none"
+      className="canvas-editor-shell allow-motion relative min-h-0 flex-1 overflow-hidden bg-background outline-none"
       data-testid="canvas-editor-shell"
       data-workspace-mode={canEdit ? 'editor' : 'viewer'}
       role="application"
@@ -256,9 +256,14 @@ export function CanvasEditorSurface({
       <section
         ref={attachSurface}
         aria-label="Canvas surface"
-        className={`relative z-0 size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring ${canvasToolCursor(interaction.tool)}`}
+        className={`relative z-0 size-full touch-none overflow-hidden data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring ${canvasToolCursor(interaction.tool)}`}
         data-tool={interaction.tool}
         data-testid="canvas-surface"
+        style={{
+          backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
+          backgroundPosition: `${interaction.viewport.x}px ${interaction.viewport.y}px`,
+          backgroundSize: `${36 * interaction.viewport.zoom}px ${36 * interaction.viewport.zoom}px`,
+        }}
         tabIndex={-1}
         onDragEnter={dropTarget.onDragEnter}
         onDragOver={dropTarget.onDragOver}

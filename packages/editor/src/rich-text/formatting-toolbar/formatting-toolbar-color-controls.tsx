@@ -26,7 +26,6 @@ const TEXT_COLOR_OPTIONS = RICH_TEXT_COLOR_PRESETS.map(({ label, surfaceColor, v
 
 type FormattingColorKind = 'background' | 'text'
 type FormattingColorOption = {
-  displayColor?: string
   label: string
   surfaceColor?: string
   value: string
@@ -229,7 +228,7 @@ function getHighlighterIconColor(
   }
 
   const activeOption = options.find((option) => option.value === activeValue)
-  return activeOption ? getColorOptionDisplayColor(activeOption) : activeValue
+  return activeOption ? activeOption.value : activeValue
 }
 
 function colorOptionIsActive({
@@ -293,15 +292,9 @@ function getColorOptionStateVariables(
 }
 
 function getColorOptionBorderColor(kind: FormattingColorKind, preset: FormattingColorOption) {
-  const borderColor = isClearHighlightOption(kind, preset)
-    ? 'var(--border)'
-    : getColorOptionDisplayColor(preset)
+  const borderColor = isClearHighlightOption(kind, preset) ? 'var(--border)' : preset.value
 
   return `color-mix(in srgb, ${borderColor} 70%, transparent)`
-}
-
-function getColorOptionDisplayColor(preset: FormattingColorOption) {
-  return preset.displayColor ?? preset.value
 }
 
 function getColorOptionSurfaceColor(kind: FormattingColorKind, preset: FormattingColorOption) {
@@ -325,11 +318,7 @@ function ColorOptionPreview({
         className="flex size-full items-center justify-center"
         style={{ backgroundColor: getTransparentColor(preset.value, 28) }}
       >
-        <Highlighter
-          className="size-4"
-          stroke={getColorOptionDisplayColor(preset)}
-          style={{ color: getColorOptionDisplayColor(preset) }}
-        />
+        <Highlighter className="size-4" stroke={preset.value} style={{ color: preset.value }} />
       </span>
     )
   }

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { CanvasDocumentNode } from './document-contract'
 import { canvasStrokePath } from './canvas-stroke-geometry'
 import { CanvasTextEditor } from './canvas-text-editor'
@@ -44,8 +44,10 @@ export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
       </svg>
     )
   }
+  const textColor = node.data.textColor ?? 'var(--foreground)'
   const sharedStyle = {
-    color: node.data.textColor ?? 'var(--foreground)',
+    '--bn-colors-editor-text': textColor,
+    color: textColor,
     backgroundColor: resolveCanvasNodePaint(
       node.data.backgroundColor ?? 'var(--background)',
       node.data.backgroundOpacity ?? 100,
@@ -55,7 +57,7 @@ export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
       node.data.borderOpacity ?? 100,
     ),
     borderWidth: node.data.borderWidth ?? 1,
-  }
+  } as CSSProperties
   if (node.type === 'embed') {
     return (
       <div
@@ -84,7 +86,7 @@ export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
       onFinish={onFinishEditing}
       selected={selected}
       style={sharedStyle}
-      textColor={node.data.textColor ?? 'var(--foreground)'}
+      textColor={textColor}
     />
   )
 }

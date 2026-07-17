@@ -26,24 +26,23 @@ export const RICH_TEXT_COLOR_PRESETS: Array<{
 }))
 
 export const RICH_TEXT_HIGHLIGHT_PRESETS: ReadonlyArray<{
-  displayColor?: string
   label: string
   value: string
 }> = [
   { label: 'No highlight', value: 'default' },
-  { label: 'Grey', value: 'var(--border)' },
-  { label: 'Brown', value: 'var(--bg-brown)', displayColor: 'var(--t-brown)' },
-  { label: 'Red', value: 'var(--bg-red)', displayColor: 'var(--t-red)' },
-  { label: 'Orange', value: 'var(--bg-orange)', displayColor: 'var(--t-orange)' },
-  { label: 'Yellow', value: 'var(--bg-yellow)', displayColor: 'var(--t-yellow)' },
-  { label: 'Green', value: 'var(--bg-green)', displayColor: 'var(--t-green)' },
-  { label: 'Blue', value: 'var(--bg-blue)', displayColor: 'var(--t-blue)' },
-  { label: 'Purple', value: 'var(--bg-purple)', displayColor: 'var(--t-purple)' },
-  { label: 'Pink', value: 'var(--bg-pink)', displayColor: 'var(--t-pink)' },
+  { label: 'Grey', value: 'var(--bg-gray)' },
+  { label: 'Brown', value: 'var(--bg-brown)' },
+  { label: 'Red', value: 'var(--bg-red)' },
+  { label: 'Orange', value: 'var(--bg-orange)' },
+  { label: 'Yellow', value: 'var(--bg-yellow)' },
+  { label: 'Green', value: 'var(--bg-green)' },
+  { label: 'Blue', value: 'var(--bg-blue)' },
+  { label: 'Purple', value: 'var(--bg-purple)' },
+  { label: 'Pink', value: 'var(--bg-pink)' },
 ]
 
 function getRichTextColorSurfaceColor(color: string) {
-  if (color === 'var(--foreground)' || color === 'var(--border)') {
+  if (color === 'var(--foreground)') {
     return 'var(--border)'
   }
 

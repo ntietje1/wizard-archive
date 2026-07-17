@@ -68,6 +68,24 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('scales and positions the background grid with the canonical viewport', async () => {
+    const session = await createSession()
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Grid board" />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+
+    expect(surface).toHaveStyle({
+      backgroundPosition: '0px 0px',
+      backgroundSize: '36px 36px',
+    })
+    fireEvent.wheel(surface, { ctrlKey: true, clientX: 0, clientY: 0, deltaY: -500 })
+    expect(surface.style.backgroundSize).toBe('72px 72px')
+    fireEvent.wheel(surface, { ctrlKey: true, clientX: 0, clientY: 0, deltaY: 500 })
+    view.unmount()
+    session.dispose()
+  })
+
   it('places resolved internal and external drops at the canvas pointer location', async () => {
     const session = await createSession()
     const externalUrl = parseSafeHttpsUrl('https://example.com/reference')!

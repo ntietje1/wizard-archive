@@ -278,7 +278,7 @@ function BlockColorSubmenu({
               <BlockColorMenuItem
                 key={`background-${preset.label}`}
                 active={getBlockProp(block, 'backgroundColor') === preset.value}
-                color={preset.displayColor ?? preset.value}
+                color={preset.value}
                 label={
                   preset.label === 'No highlight' ? preset.label : `${preset.label} background`
                 }

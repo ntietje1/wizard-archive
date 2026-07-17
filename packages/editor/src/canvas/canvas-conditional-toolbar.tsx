@@ -165,6 +165,14 @@ function CanvasSelectionToolbarContent({
   const selectedNodes = content.nodes.filter((node) => interaction.selection.nodeIds.has(node.id))
   const selectedEdges = content.edges.filter((edge) => interaction.selection.edgeIds.has(edge.id))
   const properties = resolveSelectionToolbarProperties(selectedNodes, selectedEdges)
+  const hasPaintOrSizeProperties =
+    properties.text.state !== 'unavailable' ||
+    properties.fill.state !== 'unavailable' ||
+    properties.border.state !== 'unavailable' ||
+    properties.line.state !== 'unavailable' ||
+    properties.borderWidth.state !== 'unavailable' ||
+    properties.lineWidth.state !== 'unavailable'
+  const hasEdgeType = properties.edgeType.state !== 'unavailable'
   const applyProperty = (command: CanvasPropertyCommand) => {
     const change = createCanvasPropertyChange(content, interaction.selection, command)
     if (change) documentController.apply(change)
@@ -176,66 +184,72 @@ function CanvasSelectionToolbarContent({
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      <div className="flex flex-col gap-1">
-        {properties.text.state !== 'unavailable' ? (
-          <PaintControl
-            label="Text"
-            options={BASE_TEXT_COLORS}
-            showOpacity={false}
-            value={properties.text}
-            onChange={(value) => applyProperty({ property: 'textColor', value: value.color })}
-          />
-        ) : null}
-        {properties.fill.state !== 'unavailable' ? (
-          <PaintControl
-            clear
-            label="Fill"
-            options={BASE_BG_COLORS}
-            value={properties.fill}
-            onChange={(value) => applyProperty({ property: 'fill', value })}
-          />
-        ) : null}
-        {properties.border.state !== 'unavailable' ? (
-          <PaintControl
-            label="Stroke"
-            options={BASE_STROKE_COLORS}
-            value={properties.border}
-            onChange={(value) => applyProperty({ property: 'border', value })}
-          />
-        ) : null}
-        {properties.line.state !== 'unavailable' ? (
-          <PaintControl
-            label="Stroke"
-            options={BASE_STROKE_COLORS}
-            value={properties.line}
-            onChange={(value) => applyProperty({ property: 'linePaint', value })}
-          />
-        ) : null}
-        {properties.borderWidth.state !== 'unavailable' ? (
-          <StrokeSizeControl
-            value={properties.borderWidth}
-            minimum={0}
-            onChange={(value) => applyProperty({ property: 'borderWidth', value })}
-          />
-        ) : null}
-        {properties.lineWidth.state !== 'unavailable' ? (
-          <StrokeSizeControl
-            value={properties.lineWidth}
-            minimum={1}
-            onChange={(value) => applyProperty({ property: 'lineWidth', value })}
-          />
-        ) : null}
-      </div>
-      {properties.edgeType.state !== 'unavailable' ? (
+      {hasPaintOrSizeProperties ? (
+        <div className="flex flex-col gap-1">
+          {properties.text.state !== 'unavailable' ? (
+            <PaintControl
+              label="Text"
+              options={BASE_TEXT_COLORS}
+              showOpacity={false}
+              value={properties.text}
+              onChange={(value) => applyProperty({ property: 'textColor', value: value.color })}
+            />
+          ) : null}
+          {properties.fill.state !== 'unavailable' ? (
+            <PaintControl
+              clear
+              label="Fill"
+              options={BASE_BG_COLORS}
+              value={properties.fill}
+              onChange={(value) => applyProperty({ property: 'fill', value })}
+            />
+          ) : null}
+          {properties.border.state !== 'unavailable' ? (
+            <PaintControl
+              label="Stroke"
+              options={BASE_STROKE_COLORS}
+              value={properties.border}
+              onChange={(value) => applyProperty({ property: 'border', value })}
+            />
+          ) : null}
+          {properties.line.state !== 'unavailable' ? (
+            <PaintControl
+              label="Stroke"
+              options={BASE_STROKE_COLORS}
+              value={properties.line}
+              onChange={(value) => applyProperty({ property: 'linePaint', value })}
+            />
+          ) : null}
+          {properties.borderWidth.state !== 'unavailable' ? (
+            <StrokeSizeControl
+              value={properties.borderWidth}
+              minimum={0}
+              onChange={(value) => applyProperty({ property: 'borderWidth', value })}
+            />
+          ) : null}
+          {properties.lineWidth.state !== 'unavailable' ? (
+            <StrokeSizeControl
+              value={properties.lineWidth}
+              minimum={1}
+              onChange={(value) => applyProperty({ property: 'lineWidth', value })}
+            />
+          ) : null}
+        </div>
+      ) : null}
+      {hasEdgeType ? (
         <>
-          <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+          {hasPaintOrSizeProperties ? (
+            <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+          ) : null}
           <EdgeTypeControl
             value={properties.edgeType}
             onChange={(value) => applyProperty({ property: 'edgeType', value })}
           />
         </>
       ) : null}
-      <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+      {hasPaintOrSizeProperties || hasEdgeType ? (
+        <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+      ) : null}
       <ReorderControls
         content={content}
         documentController={documentController}

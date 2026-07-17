@@ -158,6 +158,7 @@ const INITIAL_CANVAS_TOOL_SETTINGS: CanvasToolSettings = {
   strokeOpacity: 100,
   strokeSize: 4,
 }
+const CREATION_TOOLS = new Set<CanvasTool>(['draw', 'eraser', 'text', 'edge'])
 
 function emptySelection(): CanvasSelection {
   return { nodeIds: new Set(), edgeIds: new Set() }
@@ -496,8 +497,15 @@ class CanvasInteractionControllerState {
 
   setTool(tool: CanvasTool): void {
     this.#assertActive()
-    if (tool === this.#snapshot.tool) return
-    this.#publish({ ...this.#snapshot, tool, interaction: { type: 'idle' } })
+    const selection = CREATION_TOOLS.has(tool) ? emptySelection() : this.#snapshot.selection
+    if (
+      tool === this.#snapshot.tool &&
+      selectionsEqual(selection, this.#snapshot.selection) &&
+      this.#snapshot.interaction.type === 'idle'
+    ) {
+      return
+    }
+    this.#publish({ ...this.#snapshot, tool, selection, interaction: { type: 'idle' } })
   }
 
   setToolSettings(settings: CanvasToolSettings): void {

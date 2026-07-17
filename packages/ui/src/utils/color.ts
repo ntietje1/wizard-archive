@@ -7,7 +7,7 @@ interface NamedColorOption {
 
 export const BASE_TEXT_COLORS: ReadonlyArray<NamedColorOption> = [
   { color: 'var(--foreground)', label: 'Default' },
-  { color: 'var(--border)', label: 'Grey' },
+  { color: 'var(--t-gray)', label: 'Grey' },
   { color: 'var(--t-brown)', label: 'Brown' },
   { color: 'var(--t-red)', label: 'Red' },
   { color: 'var(--t-orange)', label: 'Orange' },

@@ -126,6 +126,19 @@ describe('CanvasInteractionController selection', () => {
     controller.dispose()
   })
 
+  it('clears selection when a creation tool becomes active', () => {
+    const controller = contentController()
+    controller.selectNode(NODE_A, false)
+
+    controller.setTool('draw')
+    expect(controller.get().selection).toEqual({ nodeIds: new Set(), edgeIds: new Set() })
+
+    controller.selectNode(NODE_A, false)
+    controller.setTool('draw')
+    expect(controller.get().selection).toEqual({ nodeIds: new Set(), edgeIds: new Set() })
+    controller.dispose()
+  })
+
   it('prunes local committed and preview selection after document changes', () => {
     const controller = contentController()
     controller.setSelection({
