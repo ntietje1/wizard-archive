@@ -29,6 +29,18 @@ export function focusEditorViewAtEnd(view: EditorView): boolean {
   return true
 }
 
+export function editorViewSelectionMatchesPoint(
+  view: EditorView,
+  point: BlockNoteEditorFocusPoint,
+) {
+  const selection = getSelectionNearestPoint(view, point)
+  return (
+    selection !== null &&
+    selection.anchor === view.state.selection.anchor &&
+    selection.head === view.state.selection.head
+  )
+}
+
 function getSelectionNearestPoint(view: EditorView, point: BlockNoteEditorFocusPoint) {
   const selection = getSelectionAtPoint(view, point)
   if (selection) return selection
