@@ -80,7 +80,7 @@ export function createInMemoryWorkspaceSearch(
     search: (query) =>
       executeResourceSearchPlan(
         query,
-        createSnapshotSearchProvider(searchDocuments(resources(), notes)),
+        createSnapshotSearchProvider(activeResources(resources()), notes),
       ),
     recent: () => recent,
     subscribeRecent: (listener) => {
@@ -101,19 +101,20 @@ export function createInMemoryWorkspaceSearch(
 }
 
 function createSnapshotSearchProvider(
-  documents: ReadonlyArray<ResourceSearchDocument>,
+  resources: ReadonlyArray<ResourceRecord>,
+  notes: NoteSessionSource,
 ): ResourceSearchProvider {
+  const titleDocuments = resources.map(titleSearchDocument)
   return {
     titlePrefix: (normalized, limit) => ({
-      documents: documents
+      documents: titleDocuments
         .filter((document) => normalizeResourceSearchText(document.title).startsWith(normalized))
         .sort(compareSearchDocuments)
-        .slice(0, limit)
-        .map(withoutBody),
+        .slice(0, limit),
       complete: true,
     }),
-    titleMatches: (normalized, limit) => searchPage(documents, normalized, limit, withoutBody),
-    bodyMatches: (normalized, limit) => searchPage(documents, normalized, limit, withoutTitle),
+    titleMatches: (normalized, limit) => searchPage(titleDocuments, normalized, limit),
+    bodyMatches: (normalized, limit) => bodySearchPage(resources, notes, normalized, limit),
   }
 }
 
@@ -121,20 +122,29 @@ function searchPage(
   documents: ReadonlyArray<ResourceSearchDocument>,
   normalized: string,
   limit: number,
-  searchablePart: (document: ResourceSearchDocument) => ResourceSearchDocument,
 ): ResourceSearchPage {
   const matches = documents.filter(
-    (document) => searchResourceDocuments([searchablePart(document)], normalized).length > 0,
+    (document) => searchResourceDocuments([document], normalized).length > 0,
   )
   return { documents: matches.slice(0, limit), complete: matches.length <= limit }
 }
 
-function withoutBody(document: ResourceSearchDocument): ResourceSearchDocument {
-  return { ...document, body: '' }
-}
-
-function withoutTitle(document: ResourceSearchDocument): ResourceSearchDocument {
-  return { ...document, title: '' }
+function bodySearchPage(
+  resources: ReadonlyArray<ResourceRecord>,
+  notes: NoteSessionSource,
+  normalized: string,
+  limit: number,
+): ResourceSearchPage {
+  const candidates = resources.filter((resource) => resource.kind === 'note')
+  const documents = candidates
+    .slice(0, limit)
+    .map((resource) => createResourceSearchDocument(resource.id, '', noteBody(notes, resource.id)))
+  return {
+    documents: documents.filter(
+      (document) => searchResourceDocuments([document], normalized).length > 0,
+    ),
+    complete: candidates.length <= limit,
+  }
 }
 
 function compareSearchDocuments(
@@ -150,18 +160,12 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0
 }
 
-function searchDocuments(resources: ReadonlyArray<ResourceRecord>, notes: NoteSessionSource) {
-  return resources.flatMap((resource) =>
-    resource.lifecycle.state === 'active'
-      ? [
-          createResourceSearchDocument(
-            resource.id,
-            resource.title,
-            resource.kind === 'note' ? noteBody(notes, resource.id) : '',
-          ),
-        ]
-      : [],
-  )
+function activeResources(resources: ReadonlyArray<ResourceRecord>) {
+  return resources.filter((resource) => resource.lifecycle.state === 'active')
+}
+
+function titleSearchDocument(resource: ResourceRecord): ResourceSearchDocument {
+  return createResourceSearchDocument(resource.id, resource.title, '')
 }
 
 function noteBody(notes: NoteSessionSource, resourceId: ResourceId): string {

@@ -9,7 +9,7 @@ import { createInMemoryNoteSession } from '../in-memory-note-session'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 
 describe('in-memory workspace search', () => {
-  it('scans current note state on demand without document subscriptions', async () => {
+  it('reads current note bodies only when the search plan reaches the body stage', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -196,7 +196,7 @@ describe('in-memory workspace search', () => {
       status: 'incomplete',
       results: [],
     })
-    expect(get).toHaveBeenCalledTimes(65)
+    expect(get).toHaveBeenCalledTimes(64)
     expect(subscribe).not.toHaveBeenCalled()
 
     search.dispose()
