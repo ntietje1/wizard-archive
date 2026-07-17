@@ -15,10 +15,12 @@ import { NoteSlashMenu } from './slash-menu/slash-menu'
 import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
 import './note-editor.css'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
+import type { NoteHeadingNavigation, NoteHeadingNavigationRef } from './note-heading-navigation'
 
 type NoteEditorProps = {
   collaboration?: ContentCollaboration
   document: Y.Doc
+  headingNavigationRef?: NoteHeadingNavigationRef
   label: string
   scroll: NoteScrollBehavior
 } & (
@@ -32,7 +34,7 @@ export function NoteEditor(props: NoteEditorProps) {
 }
 
 function NoteDocumentEditor(props: NoteEditorProps) {
-  const { collaboration, document, label } = props
+  const { collaboration, document, headingNavigationRef, label } = props
   const editable = props.mode === 'edit'
   const flush = props.mode === 'edit' && props.persistence === 'ready' ? props.onFlush : null
   const resolvedTheme = useResolvedTheme()
@@ -66,6 +68,22 @@ function NoteDocumentEditor(props: NoteEditorProps) {
       void flush()
     }
   }, [flush])
+  useEffect(() => {
+    if (!headingNavigationRef) return
+    const navigation: NoteHeadingNavigation = (blockId) => {
+      const block = editor._tiptapEditor.view.dom.querySelector<HTMLElement>(
+        `[data-id="${blockId}"]`,
+      )
+      if (!block) return
+      block.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      editor.focus()
+      editor.setTextCursorPosition(blockId, 'end')
+    }
+    headingNavigationRef.current = navigation
+    return () => {
+      if (headingNavigationRef.current === navigation) headingNavigationRef.current = null
+    }
+  }, [editor, headingNavigationRef])
   useNoteScrollPersistence(props.scroll, viewport)
 
   return (

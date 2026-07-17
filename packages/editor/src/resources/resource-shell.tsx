@@ -30,6 +30,10 @@ import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
 import { createWorkspaceActions } from './workspace/resource-operations'
 import type { WorkspaceActions, WorkspaceReport } from './workspace/resource-operations'
+import type {
+  NoteHeadingNavigation,
+  NoteHeadingNavigationRef,
+} from '../notes/note-heading-navigation'
 
 const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
@@ -85,6 +89,7 @@ export function ResourceShell({
   >({ status: 'closed' })
   const [notice, setNotice] = useState<{ message: string; retry?: () => void } | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
+  const noteHeadingNavigation = useRef<NoteHeadingNavigation | null>(null)
   const report: WorkspaceReport = (message, retry) =>
     setNotice({ message, ...(retry ? { retry } : {}) })
   const actions = createWorkspaceActions(runtime, report)
@@ -206,6 +211,7 @@ export function ResourceShell({
           actions={actions}
           canEdit={canEdit}
           knowledge={selected}
+          noteHeadingNavigation={noteHeadingNavigation}
           leftSidebarAvailable={showResourcePanel}
           leftSidebarVisible={leftVisible}
           load={selectedLoad}
@@ -239,6 +245,7 @@ export function ResourceShell({
           <ResourceRightSidebar
             actions={actions}
             activePanel={rightPanel}
+            noteHeadingNavigation={noteHeadingNavigation}
             resource={selected.value}
             runtime={runtime}
             onActivePanelChange={setRightPanel}
@@ -413,6 +420,7 @@ function SelectedResource({
   actions,
   canEdit,
   knowledge,
+  noteHeadingNavigation,
   leftSidebarAvailable,
   leftSidebarVisible,
   load,
@@ -432,6 +440,7 @@ function SelectedResource({
   actions: WorkspaceActions
   canEdit: boolean
   knowledge: ResourceKnowledge<AuthorizedResourceSummary>
+  noteHeadingNavigation: NoteHeadingNavigationRef
   leftSidebarAvailable: boolean
   leftSidebarVisible: boolean
   load: { result: ResourceLoadResult | null; retry: () => void }
@@ -503,6 +512,7 @@ function SelectedResource({
       <ResourceViewport
         actions={actions}
         canEdit={canEdit}
+        noteHeadingNavigation={noteHeadingNavigation}
         resource={resource}
         runtime={runtime}
         selection={selection}

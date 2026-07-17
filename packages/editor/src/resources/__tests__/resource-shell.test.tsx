@@ -152,6 +152,7 @@ describe('ResourceShell', () => {
       <ResourceViewport
         actions={createWorkspaceActions(runtime, vi.fn())}
         canEdit={false}
+        noteHeadingNavigation={{ current: null }}
         resource={summary}
         runtime={runtime}
         selection={EMPTY_WORKSPACE_SELECTION}
@@ -1270,6 +1271,7 @@ describe('ResourceShell', () => {
       <ResourceViewport
         actions={createWorkspaceActions(runtime, vi.fn())}
         canEdit={false}
+        noteHeadingNavigation={{ current: null }}
         resource={summary}
         runtime={runtime}
         selection={EMPTY_WORKSPACE_SELECTION}
@@ -1314,6 +1316,7 @@ describe('ResourceShell', () => {
       <ResourceViewport
         actions={createWorkspaceActions(runtime, vi.fn())}
         canEdit={false}
+        noteHeadingNavigation={{ current: null }}
         resource={summary}
         runtime={runtime}
         selection={EMPTY_WORKSPACE_SELECTION}

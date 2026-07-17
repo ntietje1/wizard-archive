@@ -70,16 +70,13 @@ describe('ResourceRightSidebar note outline', () => {
       content: { notes: [{ resourceId, content: noteDocument, version }] },
       navigation,
     })
-    const target = document.createElement('div')
-    const scrollIntoView = vi.fn()
-    target.id = headingId
-    target.scrollIntoView = scrollIntoView
-    document.body.append(target)
+    const navigate = vi.fn()
 
     render(
       <ResourceRightSidebar
         actions={createWorkspaceActions(core.runtime, vi.fn())}
         activePanel="outline"
+        noteHeadingNavigation={{ current: navigate }}
         resource={authorizedResourceSummaryFromRecord(resource)}
         runtime={core.runtime}
         onActivePanelChange={vi.fn()}
@@ -92,9 +89,8 @@ describe('ResourceRightSidebar note outline', () => {
     expect(screen.queryByRole('button', { name: 'Hidden vault' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Expand Chapter one' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hidden vault' }))
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    expect(navigate).toHaveBeenCalledWith(headingId)
 
-    target.remove()
     core.dispose()
   })
 })

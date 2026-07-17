@@ -11,6 +11,7 @@ import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../docume
 import { NoteEditor } from '../note-editor'
 import { EPHEMERAL_NOTE_SCROLL } from '../note-scroll-persistence'
 import { insertNoteValueFromSlashMenu } from '../slash-menu/value-slash-menu'
+import type { NoteHeadingNavigationRef } from '../note-heading-navigation'
 
 describe('NoteEditor', () => {
   it('renders the canonical document fragment in read-only mode', async () => {
@@ -266,6 +267,52 @@ describe('NoteEditor', () => {
       shiftKey: true,
     })
     expect(await screen.findByRole('button', { name: 'Value: 0' })).toBeInTheDocument()
+    createEditor.mockRestore()
+  })
+
+  it('scrolls, focuses, and places the caret through note-owned heading navigation', async () => {
+    const headingId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const document = noteBlocksToYDoc(
+      [
+        {
+          id: headingId,
+          type: 'heading',
+          props: { level: 2 },
+          content: [{ type: 'text', text: 'Navigation target' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const headingNavigationRef: NoteHeadingNavigationRef = { current: null }
+    const createEditor = vi.spyOn(BlockNoteEditor, 'create')
+    render(
+      <NoteEditor
+        document={document}
+        headingNavigationRef={headingNavigationRef}
+        label="Navigable note"
+        mode="edit"
+        persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
+        onFlush={() => Promise.resolve()}
+      />,
+    )
+
+    const textbox = await screen.findByRole('textbox', { name: 'Navigable note' })
+    const block = textbox.querySelector<HTMLElement>(`[data-id="${headingId}"]`)
+    if (!block) throw new Error('Expected the heading block element')
+    const scrollIntoView = vi.fn()
+    block.scrollIntoView = scrollIntoView
+    const editor = createEditor.mock.results.at(-1)?.value
+    if (!editor) throw new Error('Expected a BlockNote editor')
+    const focus = vi.spyOn(editor, 'focus')
+    const setTextCursorPosition = vi.spyOn(editor, 'setTextCursorPosition')
+    await waitFor(() => expect(headingNavigationRef.current).not.toBeNull())
+
+    headingNavigationRef.current?.(headingId)
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    expect(focus).toHaveBeenCalledOnce()
+    expect(setTextCursorPosition).toHaveBeenCalledWith(headingId, 'end')
     createEditor.mockRestore()
   })
 

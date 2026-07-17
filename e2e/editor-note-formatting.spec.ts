@@ -65,6 +65,42 @@ test.describe('note authoring mechanics', () => {
     await expect(insertedValue).toBeVisible()
   })
 
+  test('copies and pastes rich text while assigning copied Values new identities', async ({
+    page,
+  }) => {
+    const editor = await openNoteEditor(page)
+
+    await appendParagraph(page, editor)
+    await page.keyboard.type('Clipboard passage')
+    const sourceParagraph = editor.locator('p', { hasText: 'Clipboard passage' })
+    await sourceParagraph.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      const selection = window.getSelection()
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+    })
+    await page.keyboard.press('Control+c')
+    await appendParagraph(page, editor)
+    await page.keyboard.press('Control+v')
+    await expect(editor.locator('p', { hasText: 'Clipboard passage' })).toHaveCount(2)
+
+    await appendParagraph(page, editor)
+    await page.keyboard.type('/value')
+    await page.getByRole('option', { name: /^Value/ }).click()
+    await page.keyboard.press('Shift+ArrowLeft')
+    await page.keyboard.press('Control+c')
+    await appendParagraph(page, editor)
+    await page.keyboard.press('Control+v')
+
+    const values = editor.locator('[data-note-value-id]')
+    await expect(values).toHaveCount(2)
+    const valueIds = await values.evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute('data-note-value-id')),
+    )
+    expect(new Set(valueIds).size).toBe(2)
+  })
+
   test('creates the canonical rich block set and nests list items', async ({ page }) => {
     const editor = await openNoteEditor(page)
 
@@ -123,6 +159,57 @@ test.describe('note authoring mechanics', () => {
     await page.keyboard.press('Escape')
 
     await assertEditorOwnsViewportWhitespace(page)
+  })
+
+  test('moves blocks through the native drag handle', async ({ page }) => {
+    const editor = await openNoteEditor(page)
+    await appendParagraph(page, editor)
+    await page.keyboard.type('First draggable block')
+    await appendParagraph(page, editor)
+    await page.keyboard.type('Second draggable block')
+
+    const firstBlock = editor
+      .locator('[data-node-type="blockContainer"]')
+      .filter({ hasText: 'First draggable block' })
+    const secondBlock = editor
+      .locator('[data-node-type="blockContainer"]')
+      .filter({ hasText: 'Second draggable block' })
+    await secondBlock.hover()
+    const dragHandle = page.getByRole('button', { name: 'Open block menu' })
+    await expect(dragHandle).toHaveAttribute('draggable', 'true')
+    const dragHandleBox = await dragHandle.boundingBox()
+    const firstBlockBox = await firstBlock.boundingBox()
+    if (!dragHandleBox || !firstBlockBox) throw new Error('Expected draggable block geometry')
+    const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+    await dragHandle.dispatchEvent('dragstart', {
+      clientX: dragHandleBox.x + dragHandleBox.width / 2,
+      clientY: dragHandleBox.y + dragHandleBox.height / 2,
+      dataTransfer,
+    })
+    const drop = {
+      clientX: firstBlockBox.x + 16,
+      clientY: firstBlockBox.y + 1,
+      dataTransfer,
+    }
+    await firstBlock.dispatchEvent('dragover', drop)
+    await firstBlock.dispatchEvent('drop', drop)
+    await dragHandle.dispatchEvent('dragend', { dataTransfer })
+    await dataTransfer.dispose()
+
+    await expect
+      .poll(() =>
+        editor
+          .locator(':scope > .bn-block-group > .bn-block-outer')
+          .evaluateAll((blocks) =>
+            blocks
+              .map((block) => block.textContent ?? '')
+              .filter(
+                (text) =>
+                  text.includes('First draggable block') || text.includes('Second draggable block'),
+              ),
+          ),
+      )
+      .toEqual(['Second draggable block', 'First draggable block'])
   })
 })
 

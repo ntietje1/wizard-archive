@@ -81,7 +81,21 @@ test.describe('editor shell', () => {
     const collapsedChapterToggle = outline.getByRole('button', { expanded: false }).last()
     await expect(collapsedChapterToggle).toHaveAccessibleName('Expand Dockside chapter')
     await collapsedChapterToggle.click()
-    await expect(outline.getByRole('button', { name: 'Dockside clues' })).toBeVisible()
+    const outlineHeading = outline.getByRole('button', { name: 'Dockside clues' })
+    await expect(outlineHeading).toBeVisible()
+    await outlineHeading.click()
+    await expect(page.locator(':focus')).toHaveAttribute('contenteditable', 'true')
+    await expect
+      .poll(() =>
+        editor.evaluate((element) => {
+          const target = [...element.querySelectorAll('[data-content-type="heading"]')].find(
+            (candidate) => candidate.textContent === 'Dockside clues',
+          )
+          const selection = window.getSelection()
+          return Boolean(target && selection?.anchorNode && target.contains(selection.anchorNode))
+        }),
+      )
+      .toBe(true)
   })
 
   test('restores a note viewport after navigating away and back', async ({ page }) => {

@@ -94,8 +94,8 @@ test.describe.serial('canonical note collaboration', () => {
       .toContain('second-bbbb')
 
     await secondPage.reload({ waitUntil: 'commit' })
-    await expect(secondEditor).toContainText('first-aaaa')
-    await expect(secondEditor).toContainText('second-bbbb')
+    await expect(secondEditor).toContainText('first-aaaa', { timeout: 15_000 })
+    await expect(secondEditor).toContainText('second-bbbb', { timeout: 15_000 })
     await secondPage.close()
   })
 

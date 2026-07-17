@@ -1,6 +1,7 @@
 import type { NoteSessionState } from '../resources/content-session-contract'
 import { NoteEditor } from './note-editor'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
+import type { NoteHeadingNavigationRef } from './note-heading-navigation'
 
 type RenderableNoteSessionState = Extract<
   NoteSessionState,
@@ -9,11 +10,13 @@ type RenderableNoteSessionState = Extract<
 
 export function NoteSessionEditor({
   canEdit,
+  headingNavigationRef,
   label,
   scroll,
   state,
 }: {
   canEdit: boolean
+  headingNavigationRef?: NoteHeadingNavigationRef
   label: string
   scroll: NoteScrollBehavior
   state: RenderableNoteSessionState
@@ -22,19 +25,27 @@ export function NoteSessionEditor({
     return canEdit ? (
       <NoteEditor
         document={state.local}
+        headingNavigationRef={headingNavigationRef}
         label={label}
         mode="edit"
         persistence="initializing"
         scroll={scroll}
       />
     ) : (
-      <NoteEditor document={state.local} label={label} mode="view" scroll={scroll} />
+      <NoteEditor
+        document={state.local}
+        headingNavigationRef={headingNavigationRef}
+        label={label}
+        mode="view"
+        scroll={scroll}
+      />
     )
   }
   return canEdit ? (
     <NoteEditor
       collaboration={state.session.collaboration}
       document={state.session.document}
+      headingNavigationRef={headingNavigationRef}
       label={label}
       mode="edit"
       persistence="ready"
@@ -45,6 +56,7 @@ export function NoteSessionEditor({
     <NoteEditor
       collaboration={state.session.collaboration}
       document={state.session.document}
+      headingNavigationRef={headingNavigationRef}
       label={label}
       mode="view"
       scroll={scroll}

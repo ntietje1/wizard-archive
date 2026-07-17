@@ -37,10 +37,12 @@ import type { CanvasPreviewSource } from '../content-session-contract'
 import { CanvasResourceEmbed } from './canvas-resource-embed'
 import { FileViewer } from '../../files/file-viewer'
 import { MapViewer } from '../../maps/map-viewer'
+import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 
 export function ResourceViewport({
   actions,
   canEdit,
+  noteHeadingNavigation,
   onOpenContextMenu,
   onSelectionChange,
   resource,
@@ -51,6 +53,7 @@ export function ResourceViewport({
 }: {
   actions: WorkspaceActions
   canEdit: boolean
+  noteHeadingNavigation: NoteHeadingNavigationRef
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
@@ -88,6 +91,7 @@ export function ResourceViewport({
       return (
         <NoteViewport
           canEdit={canEdit}
+          headingNavigationRef={noteHeadingNavigation}
           resource={resource}
           runtime={runtime}
           onOpenContextMenu={onOpenContextMenu}
@@ -200,11 +204,13 @@ function CanvasViewport({
 
 function NoteViewport({
   canEdit,
+  headingNavigationRef,
   onOpenContextMenu,
   resource,
   runtime,
 }: {
   canEdit: boolean
+  headingNavigationRef: NoteHeadingNavigationRef
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
@@ -221,6 +227,7 @@ function NoteViewport({
     >
       <NoteSessionEditor
         canEdit={canEdit}
+        headingNavigationRef={headingNavigationRef}
         label={`${resource.title} note editor`}
         scroll={{
           kind: 'persistent',

@@ -7,12 +7,14 @@ import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
 import type { NoteOutlineNode } from '../../notes/document/outline'
 import type * as Y from 'yjs'
+import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
 
 export function ResourceRightSidebar({
   actions,
   activePanel,
+  noteHeadingNavigation,
   onActivePanelChange,
   onClose,
   resource,
@@ -20,6 +22,7 @@ export function ResourceRightSidebar({
 }: {
   actions: WorkspaceActions
   activePanel: PanelId
+  noteHeadingNavigation: NoteHeadingNavigationRef
   onActivePanelChange: (panel: PanelId) => void
   onClose: () => void
   resource: AuthorizedResourceSummary
@@ -69,6 +72,7 @@ export function ResourceRightSidebar({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ResourcePanel
           actions={actions}
+          noteHeadingNavigation={noteHeadingNavigation}
           panel={selected.id}
           resource={resource}
           runtime={runtime}
@@ -80,11 +84,13 @@ export function ResourceRightSidebar({
 
 function ResourcePanel({
   actions,
+  noteHeadingNavigation,
   panel,
   resource,
   runtime,
 }: {
   actions: WorkspaceActions
+  noteHeadingNavigation: NoteHeadingNavigationRef
   panel: PanelId
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
@@ -92,15 +98,25 @@ function ResourcePanel({
   if (panel === 'details') {
     return <ResourceDetails actions={actions} resource={resource} runtime={runtime} />
   }
-  if (panel === 'outline') return <NoteOutlinePanel resource={resource} runtime={runtime} />
+  if (panel === 'outline') {
+    return (
+      <NoteOutlinePanel
+        noteHeadingNavigation={noteHeadingNavigation}
+        resource={resource}
+        runtime={runtime}
+      />
+    )
+  }
   if (panel === 'history') return <ResourceHistoryPanel resource={resource} runtime={runtime} />
   throw new TypeError(`${panel} panel is unavailable`)
 }
 
 function NoteOutlinePanel({
+  noteHeadingNavigation,
   resource,
   runtime,
 }: {
+  noteHeadingNavigation: NoteHeadingNavigationRef
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -117,10 +133,16 @@ function NoteOutlinePanel({
   if (!document) {
     return <p className="p-3 text-sm text-muted-foreground">Outline is unavailable.</p>
   }
-  return <LiveNoteOutline document={document} />
+  return <LiveNoteOutline document={document} noteHeadingNavigation={noteHeadingNavigation} />
 }
 
-function LiveNoteOutline({ document: yDocument }: { document: Y.Doc }) {
+function LiveNoteOutline({
+  document: yDocument,
+  noteHeadingNavigation,
+}: {
+  document: Y.Doc
+  noteHeadingNavigation: NoteHeadingNavigationRef
+}) {
   const [headings, setHeadings] = useState(() =>
     noteDocumentOutline(noteYDocToBlocks(yDocument, NOTE_YJS_FRAGMENT)),
   )
@@ -138,13 +160,26 @@ function LiveNoteOutline({ document: yDocument }: { document: Y.Doc }) {
   return (
     <nav aria-label="Note outline" className="p-2">
       {noteOutlineTree(headings).map((heading) => (
-        <NoteOutlineItem key={heading.blockId} depth={0} heading={heading} />
+        <NoteOutlineItem
+          key={heading.blockId}
+          depth={0}
+          heading={heading}
+          noteHeadingNavigation={noteHeadingNavigation}
+        />
       ))}
     </nav>
   )
 }
 
-function NoteOutlineItem({ depth, heading }: { depth: number; heading: NoteOutlineNode }) {
+function NoteOutlineItem({
+  depth,
+  heading,
+  noteHeadingNavigation,
+}: {
+  depth: number
+  heading: NoteOutlineNode
+  noteHeadingNavigation: NoteHeadingNavigationRef
+}) {
   const [expanded, setExpanded] = useState(true)
   const hasChildren = heading.children.length > 0
   return (
@@ -171,16 +206,19 @@ function NoteOutlineItem({ depth, heading }: { depth: number; heading: NoteOutli
         <button
           type="button"
           className="min-w-0 flex-1 truncate rounded text-left text-sm focus-visible:ring-1 focus-visible:ring-ring"
-          onClick={() =>
-            document.getElementById(heading.blockId)?.scrollIntoView({ block: 'start' })
-          }
+          onClick={() => noteHeadingNavigation.current?.(heading.blockId)}
         >
           {heading.text}
         </button>
       </div>
       {hasChildren && expanded
         ? heading.children.map((child) => (
-            <NoteOutlineItem key={child.blockId} depth={depth + 1} heading={child} />
+            <NoteOutlineItem
+              key={child.blockId}
+              depth={depth + 1}
+              heading={child}
+              noteHeadingNavigation={noteHeadingNavigation}
+            />
           ))
         : null}
     </div>
