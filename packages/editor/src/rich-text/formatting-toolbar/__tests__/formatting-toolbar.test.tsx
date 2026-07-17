@@ -391,7 +391,7 @@ describe('RichTextFormattingToolbar', () => {
     fireEvent.click(highlightTrigger)
     fireEvent.click(screen.getByRole('button', { name: 'Select Red highlight color' }))
 
-    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--t-red)' })
+    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--bg-red)' })
   })
 
   it('uses the latest editor cursor when applying swatches from an already-open palette', () => {
@@ -499,7 +499,7 @@ describe('RichTextFormattingToolbar', () => {
       editor.emitSelectionChange()
     })
 
-    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--t-blue)' })
+    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--bg-blue)' })
   })
 
   it('clears the pending caret color when the collapsed cursor moves', () => {
