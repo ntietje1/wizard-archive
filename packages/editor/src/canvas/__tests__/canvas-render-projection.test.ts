@@ -142,24 +142,14 @@ function straightTopEdge(id: string, source: CanvasDocumentNode, target: CanvasD
 function routedBezier(handle: CanvasConnectionHandle) {
   const horizontal = handle === 'top' || handle === 'bottom'
   const positions = horizontal
-    ? handle === 'bottom'
-      ? [
-          { x: -1_000, y: -500 },
-          { x: 1_700, y: -500 },
-        ]
-      : [
-          { x: -1_000, y: 1_100 },
-          { x: 1_700, y: 1_100 },
-        ]
-    : handle === 'right'
-      ? [
-          { x: -500, y: -1_000 },
-          { x: -500, y: 1_500 },
-        ]
-      : [
-          { x: 1_200, y: -1_000 },
-          { x: 1_200, y: 1_500 },
-        ]
+    ? [
+        { x: 300, y: -500 },
+        { x: 300, y: 1_000 },
+      ]
+    : [
+        { x: -500, y: 200 },
+        { x: 1_200, y: 200 },
+      ]
   const nodes = positions.map((position) => ({
     id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
     type: 'text' as const,

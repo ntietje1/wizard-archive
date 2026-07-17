@@ -92,7 +92,8 @@ test.describe('canvas properties and arrangement', () => {
 
   test('restyles and retypes an edge through the canonical property path', async ({ page }) => {
     const { edges, editor } = await openDemoCanvas(page)
-    const beforePath = await edges.first().locator('path').last().getAttribute('d')
+    const primaryPath = edges.first().getByTestId('canvas-edge-primary-path')
+    const beforePath = await primaryPath.getAttribute('d')
     await edges.first().dispatchEvent('pointerdown', { button: 0 })
     const properties = editor.getByRole('toolbar', { name: 'Canvas conditional toolbar' })
     await properties.getByRole('button', { name: 'Change edge type to Step' }).click()
@@ -109,13 +110,12 @@ test.describe('canvas properties and arrangement', () => {
       opacityBounds.y + opacityBounds.height / 2,
     )
 
-    const visiblePath = edges.first().locator('path').last()
-    await expect(visiblePath).not.toHaveAttribute('d', beforePath ?? '')
-    await expect(visiblePath).toHaveAttribute('stroke-width', '7')
-    await expect(visiblePath).toHaveAttribute('stroke-opacity', '0.4')
+    await expect(primaryPath).not.toHaveAttribute('d', beforePath ?? '')
+    await expect(primaryPath).toHaveAttribute('stroke-width', '7')
+    await expect(primaryPath).toHaveAttribute('stroke-opacity', '0.4')
     await editor.focus()
     await page.keyboard.press('Escape')
-    await expect(visiblePath).toHaveAttribute('stroke', 'var(--t-blue)')
+    await expect(primaryPath).toHaveAttribute('stroke', 'var(--t-blue)')
 
     await page.getByRole('button', { name: 'Moonwell Docks' }).click()
     await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
@@ -123,8 +123,7 @@ test.describe('canvas properties and arrangement', () => {
       .getByRole('application', { name: 'Harbor Heist Board canvas editor' })
       .getByTestId('canvas-edge')
       .first()
-      .locator('path')
-      .last()
+      .getByTestId('canvas-edge-primary-path')
     await expect(reopenedEdge).toHaveAttribute('stroke-width', '7')
     await expect(reopenedEdge).toHaveAttribute('stroke-opacity', '0.4')
   })
@@ -133,7 +132,9 @@ test.describe('canvas properties and arrangement', () => {
     const { edges, editor, nodes, surface, viewport } = await openDemoCanvas(page)
     await expect(edges).toHaveCount(1)
     const routedEdgeId = await edges.first().getAttribute('data-edge-id')
-    const path = parseCubicPath(await edges.first().locator('path').last().getAttribute('d'))
+    const path = parseCubicPath(
+      await edges.first().getByTestId('canvas-edge-primary-path').getAttribute('d'),
+    )
 
     for (let index = 0; index < 12; index += 1) {
       await editor.getByRole('button', { name: 'Zoom in' }).click()
@@ -143,7 +144,7 @@ test.describe('canvas properties and arrangement', () => {
     const midpoint = cubicMidpoint(path)
     await editor.getByRole('button', { name: 'Panning' }).click()
     await panViewportTo(page, surfaceBox, viewport, {
-      x: surfaceBox.width / 2 - midpoint.x * 4 + 60,
+      x: surfaceBox.width / 2 - midpoint.x * 4,
       y: surfaceBox.height / 2 - midpoint.y * 4,
     })
 
@@ -155,7 +156,7 @@ test.describe('canvas properties and arrangement', () => {
       .toBe(true)
     const routedEdge = editor.locator(`[data-testid="canvas-edge"][data-edge-id="${routedEdgeId}"]`)
     await expect(routedEdge).toHaveCount(1)
-    const edgeBox = await visibleBox(routedEdge.locator('path').last())
+    const edgeBox = await visibleBox(routedEdge.getByTestId('canvas-edge-primary-path'))
     expect(rectanglesIntersect(surfaceBox, edgeBox)).toBe(true)
   })
 })

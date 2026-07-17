@@ -10,7 +10,9 @@ import { createCanvasBoundsIndex } from './bounds-index'
 import type { CanvasBounds } from './canvas-bounds'
 import { resolveCanvasEdgeStyle } from './canvas-edge-style'
 
-const BEZIER_SEGMENTS = 16
+const MIN_BEZIER_SEGMENTS = 24
+const MAX_BEZIER_SEGMENTS = 160
+const BEZIER_SEGMENT_LENGTH = 32
 export const CANVAS_EDGE_HIT_STROKE_WIDTH = 20
 
 export const CANVAS_CONNECTION_HANDLES: ReadonlyArray<CanvasConnectionHandle> = [
@@ -81,8 +83,9 @@ export function canvasEdgePolyline(
   if (edge.type === 'straight') return [source, target]
   if (edge.type === 'step') return stepPoints(source, target, endpoints.handles.source)
   const { sourceControl, targetControl } = bezierControls(source, target, endpoints.handles)
-  return Array.from({ length: BEZIER_SEGMENTS + 1 }, (_, index) =>
-    cubicBezierPoint(source, sourceControl, targetControl, target, index / BEZIER_SEGMENTS),
+  const segments = bezierSegments(source, sourceControl, targetControl, target)
+  return Array.from({ length: segments + 1 }, (_, index) =>
+    cubicBezierPoint(source, sourceControl, targetControl, target, index / segments),
   )
 }
 
@@ -156,11 +159,12 @@ function edgeEndpoints(
   const sourceNode = nodesById.get(edge.source)
   const targetNode = nodesById.get(edge.target)
   if (!sourceNode || !targetNode) return null
-  const sourceHandle = parseConnectionHandle(edge.sourceHandle)
-  const targetHandle = parseConnectionHandle(edge.targetHandle)
+  const inferredHandles = inferConnectionHandles(sourceNode, targetNode)
+  const sourceHandle = parseConnectionHandle(edge.sourceHandle) ?? inferredHandles.source
+  const targetHandle = parseConnectionHandle(edge.targetHandle) ?? inferredHandles.target
   return {
-    source: sourceHandle ? canvasNodeHandlePoint(sourceNode, sourceHandle) : nodeCenter(sourceNode),
-    target: targetHandle ? canvasNodeHandlePoint(targetNode, targetHandle) : nodeCenter(targetNode),
+    source: canvasNodeHandlePoint(sourceNode, sourceHandle),
+    target: canvasNodeHandlePoint(targetNode, targetHandle),
     handles: { source: sourceHandle, target: targetHandle },
   }
 }
@@ -214,6 +218,25 @@ function nodeCenter(node: CanvasDocumentNode): CanvasPoint {
   return { x: node.position.x + size.width / 2, y: node.position.y + size.height / 2 }
 }
 
+function inferConnectionHandles(
+  sourceNode: CanvasDocumentNode,
+  targetNode: CanvasDocumentNode,
+): Readonly<{
+  source: CanvasConnectionHandle
+  target: CanvasConnectionHandle
+}> {
+  const source = nodeCenter(sourceNode)
+  const target = nodeCenter(targetNode)
+  const dx = target.x - source.x
+  const dy = target.y - source.y
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? { source: 'right', target: 'left' } : { source: 'left', target: 'right' }
+  }
+
+  return dy >= 0 ? { source: 'bottom', target: 'top' } : { source: 'top', target: 'bottom' }
+}
+
 function bezierControls(
   source: CanvasPoint,
   target: CanvasPoint,
@@ -222,32 +245,51 @@ function bezierControls(
     target: CanvasConnectionHandle | null
   }>,
 ) {
-  const offset = Math.max(40, Math.hypot(target.x - source.x, target.y - source.y) / 2)
-  const sourceDirection = handleDirection(handles.source ?? 'right')
-  const targetDirection = handleDirection(handles.target ?? 'left')
   return {
-    sourceControl: {
-      x: source.x + sourceDirection.x * offset,
-      y: source.y + sourceDirection.y * offset,
-    },
-    targetControl: {
-      x: target.x + targetDirection.x * offset,
-      y: target.y + targetDirection.y * offset,
-    },
+    sourceControl: bezierControlPoint(source, target, handles.source ?? 'right'),
+    targetControl: bezierControlPoint(target, source, handles.target ?? 'left'),
   }
 }
 
-function handleDirection(handle: CanvasConnectionHandle): CanvasPoint {
+function bezierControlPoint(
+  source: CanvasPoint,
+  target: CanvasPoint,
+  handle: CanvasConnectionHandle,
+): CanvasPoint {
   switch (handle) {
     case 'top':
-      return { x: 0, y: -1 }
+      return { x: source.x, y: source.y - bezierControlOffset(source.y - target.y) }
     case 'right':
-      return { x: 1, y: 0 }
+      return { x: source.x + bezierControlOffset(target.x - source.x), y: source.y }
     case 'bottom':
-      return { x: 0, y: 1 }
+      return { x: source.x, y: source.y + bezierControlOffset(target.y - source.y) }
     case 'left':
-      return { x: -1, y: 0 }
+      return { x: source.x - bezierControlOffset(source.x - target.x), y: source.y }
   }
+}
+
+function bezierControlOffset(distance: number): number {
+  return distance >= 0 ? distance / 2 : 0.25 * 25 * Math.sqrt(-distance)
+}
+
+function bezierSegments(
+  source: CanvasPoint,
+  sourceControl: CanvasPoint,
+  targetControl: CanvasPoint,
+  target: CanvasPoint,
+): number {
+  const controlPolygonLength =
+    pointDistance(source, sourceControl) +
+    pointDistance(sourceControl, targetControl) +
+    pointDistance(targetControl, target)
+  return Math.min(
+    MAX_BEZIER_SEGMENTS,
+    Math.max(MIN_BEZIER_SEGMENTS, Math.ceil(controlPolygonLength / BEZIER_SEGMENT_LENGTH)),
+  )
+}
+
+function pointDistance(source: CanvasPoint, target: CanvasPoint): number {
+  return Math.hypot(target.x - source.x, target.y - source.y)
 }
 
 function oppositeHandle(handle: CanvasConnectionHandle): CanvasConnectionHandle {
