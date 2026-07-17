@@ -14,6 +14,8 @@ describe('canvas gesture candidate indexes', () => {
       id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
       type: 'text' as const,
       position: { x: index * 1_000, y: 0 },
+      width: 180,
+      height: 80,
       data: {},
     }))
     const target = nodes[nodes.length - 1]!

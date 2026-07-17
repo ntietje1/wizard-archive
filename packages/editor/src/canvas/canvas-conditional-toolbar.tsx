@@ -45,7 +45,11 @@ export function CanvasConditionalToolbar({
 }) {
   const hasSelection =
     interaction.selection.nodeIds.size > 0 || interaction.selection.edgeIds.size > 0
-  if (!canEdit || interaction.interaction.type === 'selecting') {
+  if (
+    !canEdit ||
+    interaction.interaction.type === 'editing' ||
+    interaction.interaction.type === 'selecting'
+  ) {
     return null
   }
   if (hasSelection) {

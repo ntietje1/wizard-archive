@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { visibleBox } from './helpers/editor-canvas-helpers'
+import { openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
 
 const CANVAS_GESTURE_MEASURE = 'wizard-archive:canvas-gesture-frame'
 const MAX_HANDLER_DURATION_MS = 8
@@ -34,11 +34,7 @@ test.describe('canvas performance smoke', () => {
   test('measures maximum canonical gestures and keeps viewport culling exact', async ({
     page,
   }, testInfo) => {
-    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
-    const editor = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
-    const surface = editor.getByRole('region', { name: 'Canvas surface' })
-    const viewport = editor.getByTestId('canvas-viewport')
-    const nodes = editor.getByTestId('canvas-node')
+    const { editor, nodes, surface, viewport } = await openDemoCanvas(page)
     const edges = editor.getByTestId('canvas-edge')
     await expect(nodes).toHaveCount(2)
     await editor.focus()
@@ -209,10 +205,7 @@ test.describe('canvas performance smoke', () => {
   test('measures erasing against the maximum canonical stroke corpus', async ({
     page,
   }, testInfo) => {
-    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
-    const editor = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
-    const surface = editor.getByRole('region', { name: 'Canvas surface' })
-    const nodes = editor.getByTestId('canvas-node')
+    const { editor, nodes, surface } = await openDemoCanvas(page)
     await expect(nodes).toHaveCount(2)
     await editor.focus()
     await page.keyboard.press('Control+a')

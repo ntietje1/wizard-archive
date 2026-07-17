@@ -48,6 +48,7 @@ import { CanvasNodeVisual } from './canvas-node-visual'
 import type { CanvasEmbedRenderer } from './canvas-editor'
 import { projectCanvasRenderContent } from './canvas-render-projection'
 import type { CanvasSurfaceSize } from './canvas-render-projection'
+import { canvasTextPlacementDragBounds } from './canvas-node-placement'
 
 export function CanvasScene({
   canEdit,
@@ -125,6 +126,7 @@ export function CanvasScene({
         ))}
         <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
         <CanvasDrawingOverlay interaction={interaction} />
+        <CanvasTextPlacementOverlay interaction={interaction} />
         <CanvasSelectionOverlay interaction={interaction} />
         <CanvasSnapGuides interaction={interaction} />
         <CanvasCollaborationCursors
@@ -695,6 +697,28 @@ function CanvasSelectionOverlay({ interaction }: { interaction: CanvasInteractio
       </svg>
       {status && <CanvasSelectionStatus status={status} />}
     </>
+  )
+}
+
+function CanvasTextPlacementOverlay({ interaction }: { interaction: CanvasInteractionSnapshot }) {
+  const gesture = interaction.interaction
+  if (gesture.type !== 'placing-text') return null
+  const bounds = canvasTextPlacementDragBounds(gesture.origin, gesture.current, gesture.square)
+  if (bounds.width === 0 && bounds.height === 0) return null
+  return (
+    <div
+      className="pointer-events-none absolute bg-canvas-selection-fill"
+      data-testid="canvas-text-placement"
+      style={{
+        borderColor: 'var(--canvas-selection-stroke)',
+        borderStyle: 'solid',
+        left: bounds.x,
+        top: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        borderWidth: 1.5 / interaction.viewport.zoom,
+      }}
+    />
   )
 }
 

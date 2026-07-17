@@ -2,6 +2,49 @@ import { expect, test } from '@playwright/test'
 import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
 
 test.describe('canvas gesture parity', () => {
+  test('restores reference click and drag text placement geometry', async ({ page }) => {
+    const { editor, nodes, surface } = await openDemoCanvas(page)
+    await editor.focus()
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    await expect(nodes).toHaveCount(0)
+
+    const surfaceBox = await visibleBox(surface)
+    const clickPoint = { x: surfaceBox.x + 420, y: surfaceBox.y + 300 }
+    await editor.getByRole('button', { name: 'Text' }).click()
+    await page.mouse.click(clickPoint.x, clickPoint.y)
+    await expect(nodes).toHaveCount(1)
+
+    const defaultNode = await visibleBox(nodes.first())
+    expect(Math.abs(defaultNode.x - (clickPoint.x - 160))).toBeLessThanOrEqual(2)
+    expect(Math.abs(defaultNode.y - (clickPoint.y - 120))).toBeLessThanOrEqual(2)
+    expect(Math.abs(defaultNode.width - 320)).toBeLessThanOrEqual(2)
+    expect(Math.abs(defaultNode.height - 240)).toBeLessThanOrEqual(2)
+
+    await page.keyboard.press('Escape')
+    await editor.getByRole('button', { name: 'Text' }).click()
+    const dragStart = { x: surfaceBox.x + 740, y: surfaceBox.y + 220 }
+    const dragEnd = { x: dragStart.x + 200, y: dragStart.y + 140 }
+    await page.mouse.move(dragStart.x, dragStart.y)
+    await page.mouse.down()
+    await page.mouse.move(dragEnd.x, dragEnd.y, { steps: 12 })
+
+    const preview = await visibleBox(editor.getByTestId('canvas-text-placement'))
+    expect(Math.abs(preview.x - dragStart.x)).toBeLessThanOrEqual(2)
+    expect(Math.abs(preview.y - dragStart.y)).toBeLessThanOrEqual(2)
+    expect(Math.abs(preview.width - 200)).toBeLessThanOrEqual(2)
+    expect(Math.abs(preview.height - 140)).toBeLessThanOrEqual(2)
+
+    await page.mouse.up()
+    await expect(editor.getByTestId('canvas-text-placement')).toHaveCount(0)
+    await expect(nodes).toHaveCount(2)
+    const draggedNode = await visibleBox(nodes.last())
+    expect(Math.abs(draggedNode.x - dragStart.x)).toBeLessThanOrEqual(2)
+    expect(Math.abs(draggedNode.y - dragStart.y)).toBeLessThanOrEqual(2)
+    expect(Math.abs(draggedNode.width - 200)).toBeLessThanOrEqual(2)
+    expect(Math.abs(draggedNode.height - 140)).toBeLessThanOrEqual(2)
+  })
+
   test('resizes, draws, erases, and restores the resulting canonical changes', async ({ page }) => {
     const { editor, nodes, surface } = await openDemoCanvas(page)
     await expect(nodes).toHaveCount(2)
@@ -9,7 +52,7 @@ test.describe('canvas gesture parity', () => {
     const firstNode = nodes.first()
     await firstNode.dragTo(surface, {
       sourcePosition: { x: 20, y: 20 },
-      targetPosition: { x: 360, y: 360 },
+      targetPosition: { x: 400, y: 250 },
     })
     const beforeResize = await visibleBox(firstNode)
     const handle = editor.getByRole('button', {

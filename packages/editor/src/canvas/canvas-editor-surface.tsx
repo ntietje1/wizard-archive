@@ -33,8 +33,8 @@ import type { CanvasDropResolver, CanvasEmbedRenderer } from './canvas-editor'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
 import { useCanvasSurface } from './use-canvas-surface'
 import { useCanvasDropTarget } from './canvas-drop-target'
+import type { CanvasBounds } from './canvas-bounds'
 
-const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
 const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
   ['1', 'select'],
   ['2', 'hand'],
@@ -108,13 +108,14 @@ export function CanvasEditorSurface({
 
   useEffect(() => () => setCanvasCollaborationCursor(collaboration, null), [collaboration])
 
-  const createTextNode = (point: CanvasPoint) => {
+  const createTextNode = (bounds: CanvasBounds) => {
     if (!canEdit) return
     const node: CanvasTextDocumentNode = {
       id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
       type: 'text',
-      position: point,
-      ...DEFAULT_TEXT_NODE_SIZE,
+      position: { x: bounds.x, y: bounds.y },
+      width: bounds.width,
+      height: bounds.height,
       data: { content: createCanvasTextDocument('') },
     }
     documentController.apply({ type: 'insert', nodes: [node], edges: [] })
@@ -269,7 +270,7 @@ export function CanvasEditorSurface({
         }}
         onPointerDown={(event) => {
           setContextMenu(null)
-          beginCanvasSurfaceInteraction(event, canEdit, interactionController, createTextNode)
+          beginCanvasSurfaceInteraction(event, canEdit, interactionController)
         }}
         onPointerMoveCapture={(event) => {
           measureCanvasGestureFrame(event.currentTarget, interactionController.get().interaction)
@@ -313,6 +314,7 @@ export function CanvasEditorSurface({
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
           if (canEdit) {
+            if (commitTextPlacement(event.pointerId, interactionController, createTextNode)) return
             if (commitResize(event.pointerId, interactionController, documentController)) return
             if (commitConnection(event.pointerId, interactionController, documentController)) return
             if (commitErasing(event.pointerId, interactionController, documentController)) return
@@ -421,7 +423,6 @@ function beginCanvasSurfaceInteraction(
   event: PointerEvent<HTMLElement>,
   canEdit: boolean,
   interactionController: CanvasInteractionController,
-  createTextNode: (point: CanvasPoint) => void,
 ) {
   event.currentTarget.focus()
   const snapshot = interactionController.get()
@@ -446,7 +447,9 @@ function beginCanvasSurfaceInteraction(
       interactionController.beginErasing(event.pointerId, canvasPoint)
       return
     case 'text':
-      if (canEdit) createTextNode(canvasPoint)
+      if (!canEdit) return
+      event.currentTarget.setPointerCapture(event.pointerId)
+      interactionController.beginTextPlacement(event.pointerId, canvasPoint)
       return
     case 'select':
     case 'lasso':
@@ -473,9 +476,21 @@ function updateCanvasEditGesture(
   const [x, y] = drawingPoints[drawingPoints.length - 1]!
   const point = { x, y }
   controller.updateDrawing(pointerId, drawingPoints, square)
+  controller.updateTextPlacement(pointerId, point, square)
   controller.updateErasing(pointerId, point)
   controller.updateConnection(pointerId, point)
   controller.updateResize(pointerId, point, square, snap)
+}
+
+function commitTextPlacement(
+  pointerId: number,
+  interactionController: CanvasInteractionController,
+  createTextNode: (bounds: CanvasBounds) => void,
+): boolean {
+  const bounds = interactionController.commitTextPlacement(pointerId)
+  if (!bounds) return false
+  createTextNode(bounds)
+  return true
 }
 
 function useCanvasDocumentContent(controller: CanvasDocumentController): CanvasDocumentContent {

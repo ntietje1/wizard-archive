@@ -24,6 +24,7 @@ import { resolveCanvasResize } from './canvas-resize-geometry'
 import { canvasBoundsFromPoints, createCanvasSelectionCandidateIndex } from './selection-geometry'
 import type { CanvasDocumentContent } from './document-contract'
 import { CANVAS_WORKLOAD_LIMITS } from './workload'
+import { resolveCanvasTextPlacementBounds } from './canvas-node-placement'
 
 type CanvasSelectionKind = 'lasso' | 'marquee'
 type CanvasSelectionMode = 'add' | 'replace'
@@ -77,6 +78,13 @@ type CanvasInteraction =
       sampleDistance: number
       constrain: boolean
       style: CanvasDrawStyle
+    }>
+  | Readonly<{
+      type: 'placing-text'
+      pointerId: number
+      origin: CanvasPoint
+      current: CanvasPoint
+      square: boolean
     }>
   | Readonly<{
       type: 'panning'
@@ -271,6 +279,7 @@ function reconcileInteraction(
     case 'drawing':
     case 'idle':
     case 'panning':
+    case 'placing-text':
       return interaction
   }
 }
@@ -633,6 +642,49 @@ class CanvasInteractionControllerState {
         style: { ...style },
       },
     })
+  }
+
+  beginTextPlacement(pointerId: number, point: CanvasPoint): void {
+    this.#assertActive()
+    this.#publish({
+      ...this.#snapshot,
+      interaction: {
+        type: 'placing-text',
+        pointerId,
+        origin: point,
+        current: point,
+        square: false,
+      },
+    })
+  }
+
+  updateTextPlacement(pointerId: number, point: CanvasPoint, square: boolean): void {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'placing-text' || interaction.pointerId !== pointerId) return
+    if (
+      interaction.current.x === point.x &&
+      interaction.current.y === point.y &&
+      interaction.square === square
+    ) {
+      return
+    }
+    this.#publish({
+      ...this.#snapshot,
+      interaction: { ...interaction, current: point, square },
+    })
+  }
+
+  commitTextPlacement(pointerId: number): CanvasBounds | null {
+    this.#assertActive()
+    const interaction = this.#snapshot.interaction
+    if (interaction.type !== 'placing-text' || interaction.pointerId !== pointerId) return null
+    this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+    return resolveCanvasTextPlacementBounds(
+      interaction.origin,
+      interaction.current,
+      interaction.square,
+    )
   }
 
   beginErasing(pointerId: number, point: CanvasPoint): void {

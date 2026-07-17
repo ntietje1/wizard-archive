@@ -12,8 +12,22 @@ import { CANVAS_WORKLOAD_LIMITS } from '../workload'
 const NODE_A = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-222222222222')
 const NODES: ReadonlyArray<CanvasDocumentNode> = [
-  { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
-  { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+  {
+    id: NODE_A,
+    type: 'text',
+    position: { x: 0, y: 0 },
+    width: 180,
+    height: 80,
+    data: {},
+  },
+  {
+    id: NODE_B,
+    type: 'embed',
+    position: { x: 300, y: 0 },
+    width: 240,
+    height: 160,
+    data: {},
+  },
 ]
 
 describe('canvas edge geometry', () => {
@@ -304,6 +318,8 @@ describe('canvas edge geometry', () => {
       id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
       type: 'text' as const,
       position: { x: index * 200, y: 0 },
+      width: 180,
+      height: 80,
       data: {},
     }))
     const target = nodes.at(-1)!

@@ -14,8 +14,22 @@ const NODE_B = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3
 
 const CONTENT: CanvasDocumentContent = {
   nodes: [
-    { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
-    { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+    {
+      id: NODE_A,
+      type: 'text',
+      position: { x: 0, y: 0 },
+      width: 180,
+      height: 80,
+      data: {},
+    },
+    {
+      id: NODE_B,
+      type: 'embed',
+      position: { x: 300, y: 0 },
+      width: 240,
+      height: 160,
+      data: {},
+    },
   ],
   edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
 }
@@ -140,6 +154,28 @@ describe('CanvasInteractionController selection', () => {
 })
 
 describe('CanvasInteractionController pointer activities', () => {
+  it('owns text placement until the captured pointer commits it', () => {
+    const controller = createCanvasInteractionController()
+    controller.beginTextPlacement(2, { x: 100, y: 200 })
+    controller.updateTextPlacement(3, { x: 180, y: 260 }, false)
+    expect(controller.get().interaction).toMatchObject({
+      type: 'placing-text',
+      pointerId: 2,
+      current: { x: 100, y: 200 },
+    })
+    expect(controller.commitTextPlacement(3)).toBeNull()
+
+    controller.updateTextPlacement(2, { x: 180, y: 260 }, false)
+    expect(controller.commitTextPlacement(2)).toEqual({
+      x: 100,
+      y: 200,
+      width: 80,
+      height: 60,
+    })
+    expect(controller.get().interaction).toEqual({ type: 'idle' })
+    controller.dispose()
+  })
+
   it('owns freehand preview and returns one constrained final stroke', () => {
     const controller = createCanvasInteractionController()
     controller.setToolSettings({

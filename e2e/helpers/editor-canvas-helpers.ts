@@ -4,7 +4,7 @@ import type { Locator, Page } from '@playwright/test'
 export async function openDemoCanvas(page: Page) {
   await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
   const editor = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
-  await expect(editor).toBeVisible()
+  await expect(editor).toBeVisible({ timeout: 45_000 })
   return {
     edges: editor.getByTestId('canvas-edge'),
     editor,

@@ -56,6 +56,7 @@ function retainedCanvasInteractionNodeIds(
     case 'drawing':
     case 'idle':
     case 'panning':
+    case 'placing-text':
     case 'selecting':
       return new Set()
   }

@@ -148,15 +148,25 @@ describe('CanvasEditor', () => {
 
     expect(screen.getByRole('button', { name: 'Pointer' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Text' }))
-    fireEvent.pointerDown(screen.getByTestId('canvas-surface'), {
+    const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
+    fireEvent.pointerDown(surface, {
       button: 0,
       clientX: 120,
       clientY: 90,
+      pointerId: 1,
     })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(0)
+    fireEvent.pointerUp(surface, { clientX: 120, clientY: 90, pointerId: 1 })
 
     const editor = screen.getByRole('textbox', { name: 'Canvas text' })
     const externalController = createCanvasDocumentController(session.document)
     const createdNode = readCanvasDocumentContent(session.document).nodes[0]!
+    expect(createdNode).toMatchObject({
+      position: { x: -40, y: -30 },
+      width: 320,
+      height: 240,
+    })
     externalController.apply({
       type: 'update',
       nodes: [
@@ -170,14 +180,65 @@ describe('CanvasEditor', () => {
     })
     externalController.dispose()
     expect(await screen.findByText('Canonical canvas text')).toBeVisible()
+    expect(screen.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()
+    expect(
+      screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' }),
+    ).not.toBeInTheDocument()
     fireEvent.keyDown(editor, { key: 'Escape' })
     expect(screen.getByText('Canonical canvas text')).toBeVisible()
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
 
     fireEvent.keyDown(screen.getByTestId('canvas-editor-shell'), { key: 'Delete' })
     expect(screen.queryByText('Canonical canvas text')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(screen.getByText('Canonical canvas text')).toBeVisible()
+    view.unmount()
+    session.dispose()
+  })
+
+  it('previews and commits a drag-sized text node', async () => {
+    const session = await createSession()
+    const view = render(
+      <CanvasEditor
+        canEdit
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Text placement board"
+      />,
+    )
+    const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
+    fireEvent.click(screen.getByRole('button', { name: 'Text' }))
+    fireEvent.pointerDown(surface, {
+      button: 0,
+      clientX: 100,
+      clientY: 200,
+      pointerId: 2,
+    })
+    fireEvent.pointerMove(surface, {
+      buttons: 1,
+      clientX: 180,
+      clientY: 260,
+      pointerId: 2,
+    })
+
+    expect(screen.getByTestId('canvas-text-placement')).toHaveStyle({
+      left: '100px',
+      top: '200px',
+      width: '80px',
+      height: '60px',
+    })
+    expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(0)
+
+    fireEvent.pointerUp(surface, { clientX: 180, clientY: 260, pointerId: 2 })
+    expect(screen.queryByTestId('canvas-text-placement')).not.toBeInTheDocument()
+    expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
+      position: { x: 100, y: 200 },
+      width: 80,
+      height: 60,
+    })
+    expect(screen.getByRole('textbox', { name: 'Canvas text' })).toBeVisible()
     view.unmount()
     session.dispose()
   })
@@ -606,6 +667,7 @@ describe('CanvasEditor', () => {
     view.rerender(renderEditor(true))
     fireEvent.click(screen.getByRole('button', { name: 'Text' }))
     fireEvent.pointerDown(surface, { button: 0, clientX: 500, clientY: 300, pointerId: 35 })
+    fireEvent.pointerUp(surface, { clientX: 500, clientY: 300, pointerId: 35 })
     const externalController = createCanvasDocumentController(session.document)
     const editingNode = readCanvasDocumentContent(session.document).nodes.at(-1)!
     externalController.apply({
@@ -720,8 +782,22 @@ describe('CanvasEditor', () => {
   it('previews and commits mixed node-edge marquee selection', async () => {
     const session = await createSession({
       nodes: [
-        { id: NODE_A, type: 'text', position: { x: 20, y: 20 }, data: {} },
-        { id: NODE_B, type: 'embed', position: { x: 300, y: 20 }, data: {} },
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 20, y: 20 },
+          width: 180,
+          height: 80,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'embed',
+          position: { x: 300, y: 20 },
+          width: 240,
+          height: 160,
+          data: {},
+        },
       ],
       edges: [{ id: 'edge-a-b', source: NODE_A, target: NODE_B, type: 'straight' }],
     })
@@ -812,8 +888,22 @@ describe('CanvasEditor', () => {
   it('previews and commits one handle-authored edge through the canonical document path', async () => {
     const session = await createSession({
       nodes: [
-        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
-        { id: NODE_B, type: 'embed', position: { x: 300, y: 0 }, data: {} },
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 180,
+          height: 80,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'embed',
+          position: { x: 300, y: 0 },
+          width: 240,
+          height: 160,
+          data: {},
+        },
       ],
       edges: [],
     })

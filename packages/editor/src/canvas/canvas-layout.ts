@@ -1,9 +1,10 @@
 import type { CanvasDocumentNode } from './document-contract'
+import {
+  CANVAS_EMBED_NODE_DEFAULT_SIZE,
+  CANVAS_TEXT_NODE_DEFAULT_SIZE,
+} from './canvas-node-defaults'
 import { canvasToScreenPoint } from './canvas-viewport'
 import type { CanvasViewport } from './interaction-types'
-
-const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
-const DEFAULT_EMBED_NODE_SIZE = { width: 240, height: 160 }
 
 export function canvasNodeSize(node: CanvasDocumentNode) {
   if (node.type === 'stroke') {
@@ -12,7 +13,8 @@ export function canvasNodeSize(node: CanvasDocumentNode) {
       height: node.height ?? node.data.bounds.height,
     }
   }
-  const fallback = node.type === 'embed' ? DEFAULT_EMBED_NODE_SIZE : DEFAULT_TEXT_NODE_SIZE
+  const fallback =
+    node.type === 'embed' ? CANVAS_EMBED_NODE_DEFAULT_SIZE : CANVAS_TEXT_NODE_DEFAULT_SIZE
   return { width: node.width ?? fallback.width, height: node.height ?? fallback.height }
 }
 

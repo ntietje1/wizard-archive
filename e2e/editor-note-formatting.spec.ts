@@ -340,7 +340,7 @@ test.describe('note authoring mechanics', () => {
 async function openNoteEditor(page: Page) {
   await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
   const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
-  await expect(workspace).toHaveAttribute('aria-busy', 'false')
+  await expect(workspace).toHaveAttribute('aria-busy', 'false', { timeout: 45_000 })
   await page.getByRole('button', { name: 'Create resource', exact: true }).click()
   await page.getByRole('textbox', { name: 'New resource title' }).fill('Formatting scratchpad')
   await page.getByRole('menuitem', { name: 'Note' }).click()

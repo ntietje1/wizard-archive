@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { fitCanvasContent } from '../canvas-layout'
+import { canvasNodeSize, fitCanvasContent } from '../canvas-layout'
 import { canvasToScreenPoint } from '../canvas-viewport'
 import { createCanvasTextDocument } from '../text/model'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
@@ -7,6 +7,15 @@ import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 const NODE_ID = assertDomainId(DOMAIN_ID_KIND.canvasNode, '01890f47-65f2-7cc0-8a3b-111111111111')
 
 describe('canvas layout', () => {
+  it('uses the reference default geometry for unsized text and embed nodes', () => {
+    expect(
+      canvasNodeSize({ id: NODE_ID, type: 'text', position: { x: 0, y: 0 }, data: {} }),
+    ).toEqual({ width: 320, height: 240 })
+    expect(
+      canvasNodeSize({ id: NODE_ID, type: 'embed', position: { x: 0, y: 0 }, data: {} }),
+    ).toEqual({ width: 320, height: 240 })
+  })
+
   it('fits visible document bounds around the surface center', () => {
     const viewport = fitCanvasContent(
       [

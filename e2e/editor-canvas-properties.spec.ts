@@ -130,6 +130,30 @@ test.describe('canvas properties and arrangement', () => {
 
   test('keeps a routed edge rendered after both endpoint nodes are offscreen', async ({ page }) => {
     const { edges, editor, nodes, surface, viewport } = await openDemoCanvas(page)
+    await editor.focus()
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    await expect(nodes).toHaveCount(0)
+
+    const surfaceBox = await visibleBox(surface)
+    for (const x of [160, 660]) {
+      await editor.getByRole('button', { name: 'Text' }).click()
+      await dragPointer(
+        page,
+        { x: surfaceBox.x + x, y: surfaceBox.y + 400 },
+        { x: surfaceBox.x + x + 100, y: surfaceBox.y + 480 },
+      )
+      await page.keyboard.press('Escape')
+    }
+    await expect(nodes).toHaveCount(2)
+    await editor.getByRole('button', { name: 'Edges' }).click()
+    const source = await visibleBox(nodes.first().getByTestId('canvas-node-handle-right'))
+    const target = await visibleBox(nodes.last().getByTestId('canvas-node-handle-left'))
+    await dragPointer(
+      page,
+      { x: source.x + source.width / 2, y: source.y + source.height / 2 },
+      { x: target.x + target.width / 2, y: target.y + target.height / 2 },
+    )
     await expect(edges).toHaveCount(1)
     const routedEdgeId = await edges.first().getAttribute('data-edge-id')
     const path = parseCubicPath(
@@ -140,7 +164,6 @@ test.describe('canvas properties and arrangement', () => {
       await editor.getByRole('button', { name: 'Zoom in' }).click()
     }
     await expect(viewport).toHaveAttribute('style', /scale\(4\)/)
-    const surfaceBox = await visibleBox(surface)
     const midpoint = cubicMidpoint(path)
     await editor.getByRole('button', { name: 'Panning' }).click()
     await panViewportTo(page, surfaceBox, viewport, {
@@ -148,12 +171,7 @@ test.describe('canvas properties and arrangement', () => {
       y: surfaceBox.height / 2 - midpoint.y * 4,
     })
 
-    await expect
-      .poll(async () => {
-        const nodeBoxes = await Promise.all([visibleBox(nodes.first()), visibleBox(nodes.last())])
-        return nodeBoxes.every((nodeBox) => !rectanglesIntersect(surfaceBox, nodeBox))
-      })
-      .toBe(true)
+    await expect(nodes).toHaveCount(0)
     const routedEdge = editor.locator(`[data-testid="canvas-edge"][data-edge-id="${routedEdgeId}"]`)
     await expect(routedEdge).toHaveCount(1)
     const edgeBox = await visibleBox(routedEdge.getByTestId('canvas-edge-primary-path'))
