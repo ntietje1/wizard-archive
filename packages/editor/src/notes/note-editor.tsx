@@ -1,23 +1,26 @@
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type * as Y from 'yjs'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { useResolvedTheme } from '@wizard-archive/ui/theme/context'
 import type { ContentCollaboration } from '../resources/content-session-contract'
 import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
 import { NoteFormattingToolbar } from './note-formatting-toolbar'
+import { useNoteScrollPersistence } from './note-scroll-persistence'
 import { noteEditorSchema } from './note-editor-schema'
 import { NoteValueRuntimeProvider } from './values/runtime-context'
 import { noteValueTransferExtension } from './values/value-transfer'
 import { NoteSlashMenu } from './slash-menu/slash-menu'
 import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
 import './note-editor.css'
+import type { NoteScrollBehavior } from './note-scroll-persistence'
 
 type NoteEditorProps = {
   collaboration?: ContentCollaboration
   document: Y.Doc
   label: string
+  scroll: NoteScrollBehavior
 } & (
   | { mode: 'view' }
   | { mode: 'edit'; persistence: 'initializing' }
@@ -33,6 +36,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
   const editable = props.mode === 'edit'
   const flush = props.mode === 'edit' && props.persistence === 'ready' ? props.onFlush : null
   const resolvedTheme = useResolvedTheme()
+  const [viewport, setViewport] = useState<HTMLDivElement | null>(null)
   const editor = useCreateBlockNote(
     {
       schema: noteEditorSchema,
@@ -62,6 +66,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
       void flush()
     }
   }, [flush])
+  useNoteScrollPersistence(props.scroll, viewport)
 
   return (
     <div
@@ -80,7 +85,11 @@ function NoteDocumentEditor(props: NoteEditorProps) {
       }}
     >
       <NoteFormattingToolbar editor={editor} visible={editable} />
-      <ScrollArea className="min-h-0 flex-1" contentClassName="note-editor-scroll-content">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        contentClassName="note-editor-scroll-content"
+        viewportRef={setViewport}
+      >
         <div className="note-editor-fill-height">
           <div className="note-editor-surface">
             <div className="note-editor-core-surface">

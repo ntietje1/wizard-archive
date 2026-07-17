@@ -4,6 +4,7 @@ import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasDocumentNode } from '../../canvas/document-contract'
 import { canvasEmbedLabel } from '../../canvas/canvas-embed-label'
 import { NoteSessionEditor } from '../../notes/note-session-editor'
+import { EPHEMERAL_NOTE_SCROLL } from '../../notes/note-scroll-persistence'
 import type { CanvasPreviewSource, NoteSessionSource } from '../content-session-contract'
 import type { ResourceIndexLoader, WorkspaceResourceIndex } from '../resource-index-contract'
 import type { ResourceId } from '../domain-id'
@@ -82,7 +83,12 @@ function CanvasNoteResourceEmbed({
   }
   return (
     <CanvasNoteSurface canEdit={canEdit} editing={editing} onEdit={onEdit}>
-      <NoteSessionEditor canEdit={editing} label={label} state={state} />
+      <NoteSessionEditor
+        canEdit={editing}
+        label={label}
+        scroll={EPHEMERAL_NOTE_SCROLL}
+        state={state}
+      />
     </CanvasNoteSurface>
   )
 }

@@ -55,8 +55,11 @@ test.describe('editor shell', () => {
     const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
     await expect(editor).toBeVisible()
 
-    await editor.click()
-    await page.keyboard.press('Control+End')
+    await editor.locator('[data-node-type="blockContainer"]').last().hover()
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.keyboard.type('/')
+    await page.getByRole('option', { name: /^Heading 1/ }).click()
+    await page.keyboard.type('Dockside chapter')
     await page.keyboard.press('Enter')
     await page.keyboard.type('/')
     await page.getByRole('option', { name: /^Heading 2/ }).click()
@@ -66,5 +69,59 @@ test.describe('editor shell', () => {
     await page.getByRole('button', { name: 'Outline' }).click()
     const outline = page.getByRole('navigation', { name: 'Note outline' })
     await expect(outline.getByRole('button', { name: 'Dockside clues' })).toBeVisible()
+    const chapterToggle = outline.getByRole('button', { expanded: true }).last()
+    await expect(chapterToggle).toHaveAccessibleName('Collapse Dockside chapter')
+    await chapterToggle.click()
+    await expect(outline.getByRole('button', { name: 'Dockside clues' })).toHaveCount(0)
+    const collapsedChapterToggle = outline.getByRole('button', { expanded: false }).last()
+    await expect(collapsedChapterToggle).toHaveAccessibleName('Expand Dockside chapter')
+    await collapsedChapterToggle.click()
+    await expect(outline.getByRole('button', { name: 'Dockside clues' })).toBeVisible()
+  })
+
+  test('restores a note viewport after navigating away and back', async ({ page }) => {
+    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
+    await page.getByRole('button', { name: 'The Lantern Market' }).click()
+    const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
+    await expect(editor).toBeVisible()
+    await editor.click()
+    await page.keyboard.press('Control+End')
+    for (let index = 0; index < 24; index += 1) {
+      await page.keyboard.press('Enter')
+      await page.keyboard.type(`Persistent scroll line ${index}`)
+    }
+
+    const viewport = page.locator('.resource-note-editor [data-slot="scroll-area-viewport"]')
+    await viewport.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+      element.dispatchEvent(new Event('scroll'))
+    })
+    await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          let key: string | null = null
+          for (let index = 0; index < window.localStorage.length; index += 1) {
+            const candidate = window.localStorage.key(index)
+            if (candidate?.includes(':note-scroll:')) {
+              key = candidate
+              break
+            }
+          }
+          if (!key) return 0
+          const value: unknown = JSON.parse(window.localStorage.getItem(key) ?? '0')
+          return typeof value === 'number' ? value : 0
+        }),
+      )
+      .toBeGreaterThan(0)
+
+    await page.getByRole('button', { name: 'Blue-glass Invoice' }).click()
+    await page.getByRole('button', { name: 'The Lantern Market' }).click()
+    const restoredViewport = page.locator(
+      '.resource-note-editor [data-slot="scroll-area-viewport"]',
+    )
+    await expect
+      .poll(() => restoredViewport.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0)
   })
 })

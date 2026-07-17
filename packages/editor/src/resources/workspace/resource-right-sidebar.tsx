@@ -1,10 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { Clock3, FileText, Link2, List, X } from 'lucide-react'
+import { ChevronRight, Clock3, FileText, Link2, List, X } from 'lucide-react'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
-import { noteDocumentOutline } from '../../notes/document/outline'
+import { noteDocumentOutline, noteOutlineTree } from '../../notes/document/outline'
 import type { EditorRuntime, ResourceHistoryEntry } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
+import type { NoteOutlineNode } from '../../notes/document/outline'
 import type * as Y from 'yjs'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
@@ -136,20 +137,53 @@ function LiveNoteOutline({ document: yDocument }: { document: Y.Doc }) {
   }
   return (
     <nav aria-label="Note outline" className="p-2">
-      {headings.map((heading) => (
+      {noteOutlineTree(headings).map((heading) => (
+        <NoteOutlineItem key={heading.blockId} depth={0} heading={heading} />
+      ))}
+    </nav>
+  )
+}
+
+function NoteOutlineItem({ depth, heading }: { depth: number; heading: NoteOutlineNode }) {
+  const [expanded, setExpanded] = useState(true)
+  const hasChildren = heading.children.length > 0
+  return (
+    <div>
+      <div
+        className="flex w-full items-center gap-1 rounded py-1 pr-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+        style={{ paddingLeft: `${depth * 0.75 + 0.5}rem` }}
+      >
+        {hasChildren ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${heading.text}` : `Expand ${heading.text}`}
+            className="inline-flex size-4 shrink-0 items-center justify-center rounded hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            <ChevronRight
+              className={`size-3 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            />
+          </button>
+        ) : (
+          <span className="size-4 shrink-0" />
+        )}
         <button
-          key={heading.blockId}
           type="button"
-          className="block w-full truncate rounded py-1 pr-2 text-left text-sm hover:bg-muted"
-          style={{ paddingLeft: `${(heading.level - 1) * 0.75 + 0.5}rem` }}
+          className="min-w-0 flex-1 truncate rounded text-left text-sm focus-visible:ring-1 focus-visible:ring-ring"
           onClick={() =>
             document.getElementById(heading.blockId)?.scrollIntoView({ block: 'start' })
           }
         >
           {heading.text}
         </button>
-      ))}
-    </nav>
+      </div>
+      {hasChildren && expanded
+        ? heading.children.map((child) => (
+            <NoteOutlineItem key={child.blockId} depth={depth + 1} heading={child} />
+          ))
+        : null}
+    </div>
   )
 }
 

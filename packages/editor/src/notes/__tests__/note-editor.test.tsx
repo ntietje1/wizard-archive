@@ -9,6 +9,7 @@ import {
 } from '../../resources/domain-id'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../document/headless-yjs'
 import { NoteEditor } from '../note-editor'
+import { EPHEMERAL_NOTE_SCROLL } from '../note-scroll-persistence'
 import { insertNoteValueFromSlashMenu } from '../slash-menu/value-slash-menu'
 
 describe('NoteEditor', () => {
@@ -30,7 +31,14 @@ describe('NoteEditor', () => {
       NOTE_YJS_FRAGMENT,
     )
 
-    const { unmount } = render(<NoteEditor document={document} label="Readonly note" mode="view" />)
+    const { unmount } = render(
+      <NoteEditor
+        document={document}
+        label="Readonly note"
+        mode="view"
+        scroll={EPHEMERAL_NOTE_SCROLL}
+      />,
+    )
 
     expect(await screen.findByRole('textbox', { name: 'Readonly note' })).toHaveTextContent(
       'Canonical headingCanonical body',
@@ -47,12 +55,18 @@ describe('NoteEditor', () => {
     const createEditor = vi.spyOn(BlockNoteEditor, 'create')
     render(
       <>
-        <NoteEditor document={document} label="Live viewer" mode="view" />
+        <NoteEditor
+          document={document}
+          label="Live viewer"
+          mode="view"
+          scroll={EPHEMERAL_NOTE_SCROLL}
+        />
         <NoteEditor
           document={document}
           label="Remote editor"
           mode="edit"
           persistence="initializing"
+          scroll={EPHEMERAL_NOTE_SCROLL}
         />
       </>,
     )
@@ -81,13 +95,21 @@ describe('NoteEditor', () => {
         label="Mode-switching note"
         mode="edit"
         persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
         onFlush={flush}
       />,
     )
     const editor = await screen.findByRole('textbox', { name: 'Mode-switching note' })
     const creationCount = createEditor.mock.calls.length
 
-    view.rerender(<NoteEditor document={document} label="Mode-switching note" mode="view" />)
+    view.rerender(
+      <NoteEditor
+        document={document}
+        label="Mode-switching note"
+        mode="view"
+        scroll={EPHEMERAL_NOTE_SCROLL}
+      />,
+    )
 
     expect(editor).toHaveAttribute('contenteditable', 'false')
     expect(editor).toHaveTextContent('One canonical document')
@@ -114,6 +136,7 @@ describe('NoteEditor', () => {
         label="Editable note"
         mode="edit"
         persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -159,6 +182,7 @@ describe('NoteEditor', () => {
         label="Value insertion note"
         mode="edit"
         persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -184,6 +208,7 @@ describe('NoteEditor', () => {
         label="Block identity note"
         mode="edit"
         persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -217,6 +242,7 @@ describe('NoteEditor', () => {
         label="History note"
         mode="edit"
         persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
         onFlush={() => Promise.resolve()}
       />,
     )
@@ -258,6 +284,7 @@ describe('NoteEditor', () => {
         label="Drop-protected note"
         mode="edit"
         persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
         onFlush={() => Promise.resolve()}
       />,
     )

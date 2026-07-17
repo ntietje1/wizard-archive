@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../../resources/domain-id'
-import { noteDocumentOutline } from '../document/outline'
+import { noteDocumentOutline, noteOutlineTree } from '../document/outline'
 import type { NoteBlock } from '../document/model'
 
 describe('note document outline', () => {
@@ -45,5 +45,43 @@ describe('note document outline', () => {
     expect(
       noteDocumentOutline([{ id: blockId, type: 'heading', props: { level: 2 }, content: [] }]),
     ).toEqual([{ blockId, level: 2, text: 'Untitled heading' }])
+  })
+
+  it('builds the reference hierarchy from heading levels', () => {
+    const first = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const child = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const grandchild = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const sibling = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+
+    expect(
+      noteOutlineTree([
+        { blockId: first, level: 1, text: 'Chapter' },
+        { blockId: child, level: 2, text: 'Scene' },
+        { blockId: grandchild, level: 3, text: 'Detail' },
+        { blockId: sibling, level: 2, text: 'Next scene' },
+      ]),
+    ).toEqual([
+      {
+        blockId: first,
+        level: 1,
+        text: 'Chapter',
+        children: [
+          {
+            blockId: child,
+            level: 2,
+            text: 'Scene',
+            children: [
+              {
+                blockId: grandchild,
+                level: 3,
+                text: 'Detail',
+                children: [],
+              },
+            ],
+          },
+          { blockId: sibling, level: 2, text: 'Next scene', children: [] },
+        ],
+      },
+    ])
   })
 })

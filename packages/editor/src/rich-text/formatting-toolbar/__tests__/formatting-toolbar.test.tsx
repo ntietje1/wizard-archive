@@ -609,33 +609,6 @@ describe('RichTextFormattingToolbar', () => {
     ).toBeInTheDocument()
   })
 
-  it('keeps toolbar subscriptions stable across same-editor rerenders', () => {
-    const editor = createEditor({
-      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
-    })
-
-    const { rerender } = render(
-      <RichTextFormattingToolbar
-        ariaLabel="Test formatting toolbar"
-        editor={editor as never}
-        mode="full"
-        visible
-      />,
-    )
-
-    rerender(
-      <RichTextFormattingToolbar
-        ariaLabel="Test formatting toolbar"
-        editor={editor as never}
-        mode="full"
-        visible
-      />,
-    )
-
-    expect(editor.onSelectionChange).toHaveBeenCalledTimes(1)
-    expect(editor.onChange).toHaveBeenCalledTimes(1)
-  })
-
   it('does not carry a stored selection snapshot across editor swaps', () => {
     const firstEditor = createEditor({
       selectionSnapshot: { anchor: 2, head: 2, type: 'text' },

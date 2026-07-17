@@ -205,7 +205,16 @@ function NoteViewport({
     return <ContentState resource={resource} state={state} />
   }
   return (
-    <NoteSessionEditor canEdit={canEdit} label={`${resource.title} note editor`} state={state} />
+    <NoteSessionEditor
+      canEdit={canEdit}
+      label={`${resource.title} note editor`}
+      scroll={{
+        kind: 'persistent',
+        campaignId: runtime.scope.campaignId,
+        resourceId: resource.id,
+      }}
+      state={state}
+    />
   )
 }
 

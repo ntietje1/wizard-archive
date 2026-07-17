@@ -19,10 +19,17 @@ describe('ResourceRightSidebar note outline', () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const parentHeadingId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const headingId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const version = initialVersion(await sha256Digest(new Uint8Array([7])))
     const noteDocument = noteBlocksToYDoc(
       [
+        {
+          id: parentHeadingId,
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Chapter one' }],
+        },
         {
           id: headingId,
           type: 'heading',
@@ -81,6 +88,9 @@ describe('ResourceRightSidebar note outline', () => {
     )
 
     expect(screen.getByRole('navigation', { name: 'Note outline' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Chapter one' }))
+    expect(screen.queryByRole('button', { name: 'Hidden vault' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Chapter one' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hidden vault' }))
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
 
