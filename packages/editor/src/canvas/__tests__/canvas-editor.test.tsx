@@ -1346,6 +1346,45 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('does not divide reorder controls from an empty property group', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 50,
+          data: {},
+        },
+        {
+          id: NODE_B,
+          type: 'text',
+          position: { x: 200, y: 0 },
+          width: 100,
+          height: 50,
+          data: {},
+        },
+      ],
+      edges: [{ id: 'mixed-edge', source: NODE_A, target: NODE_B, type: 'straight' }],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Mixed board" />,
+    )
+    installPointerCapture(screen.getByTestId('canvas-surface'))
+    const node = screen.getAllByTestId('canvas-node')[0]!
+    installPointerCapture(node)
+    fireEvent.pointerDown(node, { button: 0, clientX: 20, clientY: 20, pointerId: 41 })
+    fireEvent.pointerUp(node, { clientX: 20, clientY: 20, pointerId: 41 })
+    fireEvent.pointerDown(screen.getByTestId('canvas-edge-interaction'), { ctrlKey: true })
+
+    const toolbar = screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })
+    expect(within(toolbar).getByText('Reorder')).toBeVisible()
+    expect(within(toolbar).queryByRole('separator')).not.toBeInTheDocument()
+    view.unmount()
+    session.dispose()
+  })
+
   it('renders moved stroke coordinates with a screen-space hit target', async () => {
     const session = await createSession({
       nodes: [

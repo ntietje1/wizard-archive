@@ -114,7 +114,7 @@ export function CanvasConditionalToolbar({
 
       {interaction.tool === 'edge' ? (
         <>
-          <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+          <div className="my-1 h-px w-full bg-border" role="separator" />
           <div className="flex flex-col gap-1">
             <p className="text-[11px] font-medium text-muted-foreground">Edge type</p>
             <div className="flex items-center gap-1">
@@ -239,7 +239,7 @@ function CanvasSelectionToolbarContent({
       {hasEdgeType ? (
         <>
           {hasPaintOrSizeProperties ? (
-            <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+            <div className="my-1 h-px w-full bg-border" role="separator" />
           ) : null}
           <EdgeTypeControl
             value={properties.edgeType}
@@ -248,7 +248,7 @@ function CanvasSelectionToolbarContent({
         </>
       ) : null}
       {hasPaintOrSizeProperties || hasEdgeType ? (
-        <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+        <div className="my-1 h-px w-full bg-border" role="separator" />
       ) : null}
       <ReorderControls
         content={content}
