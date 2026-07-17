@@ -79,7 +79,19 @@ describe('CanvasEditor', () => {
       backgroundPosition: '0px 0px',
       backgroundSize: '36px 36px',
     })
-    fireEvent.wheel(surface, { ctrlKey: true, clientX: 0, clientY: 0, deltaY: -500 })
+    const nestedScrollRegion = document.createElement('div')
+    nestedScrollRegion.className = 'nowheel'
+    surface.append(nestedScrollRegion)
+    const zoomEvent = createEvent.wheel(nestedScrollRegion, {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      clientX: 0,
+      clientY: 0,
+      deltaY: -500,
+    })
+    fireEvent(nestedScrollRegion, zoomEvent)
+    expect(zoomEvent.defaultPrevented).toBe(true)
     expect(surface.style.backgroundSize).toBe('72px 72px')
     fireEvent.wheel(surface, { ctrlKey: true, clientX: 0, clientY: 0, deltaY: 500 })
     view.unmount()
@@ -413,7 +425,14 @@ describe('CanvasEditor', () => {
     installPointerCapture(screen.getByTestId('canvas-surface'))
     nodes.forEach(installPointerCapture)
 
-    fireEvent.pointerDown(nodes[0], { button: 0, pointerId: 31 })
+    const dragStart = createEvent.pointerDown(nodes[0], {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      pointerId: 31,
+    })
+    fireEvent(nodes[0], dragStart)
+    expect(dragStart.defaultPrevented).toBe(true)
     fireEvent.pointerUp(nodes[0], { pointerId: 31 })
     fireEvent.pointerDown(nodes[1], { button: 0, ctrlKey: true, pointerId: 32 })
     expect(nodes[0]).toHaveAttribute('data-selected', 'true')
@@ -985,7 +1004,7 @@ describe('CanvasEditor', () => {
       },
     })
     expect(screen.queryByTestId('canvas-connection-preview')).not.toBeInTheDocument()
-    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'true')
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'false')
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(readCanvasDocumentContent(session.document).edges).toHaveLength(0)
@@ -1423,6 +1442,55 @@ describe('CanvasEditor', () => {
     expect(hitTarget.closest('svg')).toHaveAttribute('preserveAspectRatio', 'none')
     fireEvent.pointerDown(hitTarget, { button: 0, clientX: 450, clientY: 110, pointerId: 11 })
     expect(screen.getByTestId('canvas-node')).toHaveAttribute('data-selected', 'true')
+
+    view.unmount()
+    session.dispose()
+  })
+
+  it('keeps strokes out of edge authoring and raises edited nodes above document content', async () => {
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_A,
+          type: 'text',
+          position: { x: 0, y: 0 },
+          width: 180,
+          height: 80,
+          zIndex: 1,
+          data: {},
+        },
+        {
+          id: STROKE,
+          type: 'stroke',
+          position: { x: 0, y: 100 },
+          width: 100,
+          height: 20,
+          zIndex: 20,
+          data: {
+            bounds: { x: 0, y: 100, width: 100, height: 20 },
+            points: [
+              [0, 110, 0.5],
+              [100, 110, 0.5],
+            ],
+            color: '#000000',
+            size: 4,
+          },
+        },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Layer board" />,
+    )
+    const nodes = screen.getAllByTestId('canvas-node')
+    const textNode = nodes.find((node) => node.dataset.nodeId === NODE_A)!
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edges' }))
+    expect(screen.getAllByTestId(/^canvas-node-handle-/)).toHaveLength(4)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pointer' }))
+    fireEvent.doubleClick(textNode)
+    expect(textNode).toHaveStyle({ zIndex: '21' })
 
     view.unmount()
     session.dispose()

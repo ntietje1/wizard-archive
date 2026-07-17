@@ -26,7 +26,7 @@ export const CANVAS_CONNECTION_HANDLES: ReadonlyArray<CanvasConnectionHandle> = 
 
 export function createCanvasConnectionCandidateIndex(nodes: ReadonlyArray<CanvasDocumentNode>) {
   const candidates = nodes.flatMap((node) =>
-    node.hidden
+    node.hidden || node.type === 'stroke'
       ? []
       : CANVAS_CONNECTION_HANDLES.map((handle) => ({
           anchor: { nodeId: node.id, handle },

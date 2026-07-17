@@ -313,6 +313,27 @@ describe('canvas edge geometry', () => {
     expect(index.find(NODE_A, { x: 250, y: 80 }, 20)).toBeNull()
   })
 
+  it('does not offer stroke nodes as new connection targets', () => {
+    const stroke: CanvasDocumentNode = {
+      id: NODE_B,
+      type: 'stroke',
+      position: { x: 300, y: 0 },
+      data: {
+        bounds: { x: 300, y: 0, width: 100, height: 20 },
+        points: [
+          [300, 10, 0.5],
+          [400, 10, 0.5],
+        ],
+        color: '#000000',
+        size: 4,
+      },
+    }
+
+    expect(
+      createCanvasConnectionCandidateIndex([NODES[0]!, stroke]).find(NODE_A, { x: 300, y: 10 }, 20),
+    ).toBeNull()
+  })
+
   it('finds a late target across the maximum supported node set', () => {
     const nodes = Array.from({ length: CANVAS_WORKLOAD_LIMITS.nodes }, (_, index) => ({
       id: generateDomainId(DOMAIN_ID_KIND.canvasNode),

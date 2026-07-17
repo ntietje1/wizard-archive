@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from 'react'
+import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react'
 import type { CanvasDocumentController } from './document-controller'
 import { captureCanvasSelection, materializeCanvasPaste } from './canvas-clipboard'
 import type { CanvasClipboardEntry } from './canvas-clipboard'
@@ -97,6 +97,14 @@ export function CanvasEditorSurface({
     interactionController.cancelInteraction()
     interactionController.setTool('select')
   }, [canEdit, interactionController])
+
+  useEffect(() => {
+    const element = surface.current
+    if (!element) return
+    const onWheel = (event: WheelEvent) => handleWheel(event, element, interactionController)
+    element.addEventListener('wheel', onWheel, { passive: false })
+    return () => element.removeEventListener('wheel', onWheel)
+  }, [interactionController, surface])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -330,7 +338,6 @@ export function CanvasEditorSurface({
         }}
         onPointerCancel={() => interactionController.cancelInteraction()}
         onPointerLeave={() => setCanvasCollaborationCursor(collaboration, null)}
-        onWheel={(event) => handleWheel(event, interactionController)}
       >
         <CanvasScene
           canEdit={canEdit}
@@ -574,12 +581,15 @@ function measureCanvasGestureFrame(
   })
 }
 
-function handleWheel(event: WheelEvent<HTMLElement>, controller: CanvasInteractionController) {
-  if (event.target instanceof Element && event.target.closest('.nowheel')) return
-  event.preventDefault()
+function handleWheel(
+  event: WheelEvent,
+  surface: HTMLElement,
+  controller: CanvasInteractionController,
+) {
   const viewport = controller.get().viewport
   if (event.ctrlKey) {
-    const bounds = event.currentTarget.getBoundingClientRect()
+    event.preventDefault()
+    const bounds = surface.getBoundingClientRect()
     controller.zoomTo(
       viewport.zoom * 2 ** (-event.deltaY * 0.002),
       {
@@ -590,6 +600,8 @@ function handleWheel(event: WheelEvent<HTMLElement>, controller: CanvasInteracti
     )
     return
   }
+  if (event.target instanceof Element && event.target.closest('.nowheel')) return
+  event.preventDefault()
   controller.panBy(
     event.shiftKey ? { x: -event.deltaY, y: 0 } : { x: -event.deltaX, y: -event.deltaY },
     true,

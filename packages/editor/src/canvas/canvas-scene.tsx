@@ -75,6 +75,11 @@ export function CanvasScene({
   const defaultNodeZIndex = new Map(
     content.nodes.map((node, index) => [node.id, index + 1] as const),
   )
+  const activeNodeZIndex =
+    [...content.nodes, ...content.edges].reduce(
+      (highest, element, index) => Math.max(highest, element.zIndex ?? index + 1),
+      0,
+    ) + 1
   const nodeById = new Map<CanvasNodeId, CanvasDocumentNode>(
     visualNodes.map((node) => [node.id, node]),
   )
@@ -172,7 +177,13 @@ export function CanvasScene({
             surface={surface}
             tool={interaction.tool}
             viewport={interaction.viewport}
-            zIndex={node.zIndex ?? defaultNodeZIndex.get(node.id) ?? 0}
+            zIndex={
+              canEdit &&
+              interaction.interaction.type === 'editing' &&
+              interaction.interaction.nodeId === node.id
+                ? activeNodeZIndex
+                : (node.zIndex ?? defaultNodeZIndex.get(node.id) ?? 0)
+            }
           />
         ))}
       </div>
@@ -263,7 +274,7 @@ function CanvasNode({
   const size = canvasNodeSize(node)
   return (
     <div
-      className={`absolute rounded-md ${node.type === 'stroke' ? 'pointer-events-none' : ''}`}
+      className={`absolute touch-none select-none rounded-md ${node.type === 'stroke' ? 'pointer-events-none' : ''}`}
       data-node-id={node.id}
       data-node-type={node.type}
       data-erasing={erasing}
@@ -353,7 +364,7 @@ function CanvasNode({
         }
       />
       {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={viewport.zoom} />}
-      {canEdit && tool === 'edge' && (
+      {canEdit && tool === 'edge' && node.type !== 'stroke' && (
         <CanvasNodeConnectionHandles
           interactionController={interactionController}
           node={node}
@@ -439,6 +450,7 @@ function beginNodeDrag({
 }) {
   const interaction = interactionController.get()
   if (event.button !== 0 || interaction.tool !== 'select' || editing) return
+  event.preventDefault()
   event.stopPropagation()
   const additive = event.metaKey || event.ctrlKey
   if (additive) {

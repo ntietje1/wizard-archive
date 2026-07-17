@@ -20,8 +20,11 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
     const viewportElement = viewport.current
     if (!surfaceElement || !viewportElement || !content) return
     const update = () => {
-      const bounds = surfaceElement.getBoundingClientRect()
-      const fitted = fitCanvasContent(content.nodes, bounds.width, bounds.height)
+      const fitted = fitCanvasContent(
+        content.nodes,
+        surfaceElement.clientWidth,
+        surfaceElement.clientHeight,
+      )
       viewportElement.style.transform = fitted
         ? `translate(${fitted.x}px, ${fitted.y}px) scale(${fitted.zoom})`
         : ''

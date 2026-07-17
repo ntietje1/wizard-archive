@@ -526,6 +526,7 @@ class CanvasInteractionControllerState {
 
   setSelection(selection: CanvasSelection): void {
     this.#assertActive()
+    if (CREATION_TOOLS.has(this.#snapshot.tool)) return
     const nextSelection = cloneSelection(selection)
     if (
       selectionsEqual(nextSelection, this.#snapshot.selection) &&
@@ -1158,8 +1159,11 @@ class CanvasInteractionControllerState {
   }
 
   #publish(snapshot: CanvasInteractionSnapshot): void {
-    if (this.#candidates?.type !== snapshot.interaction.type) this.#candidates = null
-    this.#snapshot = snapshot
+    const nextSnapshot = CREATION_TOOLS.has(snapshot.tool)
+      ? { ...snapshot, selection: emptySelection() }
+      : snapshot
+    if (this.#candidates?.type !== nextSnapshot.interaction.type) this.#candidates = null
+    this.#snapshot = nextSnapshot
     for (const listener of this.#listeners) listener()
   }
 
