@@ -158,6 +158,7 @@ describe('CanvasEditor', () => {
     expect(screen.getByLabelText('Canvas surface')).toBeVisible()
     expect(screen.getAllByTestId('canvas-node')).toHaveLength(2)
     expect(screen.getByTestId('canvas-edge')).toBeVisible()
+    expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '0' })
     expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fit zoom' })).toBeVisible()
@@ -182,10 +183,12 @@ describe('CanvasEditor', () => {
     expect(screen.getByRole('button', { name: 'Draw' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.keyDown(shell, { key: '7' })
     expect(screen.getByRole('button', { name: 'Edges' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('canvas-edge')).toHaveClass('pointer-events-none')
     fireEvent.keyDown(shell, { key: '6' })
     expect(screen.getByRole('button', { name: 'Text' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.keyDown(shell, { key: '1' })
     expect(screen.getByRole('button', { name: 'Pointer' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('canvas-edge')).toHaveClass('pointer-events-auto')
 
     fireEvent.keyDown(shell, { key: 'a', ctrlKey: true })
     fireEvent.keyDown(shell, { key: 'c', ctrlKey: true })
@@ -590,6 +593,7 @@ describe('CanvasEditor', () => {
     )
     const surface = screen.getByTestId('canvas-surface')
     installPointerCapture(surface)
+    expect(screen.queryByTestId('canvas-node-handle-right')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Edges' }))
     fireEvent.click(screen.getByRole('button', { name: 'Change edge type to Step' }))
     fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
@@ -609,6 +613,19 @@ describe('CanvasEditor', () => {
       'data-snap-target',
       'true',
     )
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveAttribute(
+      'data-edge-type',
+      'step',
+    )
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveAttribute(
+      'data-canvas-authored-stroke-width',
+      '6',
+    )
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveAttribute(
+      'stroke',
+      'var(--t-red)',
+    )
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveAttribute('stroke-width', '6')
     expect(readCanvasDocumentContent(session.document).edges).toHaveLength(0)
 
     fireEvent.pointerUp(surface, { clientX: 300, clientY: 80, pointerId: 12 })

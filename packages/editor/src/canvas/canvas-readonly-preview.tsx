@@ -47,7 +47,7 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
       data-testid="canvas-readonly-preview"
     >
       <div ref={viewport} className="absolute left-0 top-0 size-0 origin-top-left">
-        {content.edges.map((edge, index) => {
+        {content.edges.map((edge) => {
           if (edge.hidden) return null
           const path = canvasEdgePath(edge, nodeById)
           if (!path) return null
@@ -55,7 +55,7 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
             <svg
               key={edge.id}
               className="absolute left-0 top-0 overflow-visible"
-              style={{ zIndex: edge.zIndex ?? nodes.length + index + 1 }}
+              style={{ zIndex: edge.zIndex ?? 0 }}
               width="1"
               height="1"
             >

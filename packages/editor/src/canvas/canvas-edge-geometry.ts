@@ -112,6 +112,7 @@ export function canvasEdgeBounds(
 }
 
 export function canvasConnectionPreviewPath(
+  type: CanvasEdgeType,
   source: CanvasConnectionAnchor,
   current: CanvasPoint,
   target: CanvasConnectionAnchor | null,
@@ -123,7 +124,7 @@ export function canvasConnectionPreviewPath(
   const targetNode = target ? nodesById.get(target.nodeId) : null
   const targetPoint =
     target && targetNode ? canvasNodeHandlePoint(targetNode, target.handle) : current
-  return canvasPathBetween('bezier', sourcePoint, targetPoint, {
+  return canvasPathBetween(type, sourcePoint, targetPoint, {
     source: source.handle,
     target: target?.handle ?? oppositeHandle(source.handle),
   })

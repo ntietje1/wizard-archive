@@ -88,13 +88,13 @@ export function CanvasScene({
           transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
         }}
       >
-        {rendered.edges.map((edge, index) => (
+        {rendered.edges.map((edge) => (
           <svg
             key={edge.id}
             className="pointer-events-none absolute left-0 top-0 overflow-visible"
             data-edge-id={edge.id}
             data-testid="canvas-edge-layer"
-            style={{ zIndex: edge.zIndex ?? content.nodes.length + index + 1 }}
+            style={{ zIndex: edge.zIndex ?? 0 }}
             width="1"
             height="1"
           >
@@ -328,7 +328,7 @@ function CanvasNodeConnectionHandles({
         key={handle}
         type="button"
         aria-label={`Connect from ${handle}`}
-        className="pointer-events-auto absolute z-20 size-4 rounded-full border border-border bg-background shadow-sm data-[snap-target=true]:border-primary data-[snap-target=true]:bg-primary"
+        className="canvas-node-connection-handle pointer-events-auto absolute z-20 size-8 rounded-full border-0 bg-transparent p-0 after:pointer-events-none after:absolute after:top-1/2 after:left-1/2 after:size-3.5 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:border after:border-border after:bg-background after:content-[''] data-[snap-target=true]:after:border-primary data-[snap-target=true]:after:bg-primary"
         data-canvas-node-handle="true"
         data-handle-position={handle}
         data-snap-target={snapped}
@@ -502,7 +502,7 @@ function CanvasEdge({
   if (!path) return null
   return (
     <g
-      className="pointer-events-auto cursor-pointer"
+      className={tool === 'select' ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}
       data-edge-id={edge.id}
       data-selected={selected}
       data-testid="canvas-edge"
@@ -567,6 +567,7 @@ function CanvasConnectionOverlay({
   const connection = interaction.interaction
   if (connection.type !== 'connecting') return null
   const path = canvasConnectionPreviewPath(
+    interaction.toolSettings.edgeType,
     connection.source,
     connection.current,
     connection.target,
@@ -576,17 +577,21 @@ function CanvasConnectionOverlay({
   return (
     <svg
       className="pointer-events-none absolute left-0 top-0 overflow-visible"
-      data-snap-target={connection.target !== null}
-      data-testid="canvas-connection-preview"
       width="1"
       height="1"
     >
       <path
         d={path}
+        data-canvas-authored-stroke-width={interaction.toolSettings.strokeSize}
+        data-edge-type={interaction.toolSettings.edgeType}
+        data-snap-target={connection.target !== null}
+        data-testid="canvas-connection-preview"
         fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeWidth={2 / interaction.viewport.zoom}
+        stroke={interaction.toolSettings.strokeColor}
+        strokeLinecap="square"
+        strokeLinejoin="round"
+        strokeOpacity={interaction.toolSettings.strokeOpacity / 100}
+        strokeWidth={Math.max(interaction.toolSettings.strokeSize, 1 / interaction.viewport.zoom)}
       />
     </svg>
   )
