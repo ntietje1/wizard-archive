@@ -159,6 +159,84 @@ describe('plain transfer inventory', () => {
     expect(paths(continued)).toEqual(['campaign', 'campaign/Entry.md'])
   })
 
+  it('classifies a sole-wrapper manifest before placement and excludes all control metadata', async () => {
+    const sources = [zipSource('zip', 'campaign.zip')]
+    const entries = [
+      directory('zip', 'Wrapper'),
+      directory('zip', 'Wrapper/.wizardarchive'),
+      file('zip', 'Wrapper/.wizardarchive/manifest.json', [123, 125]),
+      file('zip', 'Wrapper/.wizardarchive/private.bin', [1, 2, 3]),
+      directory('zip', 'Wrapper/Notes'),
+      markdown('zip', 'Wrapper/Notes/Entry.md', 'Entry'),
+    ]
+
+    await expect(
+      buildPlainTransferInventory({
+        request: await plainRequest('plain_workspace', sources, entries, 'reject'),
+        entries,
+      }),
+    ).resolves.toEqual({
+      status: 'rejected',
+      reason: 'manifest_requires_explicit_choice',
+    })
+
+    const request = await plainRequest('plain_workspace', sources, entries, 'continue_plain')
+    const first = await buildPlainTransferInventory({ request, entries })
+    const resumed = await buildPlainTransferInventory({ request, entries: [...entries].reverse() })
+    const placed = await buildPlainTransferInventory({
+      request: await plainRequest('plain_resources', sources, entries, 'continue_plain'),
+      entries,
+    })
+    expect(paths(first)).toEqual(['Notes', 'Notes/Entry.md'])
+    expect(serializeInventory(resumed)).toBe(serializeInventory(first))
+    expect(paths(placed)).toEqual([
+      'campaign',
+      'campaign/Wrapper',
+      'campaign/Wrapper/Notes',
+      'campaign/Wrapper/Notes/Entry.md',
+    ])
+  })
+
+  it('rejects duplicate, malformed, and ambiguously placed manifests without fallback', async () => {
+    const duplicateSources = [zipSource('left', 'left.zip'), zipSource('right', 'right.zip')]
+    const duplicateEntries = [
+      file('left', '.wizardarchive/manifest.json', [123, 125]),
+      file('right', '.wizardarchive/manifest.json', [123, 125]),
+    ]
+    await expect(
+      buildPlainTransferInventory({
+        request: await plainRequest(
+          'plain_resources',
+          duplicateSources,
+          duplicateEntries,
+          'continue_plain',
+        ),
+        entries: duplicateEntries,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_source' })
+
+    const sources = [zipSource('zip', 'campaign.zip')]
+    const malformed = [file('zip', '.wizardarchive/manifest.json', [123])]
+    await expect(
+      buildPlainTransferInventory({
+        request: await plainRequest('plain_resources', sources, malformed, 'continue_plain'),
+        entries: malformed,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_source' })
+
+    const ambiguous = [
+      directory('zip', 'Wrapper'),
+      file('zip', 'Wrapper/.wizardarchive/manifest.json', [123, 125]),
+      markdown('zip', 'Sibling.md', 'Sibling'),
+    ]
+    await expect(
+      buildPlainTransferInventory({
+        request: await plainRequest('plain_resources', sources, ambiguous, 'continue_plain'),
+        entries: ambiguous,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_source' })
+  })
+
   it('rejects changed, duplicate, traversing, oversized-depth, and oversized-count sources', async () => {
     const sources = [directorySource('upload', 'Campaign')]
     const entry = markdown('upload', 'Entry.md', 'Original')

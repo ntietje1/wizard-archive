@@ -190,17 +190,13 @@ async function preparePlainTransferInventory(
   if (totalBytes > PLAIN_TRANSFER_LIMITS.maxTotalBytes) {
     return { status: 'rejected', reason: 'source_limit_exceeded' }
   }
-  const hasManifest = canonical.entries.some(
-    (entry) => entry.path === '.wizardarchive/manifest.json' && entry.type === 'file',
-  )
-  if (hasManifest && request.manifestHandling === 'reject') {
-    return { status: 'rejected', reason: 'manifest_requires_explicit_choice' }
-  }
+  const ordinary = ordinaryCanonicalEntries(canonical.entries, request.manifestHandling)
+  if ('status' in ordinary) return ordinary
   const sourceDigest = await digestCanonicalEntries(request.sources, canonical.entries)
   if (sourceDigest !== request.sourceDigest) {
     return { status: 'rejected', reason: 'source_changed' }
   }
-  const preparedEntries = preparePlacedEntries(request, canonical.entries)
+  const preparedEntries = preparePlacedEntries(request, ordinary.entries)
   if ('status' in preparedEntries) return preparedEntries
   return classifyPreparedEntries(preparedEntries, sourceDigest)
 }
@@ -211,9 +207,7 @@ function preparePlacedEntries(
 ): ReadonlyArray<PlacedEntry> | RejectedInventory {
   let placed: ReadonlyArray<PlacedEntry>
   try {
-    placed = placeEntries(request, entries).filter(
-      (entry) => entry.placedPath.length > 0 && !entry.path.startsWith('.wizardarchive/'),
-    )
+    placed = placeEntries(request, entries).filter((entry) => entry.placedPath.length > 0)
   } catch {
     return { status: 'rejected', reason: 'invalid_source' }
   }
@@ -412,6 +406,64 @@ function placeEntries(
   })
 }
 
+function ordinaryCanonicalEntries(
+  entries: ReadonlyArray<CanonicalEntry>,
+  manifestHandling: PlainTransferJobRequest['manifestHandling'],
+): Readonly<{ entries: ReadonlyArray<CanonicalEntry> }> | RejectedInventory {
+  const logical = canonicalLogicalEntries(entries)
+  if (logical.some(({ control }) => control === 'invalid')) {
+    return { status: 'rejected', reason: 'invalid_source' }
+  }
+  const manifests = logical.filter(({ control }) => control === 'manifest')
+  if (manifests.length > 1 || manifests.some(({ entry }) => !validPlainManifest(entry))) {
+    return { status: 'rejected', reason: 'invalid_source' }
+  }
+  if (manifests.length === 1 && manifestHandling === 'reject') {
+    return { status: 'rejected', reason: 'manifest_requires_explicit_choice' }
+  }
+  return {
+    entries: logical.filter(({ control }) => control === 'ordinary').map(({ entry }) => entry),
+  }
+}
+
+function canonicalLogicalEntries(entries: ReadonlyArray<CanonicalEntry>) {
+  const wrappers = new Map<string, string | null>()
+  return entries.map((entry) => {
+    if (!wrappers.has(entry.source.id)) {
+      wrappers.set(
+        entry.source.id,
+        entry.source.kind === 'zip' ? soleTopLevelDirectory(entries, entry.source) : null,
+      )
+    }
+    const logicalPath = sourceLogicalPath(entry.path, wrappers.get(entry.source.id) ?? null)
+    return { entry, control: controlPathKind(logicalPath) }
+  })
+}
+
+function controlPathKind(path: string): 'control' | 'invalid' | 'manifest' | 'ordinary' {
+  const segments = path.split('/')
+  const controlSegment = segments.indexOf('.wizardarchive')
+  if (controlSegment === -1) return 'ordinary'
+  if (controlSegment !== 0) return 'invalid'
+  return path === '.wizardarchive/manifest.json' ? 'manifest' : 'control'
+}
+
+function sourceLogicalPath(path: string, wrapper: string | null): string {
+  if (!wrapper) return path
+  if (path === wrapper) return ''
+  return path.startsWith(`${wrapper}/`) ? path.slice(wrapper.length + 1) : path
+}
+
+function validPlainManifest(entry: CanonicalEntry): boolean {
+  if (entry.type !== 'file' || entry.bytes === null) return false
+  try {
+    const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(entry.bytes))
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+  } catch {
+    return false
+  }
+}
+
 function soleTopLevelDirectory(
   entries: ReadonlyArray<CanonicalEntry>,
   source: TransferSourceDescriptor,
@@ -420,6 +472,7 @@ function soleTopLevelDirectory(
   const segments = new Set(candidates.map((entry) => entry.path.split('/')[0]!))
   if (segments.size !== 1) return null
   const segment = [...segments][0]!
+  if (segment === '.wizardarchive') return null
   return candidates.some((entry) => entry.path === segment && entry.type === 'file')
     ? null
     : segment
