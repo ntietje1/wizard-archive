@@ -420,17 +420,22 @@ function MapImageControl({
 
 function useMapImageUrl(session: MapSession, layerId: string | null, image: MapImageAttachment) {
   const [attempt, setAttempt] = useState(0)
-  const [state, setState] = useState<MapImageState>(
-    image.status === 'unattached' ? { status: 'empty' } : { status: 'loading' },
-  )
   const attachmentKey = image.status === 'attached' ? image.digest : image.status
+  const requestKey = `${attachmentKey}:${attempt}`
+  const initialState: MapImageState =
+    image.status === 'unattached' ? { status: 'empty' } : { status: 'loading' }
+  const [loaded, setLoaded] = useState<{ key: string; state: MapImageState }>(() => ({
+    key: requestKey,
+    state: initialState,
+  }))
+  const state = loaded.key === requestKey ? loaded.state : initialState
   useEffect(() => {
-    if (image.status === 'unattached') {
-      setState({ status: 'empty' })
-      return
-    }
-    return beginContentObjectUrlLoad(() => session.loadImage(layerId), setState)
-  }, [attempt, attachmentKey, image.status, layerId, session])
+    if (image.status === 'unattached') return
+    return beginContentObjectUrlLoad(
+      () => session.loadImage(layerId),
+      (nextState) => setLoaded({ key: requestKey, state: nextState }),
+    )
+  }, [image.status, layerId, requestKey, session])
   return { retry: () => setAttempt((current) => current + 1), state }
 }
 
