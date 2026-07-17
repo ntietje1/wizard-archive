@@ -3,11 +3,12 @@ import { internalMutation } from '../_generated/server'
 import { purgeExpiredAuthData as purgeExpiredAuthDataFn } from './functions/purgeExpiredAuthData'
 import { internal } from '../_generated/api'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import { beginCampaignDeletion } from '../campaigns/functions/lifecycle'
+import { adjustAcceptedMemberCount, beginCampaignDeletion } from '../campaigns/functions/lifecycle'
 import { isAssetOwnedByResource } from '../storage/functions/storageReferences'
 import { userDeletionStageValidator } from '../users/schema'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
+import { CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 
 const USER_DELETION_BATCH_SIZE = 32
 const USER_DELETION_STAGES = [
@@ -54,6 +55,9 @@ async function deleteMembershipBatch(ctx: MutationCtx, profileId: Id<'userProfil
   for (const membership of memberships) {
     const campaign = await ctx.db.get('campaigns', membership.campaignId)
     if (campaign?.dmUserId === profileId) await beginCampaignDeletion(ctx, campaign)
+    if (membership.status === CAMPAIGN_MEMBER_STATUS.Accepted) {
+      await adjustAcceptedMemberCount(ctx, membership.campaignId, -1)
+    }
     await ctx.db.delete('campaignMembers', membership._id)
   }
   return memberships.length

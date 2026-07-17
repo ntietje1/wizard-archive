@@ -79,6 +79,7 @@ export async function createCampaignWithDm(
     dmUserId: dmProfile._id,
     slug: assertCampaignSlug(slug ?? `campaign-${n}`),
     status: 'Active' as const,
+    acceptedMemberCount: 1,
     currentSessionId: null,
     defaultFolderInheritShares: false,
     ...rest,
@@ -116,7 +117,17 @@ export async function addPlayerToCampaign(
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
     ...overrides,
   }
-  const memberId = await t.run(async (ctx) => await ctx.db.insert('campaignMembers', data))
+  const memberId = await t.run(async (ctx) => {
+    const id = await ctx.db.insert('campaignMembers', data)
+    if (data.status === CAMPAIGN_MEMBER_STATUS.Accepted) {
+      const campaign = await ctx.db.get('campaigns', campaignId)
+      if (!campaign) throw new Error('Campaign not found')
+      await ctx.db.patch('campaigns', campaignId, {
+        acceptedMemberCount: campaign.acceptedMemberCount + 1,
+      })
+    }
+    return id
+  })
   return { memberId, memberDomainId: data.campaignMemberUuid, ...data }
 }
 

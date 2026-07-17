@@ -6,6 +6,7 @@ import type { CampaignMemberStatus } from '../../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { requireCampaignMemberRow } from './campaignIdentity'
+import { adjustAcceptedMemberCount } from './lifecycle'
 
 const VALID_STATUS_TRANSITIONS: Record<
   CampaignMemberStatus,
@@ -40,6 +41,12 @@ export async function updateCampaignMemberStatus(
       ERROR_CODE.VALIDATION_FAILED,
       `Cannot transition from ${member.status} to ${status}`,
     )
+  }
+
+  const wasAccepted = member.status === CAMPAIGN_MEMBER_STATUS.Accepted
+  const willBeAccepted = status === CAMPAIGN_MEMBER_STATUS.Accepted
+  if (wasAccepted !== willBeAccepted) {
+    await adjustAcceptedMemberCount(ctx, member.campaignId, willBeAccepted ? 1 : -1)
   }
 
   await ctx.db.patch('campaignMembers', member._id, {

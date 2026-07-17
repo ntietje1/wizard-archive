@@ -25,6 +25,7 @@ const campaignFields = {
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
+  acceptedMemberCount: v.number(),
   defaultFolderInheritShares: v.boolean(),
 }
 

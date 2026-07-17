@@ -46,6 +46,7 @@ export async function createCampaign(
     dmUserId: profile._id,
     slug,
     status: CAMPAIGN_STATUS.Active,
+    acceptedMemberCount: 1,
     currentSessionId: null,
     defaultFolderInheritShares: false,
   })

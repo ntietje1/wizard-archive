@@ -240,7 +240,10 @@ describe('onDeleteUser', () => {
     await finishScheduledWork(t)
 
     await t.run(async (ctx) => {
-      expect(await ctx.db.get('campaigns', campaignId)).toMatchObject({ status: 'Active' })
+      expect(await ctx.db.get('campaigns', campaignId)).toMatchObject({
+        status: 'Active',
+        acceptedMemberCount: 1,
+      })
       expect(await ctx.db.get('campaignMembers', dmMemberId)).toMatchObject({ status: 'Accepted' })
       expect(await ctx.db.get('campaignMembers', playerMemberId)).toBeNull()
       expect(await ctx.db.get('userProfiles', player.profile._id)).toBeNull()

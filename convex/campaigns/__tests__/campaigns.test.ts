@@ -22,8 +22,18 @@ import {
 } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import type { Id } from '../../_generated/dataModel'
 
 afterEach(() => vi.useRealTimers())
+
+async function acceptedMemberCount(
+  t: ReturnType<typeof createTestContext>,
+  campaignId: Id<'campaigns'>,
+) {
+  return await t.run(
+    async (ctx) => (await ctx.db.get('campaigns', campaignId))!.acceptedMemberCount,
+  )
+}
 
 describe('createCampaign', () => {
   const t = createTestContext()
@@ -46,6 +56,7 @@ describe('createCampaign', () => {
       expect(campaign!.slug).toBe('my-campaign')
       expect(campaign!.dmUserId).toBe(profile._id)
       expect(campaign!.status).toBe('Active')
+      expect(campaign!.acceptedMemberCount).toBe(1)
       expect(isUuidV7(campaign!.campaignUuid)).toBe(true)
 
       const members = await ctx.db
@@ -198,6 +209,37 @@ describe('getUserCampaigns', () => {
         (campaign, index) => campaign.createdAt >= (campaigns[index + 1]?.createdAt ?? 0),
       ),
     ).toBe(true)
+  })
+
+  it('bounds a maximum page independently of campaign membership history', async () => {
+    const bounded = createTestContext()
+    const user = await setupUser(bounded)
+    const historyUser = await setupUser(bounded)
+    const campaigns = await Promise.all(
+      Array.from({ length: 50 }, () => createCampaignWithDm(bounded, user.profile)),
+    )
+    await Promise.all(
+      campaigns.map(({ campaignId }) =>
+        bounded.run(async (ctx) => {
+          for (let index = 0; index < 100; index += 1) {
+            await ctx.db.insert('campaignMembers', {
+              campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+              userId: historyUser.profile._id,
+              campaignId,
+              role: 'Player',
+              status: 'Removed',
+            })
+          }
+        }),
+      ),
+    )
+
+    const result = await user.authed.query(api.campaigns.queries.getUserCampaigns, {
+      paginationOpts: { cursor: null, numItems: 1_000 },
+    })
+
+    expect(result.page).toHaveLength(50)
+    expect(result.page.every((campaign) => campaign.acceptedMemberCount === 1)).toBe(true)
   })
 
   it('excludes Pending memberships', async () => {
@@ -791,6 +833,7 @@ describe('updateCampaignMemberStatus', () => {
       const member = await ctx.db.get('campaignMembers', memberId)
       expect(member!.status).toBe('Accepted')
     })
+    expect(await acceptedMemberCount(t, campaignId)).toBe(2)
   })
 
   it('transitions Pending to Rejected', async () => {
@@ -811,6 +854,7 @@ describe('updateCampaignMemberStatus', () => {
       const member = await ctx.db.get('campaignMembers', memberId)
       expect(member!.status).toBe('Rejected')
     })
+    expect(await acceptedMemberCount(t, campaignId)).toBe(1)
   })
 
   it('transitions Accepted to Removed', async () => {
@@ -827,6 +871,7 @@ describe('updateCampaignMemberStatus', () => {
       const member = await dbCtx.db.get('campaignMembers', ctx.player.memberId)
       expect(member!.status).toBe('Removed')
     })
+    expect(await acceptedMemberCount(t, ctx.campaignId)).toBe(1)
   })
 
   it('transitions Rejected to Accepted', async () => {
@@ -847,6 +892,7 @@ describe('updateCampaignMemberStatus', () => {
       const member = await ctx.db.get('campaignMembers', memberId)
       expect(member!.status).toBe('Accepted')
     })
+    expect(await acceptedMemberCount(t, campaignId)).toBe(2)
   })
 
   it('transitions Removed to Accepted', async () => {
@@ -865,6 +911,30 @@ describe('updateCampaignMemberStatus', () => {
 
     const member = await t.run(async (ctx) => await ctx.db.get('campaignMembers', memberId))
     expect(member?.status).toBe('Accepted')
+    expect(await acceptedMemberCount(t, campaignId)).toBe(2)
+  })
+
+  it('serializes concurrent accepted transitions through the campaign count', async () => {
+    const dm = await setupUser(t)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const players = await Promise.all([setupUser(t), setupUser(t)])
+    const members = await Promise.all(
+      players.map((player) =>
+        addPlayerToCampaign(t, campaignId, player.profile, { status: 'Pending' }),
+      ),
+    )
+
+    await Promise.all(
+      members.map((member) =>
+        dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+          campaignId: campaignDomainId,
+          memberId: member.memberDomainId,
+          status: 'Accepted',
+        }),
+      ),
+    )
+
+    expect(await acceptedMemberCount(t, campaignId)).toBe(3)
   })
 
   it('rejects Accepted to Accepted', async () => {
@@ -878,6 +948,7 @@ describe('updateCampaignMemberStatus', () => {
         status: 'Accepted',
       }),
     )
+    expect(await acceptedMemberCount(t, ctx.campaignId)).toBe(2)
   })
 
   it('rejects Pending to Removed', async () => {
@@ -1139,6 +1210,7 @@ describe('deleteCampaign', () => {
     await t.run(async (dbCtx) => {
       const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign?.status).toBe('Deleted')
+      expect(campaign?.acceptedMemberCount).toBe(0)
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 

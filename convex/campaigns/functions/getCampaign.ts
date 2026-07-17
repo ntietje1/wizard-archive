@@ -26,9 +26,7 @@ function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
   }
 }
 
-function toCampaign(
-  campaign: CampaignRow,
-): Omit<Campaign, 'dmUserProfile' | 'myMembership' | 'acceptedMemberCount'> {
+function toCampaign(campaign: CampaignRow): Omit<Campaign, 'dmUserProfile' | 'myMembership'> {
   const {
     _id: _rowId,
     _creationTime,
@@ -44,25 +42,11 @@ function toCampaign(
   }
 }
 
-async function countAcceptedMembers(
-  ctx: QueryCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
-): Promise<number> {
-  const members = await ctx.db
-    .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
-    .collect()
-  return members.filter((m) => m.status === CAMPAIGN_MEMBER_STATUS.Accepted).length
-}
-
 async function enhanceCampaign(
   ctx: QueryCtx,
   { campaign }: { campaign: CampaignRow },
 ): Promise<Campaign> {
-  const [dmUserProfile, acceptedMemberCount] = await Promise.all([
-    getUserProfileById(ctx, { profileId: campaign.dmUserId }),
-    countAcceptedMembers(ctx, { campaignId: campaign._id }),
-  ])
+  const dmUserProfile = await getUserProfileById(ctx, { profileId: campaign.dmUserId })
   if (!dmUserProfile) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign DM profile not found')
   const identity = await ctx.auth.getUserIdentity()
   let myMembership: CampaignMemberSummary | null = null
@@ -92,7 +76,6 @@ async function enhanceCampaign(
   return {
     ...toCampaign(campaign),
     dmUserProfile: toUserProfileSummary(dmUserProfile),
-    acceptedMemberCount,
     myMembership,
   }
 }
