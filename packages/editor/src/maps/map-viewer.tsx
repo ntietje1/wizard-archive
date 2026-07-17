@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
-import { validateFileUpload } from '../../../../shared/storage/validation'
 import type {
   MapContentMutationResult,
   MapImageAttachment,
@@ -18,10 +17,6 @@ import type { AssetReplacementController } from '../resources/asset-replacement'
 import { AssetReplacementButton } from '../resources/asset-replacement-button'
 import { beginContentObjectUrlLoad } from '../resources/content-object-url'
 import type { ContentObjectUrlState } from '../resources/content-object-url'
-
-const MAP_IMAGE_ACCEPT_PATTERN = 'image/gif,image/jpeg,image/png,image/webp'
-const MAP_IMAGE_TYPES = new Set(['image/gif', 'image/jpeg', 'image/png', 'image/webp'])
-const MAP_IMAGE_EXTENSIONS = new Set(['gif', 'jpeg', 'jpg', 'png', 'webp'])
 
 type MapImageState = { readonly status: 'empty' } | ContentObjectUrlState
 
@@ -379,7 +374,6 @@ function useMapImageReplacement(
     },
     replace: async (target, source) =>
       await target.session.replaceImage(target.layerId, target.expectedVersion, source),
-    validate: validateMapImage,
     message: mapImageMutationMessage,
     retryable: (result) => result.status === 'retryable' || result.reason === 'version_conflict',
     readingMessage: 'Reading map image…',
@@ -399,7 +393,6 @@ function MapImageControl({
   return (
     <div className={compact ? '' : 'mt-4 flex flex-col items-center gap-2'}>
       <AssetReplacementButton
-        accept={MAP_IMAGE_ACCEPT_PATTERN}
         ariaLabel="Choose map image"
         compact={compact}
         compactLabel="Replace image"
@@ -432,16 +425,6 @@ function useMapImageUrl(session: MapSession, layerId: string | null, image: MapI
   return { retry: () => setAttempt((current) => current + 1), state }
 }
 
-function validateMapImage(file: File): string | null {
-  const validation = validateFileUpload(file.type || null, file.size, file.name)
-  if (!validation.valid) return validation.error
-  const mediaType = file.type.toLowerCase()
-  const extension = file.name.split('.').at(-1)?.toLowerCase() ?? ''
-  return MAP_IMAGE_TYPES.has(mediaType) || (!mediaType && MAP_IMAGE_EXTENSIONS.has(extension))
-    ? null
-    : 'Only PNG, JPEG, GIF, and WebP images can be used as maps.'
-}
-
 function mapImageMutationMessage(
   result: Exclude<MapContentMutationResult, { status: 'completed' }>,
 ) {
@@ -452,8 +435,6 @@ function mapImageMutationMessage(
       return 'The map image replacement could not be confirmed.'
     case 'version_conflict':
       return 'This map changed while the image was uploading.'
-    case 'invalid_image':
-      return 'The selected image is not supported.'
     case 'layer_missing':
       return 'The selected map layer no longer exists.'
     case 'content_corrupt':

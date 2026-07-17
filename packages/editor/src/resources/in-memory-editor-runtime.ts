@@ -48,7 +48,6 @@ import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource, MAX_RESOURCE_SOURCE_BYTES } from './resource-source-classifier'
-import type { ImageSourceInspection } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
 import {
   applyWorkspacePreferenceChange,
@@ -67,6 +66,7 @@ import {
   advanceMapContentVersion,
   initialMapContentVersion,
   mapImageAttachment,
+  mapImageMediaType,
   replaceMapImageAttachment,
   transitionMapContent,
 } from './map-session-policy'
@@ -128,7 +128,6 @@ export type InMemoryEditorRuntimeInput = Readonly<{
   content?: InMemoryEditorContent
   navigation: ResourceNavigation
   now?: () => number
-  inspectMapImage?: (source: FileResourceSource) => Promise<ImageSourceInspection>
 }>
 
 class InMemoryNoteSessionSource
@@ -413,7 +412,6 @@ class InMemoryMapSessionSource
     campaignId: CampaignId,
     executeStructure: ResourceStructureCommandGateway['execute'],
     private readonly isActiveResource: (resourceId: ResourceId) => boolean,
-    private readonly inspectImage: (source: FileResourceSource) => Promise<ImageSourceInspection>,
   ) {
     super(initialState, campaignId, executeStructure)
   }
@@ -449,7 +447,6 @@ class InMemoryMapSessionSource
       version,
       images,
       this.isActiveResource,
-      this.inspectImage,
       () => {
         this.set(resourceId, { status: 'ready', session })
       },
@@ -491,7 +488,6 @@ class InMemoryMapSession implements MapSession {
     private currentVersion: VersionStamp,
     images: ReadonlyArray<MapImageBytes>,
     private readonly isActiveResource: (resourceId: ResourceId) => boolean,
-    private readonly inspectImage: (source: FileResourceSource) => Promise<ImageSourceInspection>,
     private readonly publish: () => void,
   ) {
     for (const image of images) this.#images.set(image.layerId, Uint8Array.from(image.bytes))
@@ -559,20 +555,13 @@ class InMemoryMapSession implements MapSession {
       return { status: 'rejected' as const, reason: 'version_conflict' as const }
     }
     if (source.bytes.byteLength > MAX_RESOURCE_SOURCE_BYTES) {
-      return { status: 'rejected' as const, reason: 'invalid_image' as const }
-    }
-    const metadata = classifyFileResourceSource({
-      ...source,
-      inspection: { image: await this.inspectImage(source) },
-    })
-    if (metadata.classification !== 'viewable_image') {
-      return { status: 'rejected' as const, reason: 'invalid_image' as const }
+      return { status: 'rejected' as const, reason: 'invalid_command' as const }
     }
     const attachment = {
       status: 'attached' as const,
       byteSize: source.bytes.byteLength,
       digest: await sha256Digest(source.bytes),
-      mediaType: metadata.mediaType,
+      mediaType: mapImageMediaType(source.fileName),
     }
     const transition = replaceMapImageAttachment(this.currentContent, layerId, attachment)
     if (transition.status === 'rejected') return transition
@@ -722,8 +711,6 @@ export function createInMemoryEditorRuntime({
   content = {},
   navigation,
   now,
-  inspectMapImage = () =>
-    Promise.resolve({ status: 'unavailable' as const, reason: 'decoder_limit' as const }),
   scope,
   snapshot,
 }: InMemoryEditorRuntimeInput): Readonly<{ runtime: EditorRuntime; dispose(): void }> {
@@ -750,7 +737,6 @@ export function createInMemoryEditorRuntime({
       currentCatalogSnapshot().resources.some(
         (resource) => resource.id === resourceId && resource.lifecycle.state === 'active',
       ),
-    inspectMapImage,
   )
   for (const entry of content.maps ?? []) {
     maps.setReady(entry.resourceId, entry.content, entry.version, entry.images)

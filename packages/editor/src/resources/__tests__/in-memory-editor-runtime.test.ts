@@ -239,7 +239,7 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
-  it('uses current catalog targets and inspected bytes for local map mutations', async () => {
+  it('uses current catalog targets and preserves opaque bytes for local map mutations', async () => {
     const empty = emptySnapshot()
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -294,16 +294,6 @@ describe('createInMemoryEditorRuntime', () => {
           },
         ],
       },
-      inspectMapImage: () =>
-        Promise.resolve({
-          status: 'valid',
-          format: 'png',
-          width: 2,
-          height: 3,
-          frameCount: 1,
-          totalDecodedPixels: 6,
-          canonicalOrientation: true,
-        }),
       navigation: navigation(),
     })
     await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
@@ -354,7 +344,7 @@ describe('createInMemoryEditorRuntime', () => {
       reason: 'target_missing',
     })
 
-    const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    const bytes = Uint8Array.from([0, 1, 2, 3])
     await expect(
       state.session.replaceImage(null, state.session.version, {
         bytes,

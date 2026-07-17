@@ -4,7 +4,6 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceFixture } from './local-workspace-fixture'
 import { createSampleLocalWorkspaceFixture } from './sample-local-workspace'
 import { useCommittedRuntime } from '../committed-runtime'
-import { inspectLocalMapImage } from './local-map-image-inspection'
 
 export function useLocalWorkspaceRuntime({
   canEdit = true,
@@ -21,7 +20,6 @@ export function useLocalWorkspaceRuntime({
       ...workspace,
       navigation: createLocalResourceNavigation(initialResourceId ?? null),
       canEdit: canEdit && workspace.scope.projection === 'dm',
-      inspectMapImage: inspectLocalMapImage,
     })
     return { ...core, start: () => {} }
   })

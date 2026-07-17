@@ -46,7 +46,7 @@ export type AssetReplacementController = Readonly<{
 export function useAssetReplacement<T>(options: {
   target: ReplacementTarget<T>
   replace(target: T, source: FileResourceSource): Promise<ReplacementResult>
-  validate(file: File): string | null
+  validate?(file: File): string | null
   message(result: ReplacementFailure): string
   retryable(result: ReplacementFailure): boolean
   readingMessage: string
@@ -93,7 +93,7 @@ export function useAssetReplacement<T>(options: {
   }
   const choose = (file: File) => {
     const target = options.target
-    const error = options.validate(file)
+    const error = options.validate?.(file) ?? null
     if (error) {
       setState({ status: 'failed', message: error, target })
       return

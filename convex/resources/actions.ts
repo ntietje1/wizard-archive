@@ -7,6 +7,7 @@ import {
   initialFileContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
 import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
+import { mapImageMediaType } from '@wizard-archive/editor/resources/map-session-policy'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import type { ResourceSourceInspection } from '@wizard-archive/editor/resources/source-classifier'
 import { action } from '../_generated/server'
@@ -37,11 +38,16 @@ type InspectedFileUpload = Readonly<{
   upload: StoredFileUpload
 }>
 
-async function loadInspectedFileUpload(
+type LoadedFileUpload = Readonly<{
+  bytes: Uint8Array
+  upload: StoredFileUpload
+}>
+
+async function loadFileUpload(
   ctx: ActionCtx,
   campaignId: string,
   uploadSessionId: Id<'fileStorage'>,
-): Promise<InspectedFileUpload | null> {
+): Promise<LoadedFileUpload | null> {
   const upload: StoredFileUpload = await ctx.runQuery(
     internal.resources.fileUpload.prepareFileUpload,
     { campaignId, uploadSessionId },
@@ -51,6 +57,17 @@ async function loadInspectedFileUpload(
   const validation = validateFileUpload(blob.type || null, blob.size, upload.originalFileName)
   if (!validation.valid) return null
   const bytes = new Uint8Array(await blob.arrayBuffer())
+  return { bytes, upload }
+}
+
+async function loadInspectedFileUpload(
+  ctx: ActionCtx,
+  campaignId: string,
+  uploadSessionId: Id<'fileStorage'>,
+): Promise<InspectedFileUpload | null> {
+  const loaded = await loadFileUpload(ctx, campaignId, uploadSessionId)
+  if (!loaded) return null
+  const { bytes, upload } = loaded
   const preliminary = classifyFileResourceSource({ bytes, fileName: upload.originalFileName })
   if (preliminary.classification === 'rejected') return null
   const inspection = await inspectSupportedFileSource(bytes, preliminary.detectedFormat)
@@ -139,10 +156,8 @@ export const replaceMapImage = action({
   },
   returns: mapContentMutationResultValidator,
   handler: async (ctx, args): Promise<StoredMapContentMutationResult> => {
-    const upload = await loadInspectedFileUpload(ctx, args.campaignId, args.uploadSessionId)
-    if (!upload || upload.metadata.classification !== 'viewable_image') {
-      return { status: 'rejected', reason: 'invalid_image' }
-    }
+    const upload = await loadFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    if (!upload) return { status: 'rejected', reason: 'invalid_command' }
     return await ctx.runMutation(internal.resources.mutations.commitMapImageReplacement, {
       campaignId: upload.upload.campaignId,
       resourceId: args.resourceId,
@@ -152,7 +167,7 @@ export const replaceMapImage = action({
       image: {
         byteSize: upload.bytes.byteLength,
         digest: await sha256Digest(upload.bytes),
-        mediaType: upload.metadata.mediaType,
+        mediaType: mapImageMediaType(upload.upload.originalFileName),
       },
     })
   },

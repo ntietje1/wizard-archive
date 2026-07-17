@@ -125,7 +125,6 @@ export const mapContentMutationResultValidator = v.union(
       'content_corrupt',
       'content_missing',
       'invalid_command',
-      'invalid_image',
       'layer_missing',
       'operation_id_reused',
       'pin_missing',

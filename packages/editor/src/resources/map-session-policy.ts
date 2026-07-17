@@ -17,6 +17,22 @@ import type { MapPinId, ResourceId } from './domain-id'
 const MAX_MAP_PINS = 500
 const MAX_MAP_PINS_PER_COMMAND = 100
 
+export function mapImageMediaType(fileName: string): string {
+  switch (fileName.split('.').at(-1)?.toLocaleLowerCase()) {
+    case 'gif':
+      return 'image/gif'
+    case 'jpeg':
+    case 'jpg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'webp':
+      return 'image/webp'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
 export type MapImageBytes = Readonly<{
   layerId: string | null
   bytes: Uint8Array

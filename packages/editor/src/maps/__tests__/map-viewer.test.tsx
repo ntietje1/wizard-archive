@@ -92,7 +92,7 @@ describe('MapViewer', () => {
     expect(revokeObjectURL).not.toHaveBeenCalled()
   })
 
-  it('uploads an empty map image and rejects unsupported files before reading', async () => {
+  it('uploads opaque map bytes without inspecting them', async () => {
     const replaceImage = vi.fn(() =>
       Promise.resolve({
         status: 'completed' as const,
@@ -103,23 +103,16 @@ describe('MapViewer', () => {
     const session = mapSession(emptyMap(), { replaceImage })
     renderMap(session)
     const input = screen.getByLabelText('Choose map image')
-    const invalid = new File(['text'], 'notes.txt', { type: 'text/plain' })
-    const invalidRead = vi.fn()
-    Object.defineProperty(invalid, 'arrayBuffer', { value: invalidRead })
-    fireEvent.change(input, { target: { files: [invalid] } })
-    expect(await screen.findByRole('alert')).toHaveTextContent('Only PNG, JPEG, GIF, and WebP')
-    expect(invalidRead).not.toHaveBeenCalled()
-
     const bytes = new Uint8Array([1, 2, 3])
-    const valid = new File([Uint8Array.from(bytes).buffer], 'map.png', { type: 'image/png' })
-    Object.defineProperty(valid, 'arrayBuffer', {
+    const invalid = new File([Uint8Array.from(bytes).buffer], 'notes.txt', { type: 'text/plain' })
+    Object.defineProperty(invalid, 'arrayBuffer', {
       value: () => Promise.resolve(Uint8Array.from(bytes).buffer),
     })
-    fireEvent.change(input, { target: { files: [valid] } })
+    fireEvent.change(input, { target: { files: [invalid] } })
     await waitFor(() =>
       expect(replaceImage).toHaveBeenCalledWith(null, session.version, {
         bytes,
-        fileName: 'map.png',
+        fileName: 'notes.txt',
       }),
     )
   })

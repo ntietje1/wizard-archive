@@ -78,7 +78,7 @@ async function prepareMapImageReplacement(
   if (mapImageReplayMatches(claim, currentImage, args.image, digest)) {
     return { status: 'completed', content: rows.projected, version: rows.content.version }
   }
-  if (claim.status === 'claimed') return rejected('invalid_image')
+  if (claim.status === 'claimed') return rejected('invalid_command')
   const currentVersion = assertVersionStamp(rows.content.version)
   if (!versionStampEquals(currentVersion, assertVersionStamp(args.expectedVersion))) {
     return rejected('version_conflict')
@@ -152,7 +152,7 @@ async function loadMapImageReplacement(
     sessionId: args.uploadSessionId,
   })
   return claim.status === 'unavailable'
-    ? { ready: false, result: rejected('invalid_image') }
+    ? { ready: false, result: rejected('invalid_command') }
     : { ready: true, resourceId, rows, currentImage, claim, digest }
 }
 

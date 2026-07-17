@@ -742,7 +742,7 @@ describe('resource structure commands', () => {
     })
   })
 
-  it('replaces map images idempotently, advances the map version, and retires old assets', async () => {
+  it('replaces opaque map bytes idempotently, advances the version, and retires old assets', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = await createResource(campaign, campaignUuid, 'map', null, 'Map')
@@ -754,7 +754,7 @@ describe('resource structure commands', () => {
       if (!content) throw new TypeError('Expected map content')
       return content.version
     })
-    const originalBytes = testPng(1, 1)
+    const originalBytes = Uint8Array.from([0, 1, 2, 3])
     const original = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
@@ -793,7 +793,7 @@ describe('resource structure commands', () => {
         layerId: null,
         uploadSessionId: original.sessionId,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_image' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
     const fileId = await createResource(campaign, campaignUuid, 'file', null, 'File')
     await expect(
       asDm(campaign).action(api.resources.actions.replaceFileContent, {

@@ -3,12 +3,18 @@ import { initialVersion, sha256Digest } from '../component-version'
 import type { MapResourceContent } from '../content-session-contract'
 import {
   copyMapImageBytes,
+  mapImageMediaType,
   reconcileMapSnapshot,
   transitionMapContent,
 } from '../map-session-policy'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 
 describe('map session policy', () => {
+  it('labels map bytes from their authored filename without inspecting content', () => {
+    expect(mapImageMediaType('opaque.PNG')).toBe('image/png')
+    expect(mapImageMediaType('not-an-image.txt')).toBe('application/octet-stream')
+  })
+
   it('applies one canonical command transition with backend-visible pin defaults', () => {
     const resourceId = testDomainId('resource', 'map-policy')
     const targetId = testDomainId('resource', 'map-policy-target')
