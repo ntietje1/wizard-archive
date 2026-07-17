@@ -30,6 +30,11 @@ import type {
   CanvasViewport,
 } from './interaction-types'
 import { canvasNodeSize } from './canvas-layout'
+import {
+  CANVAS_EDGE_PENDING_OPACITY,
+  canvasScreenStrokeWidth,
+  resolveCanvasEdgeStyle,
+} from './canvas-edge-style'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { CanvasNodeSelectionIndicator, CanvasSelectionBounds } from './canvas-selection-bounds'
 import { CanvasSnapGuides } from './canvas-snap-guides'
@@ -101,9 +106,14 @@ export function CanvasScene({
             <CanvasEdge
               edge={edge}
               nodeById={nodeById}
-              selected={visualSelection.edgeIds.has(edge.id)}
+              pendingSelected={
+                interaction.interaction.type === 'selecting' &&
+                interaction.interaction.candidate?.edgeIds.has(edge.id) === true
+              }
               selection={visualSelection}
               tool={interaction.tool}
+              visuallySelected={visualSelection.edgeIds.has(edge.id)}
+              zoom={interaction.viewport.zoom}
               onOpenContextMenu={onOpenContextMenu}
               onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
             />
@@ -485,32 +495,41 @@ function CanvasEdge({
   nodeById,
   onOpenContextMenu,
   onSelect,
-  selected,
+  pendingSelected,
   selection,
   tool,
+  visuallySelected,
+  zoom,
 }: {
   edge: CanvasDocumentEdge
   nodeById: ReadonlyMap<CanvasNodeId, CanvasDocumentNode>
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   onSelect: (additive: boolean) => void
-  selected: boolean
+  pendingSelected: boolean
   selection: CanvasSelection
   tool: CanvasInteractionSnapshot['tool']
+  visuallySelected: boolean
+  zoom: number
 }) {
   if (edge.hidden) return null
   const path = canvasEdgePath(edge, nodeById)
   if (!path) return null
+  const style = resolveCanvasEdgeStyle(edge.style)
+  const primaryStrokeWidth = canvasScreenStrokeWidth(style.strokeWidth, zoom)
+  const highlightStrokeWidth = canvasScreenStrokeWidth(Math.max(style.strokeWidth * 0.15, 1), zoom)
   return (
     <g
       className={tool === 'select' ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}
       data-edge-id={edge.id}
-      data-selected={selected}
+      data-selected={visuallySelected}
       data-testid="canvas-edge"
       onContextMenu={(event) => {
         event.stopPropagation()
         onOpenContextMenu(
           event,
-          selected ? selection : { nodeIds: new Set<CanvasNodeId>(), edgeIds: new Set([edge.id]) },
+          visuallySelected
+            ? selection
+            : { nodeIds: new Set<CanvasNodeId>(), edgeIds: new Set([edge.id]) },
         )
       }}
       onPointerDown={(event) => {
@@ -519,14 +538,38 @@ function CanvasEdge({
         onSelect(event.metaKey || event.ctrlKey)
       }}
     >
-      <path d={path} fill="none" stroke="transparent" strokeWidth={CANVAS_EDGE_HIT_STROKE_WIDTH} />
       <path
         d={path}
+        data-canvas-authored-stroke-width={style.strokeWidth}
+        data-testid="canvas-edge-primary-path"
         fill="none"
-        stroke={selected ? 'var(--ring)' : (edge.style?.stroke ?? 'var(--foreground)')}
-        strokeOpacity={edge.style?.opacity ?? 0.75}
-        strokeWidth={edge.style?.strokeWidth ?? 2}
+        stroke={style.stroke}
+        strokeLinecap="square"
+        strokeLinejoin="round"
+        strokeOpacity={pendingSelected ? CANVAS_EDGE_PENDING_OPACITY : style.opacity}
+        strokeWidth={primaryStrokeWidth}
       />
+      <path
+        d={path}
+        data-testid="canvas-edge-interaction"
+        fill="none"
+        pointerEvents="stroke"
+        stroke="transparent"
+        strokeWidth={CANVAS_EDGE_HIT_STROKE_WIDTH}
+      />
+      {visuallySelected && (
+        <path
+          d={path}
+          data-canvas-highlight-stroke-width={Math.max(style.strokeWidth * 0.15, 1)}
+          data-testid="canvas-edge-selection-highlight"
+          fill="none"
+          pointerEvents="none"
+          stroke="var(--primary)"
+          strokeLinecap="square"
+          strokeLinejoin="round"
+          strokeWidth={highlightStrokeWidth}
+        />
+      )}
     </g>
   )
 }

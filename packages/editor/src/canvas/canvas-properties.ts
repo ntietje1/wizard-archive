@@ -10,6 +10,7 @@ import type {
   CanvasEdgeType,
 } from './document-contract'
 import type { CanvasSelection } from './interaction-types'
+import { resolveCanvasEdgeStyle } from './canvas-edge-style'
 
 type CanvasPropertyCommand =
   | Readonly<{
@@ -170,7 +171,7 @@ function patchLineSelection(
           : [],
       ),
       edges: edges.flatMap((edge) =>
-        (edge.style?.strokeWidth ?? 2) !== size
+        resolveCanvasEdgeStyle(edge.style).strokeWidth !== size
           ? [{ id: edge.id, style: { strokeWidth: size } }]
           : [],
       ),
@@ -191,17 +192,17 @@ function patchLineSelection(
           ]
         : [],
     ),
-    edges: edges.flatMap((edge) =>
-      (edge.style?.stroke ?? 'var(--foreground)') !== command.value.color ||
-      (edge.style?.opacity ?? 0.75) !== opacity / 100
+    edges: edges.flatMap((edge) => {
+      const style = resolveCanvasEdgeStyle(edge.style)
+      return style.stroke !== command.value.color || style.opacity !== opacity / 100
         ? [
             {
               id: edge.id,
               style: { stroke: command.value.color, opacity: opacity / 100 },
             },
           ]
-        : [],
-    ),
+        : []
+    }),
   }
 }
 

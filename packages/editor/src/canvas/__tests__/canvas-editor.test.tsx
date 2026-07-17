@@ -541,10 +541,25 @@ describe('CanvasEditor', () => {
         .every((node) => node.getAttribute('data-selected') === 'true'),
     ).toBe(true)
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'true')
+    expect(screen.getByTestId('canvas-edge-primary-path')).toHaveAttribute(
+      'data-canvas-authored-stroke-width',
+      '1.5',
+    )
+    expect(screen.getByTestId('canvas-edge-primary-path')).toHaveAttribute(
+      'stroke',
+      'var(--foreground)',
+    )
+    expect(screen.getByTestId('canvas-edge-primary-path')).toHaveAttribute('stroke-opacity', '0.45')
+    expect(screen.getByTestId('canvas-edge-interaction')).toHaveAttribute('stroke-width', '20')
+    expect(screen.getByTestId('canvas-edge-selection-highlight')).toHaveAttribute(
+      'data-canvas-highlight-stroke-width',
+      '1',
+    )
 
     fireEvent.pointerUp(surface, { clientX: 600, clientY: 220, pointerId: 7 })
     expect(screen.queryByTestId('canvas-marquee')).not.toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByTestId('canvas-edge-primary-path')).toHaveAttribute('stroke-opacity', '1')
 
     fireEvent.click(screen.getByRole('button', { name: 'Lasso select' }))
     fireEvent.pointerDown(surface, { button: 0, clientX: 0, clientY: 0, pointerId: 8 })

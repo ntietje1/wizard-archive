@@ -8,6 +8,7 @@ import {
 import { CheckerboardSwatch } from '@wizard-archive/ui/components/checkerboard-swatch'
 import { ColorPickerPopover } from '@wizard-archive/ui/components/color-picker-popover'
 import type { CanvasDocumentController } from './document-controller'
+import { resolveCanvasEdgeStyle } from './canvas-edge-style'
 import type {
   CanvasDocumentContent,
   CanvasDocumentEdge,
@@ -292,16 +293,16 @@ function resolveSelectionToolbarProperties(
             color: node.data.color,
             opacity: node.data.opacity ?? 100,
           })),
-          ...selectedEdges.map((edge) => ({
-            color: edge.style?.stroke ?? 'var(--foreground)',
-            opacity: (edge.style?.opacity ?? 0.75) * 100,
-          })),
+          ...selectedEdges.map((edge) => {
+            const style = resolveCanvasEdgeStyle(edge.style)
+            return { color: style.stroke, opacity: style.opacity * 100 }
+          }),
         ])
       : unavailable,
     lineWidth: onlyLineElements
       ? resolveCanvasSharedValue([
           ...strokeNodes.map((node) => node.data.size),
-          ...selectedEdges.map((edge) => edge.style?.strokeWidth ?? 2),
+          ...selectedEdges.map((edge) => resolveCanvasEdgeStyle(edge.style).strokeWidth),
         ])
       : unavailable,
     edgeType: onlyEdges

@@ -3,6 +3,7 @@ import type * as Y from 'yjs'
 import { canvasEdgePath } from './canvas-edge-geometry'
 import { fitCanvasContent, canvasNodeSize } from './canvas-layout'
 import { CanvasNodeVisual } from './canvas-node-visual'
+import { resolveCanvasEdgeStyle } from './canvas-edge-style'
 import { parseCanvasDocumentContent } from './document-contract'
 import type { CanvasDocumentNode } from './document-contract'
 import type { CanvasNodeId } from '../resources/domain-id'
@@ -51,6 +52,7 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
           if (edge.hidden) return null
           const path = canvasEdgePath(edge, nodeById)
           if (!path) return null
+          const style = resolveCanvasEdgeStyle(edge.style)
           return (
             <svg
               key={edge.id}
@@ -62,9 +64,11 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
               <path
                 d={path}
                 fill="none"
-                stroke={edge.style?.stroke ?? 'var(--foreground)'}
-                strokeOpacity={edge.style?.opacity ?? 0.75}
-                strokeWidth={edge.style?.strokeWidth ?? 2}
+                stroke={style.stroke}
+                strokeLinecap="square"
+                strokeLinejoin="round"
+                strokeOpacity={style.opacity}
+                strokeWidth={style.strokeWidth}
               />
             </svg>
           )

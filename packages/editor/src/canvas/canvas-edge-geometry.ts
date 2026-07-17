@@ -8,9 +8,10 @@ import type {
 import type { CanvasNodeId } from '../resources/domain-id'
 import { createCanvasBoundsIndex } from './bounds-index'
 import type { CanvasBounds } from './canvas-bounds'
+import { resolveCanvasEdgeStyle } from './canvas-edge-style'
 
 const BEZIER_SEGMENTS = 16
-export const CANVAS_EDGE_HIT_STROKE_WIDTH = 12
+export const CANVAS_EDGE_HIT_STROKE_WIDTH = 20
 
 export const CANVAS_CONNECTION_HANDLES: ReadonlyArray<CanvasConnectionHandle> = [
   'top',
@@ -92,7 +93,8 @@ export function canvasEdgeBounds(
   const endpoints = edgeEndpoints(edge, nodesById)
   if (!endpoints) return null
   const points = edgeBoundsPoints(edge.type, endpoints)
-  const padding = Math.max(CANVAS_EDGE_HIT_STROKE_WIDTH, edge.style?.strokeWidth ?? 2) / 2
+  const padding =
+    Math.max(CANVAS_EDGE_HIT_STROKE_WIDTH, resolveCanvasEdgeStyle(edge.style).strokeWidth) / 2
   let left = Infinity
   let top = Infinity
   let right = -Infinity
