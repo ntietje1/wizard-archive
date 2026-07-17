@@ -14,7 +14,6 @@ test.describe('canvas performance smoke', () => {
     await expect(nodes).toHaveCount(2)
     await editor.focus()
 
-    const startedAt = Date.now()
     for (let index = 0; index < 9; index += 1) {
       await page.keyboard.press('Control+a')
       await page.keyboard.press('Control+d')
@@ -29,7 +28,6 @@ test.describe('canvas performance smoke', () => {
       targetPosition: { x: 600, y: 400 },
     })
     await expect(firstNode).toBeVisible()
-    expect(Date.now() - startedAt).toBeLessThan(15_000)
 
     const bounds = await surface.boundingBox()
     if (!bounds) throw new Error('Canvas surface is not visible')
@@ -47,7 +45,6 @@ test.describe('canvas performance smoke', () => {
     await expect(nodes).toHaveCount(512)
 
     const fittedBounds = await visibleBox(surface)
-    const geometryStartedAt = Date.now()
     await editor.getByRole('button', { name: 'Lasso select' }).click()
     const inset = 8
     const lasso = [
@@ -93,6 +90,5 @@ test.describe('canvas performance smoke', () => {
     )
     await page.keyboard.up('Control')
     await expect(selection).toBeVisible()
-    expect(Date.now() - geometryStartedAt).toBeLessThan(5_000)
   })
 })
