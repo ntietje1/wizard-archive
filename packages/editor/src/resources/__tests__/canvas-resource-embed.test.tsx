@@ -139,7 +139,7 @@ describe('CanvasResourceEmbed', () => {
     expect(screen.getByRole('textbox', { name: 'Ship manifest embedded note' })).toBe(editor)
     expect(editor).toHaveAttribute('contenteditable', 'true')
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
-    expect(screen.getByRole('button', { name: 'Value' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Value' })).not.toBeInTheDocument()
     expect(loader.ensureResource).not.toHaveBeenCalled()
 
     createEditor.mockRestore()

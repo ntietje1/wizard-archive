@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 test.describe('canonical note values', () => {
   test('authors dependencies, preserves drag identity, and renders in viewer mode', async ({
@@ -9,7 +10,7 @@ test.describe('canonical note values', () => {
     const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
     await expect(editor).toBeVisible()
 
-    await page.getByRole('button', { name: 'Value', exact: true }).click()
+    await insertValue(page)
     const source = page.getByRole('button', { name: 'Value: 0' })
     const sourceId = await source.getAttribute('data-note-value-id')
     expect(sourceId).toMatch(/^[0-9a-f-]{36}$/)
@@ -19,7 +20,7 @@ test.describe('canonical note values', () => {
     await dialog.getByRole('combobox', { name: 'Value formula' }).fill('7')
     await dialog.getByRole('button', { name: 'Close value editor' }).click()
 
-    await page.getByRole('button', { name: 'Value', exact: true }).click()
+    await insertValue(page)
     const dependent = page.getByRole('button', { name: 'Value: 0' })
     await dependent.click()
     dialog = page.getByRole('dialog')
@@ -56,3 +57,12 @@ test.describe('canonical note values', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 })
+
+async function insertValue(page: Page) {
+  const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
+  const lastBlock = editor.locator(':scope > .bn-block-group > .bn-block-outer').last()
+  await lastBlock.hover()
+  await page.getByRole('button', { name: 'Add block' }).click()
+  await page.keyboard.type('/value')
+  await page.getByRole('option', { name: /^Value/ }).click()
+}

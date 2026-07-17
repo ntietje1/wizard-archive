@@ -9,6 +9,7 @@ import {
 } from '../../resources/domain-id'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../document/headless-yjs'
 import { NoteEditor } from '../note-editor'
+import { insertNoteValueFromSlashMenu } from '../slash-menu/value-slash-menu'
 
 describe('NoteEditor', () => {
   it('renders the canonical document fragment in read-only mode', async () => {
@@ -43,6 +44,7 @@ describe('NoteEditor', () => {
 
   it('renders remote document updates in view mode', async () => {
     const document = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    const createEditor = vi.spyOn(BlockNoteEditor, 'create')
     render(
       <>
         <NoteEditor document={document} label="Live viewer" mode="view" />
@@ -55,9 +57,10 @@ describe('NoteEditor', () => {
       </>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Value' }))
+    insertValueWithLatestEditor(createEditor)
 
     expect(await screen.findByRole('textbox', { name: 'Live viewer' })).toHaveTextContent('Value0')
+    createEditor.mockRestore()
   })
 
   it('switches presentation mode without recreating the editor or document', async () => {
@@ -149,6 +152,7 @@ describe('NoteEditor', () => {
       ],
       NOTE_YJS_FRAGMENT,
     )
+    const createEditor = vi.spyOn(BlockNoteEditor, 'create')
     render(
       <NoteEditor
         document={document}
@@ -159,7 +163,7 @@ describe('NoteEditor', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Value' }))
+    insertValueWithLatestEditor(createEditor)
 
     await waitFor(() => {
       const [block] = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
@@ -169,6 +173,7 @@ describe('NoteEditor', () => {
       expect(value?.type).toBe('value')
       if (value?.type === 'value') expect(isUuidV7(value.props.valueId)).toBe(true)
     })
+    createEditor.mockRestore()
   })
 
   it('creates canonical block identities through native keyboard commands', async () => {
@@ -205,6 +210,7 @@ describe('NoteEditor', () => {
       ],
       NOTE_YJS_FRAGMENT,
     )
+    const createEditor = vi.spyOn(BlockNoteEditor, 'create')
     render(
       <NoteEditor
         document={document}
@@ -215,7 +221,7 @@ describe('NoteEditor', () => {
       />,
     )
     const textbox = await screen.findByRole('textbox', { name: 'History note' })
-    fireEvent.click(screen.getByRole('button', { name: 'Value' }))
+    insertValueWithLatestEditor(createEditor)
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Value: 0' })).toBeInTheDocument(),
     )
@@ -232,6 +238,7 @@ describe('NoteEditor', () => {
       shiftKey: true,
     })
     expect(await screen.findByRole('button', { name: 'Value: 0' })).toBeInTheDocument()
+    createEditor.mockRestore()
   })
 
   it('stops external file drops without intercepting rich internal transfers', () => {
@@ -254,18 +261,25 @@ describe('NoteEditor', () => {
         onFlush={() => Promise.resolve()}
       />,
     )
-    const dropTarget = screen.getByRole('button', { name: 'Value' })
-    const surface = dropTarget.closest('.resource-note-editor')
+    const textbox = screen.getByRole('textbox', { name: 'Drop-protected note' })
+    const surface = textbox.closest('.resource-note-editor')
     if (!(surface instanceof HTMLElement)) throw new Error('Expected note editor surface')
     const received = vi.fn()
     surface.addEventListener('drop', received)
 
-    fireEvent.drop(dropTarget, {
+    fireEvent.drop(surface, {
       dataTransfer: { files: [new File(['content'], 'outside.txt')], types: ['Files'] },
     })
     expect(received).not.toHaveBeenCalled()
 
-    fireEvent.drop(dropTarget, { dataTransfer: { files: [], types: ['text/html'] } })
+    fireEvent.drop(surface, { dataTransfer: { files: [], types: ['text/html'] } })
     expect(received).toHaveBeenCalledOnce()
   })
 })
+
+function insertValueWithLatestEditor(createEditor: ReturnType<typeof vi.spyOn>) {
+  const editor = createEditor.mock.results.at(-1)?.value
+  if (!editor) throw new Error('Expected a BlockNote editor')
+  editor.focus()
+  insertNoteValueFromSlashMenu(editor)
+}

@@ -20,15 +20,27 @@ describe('local note history', () => {
     const textbox = await screen.findByRole('textbox', {
       name: 'The Lantern Market note editor',
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Value' }))
-    await screen.findByRole('button', { name: 'Value: 0' })
+    const initialBlockCount = textbox.querySelectorAll('[data-node-type="blockContainer"]').length
+    fireEvent.click(textbox)
+    fireEvent.keyDown(textbox, { key: 'Enter' })
+    await waitFor(() =>
+      expect(textbox.querySelectorAll('[data-node-type="blockContainer"]')).toHaveLength(
+        initialBlockCount + 1,
+      ),
+    )
 
     fireEvent.keyDown(textbox, { key: 'z', ctrlKey: true })
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Value: 0' })).not.toBeInTheDocument(),
+      expect(textbox.querySelectorAll('[data-node-type="blockContainer"]')).toHaveLength(
+        initialBlockCount,
+      ),
     )
 
     fireEvent.keyDown(textbox, { key: 'z', ctrlKey: true, shiftKey: true })
-    expect(await screen.findByRole('button', { name: 'Value: 0' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(textbox.querySelectorAll('[data-node-type="blockContainer"]')).toHaveLength(
+        initialBlockCount + 1,
+      ),
+    )
   })
 })

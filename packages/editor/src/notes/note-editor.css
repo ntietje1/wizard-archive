@@ -1,14 +1,38 @@
 @import '@blocknote/shadcn/style.css';
 
+.resource-note-editor .note-editor-scroll-content,
+.resource-note-editor .note-editor-fill-height,
+.resource-note-editor .note-editor-fill-height > div,
+.resource-note-editor .note-editor-core-surface,
 .resource-note-editor .bn-container,
 .resource-note-editor .bn-editor {
   min-height: 100%;
 }
 
+.resource-note-editor .note-editor-scroll-content,
+.resource-note-editor .note-editor-fill-height,
+.resource-note-editor .note-editor-fill-height > div,
+.resource-note-editor .note-editor-core-surface,
+.resource-note-editor .bn-container {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+.resource-note-editor .note-editor-fill-height,
+.resource-note-editor .note-editor-fill-height > div,
+.resource-note-editor .note-editor-core-surface,
+.resource-note-editor .bn-container,
 .resource-note-editor .bn-editor {
+  flex: 1;
+}
+
+.resource-note-editor .bn-editor {
+  width: 100%;
+  max-width: 48rem;
   margin-inline: auto;
-  max-width: 56rem;
-  padding: 2.5rem max(3rem, calc((100% - 56rem) / 2));
+  border-radius: 0;
+  padding-top: 0.5rem;
 }
 
 .resource-note-editor .note-value-inline {
@@ -27,7 +51,6 @@
 }
 
 .resource-note-editor .note-value-inline > svg,
-.note-editor-toolbar svg,
 .note-value-popover-heading svg {
   width: 0.875rem;
   height: 0.875rem;
@@ -91,32 +114,6 @@
 
 .resource-note-editor .note-value-error {
   color: var(--destructive);
-}
-
-.resource-note-editor .note-editor-toolbar {
-  position: sticky;
-  z-index: 10;
-  top: 0;
-  display: flex;
-  justify-content: flex-end;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--background) 92%, transparent);
-  padding: 0.375rem 0.75rem;
-  backdrop-filter: blur(8px);
-}
-
-.resource-note-editor .note-editor-toolbar button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  border-radius: 0.375rem;
-  padding: 0.375rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.resource-note-editor .note-editor-toolbar button:hover {
-  background: var(--muted);
 }
 
 .resource-note-editor .note-embed-placeholder {

@@ -33,9 +33,11 @@ test.describe('note authoring mechanics', () => {
   })
 
   test('undoes and redoes canonical editor commands through keyboard history', async ({ page }) => {
-    await openNoteEditor(page)
+    const editor = await openNoteEditor(page)
 
-    await page.getByRole('button', { name: 'Value', exact: true }).click()
+    await appendParagraph(page, editor)
+    await page.keyboard.type('/value')
+    await page.getByRole('option', { name: /^Value/ }).click()
     const insertedValue = page.getByRole('button', { name: 'Value: 0' })
     await expect(insertedValue).toBeVisible()
     await expect(page.locator(':focus')).toHaveAttribute('contenteditable', 'true')
@@ -85,6 +87,7 @@ test.describe('note authoring mechanics', () => {
 
   test('filters slash commands and exposes native block controls', async ({ page }) => {
     const editor = await openNoteEditor(page)
+    await expect(editor).not.toBeFocused()
 
     await appendParagraph(page, editor)
     await page.keyboard.type('/heading 3')
@@ -101,13 +104,7 @@ test.describe('note authoring mechanics', () => {
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
     await page.keyboard.press('Escape')
 
-    await expect
-      .poll(() =>
-        page
-          .locator('.resource-note-editor .bn-container')
-          .evaluate((element) => element.getBoundingClientRect().height),
-      )
-      .toBeGreaterThan(300)
+    await assertEditorOwnsViewportWhitespace(page)
   })
 })
 
@@ -117,6 +114,30 @@ async function openNoteEditor(page: Page) {
   const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
   await expect(editor).toBeVisible()
   return editor
+}
+
+async function assertEditorOwnsViewportWhitespace(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const editor = document.querySelector('.resource-note-editor .bn-editor')
+        const viewport = document.querySelector(
+          '.resource-note-editor [data-slot="scroll-area-viewport"]',
+        )
+        if (!editor || !viewport) return { bottom: false, top: false }
+
+        const editorRect = editor.getBoundingClientRect()
+        const viewportRect = viewport.getBoundingClientRect()
+        const x = editorRect.left + editorRect.width / 2
+        return {
+          top: Boolean(document.elementFromPoint(x, editorRect.top + 4)?.closest('.bn-editor')),
+          bottom: Boolean(
+            document.elementFromPoint(x, viewportRect.bottom - 24)?.closest('.bn-editor'),
+          ),
+        }
+      }),
+    )
+    .toEqual({ bottom: true, top: true })
 }
 
 async function appendParagraph(page: Page, editor: Locator) {
