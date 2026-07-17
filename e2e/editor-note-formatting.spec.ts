@@ -68,29 +68,31 @@ test.describe('note authoring mechanics', () => {
   test('copies and pastes rich text while assigning copied Values new identities', async ({
     page,
   }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     const editor = await openNoteEditor(page)
 
     await appendParagraph(page, editor)
-    await page.keyboard.type('Clipboard passage')
-    const sourceParagraph = editor.locator('p', { hasText: 'Clipboard passage' })
-    await sourceParagraph.evaluate((element) => {
-      const range = document.createRange()
-      range.selectNodeContents(element)
-      const selection = window.getSelection()
-      selection?.removeAllRanges()
-      selection?.addRange(range)
-    })
+    const clipboardPassage = 'Clipboard passage'
+    await page.keyboard.type(clipboardPassage)
+    const sourceParagraph = editor.locator('p', { hasText: 'Clipboard passage' }).last()
+    await selectTextWithMouse(page, sourceParagraph)
     await page.keyboard.press('Control+c')
-    await appendParagraph(page, editor)
+    await expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText().then((text) => text.trim())))
+      .toBe('Clipboard passage')
+    await sourceParagraph.click()
+    await page.keyboard.press('End')
+    await page.keyboard.type(' ')
     await page.keyboard.press('Control+v')
-    await expect(editor.locator('p', { hasText: 'Clipboard passage' })).toHaveCount(2)
+    await expect(sourceParagraph).toHaveText('Clipboard passage Clipboard passage')
 
     await appendParagraph(page, editor)
     await page.keyboard.type('/value')
     await page.getByRole('option', { name: /^Value/ }).click()
     await page.keyboard.press('Shift+ArrowLeft')
     await page.keyboard.press('Control+c')
-    await appendParagraph(page, editor)
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.type(' ')
     await page.keyboard.press('Control+v')
 
     const values = editor.locator('[data-note-value-id]')
@@ -104,18 +106,29 @@ test.describe('note authoring mechanics', () => {
   test('creates the canonical rich block set and nests list items', async ({ page }) => {
     const editor = await openNoteEditor(page)
 
-    await insertSlashBlock(page, editor, 'Heading 1', 'Authoring heading')
-    await insertSlashBlock(page, editor, 'Quote', 'A quoted passage')
-    await insertSlashBlock(page, editor, 'Code Block', 'const answer = 42')
-    await insertSlashBlock(page, editor, 'Check List', 'Review clues')
-    await insertSlashBlock(page, editor, 'Toggle List', 'Optional details')
-    await insertSlashBlock(page, editor, 'Bullet List', 'Parent item')
+    await appendParagraph(page, editor)
+    await insertSlashBlock(page, 'Heading 1', 'Authoring heading')
+    await page.keyboard.press('Enter')
+    await insertSlashBlock(page, 'Quote', 'A quoted passage')
+    await page.keyboard.press('Enter')
+    await insertSlashBlock(page, 'Code Block', 'const answer = 42')
+    await page.keyboard.press('Shift+Enter')
+    await insertSlashBlock(page, 'Check List', 'Review clues')
+    await exitList(page)
+    await insertSlashBlock(page, 'Toggle List', 'Optional details')
+    await exitList(page)
+    await insertSlashBlock(page, 'Bullet List', 'Parent item')
     await page.keyboard.press('Enter')
     await page.keyboard.type('Nested item')
     await page.keyboard.press('Tab')
-    await insertSlashBlock(page, editor, 'Numbered List', 'First step')
-    await insertSlashBlock(page, editor, 'Divider')
-    await insertSlashBlock(page, editor, 'Table')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await insertSlashBlock(page, 'Numbered List', 'First step')
+    await exitList(page)
+    await insertSlashBlock(page, 'Divider')
+    await page.keyboard.press('ArrowDown')
+    await insertSlashBlock(page, 'Table')
 
     await expect(editor.getByRole('heading', { name: 'Authoring heading', level: 1 })).toBeVisible()
     await expect(editor.locator('blockquote', { hasText: 'A quoted passage' })).toBeVisible()
@@ -139,29 +152,118 @@ test.describe('note authoring mechanics', () => {
     ).toBeVisible()
   })
 
-  test('filters slash commands and exposes native block controls', async ({ page }) => {
+  test('filters slash commands and exposes the custom block menu', async ({ page }) => {
     const editor = await openNoteEditor(page)
     await expect(editor).not.toBeFocused()
 
     await appendParagraph(page, editor)
     await page.keyboard.type('/heading 3')
-    const menu = page.getByRole('listbox')
-    await expect(menu).toBeVisible()
-    await expect(menu.getByRole('option', { name: /^Heading 3/ })).toBeVisible()
-    await expect(menu.getByRole('option', { name: /^Quote/ })).toHaveCount(0)
+    const slashMenu = page.getByRole('listbox')
+    await expect(slashMenu).toBeVisible()
+    await expect(slashMenu.getByRole('option', { name: /^Heading 3/ })).toBeVisible()
+    await expect(slashMenu.getByRole('option', { name: /^Quote/ })).toHaveCount(0)
     await page.keyboard.press('Escape')
 
     const block = editor.locator('[data-node-type="blockContainer"]').last()
     await block.hover()
-    await expect(page.getByRole('button', { name: 'Add block' })).toBeVisible()
-    await page.getByRole('button', { name: 'Open block menu' }).click()
+    const dragHandle = page.getByRole('button', { name: 'Drag block' })
+    await expect(dragHandle).toBeVisible()
+    await expect(dragHandle).toHaveAttribute('draggable', 'true')
+    await expect(page.getByRole('button', { name: 'Add block' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Open block menu' })).toHaveCount(0)
+    await dragHandle.dispatchEvent('mousedown', { button: 0 })
+    await expect(page.getByRole('menuitem', { name: 'Turn into' })).toHaveCount(0)
+    await dragHandle.click()
+    const blockMenu = page.getByTestId('block-drag-handle-menu')
+    await expect(blockMenu).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Turn into' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Color' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Comment' })).toBeVisible()
+    await expect(page.getByText(/drag\s+to move/i)).toHaveCount(0)
+    await expect(page.getByText(/click\s+to open menu/i)).toHaveCount(0)
+    const dragHandleBox = await dragHandle.boundingBox()
+    const menuBox = await blockMenu.boundingBox()
+    if (!dragHandleBox || !menuBox) throw new Error('Expected custom block menu geometry')
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(dragHandleBox.x + 1)
     await page.keyboard.press('Escape')
 
     await assertEditorOwnsViewportWhitespace(page)
   })
 
-  test('moves blocks through the native drag handle', async ({ page }) => {
+  test('executes custom block conversion, color, duplicate, and delete commands', async ({
+    page,
+  }) => {
+    const editor = await openNoteEditor(page)
+    await appendParagraph(page, editor)
+    await page.keyboard.type('Custom menu block')
+    const authoredBlock = editor
+      .locator('[data-node-type="blockContainer"]')
+      .filter({ hasText: 'Custom menu block' })
+
+    await authoredBlock.hover()
+    await page.getByRole('button', { name: 'Drag block' }).click()
+    await page.getByRole('menuitem', { name: 'Turn into' }).hover()
+    await page.getByRole('menuitem', { name: 'Heading 2', exact: true }).click()
+    await expect(editor.getByRole('heading', { name: 'Custom menu block', level: 2 })).toBeVisible()
+
+    await authoredBlock.hover()
+    await page.getByRole('button', { name: 'Drag block' }).click()
+    await page.getByRole('menuitem', { name: 'Color' }).hover()
+    await page.getByRole('menuitem', { name: 'Blue text' }).click()
+    await expect(
+      authoredBlock.locator('.bn-block-content[data-text-color="var(--t-blue)"]'),
+    ).toBeVisible()
+
+    await authoredBlock.hover()
+    await page.getByRole('button', { name: 'Drag block' }).click()
+    await page.getByRole('menuitem', { name: 'Duplicate' }).click()
+    await expect(
+      editor.locator('[data-node-type="blockContainer"]').filter({ hasText: 'Custom menu block' }),
+    ).toHaveCount(2)
+
+    const duplicatedBlock = editor
+      .locator('[data-node-type="blockContainer"]')
+      .filter({ hasText: 'Custom menu block' })
+      .last()
+    await duplicatedBlock.hover()
+    await page.getByRole('button', { name: 'Drag block' }).click()
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+    await expect(
+      editor.locator('[data-node-type="blockContainer"]').filter({ hasText: 'Custom menu block' }),
+    ).toHaveCount(1)
+  })
+
+  test('keeps future custom block actions explicit without inventing parallel models', async ({
+    page,
+  }) => {
+    const editor = await openNoteEditor(page)
+    const block = editor.locator('[data-node-type="blockContainer"]').last()
+    const initialBlockCount = await editor
+      .locator(':scope > .bn-block-group > .bn-block-outer')
+      .count()
+    const initialText = await editor.textContent()
+    const initialUrl = page.url()
+
+    await block.hover()
+    await page.getByRole('button', { name: 'Drag block' }).click()
+    await page.getByRole('menuitem', { name: 'Copy link to block' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toHaveCount(0)
+
+    await block.hover()
+    await page.getByRole('button', { name: 'Drag block' }).click()
+    await page.getByRole('menuitem', { name: 'Comment' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Comment' })).toHaveCount(0)
+    await expect(editor.locator(':scope > .bn-block-group > .bn-block-outer')).toHaveCount(
+      initialBlockCount,
+    )
+    await expect(editor).toHaveText(initialText ?? '')
+    expect(page.url()).toBe(initialUrl)
+  })
+
+  test('moves blocks through the custom drag handle', async ({ page }) => {
     const editor = await openNoteEditor(page)
     await appendParagraph(page, editor)
     await page.keyboard.type('First draggable block')
@@ -175,7 +277,7 @@ test.describe('note authoring mechanics', () => {
       .locator('[data-node-type="blockContainer"]')
       .filter({ hasText: 'Second draggable block' })
     await secondBlock.hover()
-    const dragHandle = page.getByRole('button', { name: 'Open block menu' })
+    const dragHandle = page.getByRole('button', { name: 'Drag block' })
     await expect(dragHandle).toHaveAttribute('draggable', 'true')
     const dragHandleBox = await dragHandle.boundingBox()
     const firstBlockBox = await firstBlock.boundingBox()
@@ -186,6 +288,16 @@ test.describe('note authoring mechanics', () => {
       clientY: dragHandleBox.y + dragHandleBox.height / 2,
       dataTransfer,
     })
+    expect(await dataTransfer.evaluate((transfer) => [...transfer.types])).toContain(
+      'application/x-wizard-archive-internal-drag',
+    )
+    const dragPreview = page.locator('.bn-drag-preview')
+    await expect(dragPreview).toHaveCSS('opacity', '1')
+    await expect(dragPreview).toContainText('Second draggable block')
+    const dragPreviewBox = await dragPreview.boundingBox()
+    if (!dragPreviewBox) throw new Error('Expected native drag preview geometry')
+    expect(dragPreviewBox.width).toBeGreaterThan(0)
+    expect(dragPreviewBox.height).toBeGreaterThan(0)
     const drop = {
       clientX: firstBlockBox.x + 16,
       clientY: firstBlockBox.y + 1,
@@ -215,8 +327,13 @@ test.describe('note authoring mechanics', () => {
 
 async function openNoteEditor(page: Page) {
   await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-  await page.getByRole('button', { name: 'The Lantern Market' }).click()
-  const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
+  const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
+  await expect(workspace).toHaveAttribute('aria-busy', 'false')
+  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
+  await page.getByRole('textbox', { name: 'New resource title' }).fill('Formatting scratchpad')
+  await page.getByRole('menuitem', { name: 'Note' }).click()
+  await expect(page.getByRole('heading', { name: 'Formatting scratchpad' })).toBeVisible()
+  const editor = page.getByRole('textbox', { name: 'Formatting scratchpad note editor' })
   await expect(editor).toBeVisible()
   return editor
 }
@@ -246,21 +363,56 @@ async function assertEditorOwnsViewportWhitespace(page: Page) {
 }
 
 async function appendParagraph(page: Page, editor: Locator) {
-  const lastBlock = editor.locator(':scope > .bn-block-group > .bn-block-outer').last()
-  await lastBlock.hover()
-  const addBlock = page.getByRole('button', { name: 'Add block' })
-  await expect(addBlock).toBeVisible()
-  await addBlock.click()
+  const inlineContents = editor.locator('.bn-inline-content')
+  const nonEmptyInlineContents = inlineContents.filter({ hasText: /\S/ })
+  const inlineContent =
+    (await nonEmptyInlineContents.count()) > 0
+      ? nonEmptyInlineContents.last()
+      : inlineContents.last()
+  const blockType = await inlineContent.evaluate(
+    (element) => element.closest('[data-content-type]')?.getAttribute('data-content-type') ?? null,
+  )
+  await inlineContent.click()
+  await page.keyboard.press('Control+End')
+  if (blockType === 'codeBlock') {
+    await page.keyboard.press('Shift+Enter')
+  } else {
+    await page.keyboard.press('Enter')
+    if (
+      blockType === 'bulletListItem' ||
+      blockType === 'checkListItem' ||
+      blockType === 'numberedListItem' ||
+      blockType === 'toggleListItem'
+    ) {
+      await page.keyboard.press('Enter')
+    }
+  }
 }
 
-async function insertSlashBlock(page: Page, editor: Locator, title: string, content?: string) {
-  await appendParagraph(page, editor)
+async function insertSlashBlock(page: Page, title: string, content?: string) {
   await page.keyboard.type('/')
   const menu = page.getByRole('listbox')
   await menu.getByRole('option', { name: new RegExp(`^${title}`) }).click()
   await expect(menu).toHaveCount(0)
   if (content) {
     await page.keyboard.type(content, { delay: 5 })
-    await page.waitForTimeout(100)
   }
+}
+
+async function exitList(page: Page) {
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+}
+
+async function selectTextWithMouse(page: Page, text: Locator) {
+  const bounds = await text.evaluate((element) => {
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const rect = range.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, y: rect.top + rect.height / 2 }
+  })
+  await page.mouse.move(bounds.right - 1, bounds.y)
+  await page.mouse.down()
+  await page.mouse.move(bounds.left + 1, bounds.y, { steps: 8 })
+  await page.mouse.up()
 }

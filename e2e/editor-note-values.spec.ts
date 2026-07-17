@@ -1,16 +1,13 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 test.describe('canonical note values', () => {
   test('authors dependencies, preserves drag identity, and renders in viewer mode', async ({
     page,
   }) => {
-    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'The Lantern Market' }).click()
-    const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
-    await expect(editor).toBeVisible()
+    const editor = await openFreshNote(page)
 
-    await insertValue(page)
+    await insertValue(page, editor)
     const source = page.getByRole('button', { name: 'Value: 0' })
     const sourceId = await source.getAttribute('data-note-value-id')
     expect(sourceId).toMatch(/^[0-9a-f-]{36}$/)
@@ -21,7 +18,7 @@ test.describe('canonical note values', () => {
     await dialog.getByRole('combobox', { name: 'Value formula' }).fill('7')
     await dialog.getByRole('button', { name: 'Close value editor' }).click()
 
-    await insertValue(page)
+    await insertValue(page, editor)
     const dependent = page.getByRole('button', { name: 'Value: 0' })
     await dependent.click()
     dialog = page.getByRole('dialog')
@@ -60,11 +57,26 @@ test.describe('canonical note values', () => {
   })
 })
 
-async function insertValue(page: Page) {
-  const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
-  const lastBlock = editor.locator(':scope > .bn-block-group > .bn-block-outer').last()
-  await lastBlock.hover()
-  await page.getByRole('button', { name: 'Add block' }).click()
+async function openFreshNote(page: Page) {
+  await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
+  const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
+  await expect(workspace).toHaveAttribute('aria-busy', 'false')
+  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
+  await page.getByRole('textbox', { name: 'New resource title' }).fill('Value scratchpad')
+  await page.getByRole('menuitem', { name: 'Note' }).click()
+  await expect(page.getByRole('heading', { name: 'Value scratchpad' })).toBeVisible()
+  const editor = page.getByRole('textbox', { name: 'Value scratchpad note editor' })
+  await expect(editor).toBeVisible()
+  return editor
+}
+
+async function insertValue(page: Page, editor: Locator) {
+  const inlineContent = editor.locator('.bn-inline-content').last()
+  await inlineContent.click()
+  await page.keyboard.press('End')
+  if ((await editor.locator('[data-note-value-id]').count()) > 0) {
+    await page.keyboard.type(' ')
+  }
   await page.keyboard.type('/value')
   await page.getByRole('option', { name: /^Value/ }).click()
 }

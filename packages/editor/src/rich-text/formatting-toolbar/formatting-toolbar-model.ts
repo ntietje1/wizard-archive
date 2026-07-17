@@ -327,9 +327,7 @@ function getToolbarSnapshot(
   const selectedTextBlocks = hasTextSelection
     ? editor.getSelectionCutBlocks().blocks
     : selectedBlocks
-  const supportedBlockTypes = BLOCK_TYPE_OPTIONS.filter(
-    (option) => option.modes.includes(mode) && blockTypeOptionExists(editor, option),
-  )
+  const supportedBlockTypes = getSupportedBlockTypeOptions(editor, mode)
   const editorActiveStyles = editor.getActiveStyles()
   const activeStyles = editorActiveStyles as Partial<Record<InlineStyle, boolean>>
   const alignableBlocks = selectedBlocks.filter((block) =>
@@ -358,6 +356,15 @@ function getToolbarSnapshot(
     hasTextSelection,
     supportedBlockTypes,
   }
+}
+
+export function getSupportedBlockTypeOptions(
+  editor: RichTextFormattingEditor,
+  mode: FormattingToolbarMode,
+) {
+  return BLOCK_TYPE_OPTIONS.filter(
+    (option) => option.modes.includes(mode) && blockTypeOptionExists(editor, option),
+  )
 }
 
 function getSelectedBlocksFromSelection(

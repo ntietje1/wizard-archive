@@ -1,4 +1,4 @@
-import { useCreateBlockNote } from '@blocknote/react'
+import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { useEffect, useState } from 'react'
 import type * as Y from 'yjs'
@@ -12,6 +12,7 @@ import { noteEditorSchema } from './note-editor-schema'
 import { NoteValueRuntimeProvider } from './values/runtime-context'
 import { noteValueTransferExtension } from './values/value-transfer'
 import { NoteSlashMenu } from './slash-menu/slash-menu'
+import { NoteSideMenu } from './side-menu/side-menu'
 import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
 import './note-editor.css'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
@@ -117,11 +118,16 @@ function NoteDocumentEditor(props: NoteEditorProps) {
                   editor={editor}
                   formattingToolbar={false}
                   linkToolbar={false}
-                  sideMenu={editable}
+                  sideMenu={false}
                   slashMenu={false}
                   theme={resolvedTheme}
                 >
-                  {editable && <NoteSlashMenu editor={editor} />}
+                  {editable && (
+                    <>
+                      <SideMenuController sideMenu={NoteSideMenu} />
+                      <NoteSlashMenu editor={editor} />
+                    </>
+                  )}
                 </BlockNoteView>
               </NoteValueRuntimeProvider>
             </div>

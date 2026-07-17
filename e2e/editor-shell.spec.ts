@@ -56,12 +56,16 @@ test.describe('editor shell', () => {
 
   test('projects note headings into the live outline', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'The Lantern Market' }).click()
-    const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
+    const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
+    await expect(workspace).toHaveAttribute('aria-busy', 'false')
+    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
+    await page.getByRole('textbox', { name: 'New resource title' }).fill('Outline scratchpad')
+    await page.getByRole('menuitem', { name: 'Note' }).click()
+    await expect(page.getByRole('heading', { name: 'Outline scratchpad' })).toBeVisible()
+    const editor = page.getByRole('textbox', { name: 'Outline scratchpad note editor' })
     await expect(editor).toBeVisible()
 
-    await editor.locator('[data-node-type="blockContainer"]').last().hover()
-    await page.getByRole('button', { name: 'Add block' }).click()
+    await editor.locator('.bn-inline-content').click()
     await page.keyboard.type('/')
     await page.getByRole('option', { name: /^Heading 1/ }).click()
     await page.keyboard.type('Dockside chapter')
@@ -71,7 +75,7 @@ test.describe('editor shell', () => {
     await page.keyboard.type('Dockside clues')
 
     await page.getByRole('button', { name: 'Open resource panel' }).click()
-    await page.getByRole('button', { name: 'Outline' }).click()
+    await page.getByRole('button', { name: 'Outline', exact: true }).click()
     const outline = page.getByRole('navigation', { name: 'Note outline' })
     await expect(outline.getByRole('button', { name: 'Dockside clues' })).toBeVisible()
     const chapterToggle = outline.getByRole('button', { expanded: true }).last()

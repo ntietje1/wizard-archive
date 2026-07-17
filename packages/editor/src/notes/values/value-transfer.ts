@@ -1,7 +1,7 @@
 import { Fragment, Slice } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { createExtension } from '@blocknote/core'
-import { generateUuidV7 } from '../../resources/domain-id'
+import { copyNoteValueProps, createCopiedNoteValueIdMap } from './value-copy'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { EditorView } from '@tiptap/pm/view'
 
@@ -12,16 +12,6 @@ export const noteValueTransferExtension = createExtension(() => ({
   key: 'canonicalNoteValueTransfer',
   prosemirrorPlugins: [createNoteValueTransferPlugin()],
 }))()
-
-function rewriteCopiedNoteValueFormula(
-  expressionSource: string,
-  copiedIdByOriginalId: ReadonlyMap<string, string>,
-) {
-  return expressionSource.replace(/\{\{([^}]+)}}/g, (reference, rawValueId: string) => {
-    const copiedId = copiedIdByOriginalId.get(rawValueId.trim())
-    return copiedId ? `{{${copiedId}}}` : reference
-  })
-}
 
 function createNoteValueTransferPlugin() {
   return new Plugin({
@@ -47,15 +37,13 @@ function copyNoteValues(slice: Slice) {
 }
 
 function collectCopiedIds(fragment: Fragment) {
-  const copiedIdByOriginalId = new Map<string, string>()
+  const originalValueIds: Array<string> = []
   fragment.descendants((node) => {
     if (node.type.name !== VALUE_NODE_TYPE) return
     const valueId = String(node.attrs.valueId ?? '')
-    if (valueId && !copiedIdByOriginalId.has(valueId)) {
-      copiedIdByOriginalId.set(valueId, generateUuidV7())
-    }
+    if (valueId) originalValueIds.push(valueId)
   })
-  return copiedIdByOriginalId
+  return createCopiedNoteValueIdMap(originalValueIds)
 }
 
 function rewriteCopiedValues(
@@ -73,16 +61,19 @@ function rewriteCopiedValues(
       nodes.push(content === node.content ? node : node.copy(content))
       return
     }
-    const originalId = String(node.attrs.valueId ?? '')
+    const copiedProps = copyNoteValueProps(
+      {
+        valueId: String(node.attrs.valueId ?? ''),
+        label: String(node.attrs.label ?? ''),
+        expressionSource: String(node.attrs.expressionSource ?? ''),
+      },
+      copiedIdByOriginalId,
+    )
     nodes.push(
       node.type.create(
         {
           ...node.attrs,
-          valueId: copiedIdByOriginalId.get(originalId) ?? generateUuidV7(),
-          expressionSource: rewriteCopiedNoteValueFormula(
-            String(node.attrs.expressionSource ?? ''),
-            copiedIdByOriginalId,
-          ),
+          ...copiedProps,
         },
         content,
         node.marks,
