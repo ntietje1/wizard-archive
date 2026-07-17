@@ -23,12 +23,7 @@ import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
 } from './interaction-controller'
-import type {
-  CanvasConnectionHandle,
-  CanvasPoint,
-  CanvasSelection,
-  CanvasViewport,
-} from './interaction-types'
+import type { CanvasConnectionHandle, CanvasPoint, CanvasSelection } from './interaction-types'
 import { canvasNodeSize } from './canvas-layout'
 import {
   CANVAS_EDGE_PENDING_OPACITY,
@@ -74,8 +69,11 @@ export function CanvasScene({
   surfaceSize: CanvasSurfaceSize
 }) {
   const resizedNodeBounds = canvasResizedNodeBounds(interaction)
-  const visualNodes = content.nodes.map((node, index) =>
-    canvasVisualNode({ ...node, zIndex: node.zIndex ?? index + 1 }, interaction, resizedNodeBounds),
+  const visualNodes = content.nodes.map((node) =>
+    canvasVisualNode(node, interaction, resizedNodeBounds),
+  )
+  const defaultNodeZIndex = new Map(
+    content.nodes.map((node, index) => [node.id, index + 1] as const),
   )
   const nodeById = new Map<CanvasNodeId, CanvasDocumentNode>(
     visualNodes.map((node) => [node.id, node]),
@@ -139,7 +137,21 @@ export function CanvasScene({
             canEdit={canEdit}
             content={content}
             documentController={documentController}
-            interaction={interaction}
+            editing={
+              canEdit &&
+              interaction.interaction.type === 'editing' &&
+              interaction.interaction.nodeId === node.id
+            }
+            erasing={
+              interaction.interaction.type === 'erasing' &&
+              interaction.interaction.nodeIds.has(node.id)
+            }
+            snappedConnectionHandle={
+              interaction.interaction.type === 'connecting' &&
+              interaction.interaction.target?.nodeId === node.id
+                ? interaction.interaction.target.handle
+                : null
+            }
             interactionController={interactionController}
             node={node}
             onOpenContextMenu={onOpenContextMenu}
@@ -155,6 +167,9 @@ export function CanvasScene({
                 visualSelection.nodeIds.size > 1)
             }
             surface={surface}
+            tool={interaction.tool}
+            viewport={interaction.viewport}
+            zIndex={node.zIndex ?? defaultNodeZIndex.get(node.id) ?? 0}
           />
         ))}
       </div>
@@ -196,17 +211,16 @@ function canvasVisualNode(
       height: resized.height,
     }
   }
-  return {
-    ...node,
-    position: getCanvasNodeInteractionPosition(interaction, node.id, node.position),
-  }
+  const position = getCanvasNodeInteractionPosition(interaction, node.id, node.position)
+  return position === node.position ? node : { ...node, position }
 }
 
 function CanvasNode({
   canEdit,
   content,
   documentController,
-  interaction,
+  editing,
+  erasing,
   interactionController,
   node,
   onOpenContextMenu,
@@ -214,12 +228,17 @@ function CanvasNode({
   exclusivelySelected,
   selected,
   showSelectionIndicator,
+  snappedConnectionHandle,
   surface,
+  tool,
+  viewport,
+  zIndex,
 }: {
   canEdit: boolean
   content: CanvasDocumentContent
   documentController: CanvasDocumentController
-  interaction: CanvasInteractionSnapshot
+  editing: boolean
+  erasing: boolean
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
@@ -227,16 +246,14 @@ function CanvasNode({
   exclusivelySelected: boolean
   selected: boolean
   showSelectionIndicator: boolean
+  snappedConnectionHandle: CanvasConnectionHandle | null
   surface: RefObject<HTMLElement | null>
+  tool: CanvasInteractionSnapshot['tool']
+  viewport: CanvasInteractionSnapshot['viewport']
+  zIndex: number
 }) {
   if (node.hidden) return null
   const position = node.position
-  const editing =
-    canEdit &&
-    interaction.interaction.type === 'editing' &&
-    interaction.interaction.nodeId === node.id
-  const erasing =
-    interaction.interaction.type === 'erasing' && interaction.interaction.nodeIds.has(node.id)
   const size = canvasNodeSize(node)
   return (
     <div
@@ -250,11 +267,11 @@ function CanvasNode({
         width: size.width,
         height: size.height,
         transform: `translate(${position.x}px, ${position.y}px)`,
-        zIndex: node.zIndex ?? 0,
+        zIndex,
         opacity: erasing ? 0.35 : undefined,
       }}
       onDoubleClickCapture={(event) => {
-        if (!canEdit || interaction.tool !== 'select' || node.type !== 'text') return
+        if (!canEdit || tool !== 'select' || node.type !== 'text') return
         event.preventDefault()
         event.stopPropagation()
         interactionController.selectNode(node.id, false)
@@ -265,7 +282,7 @@ function CanvasNode({
         onOpenContextMenu(
           event,
           selected
-            ? interaction.selection
+            ? interactionController.get().selection
             : { nodeIds: new Set([node.id]), edgeIds: new Set<string>() },
         )
       }}
@@ -275,26 +292,15 @@ function CanvasNode({
           content,
           editing,
           event,
-          interaction,
           interactionController,
           node,
           selected,
           surface,
         })
       }
-      onPointerMove={(event) =>
-        updateNodeDrag(event, interaction.viewport, interactionController, surface)
-      }
+      onPointerMove={(event) => updateNodeDrag(event, interactionController, surface)}
       onPointerUp={(event) =>
-        commitNodeDrag(
-          canEdit,
-          event,
-          interaction.viewport,
-          documentController,
-          interactionController,
-          node.id,
-          surface,
-        )
+        commitNodeDrag(canEdit, event, documentController, interactionController, node.id, surface)
       }
       onPointerCancel={() => interactionController.cancelInteraction()}
     >
@@ -318,18 +324,18 @@ function CanvasNode({
         }
         node={node}
         selected={selected}
-        zoom={interaction.viewport.zoom}
+        zoom={viewport.zoom}
         onFinishEditing={() => interactionController.finishEditing()}
         onSaveContent={(nextContent) =>
           saveTextNodeData(canEdit, documentController, node.id, { content: nextContent })
         }
       />
-      {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={interaction.viewport.zoom} />}
-      {canEdit && interaction.tool === 'edge' && (
+      {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={viewport.zoom} />}
+      {canEdit && tool === 'edge' && (
         <CanvasNodeConnectionHandles
-          interaction={interaction}
           interactionController={interactionController}
           node={node}
+          snappedHandle={snappedConnectionHandle}
           surface={surface}
         />
       )}
@@ -338,22 +344,18 @@ function CanvasNode({
 }
 
 function CanvasNodeConnectionHandles({
-  interaction,
   interactionController,
   node,
+  snappedHandle,
   surface,
 }: {
-  interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
+  snappedHandle: CanvasConnectionHandle | null
   surface: RefObject<HTMLElement | null>
 }) {
-  const connection = interaction.interaction
   return CANVAS_CONNECTION_HANDLES.map((handle) => {
-    const snapped =
-      connection.type === 'connecting' &&
-      connection.target?.nodeId === node.id &&
-      connection.target.handle === handle
+    const snapped = snappedHandle === handle
     return (
       <button
         key={handle}
@@ -399,7 +401,6 @@ function beginNodeDrag({
   content,
   editing,
   event,
-  interaction,
   interactionController,
   node,
   selected,
@@ -409,12 +410,12 @@ function beginNodeDrag({
   content: CanvasDocumentContent
   editing: boolean
   event: PointerEvent<HTMLDivElement>
-  interaction: CanvasInteractionSnapshot
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
   selected: boolean
   surface: RefObject<HTMLElement | null>
 }) {
+  const interaction = interactionController.get()
   if (event.button !== 0 || interaction.tool !== 'select' || editing) return
   event.stopPropagation()
   const additive = event.metaKey || event.ctrlKey
@@ -444,13 +445,13 @@ function beginNodeDrag({
 
 function updateNodeDrag(
   event: PointerEvent<HTMLDivElement>,
-  viewport: CanvasViewport,
   interactionController: CanvasInteractionController,
   surface: RefObject<HTMLElement | null>,
 ) {
   if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
   const bounds = surface.current?.getBoundingClientRect()
   if (!bounds) return
+  const viewport = interactionController.get().viewport
   const point = screenToCanvasPoint({ x: event.clientX, y: event.clientY }, viewport, {
     x: bounds.left,
     y: bounds.top,
@@ -466,7 +467,6 @@ function updateNodeDrag(
 function commitNodeDrag(
   canEdit: boolean,
   event: PointerEvent<HTMLDivElement>,
-  viewport: CanvasViewport,
   documentController: CanvasDocumentController,
   interactionController: CanvasInteractionController,
   nodeId: CanvasNodeId,
@@ -474,7 +474,7 @@ function commitNodeDrag(
 ) {
   const captured = event.currentTarget.hasPointerCapture(event.pointerId)
   if (canEdit && captured) {
-    updateNodeDrag(event, viewport, interactionController, surface)
+    updateNodeDrag(event, interactionController, surface)
     event.currentTarget.releasePointerCapture(event.pointerId)
   }
   const positions = interactionController.commitDrag(event.pointerId)
