@@ -357,7 +357,7 @@ describe('createInMemoryEditorRuntime', () => {
     await expect(state.session.loadImage(null)).resolves.toMatchObject({
       status: 'ready',
       bytes,
-      mediaType: 'image/png',
+      mediaType: 'application/octet-stream',
     })
     core.dispose()
   })

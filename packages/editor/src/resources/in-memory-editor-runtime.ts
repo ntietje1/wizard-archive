@@ -47,7 +47,7 @@ import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtim
 import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
-import { classifyFileResourceSource, MAX_RESOURCE_SOURCE_BYTES } from './resource-source-classifier'
+import { classifyFileResourceSource } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
 import {
   applyWorkspacePreferenceChange,
@@ -66,7 +66,6 @@ import {
   advanceMapContentVersion,
   initialMapContentVersion,
   mapImageAttachment,
-  mapImageMediaType,
   replaceMapImageAttachment,
   transitionMapContent,
 } from './map-session-policy'
@@ -554,14 +553,15 @@ class InMemoryMapSession implements MapSession {
     if (!versionStampEquals(expectedVersion, this.currentVersion)) {
       return { status: 'rejected' as const, reason: 'version_conflict' as const }
     }
-    if (source.bytes.byteLength > MAX_RESOURCE_SOURCE_BYTES) {
+    const metadata = classifyFileResourceSource(source)
+    if (metadata.classification === 'rejected') {
       return { status: 'rejected' as const, reason: 'invalid_command' as const }
     }
     const attachment = {
       status: 'attached' as const,
       byteSize: source.bytes.byteLength,
       digest: await sha256Digest(source.bytes),
-      mediaType: mapImageMediaType(source.fileName),
+      mediaType: metadata.mediaType,
     }
     const transition = replaceMapImageAttachment(this.currentContent, layerId, attachment)
     if (transition.status === 'rejected') return transition

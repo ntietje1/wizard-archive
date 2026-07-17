@@ -7,7 +7,6 @@ import {
   initialFileContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
 import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
-import { mapImageMediaType } from '@wizard-archive/editor/resources/map-session-policy'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import type { ResourceSourceInspection } from '@wizard-archive/editor/resources/source-classifier'
 import { action } from '../_generated/server'
@@ -156,7 +155,7 @@ export const replaceMapImage = action({
   },
   returns: mapContentMutationResultValidator,
   handler: async (ctx, args): Promise<StoredMapContentMutationResult> => {
-    const upload = await loadFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    const upload = await loadInspectedFileUpload(ctx, args.campaignId, args.uploadSessionId)
     if (!upload) return { status: 'rejected', reason: 'invalid_command' }
     return await ctx.runMutation(internal.resources.mutations.commitMapImageReplacement, {
       campaignId: upload.upload.campaignId,
@@ -167,7 +166,7 @@ export const replaceMapImage = action({
       image: {
         byteSize: upload.bytes.byteLength,
         digest: await sha256Digest(upload.bytes),
-        mediaType: mapImageMediaType(upload.upload.originalFileName),
+        mediaType: upload.metadata.mediaType,
       },
     })
   },

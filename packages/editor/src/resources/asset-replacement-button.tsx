@@ -10,7 +10,7 @@ export function AssetReplacementButton({
   pendingLabel,
   replacement,
 }: {
-  accept?: string
+  accept: string
   ariaLabel: string
   compact: boolean
   compactLabel: string

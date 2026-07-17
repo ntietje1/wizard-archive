@@ -775,7 +775,11 @@ describe('resource structure commands', () => {
     expect(attached).toMatchObject({
       status: 'completed',
       content: {
-        image: { status: 'attached', byteSize: originalBytes.byteLength, mediaType: 'image/png' },
+        image: {
+          status: 'attached',
+          byteSize: originalBytes.byteLength,
+          mediaType: 'application/octet-stream',
+        },
       },
       version: { revision: 2 },
     })

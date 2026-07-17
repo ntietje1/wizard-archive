@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import {
+  FILE_UPLOAD_ACCEPT_PATTERN,
+  validateFileUpload,
+} from '../../../../shared/storage/validation'
 import type {
   MapContentMutationResult,
   MapImageAttachment,
@@ -374,6 +378,10 @@ function useMapImageReplacement(
     },
     replace: async (target, source) =>
       await target.session.replaceImage(target.layerId, target.expectedVersion, source),
+    validate: (file) => {
+      const result = validateFileUpload(file.type || null, file.size, file.name)
+      return result.valid ? null : result.error
+    },
     message: mapImageMutationMessage,
     retryable: (result) => result.status === 'retryable' || result.reason === 'version_conflict',
     readingMessage: 'Reading map image…',
@@ -393,6 +401,7 @@ function MapImageControl({
   return (
     <div className={compact ? '' : 'mt-4 flex flex-col items-center gap-2'}>
       <AssetReplacementButton
+        accept={FILE_UPLOAD_ACCEPT_PATTERN}
         ariaLabel="Choose map image"
         compact={compact}
         compactLabel="Replace image"
