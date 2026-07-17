@@ -5,7 +5,10 @@ import { captureCanvasSelection, materializeCanvasPaste } from './canvas-clipboa
 import type { CanvasClipboardEntry } from './canvas-clipboard'
 import type { CanvasDocumentContent, CanvasTextDocumentNode } from './document-contract'
 import { screenToCanvasPoint } from './canvas-viewport'
-import type { CanvasInteractionController } from './interaction-controller'
+import type {
+  CanvasInteractionController,
+  CanvasInteractionSnapshot,
+} from './interaction-controller'
 import type { createCanvasInteractionRenderStore } from './interaction-render-store'
 import type { CanvasPoint, CanvasSelection, CanvasTool } from './interaction-types'
 import { CanvasScene } from './canvas-scene'
@@ -256,6 +259,9 @@ export function CanvasEditorSurface({
           setContextMenu(null)
           beginCanvasSurfaceInteraction(event, canEdit, interactionController, createTextNode)
         }}
+        onPointerMoveCapture={(event) => {
+          measureCanvasGestureFrame(event.currentTarget, interactionController.get().interaction)
+        }}
         onPointerMove={(event) => {
           const point = localPoint(event, event.currentTarget)
           setCanvasCollaborationCursor(
@@ -498,6 +504,26 @@ function canvasHistoryState(controller: CanvasDocumentController): CanvasHistory
 function localPoint(event: PointerEvent<HTMLElement>, surface: HTMLElement): CanvasPoint {
   const bounds = surface.getBoundingClientRect()
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+}
+
+function measureCanvasGestureFrame(
+  surface: HTMLElement,
+  interaction: CanvasInteractionSnapshot['interaction'],
+) {
+  const measureName = surface.dataset.canvasPerformanceMeasure
+  if (!measureName || interaction.type === 'idle') return
+  const gesture = interaction.type === 'selecting' ? interaction.kind : interaction.type
+  const startedAt = performance.now()
+  queueMicrotask(() => {
+    const handlerDuration = performance.now() - startedAt
+    requestAnimationFrame(() => {
+      performance.measure(measureName, {
+        start: startedAt,
+        end: performance.now(),
+        detail: { gesture, handlerDuration },
+      })
+    })
+  })
 }
 
 function handleWheel(event: WheelEvent<HTMLElement>, controller: CanvasInteractionController) {

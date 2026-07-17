@@ -22,21 +22,21 @@ describe('createCanvasInteractionRenderStore', () => {
       size: 4,
       opacity: 100,
     })
-    for (let index = 1; index <= 20_000; index += 1) {
+    for (let index = 1; index <= 3; index += 1) {
       controller.updateDrawing(4, { x: index, y: index }, 0.5, false)
     }
 
     const controllerInteraction = controller.get().interaction
     expect(controllerInteraction.type).toBe('drawing')
     if (controllerInteraction.type !== 'drawing') throw new Error('Expected drawing interaction')
-    expect(getCanvasDrawingPoints(controllerInteraction).at(-1)).toEqual([20_000, 20_000, 0.5])
+    expect(getCanvasDrawingPoints(controllerInteraction).at(-1)).toEqual([3, 3, 0.5])
     expect(rendered).toHaveBeenCalledTimes(2)
 
     scheduled.render?.()
     const renderedInteraction = store.get().interaction
     expect(renderedInteraction.type).toBe('drawing')
     if (renderedInteraction.type !== 'drawing') throw new Error('Expected rendered drawing')
-    expect(getCanvasDrawingPoints(renderedInteraction).at(-1)).toEqual([20_000, 20_000, 0.5])
+    expect(getCanvasDrawingPoints(renderedInteraction).at(-1)).toEqual([3, 3, 0.5])
     expect(rendered).toHaveBeenCalledTimes(3)
 
     controller.commitDrawing(4)

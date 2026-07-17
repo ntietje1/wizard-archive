@@ -173,14 +173,15 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
-  it('resamples tens of thousands of drawing events into one bounded stroke', () => {
+  it('resamples drawing events beyond the point limit into one bounded stroke', () => {
     const controller = createCanvasInteractionController()
+    const eventCount = CANVAS_WORKLOAD_LIMITS.pointsPerStroke * 2
     controller.beginDrawing(5, { x: 0, y: 0 }, 0.5, {
       color: '#112233',
       size: 4,
       opacity: 60,
     })
-    for (let index = 1; index <= 20_000; index += 1) {
+    for (let index = 1; index <= eventCount; index += 1) {
       controller.updateDrawing(5, { x: index, y: index }, 0.5, false)
     }
 
@@ -193,14 +194,15 @@ describe('CanvasInteractionController pointer activities', () => {
     const stroke = controller.commitDrawing(5)
     expect(stroke?.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.pointsPerStroke)
     expect(stroke?.points[0]).toEqual([0, 0, 0.5])
-    expect(stroke?.points.at(-1)).toEqual([20_000, 20_000, 0.5])
+    expect(stroke?.points.at(-1)).toEqual([eventCount, eventCount, 0.5])
     controller.dispose()
   })
 
   it('samples long lasso trails with bounded amortized point storage', () => {
     const controller = createCanvasInteractionController()
+    const eventCount = CANVAS_WORKLOAD_LIMITS.gesturePoints * 2
     controller.beginSelection('lasso', 'replace', 6, { x: 0, y: 0 })
-    for (let index = 1; index <= 20_000; index += 1) {
+    for (let index = 1; index <= eventCount; index += 1) {
       controller.updateSelection(6, { x: index, y: index })
     }
 
@@ -211,7 +213,7 @@ describe('CanvasInteractionController pointer activities', () => {
     }
     expect(lasso.sampleDistance).toBeGreaterThan(1)
     expect(lasso.points.length).toBeLessThanOrEqual(CANVAS_WORKLOAD_LIMITS.gesturePoints)
-    expect(lasso.current).toEqual({ x: 20_000, y: 20_000 })
+    expect(lasso.current).toEqual({ x: eventCount, y: eventCount })
     controller.dispose()
   })
 
