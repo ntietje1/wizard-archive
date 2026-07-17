@@ -383,7 +383,7 @@ function useMapImageReplacement(
       return result.valid ? null : result.error
     },
     message: mapImageMutationMessage,
-    retryable: (result) => result.status === 'retryable' || result.reason === 'version_conflict',
+    retryable: (result) => result.status === 'retryable',
     readingMessage: 'Reading map image…',
     uploadingMessage: 'Uploading map image…',
     readFailureMessage: 'The selected image could not be read.',

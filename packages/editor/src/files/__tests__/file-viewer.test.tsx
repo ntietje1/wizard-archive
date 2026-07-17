@@ -204,7 +204,73 @@ describe('FileViewer', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(replace).toHaveBeenCalledTimes(2))
+    expect(replace.mock.calls[1]![0]).toBe(replace.mock.calls[0]![0])
+    expect(replace.mock.calls[1]![1]).toBe(replace.mock.calls[0]![1])
     expect(replace.mock.calls[1]![2]).toBe(replace.mock.calls[0]![2])
+  })
+
+  it('requires a fresh replacement after a version conflict', async () => {
+    const firstVersion = initialVersion(await sha256Digest(new Uint8Array([1])))
+    const currentVersion = initialVersion(await sha256Digest(new Uint8Array([2])))
+    const replace = vi
+      .fn<FileContentSource['replace']>()
+      .mockResolvedValueOnce({ status: 'rejected', reason: 'version_conflict' })
+      .mockResolvedValueOnce({
+        status: 'completed',
+        content: fileContent({ attachment: 'attached' }),
+        version: initialVersion(await sha256Digest(new Uint8Array([3]))),
+      })
+    const source = fileSource(vi.fn(), replace)
+    const staleBytes = new TextEncoder().encode('stale')
+    const currentBytes = new TextEncoder().encode('current')
+    const staleFile = new File([staleBytes], 'stale.txt', { type: 'text/plain' })
+    const currentFile = new File([currentBytes], 'current.txt', { type: 'text/plain' })
+    Object.defineProperty(staleFile, 'arrayBuffer', {
+      value: () => Promise.resolve(staleBytes.buffer),
+    })
+    Object.defineProperty(currentFile, 'arrayBuffer', {
+      value: () => Promise.resolve(currentBytes.buffer),
+    })
+    const resourceId = testDomainId('resource', 'replacement-conflict')
+    const view = render(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={resourceId}
+        source={source}
+        title="Conflict"
+        version={firstVersion}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose file replacement'), {
+      target: { files: [staleFile] },
+    })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This file changed while the replacement was uploading.',
+    )
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(replace).toHaveBeenCalledOnce()
+
+    view.rerender(
+      <FileViewer
+        canEdit
+        content={fileContent({ attachment: 'unattached' })}
+        resourceId={resourceId}
+        source={source}
+        title="Conflict"
+        version={currentVersion}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Choose file replacement'), {
+      target: { files: [currentFile] },
+    })
+
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(2))
+    expect(replace.mock.calls[0]![1]).toBe(firstVersion)
+    expect(replace.mock.calls[1]![1]).toBe(currentVersion)
+    expect(replace.mock.calls[1]![2]).not.toBe(replace.mock.calls[0]![2])
   })
 
   it('retires a retry when navigation changes its immutable resource target', async () => {

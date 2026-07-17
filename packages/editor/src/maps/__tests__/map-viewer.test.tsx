@@ -117,6 +117,83 @@ describe('MapViewer', () => {
     )
   })
 
+  it('requires a fresh image replacement after a version conflict', async () => {
+    const firstVersion = testVersion()
+    const currentVersion = initialVersion(assertSha256Digest('b'.repeat(64)))
+    const replaceImage = vi
+      .fn<MapSession['replaceImage']>()
+      .mockResolvedValueOnce({ status: 'rejected', reason: 'version_conflict' })
+      .mockResolvedValueOnce({
+        status: 'completed',
+        content: emptyMap(),
+        version: initialVersion(assertSha256Digest('c'.repeat(64))),
+      })
+    let version = firstVersion
+    const session = mapSession(emptyMap(), { replaceImage })
+    Object.defineProperty(session, 'version', { get: () => version })
+    const staleBytes = new Uint8Array([1])
+    const currentBytes = new Uint8Array([2])
+    const staleImage = new File([staleBytes], 'stale.png', { type: 'image/png' })
+    const currentImage = new File([currentBytes], 'current.png', { type: 'image/png' })
+    Object.defineProperty(staleImage, 'arrayBuffer', {
+      value: () => Promise.resolve(staleBytes.buffer),
+    })
+    Object.defineProperty(currentImage, 'arrayBuffer', {
+      value: () => Promise.resolve(currentBytes.buffer),
+    })
+    const view = renderMap(session)
+
+    fireEvent.change(screen.getByLabelText('Choose map image'), {
+      target: { files: [staleImage] },
+    })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This map changed while the image was uploading.',
+    )
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(replaceImage).toHaveBeenCalledOnce()
+
+    version = currentVersion
+    view.rerender(mapViewer(session))
+    fireEvent.change(screen.getByLabelText('Choose map image'), {
+      target: { files: [currentImage] },
+    })
+
+    await waitFor(() => expect(replaceImage).toHaveBeenCalledTimes(2))
+    expect(replaceImage.mock.calls[0]![1]).toBe(firstVersion)
+    expect(replaceImage.mock.calls[1]![1]).toBe(currentVersion)
+    expect(replaceImage.mock.calls[1]![2]).not.toBe(replaceImage.mock.calls[0]![2])
+  })
+
+  it('retries an uncertain image replacement against the exact captured target', async () => {
+    const replaceImage = vi
+      .fn<MapSession['replaceImage']>()
+      .mockResolvedValueOnce({ status: 'retryable', reason: 'response_lost' })
+      .mockResolvedValueOnce({
+        status: 'completed',
+        content: emptyMap(),
+        version: initialVersion(assertSha256Digest('d'.repeat(64))),
+      })
+    const session = mapSession(emptyMap(), { replaceImage })
+    const bytes = new Uint8Array([1, 2, 3])
+    const image = new File([bytes], 'map.png', { type: 'image/png' })
+    Object.defineProperty(image, 'arrayBuffer', {
+      value: () => Promise.resolve(bytes.buffer),
+    })
+    renderMap(session)
+
+    fireEvent.change(screen.getByLabelText('Choose map image'), { target: { files: [image] } })
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The map image replacement could not be confirmed.',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+    await waitFor(() => expect(replaceImage).toHaveBeenCalledTimes(2))
+    expect(replaceImage.mock.calls[1]![0]).toBe(replaceImage.mock.calls[0]![0])
+    expect(replaceImage.mock.calls[1]![1]).toBe(replaceImage.mock.calls[0]![1])
+    expect(replaceImage.mock.calls[1]![2]).toBe(replaceImage.mock.calls[0]![2])
+  })
+
   it('retires a retry when layer selection changes its immutable target', async () => {
     const replaceImage = vi.fn<MapSession['replaceImage']>(() =>
       Promise.resolve({ status: 'retryable' as const, reason: 'response_lost' as const }),

@@ -167,7 +167,7 @@ function useFileReplacement(
       return result.valid ? null : result.error
     },
     message: (result) => fileReplacementMessage(result.reason),
-    retryable: (result) => result.status === 'retryable' || result.reason === 'version_conflict',
+    retryable: (result) => result.status === 'retryable',
     readingMessage: 'Reading file…',
     uploadingMessage: 'Uploading replacement…',
     readFailureMessage: 'The selected file could not be read.',
