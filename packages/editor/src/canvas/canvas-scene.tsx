@@ -127,10 +127,6 @@ export function CanvasScene({
         <CanvasTextPlacementOverlay interaction={interaction} />
         <CanvasSelectionOverlay interaction={interaction} />
         <CanvasSnapGuides interaction={interaction} />
-        <CanvasCollaborationCursors
-          collaboration={collaboration}
-          zoom={interaction.viewport.zoom}
-        />
         {rendered.nodes.map((node) => (
           <CanvasNode
             key={node.id}
@@ -180,6 +176,7 @@ export function CanvasScene({
           />
         ))}
       </div>
+      <CanvasCollaborationCursors collaboration={collaboration} viewport={interaction.viewport} />
       <CanvasSelectionBounds
         canEdit={canEdit}
         interaction={interaction}
