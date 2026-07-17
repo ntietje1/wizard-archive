@@ -90,7 +90,6 @@ async function createWorkspaceResource(
   if (signal?.aborted) return { status: 'cancelled' } as const
   const structure = runtime.resources.structure
   if (structure.status !== 'available') {
-    report('This workspace is read only')
     return { status: 'rejected', reason: 'read_only' } as const
   }
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -99,7 +98,6 @@ async function createWorkspaceResource(
   try {
     canonicalTitle = canonicalizeResourceTitle(title || `Untitled ${kind}`)
   } catch {
-    report('Invalid resource title')
     return { status: 'rejected', reason: 'invalid_title' } as const
   }
   const command = {
@@ -112,15 +110,18 @@ async function createWorkspaceResource(
     color: null,
   }
   const envelope = { campaignId: runtime.scope.campaignId, operationId, command }
+  const noteDocument = kind === 'note' ? createEmptyNoteYDoc() : null
   const deliver = () => {
     switch (kind) {
       case 'folder':
         return structure.value.execute(envelope)
-      case 'note':
+      case 'note': {
+        if (!noteDocument) throw new TypeError('Note creation document is unavailable')
         return runtime.content.notes.create(
           { ...envelope, command: { ...command, kind: 'note' } },
-          createEmptyNoteYDoc(),
+          noteDocument,
         )
+      }
       case 'map':
         return runtime.content.maps.create({
           ...envelope,
@@ -134,7 +135,6 @@ async function createWorkspaceResource(
     }
   }
   return await completeWorkspaceCreation(
-    runtime,
     resourceId,
     deliver,
     `${resourceKindLabel(kind)} created`,
@@ -152,12 +152,10 @@ async function createWorkspaceFile(
 ) {
   if (signal?.aborted) return { status: 'cancelled' } as const
   if (runtime.resources.structure.status !== 'available') {
-    report('This workspace is read only')
     return { status: 'rejected', reason: 'read_only' } as const
   }
   const validation = validateFileUpload(file.type || null, file.size, file.name)
   if (!validation.valid) {
-    report(validation.error)
     return { status: 'rejected', reason: validation.error } as const
   }
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -166,7 +164,6 @@ async function createWorkspaceFile(
   try {
     title = canonicalizeResourceTitle(file.name)
   } catch {
-    report('Invalid resource title')
     return { status: 'rejected', reason: 'invalid_title' } as const
   }
   let bytes: Uint8Array
@@ -174,7 +171,6 @@ async function createWorkspaceFile(
     bytes = new Uint8Array(await file.arrayBuffer())
   } catch {
     if (signal?.aborted) return { status: 'cancelled' } as const
-    report('Could not read file')
     return { status: 'rejected', reason: 'file_read_failed' } as const
   }
   const source = { bytes, fileName: file.name }
@@ -192,7 +188,6 @@ async function createWorkspaceFile(
     },
   }
   return await completeWorkspaceCreation(
-    runtime,
     resourceId,
     () => runtime.content.files.create(envelope, source),
     'File uploaded',
@@ -264,7 +259,6 @@ function resourceDownloadFileName(title: string, extension: string): string {
 }
 
 async function completeWorkspaceCreation(
-  runtime: EditorRuntime,
   resourceId: ResourceId,
   deliver: () => Promise<CommandDelivery<ResourceStructureCommandResult>>,
   successMessage: string,
@@ -278,32 +272,26 @@ async function completeWorkspaceCreation(
   } catch {
     if (signal?.aborted) return { status: 'cancelled' }
     const retry = () =>
-      completeWorkspaceCreation(runtime, resourceId, deliver, successMessage, report, signal)
-    report('Not committed: provider_failure', () => void retry())
+      completeWorkspaceCreation(resourceId, deliver, successMessage, report, signal)
     return { status: 'failed', reason: 'provider_failure', retry }
   }
   if (signal?.aborted) return { status: 'cancelled' }
   if (delivery.status === 'indeterminate') {
     const retry = () =>
-      completeWorkspaceCreation(runtime, resourceId, deliver, successMessage, report, signal)
-    report(deliveryMessage(delivery), () => void retry())
+      completeWorkspaceCreation(resourceId, deliver, successMessage, report, signal)
     return { status: 'indeterminate', reason: delivery.reason, retry }
   }
   if (delivery.status === 'not_committed') {
     const retry = delivery.retryable
-      ? () =>
-          completeWorkspaceCreation(runtime, resourceId, deliver, successMessage, report, signal)
+      ? () => completeWorkspaceCreation(resourceId, deliver, successMessage, report, signal)
       : null
-    report(deliveryMessage(delivery), retry ? () => void retry() : undefined)
     return { status: 'failed', reason: delivery.reason, retry }
   }
   if (delivery.result.status === 'completed') {
     const result = delivery.result.receipt.result
     if (result.type !== 'created' || result.resourceId !== resourceId) {
-      report('Not committed: invalid_response')
       return { status: 'failed', reason: 'invalid_response', retry: null }
     }
-    runtime.navigation.open(resourceId)
     report(successMessage)
     return { status: 'completed', resourceId }
   }

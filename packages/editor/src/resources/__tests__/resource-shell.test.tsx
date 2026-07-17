@@ -313,9 +313,11 @@ describe('ResourceShell', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
       target: { value: 'Settled folder' },
     })
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+    const folderButton = screen.getByRole('menuitem', { name: 'Folder' })
+    fireEvent.click(folderButton)
 
-    expect(trigger).toHaveAttribute('aria-busy', 'true')
+    expect(folderButton).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Creating…')).not.toBeInTheDocument()
     expect(screen.getByRole('menu')).toBeInTheDocument()
     expect(navigation.current()).toBe(resource.id)
 
@@ -323,7 +325,7 @@ describe('ResourceShell', () => {
 
     expect(await screen.findByText('Folder created')).toBeInTheDocument()
     await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
     core.dispose()
   })
 
@@ -414,10 +416,244 @@ describe('ResourceShell', () => {
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
 
-    expect(await screen.findByText('rejected: invalid_parent')).toBeInTheDocument()
+    expect(await screen.findByText('Creation rejected: invalid_parent')).toBeInTheDocument()
     await waitFor(() => expect(trigger).toBeEnabled())
     expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Folder' })).toBeEnabled()
     expect(navigation.current()).toBe(resource.id)
+    core.dispose()
+  })
+
+  it('keeps an unresolved create in its surface and retries one operation to completion', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    const operationIds: Array<string> = []
+    const resourceIds: Array<string> = []
+    let releaseRetry!: () => void
+    const retryGate = new Promise<void>((resolve) => {
+      releaseRetry = resolve
+    })
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              operationIds.push(args[0].operationId)
+              if (args[0].command.type !== 'create') throw new Error('expected create')
+              resourceIds.push(args[0].command.resourceId)
+              if (operationIds.length === 1) {
+                return {
+                  status: 'indeterminate' as const,
+                  retryable: true as const,
+                  reason: 'response_lost' as const,
+                }
+              }
+              await retryGate
+              return await authoritative.execute(...args)
+            },
+          },
+        },
+      },
+    }
+    render(
+      <ResourceShell ariaLabel="Unresolved creation" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    const trigger = await screen.findByRole('button', { name: 'Create resource' })
+    fireEvent.click(trigger)
+    fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
+      target: { value: 'Uncertain folder' },
+    })
+    const folderButton = screen.getByRole('menuitem', { name: 'Folder' })
+    fireEvent.click(folderButton)
+
+    expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
+    expect(trigger).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Note' })).toBeDisabled()
+    expect(navigation.current()).toBe(resource.id)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(folderButton).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Creating…')).not.toBeInTheDocument()
+    releaseRetry()
+
+    expect(await screen.findByText('Folder created')).toBeVisible()
+    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
+    expect(operationIds).toHaveLength(2)
+    expect(operationIds[1]).toBe(operationIds[0])
+    expect(resourceIds[1]).toBe(resourceIds[0])
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    core.dispose()
+  })
+
+  it('retries note creation with the same canonical document', async () => {
+    const { core } = await shellRuntime(true)
+    const authoritative = core.runtime.content.notes
+    const documents: Array<Parameters<typeof authoritative.create>[1]> = []
+    const notes: typeof authoritative = {
+      get: (resourceId) => authoritative.get(resourceId),
+      subscribe: (resourceId, listener) => authoritative.subscribe(resourceId, listener),
+      export: (resourceId) => authoritative.export(resourceId),
+      create: async (...args) => {
+        documents.push(args[1])
+        if (documents.length === 1) {
+          return {
+            status: 'indeterminate',
+            retryable: true,
+            reason: 'response_lost',
+          }
+        }
+        return await authoritative.create(...args)
+      },
+      dispose: () => authoritative.dispose(),
+    }
+    const runtime = {
+      ...core.runtime,
+      content: { ...core.runtime.content, notes },
+    }
+    render(
+      <ResourceShell ariaLabel="Retried note creation" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Note' }))
+    expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('Note created')).toBeVisible()
+    expect(documents).toHaveLength(2)
+    expect(documents[1]).toBe(documents[0])
+    core.dispose()
+  })
+
+  it('retires an unresolved create when navigation leaves its invoking surface', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const execute = vi.fn(() =>
+      Promise.resolve({
+        status: 'indeterminate' as const,
+        retryable: true as const,
+        reason: 'response_lost' as const,
+      }),
+    )
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: { status: 'available' as const, value: { execute } },
+      },
+    }
+    render(<ResourceShell ariaLabel="Retired creation" runtime={runtime} workspaceName="DM view" />)
+
+    const trigger = await screen.findByRole('button', { name: 'Create resource' })
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+    expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
+
+    act(() => navigation.open(resource.id))
+
+    await waitFor(() => expect(trigger).toBeEnabled())
+    expect(screen.queryByText('Creation unresolved: response_lost')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(execute).toHaveBeenCalledOnce()
+    core.dispose()
+  })
+
+  it('retires an unresolved create when its campaign changes', async () => {
+    const { core } = await shellRuntime(true)
+    const execute = vi.fn(() =>
+      Promise.resolve({
+        status: 'indeterminate' as const,
+        retryable: true as const,
+        reason: 'response_lost' as const,
+      }),
+    )
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: { status: 'available' as const, value: { execute } },
+      },
+    }
+    const view = render(
+      <ResourceShell ariaLabel="Campaign creation" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    const trigger = await screen.findByRole('button', { name: 'Create resource' })
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+    expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
+
+    view.rerender(
+      <ResourceShell
+        ariaLabel="Campaign creation"
+        runtime={{
+          ...runtime,
+          scope: {
+            ...runtime.scope,
+            campaignId: generateDomainId(DOMAIN_ID_KIND.campaign),
+          },
+        }}
+        workspaceName="DM view"
+      />,
+    )
+
+    await waitFor(() => expect(trigger).toBeEnabled())
+    expect(screen.queryByText('Creation unresolved: response_lost')).not.toBeInTheDocument()
+    expect(execute).toHaveBeenCalledOnce()
+    core.dispose()
+  })
+
+  it('requires abandonment before a fresh create and allocates a new operation identity', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    const operationIds: Array<string> = []
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              operationIds.push(args[0].operationId)
+              return operationIds.length === 1
+                ? {
+                    status: 'indeterminate' as const,
+                    retryable: true as const,
+                    reason: 'response_lost' as const,
+                  }
+                : await authoritative.execute(...args)
+            },
+          },
+        },
+      },
+    }
+    render(
+      <ResourceShell ariaLabel="Abandoned creation" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    const trigger = await screen.findByRole('button', { name: 'Create resource' })
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+    expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
+    expect(trigger).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(trigger).toBeEnabled()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+
+    expect(await screen.findByText('Folder created')).toBeVisible()
+    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
+    expect(operationIds).toHaveLength(2)
+    expect(operationIds[1]).not.toBe(operationIds[0])
     core.dispose()
   })
 
@@ -460,7 +696,7 @@ describe('ResourceShell', () => {
     await expect(settlement.retry()).resolves.toMatchObject({ status: 'completed' })
     expect(operationIds).toHaveLength(2)
     expect(operationIds[1]).toBe(operationIds[0])
-    expect(navigation.current()).not.toBe(resource.id)
+    expect(navigation.current()).toBe(resource.id)
     core.dispose()
   })
 
@@ -497,12 +733,12 @@ describe('ResourceShell', () => {
     if (settlement.status !== 'failed' || !settlement.retry) {
       throw new Error('expected retryable provider failure')
     }
-    expect(report).toHaveBeenLastCalledWith('Not committed: provider_failure', expect.any(Function))
+    expect(report).not.toHaveBeenCalled()
     expect(navigation.current()).toBe(resource.id)
 
     await expect(settlement.retry()).resolves.toMatchObject({ status: 'completed' })
     expect(operationIds[1]).toBe(operationIds[0])
-    expect(navigation.current()).not.toBe(resource.id)
+    expect(navigation.current()).toBe(resource.id)
     core.dispose()
   })
 
@@ -526,7 +762,9 @@ describe('ResourceShell', () => {
       target: { files: [file] },
     })
 
-    expect(await screen.findByText('File must be less than 100MB')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Creation rejected: File must be less than 100MB'),
+    ).toBeInTheDocument()
     expect(arrayBuffer).not.toHaveBeenCalled()
     core.dispose()
   })

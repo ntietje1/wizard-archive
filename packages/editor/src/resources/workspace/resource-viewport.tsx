@@ -1,4 +1,4 @@
-import { FileUp, Folder } from 'lucide-react'
+import { FileUp, Folder, Loader2 } from 'lucide-react'
 import { useRef, useSyncExternalStore } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -20,6 +20,7 @@ import {
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
 import { useWorkspaceCreation } from './use-workspace-creation'
+import { WorkspaceCreationStatus } from './workspace-creation-status'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
@@ -244,7 +245,7 @@ function FolderViewport({
   sort: WorkspaceSort
 }) {
   const query = { parentId: folder.id, lifecycle: 'active' as const }
-  const creation = useWorkspaceCreation(runtime.navigation, folder.id)
+  const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, folder.id)
   const load = useEnsureResourceCollection(runtime, query)
   const collection = snapshot.list(query)
   if (collection.state === 'unknown') return <FolderLoadingState load={load} />
@@ -319,7 +320,7 @@ function CreateNewDashboard({
   creation: ReturnType<typeof useWorkspaceCreation>
   folder: AuthorizedResourceSummary
 }) {
-  const pending = creation.pending
+  const blocked = creation.blocked
   const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
@@ -329,31 +330,42 @@ function CreateNewDashboard({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(['note', 'folder', 'map', 'canvas'] as const).map((kind) => {
             const Icon = resourceKindIcon(kind)
+            const isPending = creation.pendingControlId === kind
             return (
               <button
                 key={kind}
                 type="button"
-                aria-busy={pending}
-                disabled={pending}
+                aria-busy={isPending}
+                disabled={blocked}
                 className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted"
                 onClick={async () => {
                   const title = `Untitled ${kind}`
-                  await creation.run((signal) => actions.create(kind, folder.id, title, signal))
+                  await creation.run(kind, (signal) =>
+                    actions.create(kind, folder.id, title, signal),
+                  )
                 }}
               >
-                <Icon className="size-7 text-muted-foreground" />
+                {isPending ? (
+                  <Loader2 className="size-7 animate-spin text-muted-foreground" />
+                ) : (
+                  <Icon className="size-7 text-muted-foreground" />
+                )}
                 {resourceKindLabel(kind)}
               </button>
             )
           })}
           <button
             type="button"
-            aria-busy={pending}
-            disabled={pending}
+            aria-busy={creation.pendingControlId === 'file'}
+            disabled={blocked}
             className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
             onClick={() => upload.current?.click()}
           >
-            <FileUp className="size-7 text-muted-foreground" />
+            {creation.pendingControlId === 'file' ? (
+              <Loader2 className="size-7 animate-spin text-muted-foreground" />
+            ) : (
+              <FileUp className="size-7 text-muted-foreground" />
+            )}
             Upload File
           </button>
           <input
@@ -365,10 +377,11 @@ function CreateNewDashboard({
               const file = event.target.files?.[0]
               event.target.value = ''
               if (!file) return
-              await creation.run((signal) => actions.createFile(folder.id, file, signal))
+              await creation.run('file', (signal) => actions.createFile(folder.id, file, signal))
             }}
           />
         </div>
+        <WorkspaceCreationStatus creation={creation} />
         <div className="mt-8 border-t border-border pt-5 text-center">
           <p className="text-sm font-medium">Create from Template</p>
           <p className="mt-1 text-sm text-muted-foreground">No templates yet</p>

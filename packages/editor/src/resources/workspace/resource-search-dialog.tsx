@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { PanelRight, Search, X } from 'lucide-react'
+import { Loader2, PanelRight, Search, X } from 'lucide-react'
 import type { EditorRuntime, WorkspaceSearch } from '../editor-runtime-contract'
 import type { WorkspaceSearchResult } from '../resource-search-policy'
 import type { AuthorizedResourceSummary, ResourceKnowledge } from '../resource-index-contract'
@@ -10,6 +10,8 @@ import type { WorkspaceActions } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
 import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'
+import { useWorkspaceCreation } from './use-workspace-creation'
+import { WorkspaceCreationStatus } from './workspace-creation-status'
 
 type SearchState =
   | Readonly<{ status: 'idle'; results: ReadonlyArray<WorkspaceSearchResult> }>
@@ -74,6 +76,7 @@ function OpenResourceSearchDialog({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const dialogRef = useModalDialog()
+  const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, null)
 
   useEffect(() => {
     void Promise.all(
@@ -124,10 +127,12 @@ function OpenResourceSearchDialog({
     selected?.type === 'resource'
       ? knownResource(snapshot.lookup(selected.result.resourceId))
       : null
-  const select = (item: SearchDisplayItem) => {
+  const select = async (item: SearchDisplayItem) => {
     if (item.type === 'create') {
-      onOpenChange(false)
-      void actions.create(item.kind, null, '')
+      const settlement = await creation.run(item.kind, (signal) =>
+        actions.create(item.kind, null, '', signal),
+      )
+      if (settlement.status === 'completed') onOpenChange(false)
       return
     }
     search.recordOpened(item.result.resourceId)
@@ -144,7 +149,7 @@ function OpenResourceSearchDialog({
     }
     if (event.key === 'Enter' && selected) {
       event.preventDefault()
-      select(selected)
+      void select(selected)
     }
   }
 
@@ -207,6 +212,7 @@ function OpenResourceSearchDialog({
           <X className="size-3.5" />
         </button>
       </div>
+      <WorkspaceCreationStatus creation={creation} onCompleted={() => onOpenChange(false)} />
       <div className="flex min-h-0 flex-1">
         <div
           className={`${showPreview ? 'w-1/2 border-r border-border' : 'w-full'} flex min-h-0 flex-col`}
@@ -229,6 +235,8 @@ function OpenResourceSearchDialog({
                   key={item.type === 'create' ? `create-${item.kind}` : item.result.resourceId}
                   id={`resource-search-${index}`}
                   item={item}
+                  disabled={item.type === 'create' && creation.blocked}
+                  pending={item.type === 'create' && creation.pendingControlId === item.kind}
                   query={query}
                   resource={
                     item.type === 'resource'
@@ -236,7 +244,7 @@ function OpenResourceSearchDialog({
                       : null
                   }
                   selected={index === selectedIndex}
-                  onActivate={() => select(item)}
+                  onActivate={() => void select(item)}
                   onHover={() => setSelectedIndex(index)}
                 />
               ))}
@@ -260,18 +268,22 @@ function OpenResourceSearchDialog({
 }
 
 function SearchItem({
+  disabled,
   id,
   item,
   onActivate,
   onHover,
+  pending,
   query,
   resource,
   selected,
 }: {
+  disabled: boolean
   id: string
   item: SearchDisplayItem
   onActivate: () => void
   onHover: () => void
+  pending: boolean
   query: string
   resource: AuthorizedResourceSummary | null
   selected: boolean
@@ -294,11 +306,17 @@ function SearchItem({
       role="option"
       type="button"
       aria-selected={selected}
+      aria-busy={pending}
+      disabled={disabled}
       className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted aria-selected:bg-muted"
       onClick={onActivate}
       onMouseEnter={onHover}
     >
-      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      {pending ? (
+        <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground" />
+      ) : (
+        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      )}
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{highlight(title, query)}</span>
         <span className="block truncate text-xs text-muted-foreground">

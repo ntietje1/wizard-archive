@@ -259,8 +259,10 @@ export function ResourceShell({
         <ResourceContextMenu
           actions={actions}
           bookmarksAvailable={runtime.resources.bookmarks.status === 'available'}
+          campaignId={runtime.scope.campaignId}
           canEdit={canEdit}
           clipboard={clipboard}
+          navigation={runtime.navigation}
           request={contextMenu.request}
           resourceIds={contextMenu.resourceIds}
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}

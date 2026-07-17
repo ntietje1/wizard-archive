@@ -5,6 +5,7 @@ import {
   ChevronRight,
   File,
   ListCollapse,
+  Loader2,
   PanelLeftClose,
   Plus,
   Search,
@@ -41,6 +42,7 @@ import {
 } from './resource-presentation'
 import { ResourceTrashControl } from './resource-trash-control'
 import { useWorkspaceCreation } from './use-workspace-creation'
+import { WorkspaceCreationStatus } from './workspace-creation-status'
 
 const EMPTY_BOOKMARKS: ReadonlySet<ResourceId> = new Set()
 
@@ -762,8 +764,8 @@ export function ResourceCreateMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
-  const creation = useWorkspaceCreation(runtime.navigation, parentId)
-  const pending = creation.pending
+  const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, parentId)
+  const blocked = creation.blocked
   const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="relative">
@@ -772,8 +774,7 @@ export function ResourceCreateMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={label}
-        aria-busy={pending}
-        disabled={pending}
+        disabled={blocked}
         className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
         onClick={() => setOpen((value) => !value)}
       >
@@ -787,7 +788,7 @@ export function ResourceCreateMenu({
           <input
             autoFocus
             aria-label="New resource title"
-            disabled={pending}
+            disabled={blocked}
             className="mb-1 h-8 w-full rounded border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             placeholder="Optional title"
             value={title}
@@ -802,15 +803,17 @@ export function ResourceCreateMenu({
             ] as const
           ).map((kind) => {
             const Icon = resourceKindIcon(kind)
+            const isPending = creation.pendingControlId === kind
             return (
               <button
                 key={kind}
                 role="menuitem"
                 type="button"
-                disabled={pending}
+                aria-busy={isPending}
+                disabled={blocked}
                 className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
                 onClick={async () => {
-                  const settlement = await creation.run((signal) =>
+                  const settlement = await creation.run(kind, (signal) =>
                     actions.create(kind, parentId, title, signal),
                   )
                   if (settlement.status === 'completed') {
@@ -819,7 +822,11 @@ export function ResourceCreateMenu({
                   }
                 }}
               >
-                <Icon className="size-4" />
+                {isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Icon className="size-4" />
+                )}
                 {resourceKindLabel(kind)}
               </button>
             )
@@ -827,11 +834,16 @@ export function ResourceCreateMenu({
           <button
             role="menuitem"
             type="button"
-            disabled={pending}
+            aria-busy={creation.pendingControlId === 'file'}
+            disabled={blocked}
             className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
             onClick={() => upload.current?.click()}
           >
-            <File className="size-4" />
+            {creation.pendingControlId === 'file' ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <File className="size-4" />
+            )}
             Upload file
           </button>
           <input
@@ -843,13 +855,20 @@ export function ResourceCreateMenu({
               const file = event.target.files?.[0]
               event.target.value = ''
               if (!file) return
-              const settlement = await creation.run((signal) =>
+              const settlement = await creation.run('file', (signal) =>
                 actions.createFile(parentId, file, signal),
               )
               if (settlement.status === 'completed') {
                 setOpen(false)
                 setTitle('')
               }
+            }}
+          />
+          <WorkspaceCreationStatus
+            creation={creation}
+            onCompleted={() => {
+              setOpen(false)
+              setTitle('')
             }}
           />
         </div>

@@ -10,6 +10,7 @@ import {
   FileUp,
   FolderInput,
   Hash,
+  Loader2,
   Plus,
   RotateCcw,
   Scissors,
@@ -17,32 +18,39 @@ import {
   StarOff,
   Trash2,
 } from 'lucide-react'
-import type { ResourceId } from '../domain-id'
+import type { CampaignId, ResourceId } from '../domain-id'
+import type { ResourceNavigation } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
+import { useWorkspaceCreation } from './use-workspace-creation'
+import { WorkspaceCreationStatus } from './workspace-creation-status'
 
 export function ResourceContextMenu({
   canEdit,
   actions: workspace,
   bookmarksAvailable,
+  campaignId,
   clipboard,
   onClipboardChange,
   onClose,
   onRequestMove,
+  navigation,
   request,
   resourceIds,
   bookmarkedIds,
 }: {
   actions: WorkspaceActions
   bookmarksAvailable: boolean
+  campaignId: CampaignId
   canEdit: boolean
   clipboard: WorkspaceClipboard
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   onClose: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
+  navigation: ResourceNavigation
   request: ResourceContextMenuRequest
   resourceIds: ReadonlyArray<ResourceId>
   bookmarkedIds: ReadonlySet<ResourceId>
@@ -51,6 +59,8 @@ export function ResourceContextMenu({
   const resource = request.resource
   const active = resource.lifecycle === 'active'
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const destinationId = resource.kind === 'folder' ? resource.id : null
+  const creation = useWorkspaceCreation(campaignId, navigation, destinationId)
 
   useEffect(() => {
     menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus()
@@ -81,6 +91,7 @@ export function ResourceContextMenu({
         <ActiveResourceMenuItems
           actions={actions}
           clipboard={clipboard}
+          creation={creation}
           onClipboardChange={onClipboardChange}
         />
       )}
@@ -134,10 +145,12 @@ type ResourceMenuActions = Readonly<{
 function ActiveResourceMenuItems({
   actions,
   clipboard,
+  creation,
   onClipboardChange,
 }: {
   actions: ResourceMenuActions
   clipboard: WorkspaceClipboard
+  creation: ReturnType<typeof useWorkspaceCreation>
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
 }) {
   const { resource, resourceIds, workspace } = actions
@@ -158,16 +171,32 @@ function ActiveResourceMenuItems({
         <>
           {(['note', 'folder', 'map', 'canvas'] as const).map((kind) => (
             <MenuItem
+              busy={creation.pendingControlId === kind}
+              disabled={creation.blocked}
               key={kind}
-              icon={<Plus />}
+              icon={
+                creation.pendingControlId === kind ? <Loader2 className="animate-spin" /> : <Plus />
+              }
               label={`New ${resourceKindLabel(kind)}`}
               onActivate={() =>
-                runMenuOperation(actions, () => workspace.create(kind, destinationId, ''))
+                void creation
+                  .run(kind, (signal) => workspace.create(kind, destinationId, '', signal))
+                  .then((settlement) => {
+                    if (settlement.status === 'completed') actions.onClose()
+                  })
               }
             />
           ))}
           <MenuItem
-            icon={<FileUp />}
+            busy={creation.pendingControlId === 'file'}
+            disabled={creation.blocked}
+            icon={
+              creation.pendingControlId === 'file' ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <FileUp />
+              )
+            }
             label="Upload File"
             onActivate={() => upload.current?.click()}
           />
@@ -179,9 +208,16 @@ function ActiveResourceMenuItems({
             onChange={(event) => {
               const file = event.target.files?.[0]
               event.target.value = ''
-              if (file) runMenuOperation(actions, () => workspace.createFile(destinationId, file))
+              if (file) {
+                void creation
+                  .run('file', (signal) => workspace.createFile(destinationId, file, signal))
+                  .then((settlement) => {
+                    if (settlement.status === 'completed') actions.onClose()
+                  })
+              }
             }}
           />
+          <WorkspaceCreationStatus creation={creation} onCompleted={actions.onClose} />
           <MenuSeparator />
         </>
       )}
@@ -327,6 +363,7 @@ function runMenuOperation(actions: ResourceMenuActions, operation: () => unknown
 }
 
 function MenuItem({
+  busy = false,
   danger = false,
   disabled = false,
   icon,
@@ -334,6 +371,7 @@ function MenuItem({
   onActivate,
   shortcut,
 }: {
+  busy?: boolean
   danger?: boolean
   disabled?: boolean
   icon: ReactNode
@@ -346,6 +384,7 @@ function MenuItem({
       role="menuitem"
       type="button"
       aria-label={label}
+      aria-busy={busy}
       disabled={disabled}
       className={`flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:pointer-events-none disabled:opacity-50 ${danger ? 'text-destructive' : ''}`}
       onClick={onActivate}
