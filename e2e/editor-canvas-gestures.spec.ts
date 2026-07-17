@@ -2,6 +2,19 @@ import { expect, test } from '@playwright/test'
 import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
 
 test.describe('canvas gesture parity', () => {
+  test('adds one embed for each repeated sidebar resource drop', async ({ page }) => {
+    const { nodes, surface } = await openDemoCanvas(page)
+    const note = page.getByRole('button', { name: 'The Lantern Market', exact: true })
+    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    const initialCount = await nodes.count()
+
+    await note.dragTo(surface, { targetPosition: { x: 360, y: 220 } })
+    await expect(nodes).toHaveCount(initialCount + 1)
+
+    await note.dragTo(surface, { targetPosition: { x: 620, y: 340 } })
+    await expect(nodes).toHaveCount(initialCount + 2)
+  })
+
   test('restores reference click and drag text placement geometry', async ({ page }) => {
     const { editor, nodes, surface } = await openDemoCanvas(page)
     await editor.focus()

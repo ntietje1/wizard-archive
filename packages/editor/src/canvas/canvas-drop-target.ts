@@ -22,6 +22,7 @@ export function useCanvasDropTarget({
   interactionController: CanvasInteractionController
 }) {
   const lifetime = useRef<AbortController | null>(null)
+  const consumedDrops = useRef(new WeakSet<DataTransfer>())
 
   useEffect(() => {
     const controller = new AbortController()
@@ -54,6 +55,8 @@ export function useCanvasDropTarget({
     if (!drop || !canResolve(event.dataTransfer)) return
     event.preventDefault()
     event.stopPropagation()
+    if (consumedDrops.current.has(event.dataTransfer)) return
+    consumedDrops.current.add(event.dataTransfer)
     const bounds = event.currentTarget.getBoundingClientRect()
     const point = screenToCanvasPoint(
       { x: event.clientX - bounds.left, y: event.clientY - bounds.top },

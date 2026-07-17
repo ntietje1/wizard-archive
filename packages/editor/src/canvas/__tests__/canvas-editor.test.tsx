@@ -1,5 +1,5 @@
 import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { StrictMode } from 'react'
 import type { ComponentProps } from 'react'
 import * as Y from 'yjs'
@@ -89,19 +89,21 @@ describe('CanvasEditor', () => {
   it('places resolved internal and external drops at the canvas pointer location', async () => {
     const session = await createSession()
     const externalUrl = parseSafeHttpsUrl('https://example.com/reference')!
+    const resolve = vi.fn(() =>
+      Promise.resolve([
+        {
+          kind: 'internal' as const,
+          target: { kind: 'resource' as const, resourceId: RESOURCE_ID },
+        },
+        { kind: 'externalUrl' as const, url: externalUrl },
+      ]),
+    )
     const view = render(
       <ProductionCanvasEditor
         canEdit
         drop={{
           canResolve: () => true,
-          resolve: () =>
-            Promise.resolve([
-              {
-                kind: 'internal',
-                target: { kind: 'resource', resourceId: RESOURCE_ID },
-              },
-              { kind: 'externalUrl', url: externalUrl },
-            ]),
+          resolve,
         }}
         renderEmbed={() => null}
         resourceId={RESOURCE_ID}
@@ -124,10 +126,17 @@ describe('CanvasEditor', () => {
       clientY: { value: 90 },
     })
     fireEvent(surface, dropEvent)
+    const repeatedDropEvent = createEvent.drop(surface, { dataTransfer })
+    Object.defineProperties(repeatedDropEvent, {
+      clientX: { value: 120 },
+      clientY: { value: 90 },
+    })
+    fireEvent(surface, repeatedDropEvent)
 
     await waitFor(() => {
       expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(2)
     })
+    expect(resolve).toHaveBeenCalledOnce()
     expect(readCanvasDocumentContent(session.document).nodes).toMatchObject([
       {
         type: 'embed',
