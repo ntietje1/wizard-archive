@@ -6,6 +6,7 @@ import {
   digestPlainTransferSources,
 } from '../plain-transfer-inventory'
 import type { PlainTransferSourceEntry } from '../plain-transfer-inventory'
+import { MAX_RESOURCE_SOURCE_BYTES } from '../resource-source-classifier'
 import { TRANSFER_JOB_REQUEST_VERSION } from '../transfer-job-contract'
 import type { PlainTransferJobRequest, TransferSourceDescriptor } from '../transfer-job-contract'
 
@@ -31,7 +32,7 @@ describe('plain transfer inventory', () => {
     )
     const binary = result.inventory.resources.find((resource) => resource.sourcePath === 'map.bin')
     expect(result.inventory).toMatchObject({
-      version: 'plain-transfer-inventory-v1',
+      version: 'plain-transfer-inventory-v2',
       sourceDigest: request.sourceDigest,
     })
     expect(notes).toMatchObject({ kind: 'folder', parentId: null, sourcePath: 'Notes' })
@@ -59,6 +60,34 @@ describe('plain transfer inventory', () => {
       },
     })
     expect(new Set(result.inventory.resources.map((resource) => resource.id)).size).toBe(3)
+    const resourcesById = new Map(
+      result.inventory.resources.map((resource) => [resource.id, resource]),
+    )
+    for (const resource of result.inventory.resources) {
+      if (resource.parentId !== null)
+        expect(resourcesById.get(resource.parentId)?.kind).toBe('folder')
+    }
+  })
+
+  it('rebuilds and reloads the same immutable identity plan', async () => {
+    const sources = [directorySource('upload', 'Campaign')]
+    const entries: Array<PlainTransferSourceEntry> = [
+      markdown('upload', 'Notes/Session.md', '# Arrival'),
+      file('upload', 'map.bin', [1, 2, 3]),
+    ]
+    const request = await plainRequest('plain_workspace', sources, entries)
+
+    const first = await buildPlainTransferInventory({ request, entries })
+    const resumed = await buildPlainTransferInventory({
+      request: structuredClone(request),
+      entries: structuredClone(entries).reverse(),
+    })
+
+    expect(serializeInventory(resumed)).toBe(serializeInventory(first))
+    if (first.status !== 'ready') return
+    expect(serializeInventory(reloadInventory(first.inventory))).toBe(
+      serializeInventory(first.inventory),
+    )
   })
 
   it('strips a sole ZIP wrapper only for a new plain workspace', async () => {
@@ -167,6 +196,32 @@ describe('plain transfer inventory', () => {
     ).resolves.toEqual({ status: 'rejected', reason: 'entry_limit_exceeded' })
   })
 
+  it('rejects oversized entries and file ancestors before allocating an identity plan', async () => {
+    const sources = [directorySource('upload', 'Campaign')]
+    const oversized = file('upload', 'oversized.bin', new Uint8Array(MAX_RESOURCE_SOURCE_BYTES + 1))
+    const oversizedRequest = await plainRequest('plain_workspace', sources, [oversized])
+
+    await expect(
+      buildPlainTransferInventory({ request: oversizedRequest, entries: [oversized] }),
+    ).resolves.toEqual({
+      status: 'rejected',
+      reason: 'entry_too_large',
+      sourceId: 'upload',
+      sourcePath: 'oversized.bin',
+    })
+
+    const invalidHierarchy = [
+      file('upload', 'parent.bin', [1]),
+      markdown('upload', 'parent.bin/child.md', 'child'),
+    ]
+    await expect(
+      buildPlainTransferInventory({
+        request: await plainRequest('plain_workspace', sources, invalidHierarchy),
+        entries: invalidHierarchy,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_source' })
+  })
+
   it('produces an order-independent immutable source digest', async () => {
     const sources = [directorySource('upload', 'Campaign')]
     const left = markdown('upload', 'A.md', 'A')
@@ -243,7 +298,31 @@ function markdown(sourceId: string, path: string, text: string): PlainTransferSo
 function file(
   sourceId: string,
   path: string,
-  bytes: ReadonlyArray<number>,
+  bytes: ReadonlyArray<number> | Uint8Array,
 ): PlainTransferSourceEntry {
-  return { sourceId, path, type: 'file', bytes: Uint8Array.from(bytes) }
+  return {
+    sourceId,
+    path,
+    type: 'file',
+    bytes: bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes),
+  }
+}
+
+function reloadInventory<T>(value: T): T {
+  return JSON.parse(serializeInventory(value), (_key, entry) =>
+    typeof entry === 'object' &&
+    entry !== null &&
+    '$plainTransferBytes' in entry &&
+    Array.isArray(entry.$plainTransferBytes)
+      ? Uint8Array.from(entry.$plainTransferBytes)
+      : entry,
+  ) as T
+}
+
+function serializeInventory(value: unknown): string {
+  return JSON.stringify(value, (_key, entry) =>
+    Object.prototype.toString.call(entry) === '[object Uint8Array]'
+      ? { $plainTransferBytes: Array.from(entry as Uint8Array) }
+      : entry,
+  )
 }

@@ -1,6 +1,6 @@
 import type { Sha256Digest, VersionStamp } from './component-version'
 import { sha256Digest } from './component-version'
-import { DOMAIN_ID_KIND, generateDomainId, isUuidV7 } from './domain-id'
+import { DOMAIN_ID_KIND, assertDomainId, isUuidV7 } from './domain-id'
 import type { ResourceId } from './domain-id'
 import type { FileOwnedMetadata } from './file-content-contract'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
@@ -16,7 +16,7 @@ import type { SourcePathAlias } from './resource-catalog-contract'
 import { TRANSFER_JOB_REQUEST_VERSION } from './transfer-job-contract'
 import type { PlainTransferJobRequest, TransferSourceDescriptor } from './transfer-job-contract'
 
-export const PLAIN_TRANSFER_INVENTORY_VERSION = 'plain-transfer-inventory-v1' as const
+export const PLAIN_TRANSFER_INVENTORY_VERSION = 'plain-transfer-inventory-v2' as const
 export const PLAIN_TRANSFER_LIMITS = {
   maxEntries: MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
   maxPathDepth: 64,
@@ -82,6 +82,12 @@ export type PlainTransferInventoryResult =
         | 'source_limit_exceeded'
         | 'workspace_source_required'
     }>
+  | Readonly<{
+      status: 'rejected'
+      reason: 'entry_too_large'
+      sourceId: string
+      sourcePath: string
+    }>
 
 type CanonicalEntry = Readonly<{
   source: TransferSourceDescriptor
@@ -93,10 +99,12 @@ type CanonicalEntry = Readonly<{
 
 type PlacedEntry = CanonicalEntry & Readonly<{ placedPath: string }>
 
+type PreparedEntry = PlacedEntry & Readonly<{ classification: ResourceSourceClassification | null }>
+
 type RejectedInventory = Extract<PlainTransferInventoryResult, { status: 'rejected' }>
 
 type PreparedInventory = Readonly<{
-  entries: ReadonlyArray<PlacedEntry>
+  entries: ReadonlyArray<PreparedEntry>
   sourceDigest: Sha256Digest
 }>
 
@@ -115,7 +123,7 @@ async function digestCanonicalEntries(
 ): Promise<Sha256Digest> {
   const parts: Array<Uint8Array> = []
   const encoder = new TextEncoder()
-  for (const source of [...sources].sort((left, right) => left.id.localeCompare(right.id))) {
+  for (const source of [...sources].sort((left, right) => compareText(left.id, right.id))) {
     parts.push(
       encoder.encode(`source\0${source.id}\0${source.kind}\0${source.name.normalize('NFC')}`),
     )
@@ -124,7 +132,7 @@ async function digestCanonicalEntries(
     const bytesDigest = entry.bytes ? await sha256Digest(entry.bytes) : ''
     parts.push(
       encoder.encode(
-        `entry\0${entry.source.id}\0${entry.path}\0${entry.type}\0${entry.bytes?.byteLength ?? 0}\0${bytesDigest}`,
+        `entry\0${entry.source.id}\0${entry.path}\0${entry.type}\0${entry.bytes?.byteLength ?? 0}\0${bytesDigest}\0${canonicalJson(entry.inspection ?? null)}`,
       ),
     )
   }
@@ -144,19 +152,13 @@ async function digestCanonicalEntries(
 export async function buildPlainTransferInventory({
   request,
   entries,
-  allocateResourceId = () => generateDomainId(DOMAIN_ID_KIND.resource),
 }: Readonly<{
   request: PlainTransferJobRequest
   entries: ReadonlyArray<PlainTransferSourceEntry>
-  allocateResourceId?: () => ResourceId
 }>): Promise<PlainTransferInventoryResult> {
   const prepared = await preparePlainTransferInventory(request, entries)
   if ('status' in prepared) return prepared
-  const resources = await materializePlainTransferResources(
-    request,
-    prepared.entries,
-    allocateResourceId,
-  )
+  const resources = await materializePlainTransferResources(request, prepared.entries)
   return {
     status: 'ready',
     inventory: {
@@ -198,10 +200,18 @@ async function preparePlainTransferInventory(
   if (sourceDigest !== request.sourceDigest) {
     return { status: 'rejected', reason: 'source_changed' }
   }
+  const preparedEntries = preparePlacedEntries(request, canonical.entries)
+  if ('status' in preparedEntries) return preparedEntries
+  return classifyPreparedEntries(preparedEntries, sourceDigest)
+}
 
+function preparePlacedEntries(
+  request: PlainTransferJobRequest,
+  entries: ReadonlyArray<CanonicalEntry>,
+): ReadonlyArray<PlacedEntry> | RejectedInventory {
   let placed: ReadonlyArray<PlacedEntry>
   try {
-    placed = placeEntries(request, canonical.entries).filter(
+    placed = placeEntries(request, entries).filter(
       (entry) => entry.placedPath.length > 0 && !entry.path.startsWith('.wizardarchive/'),
     )
   } catch {
@@ -214,55 +224,97 @@ async function preparePlainTransferInventory(
   if (resourcePaths.length > PLAIN_TRANSFER_LIMITS.maxEntries) {
     return { status: 'rejected', reason: 'entry_limit_exceeded' }
   }
-  return { entries: resourcePaths, sourceDigest }
+  if (hasFileAncestor(resourcePaths)) return { status: 'rejected', reason: 'invalid_source' }
+  return resourcePaths
+}
+
+function classifyPreparedEntries(
+  entries: ReadonlyArray<PlacedEntry>,
+  sourceDigest: Sha256Digest,
+): PreparedInventory | RejectedInventory {
+  const preparedEntries: Array<PreparedEntry> = []
+  for (const entry of entries) {
+    const classification = classifyEntry(entry)
+    if (classification?.classification === 'rejected') {
+      return {
+        status: 'rejected',
+        reason: classification.reason,
+        sourceId: entry.source.id,
+        sourcePath: entry.placedPath,
+      }
+    }
+    preparedEntries.push({ ...entry, classification })
+  }
+  return { entries: preparedEntries, sourceDigest }
 }
 
 async function materializePlainTransferResources(
   request: PlainTransferJobRequest,
-  entries: ReadonlyArray<PlacedEntry>,
-  allocateResourceId: () => ResourceId,
+  entries: ReadonlyArray<PreparedEntry>,
 ): Promise<ReadonlyArray<PlainTransferInventoryResource>> {
-  const ids = new Map(entries.map((entry) => [resourceKey(entry), allocateResourceId()]))
-  const resources: Array<PlainTransferInventoryResource> = []
+  const ids = await derivePlannedResourceIds(request, entries)
+  return await Promise.all(
+    entries.map((entry) => materializePlainTransferResource(request, entry, ids)),
+  )
+}
+
+async function derivePlannedResourceIds(
+  request: PlainTransferJobRequest,
+  entries: ReadonlyArray<PreparedEntry>,
+): Promise<ReadonlyMap<string, ResourceId>> {
+  const ids = new Map<string, ResourceId>()
+  const allocated = new Set<ResourceId>()
   for (const entry of entries) {
-    const id = ids.get(resourceKey(entry))!
-    const parentPath = pathParent(entry.placedPath)
-    const parentId = parentPath
-      ? (ids.get(resourceKey(entry, parentPath)) ?? request.destinationParentId)
-      : request.destinationParentId
-    const classified = classifyEntry(entry)
-    if (classified?.classification === 'rejected') continue
-    const kind =
-      classified === null ? 'folder' : classified.classification === 'note' ? 'note' : 'file'
-    const title = canonicalizeResourceTitle(pathBasename(entry.placedPath))
-    const metadataVersion = await initialResourceMetadataVersion({
+    const id = await derivePlannedResourceId(request, entry)
+    if (allocated.has(id)) throw new TypeError('Plain transfer identity collision')
+    allocated.add(id)
+    ids.set(resourceKey(entry), id)
+  }
+  return ids
+}
+
+async function materializePlainTransferResource(
+  request: PlainTransferJobRequest,
+  entry: PreparedEntry,
+  ids: ReadonlyMap<string, ResourceId>,
+): Promise<PlainTransferInventoryResource> {
+  const id = ids.get(resourceKey(entry))!
+  const parentPath = pathParent(entry.placedPath)
+  const parentId = parentPath
+    ? (ids.get(resourceKey(entry, parentPath)) ?? request.destinationParentId)
+    : request.destinationParentId
+  const kind = preparedResourceKind(entry)
+  const title = canonicalizeResourceTitle(pathBasename(entry.placedPath))
+  const bytes = entry.bytes
+  return {
+    id,
+    parentId,
+    kind,
+    title,
+    sourcePath: entry.placedPath,
+    sourceDigest: bytes ? await sha256Digest(bytes) : null,
+    metadataVersion: await initialResourceMetadataVersion({
       parentId,
       kind,
       title,
       icon: null,
       color: null,
       lifecycle: 'active',
-    })
-    const bytes = entry.bytes
-    resources.push({
-      id,
-      parentId,
-      kind,
-      title,
-      sourcePath: entry.placedPath,
-      sourceDigest: bytes ? await sha256Digest(bytes) : null,
-      metadataVersion,
-      alias: createSourcePathAlias({
-        campaignId: request.destinationCampaignId,
-        importJobId: request.jobId,
-        rawPath: entry.placedPath,
-        resourceId: id,
-        sourceRootId: entry.source.id,
-      }),
-      content: classified ? inventoryContent(classified, bytes) : null,
-    })
+    }),
+    alias: createSourcePathAlias({
+      campaignId: request.destinationCampaignId,
+      importJobId: request.jobId,
+      rawPath: entry.placedPath,
+      resourceId: id,
+      sourceRootId: entry.source.id,
+    }),
+    content: entry.classification ? inventoryContent(entry.classification, bytes) : null,
   }
-  return resources
+}
+
+function preparedResourceKind(entry: PreparedEntry): ResourceKind {
+  if (entry.classification === null) return 'folder'
+  return entry.classification.classification === 'note' ? 'note' : 'file'
 }
 
 function validRequest(request: PlainTransferJobRequest): boolean {
@@ -328,7 +380,7 @@ function canonicalEntries(
   }
   canonical.sort(
     (left, right) =>
-      left.source.id.localeCompare(right.source.id) || left.path.localeCompare(right.path),
+      compareText(left.source.id, right.source.id) || compareText(left.path, right.path),
   )
   return { status: 'ready', entries: canonical }
 }
@@ -376,8 +428,7 @@ function soleTopLevelDirectory(
 function addImplicitDirectories(entries: ReadonlyArray<PlacedEntry>): ReadonlyArray<PlacedEntry> {
   const byPath = new Map(entries.map((entry) => [resourceKey(entry), entry]))
   for (const entry of entries) {
-    let parent = pathParent(entry.placedPath)
-    while (parent) {
+    for (const parent of ancestorPaths(entry.placedPath)) {
       const key = resourceKey(entry, parent)
       if (!byPath.has(key)) {
         byPath.set(key, {
@@ -388,15 +439,72 @@ function addImplicitDirectories(entries: ReadonlyArray<PlacedEntry>): ReadonlyAr
           bytes: null,
         })
       }
-      parent = pathParent(parent)
     }
   }
   return [...byPath.values()].sort(
     (left, right) =>
-      left.source.id.localeCompare(right.source.id) ||
+      compareText(left.source.id, right.source.id) ||
       left.placedPath.split('/').length - right.placedPath.split('/').length ||
-      left.placedPath.localeCompare(right.placedPath),
+      compareText(left.placedPath, right.placedPath),
   )
+}
+
+function hasFileAncestor(entries: ReadonlyArray<PlacedEntry>): boolean {
+  const byPath = new Map(entries.map((entry) => [resourceKey(entry), entry]))
+  for (const entry of entries) {
+    for (const parent of ancestorPaths(entry.placedPath)) {
+      const ancestor = byPath.get(resourceKey(entry, parent))
+      if (ancestor?.type === 'file') return true
+    }
+  }
+  return false
+}
+
+function ancestorPaths(path: string): ReadonlyArray<string> {
+  const ancestors: Array<string> = []
+  let parent = pathParent(path)
+  while (parent) {
+    ancestors.push(parent)
+    parent = pathParent(parent)
+  }
+  return ancestors
+}
+
+async function derivePlannedResourceId(
+  request: PlainTransferJobRequest,
+  entry: PreparedEntry,
+): Promise<ResourceId> {
+  const digest = await sha256Digest(
+    new TextEncoder().encode(
+      [
+        PLAIN_TRANSFER_INVENTORY_VERSION,
+        request.jobId,
+        request.sourceDigest,
+        request.destinationCampaignId,
+        request.destinationParentId ?? '',
+        request.mode,
+        resourceKey(entry),
+      ].join('\0'),
+    ),
+  )
+  const timestamp = request.jobId.replaceAll('-', '').slice(0, 12)
+  return assertDomainId(
+    DOMAIN_ID_KIND.resource,
+    `${timestamp.slice(0, 8)}-${timestamp.slice(8)}-7${digest.slice(0, 3)}-8${digest.slice(3, 6)}-${digest.slice(6, 18)}`,
+  )
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  const entries = Object.entries(value as Readonly<Record<string, unknown>>).sort(
+    ([left], [right]) => compareText(left, right),
+  )
+  return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(',')}}`
 }
 
 function resourceKey(entry: Pick<PlacedEntry, 'source' | 'placedPath'>, path = entry.placedPath) {
