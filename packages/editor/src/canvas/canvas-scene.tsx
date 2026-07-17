@@ -31,7 +31,7 @@ import type {
 } from './interaction-types'
 import { canvasNodeSize } from './canvas-layout'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
-import { CanvasSelectionBounds } from './canvas-selection-bounds'
+import { CanvasNodeSelectionIndicator, CanvasSelectionBounds } from './canvas-selection-bounds'
 import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import type { CanvasTextDocument } from './text/model'
@@ -76,58 +76,69 @@ export function CanvasScene({
   const rendered = projectCanvasRenderContent(visualNodes, content.edges, interaction, surfaceSize)
   const visualSelection = getVisualCanvasSelection(interaction)
   return (
-    <div
-      className="absolute left-0 top-0 size-0 origin-top-left"
-      data-rendered-edge-count={rendered.edges.length}
-      data-rendered-node-count={rendered.nodes.length}
-      data-surface-height={surfaceSize.height}
-      data-surface-width={surfaceSize.width}
-      data-testid="canvas-viewport"
-      style={{
-        transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
-      }}
-    >
-      {rendered.edges.map((edge, index) => (
-        <svg
-          key={edge.id}
-          className="pointer-events-none absolute left-0 top-0 overflow-visible"
-          data-edge-id={edge.id}
-          data-testid="canvas-edge-layer"
-          style={{ zIndex: edge.zIndex ?? content.nodes.length + index + 1 }}
-          width="1"
-          height="1"
-        >
-          <CanvasEdge
-            edge={edge}
-            nodeById={nodeById}
-            selected={visualSelection.edgeIds.has(edge.id)}
-            selection={visualSelection}
-            tool={interaction.tool}
-            onOpenContextMenu={onOpenContextMenu}
-            onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
-          />
-        </svg>
-      ))}
-      <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
-      <CanvasDrawingOverlay interaction={interaction} />
-      <CanvasSelectionOverlay interaction={interaction} />
-      <CanvasSnapGuides interaction={interaction} />
-      <CanvasCollaborationCursors collaboration={collaboration} zoom={interaction.viewport.zoom} />
-      {rendered.nodes.map((node) => (
-        <CanvasNode
-          key={node.id}
-          canEdit={canEdit}
-          content={content}
-          documentController={documentController}
-          interaction={interaction}
-          interactionController={interactionController}
-          node={node}
-          onOpenContextMenu={onOpenContextMenu}
-          renderEmbed={renderEmbed}
-          selected={visualSelection.nodeIds.has(node.id)}
-          surface={surface}
+    <>
+      <div
+        className="absolute left-0 top-0 size-0 origin-top-left"
+        data-rendered-edge-count={rendered.edges.length}
+        data-rendered-node-count={rendered.nodes.length}
+        data-surface-height={surfaceSize.height}
+        data-surface-width={surfaceSize.width}
+        data-testid="canvas-viewport"
+        style={{
+          transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
+        }}
+      >
+        {rendered.edges.map((edge, index) => (
+          <svg
+            key={edge.id}
+            className="pointer-events-none absolute left-0 top-0 overflow-visible"
+            data-edge-id={edge.id}
+            data-testid="canvas-edge-layer"
+            style={{ zIndex: edge.zIndex ?? content.nodes.length + index + 1 }}
+            width="1"
+            height="1"
+          >
+            <CanvasEdge
+              edge={edge}
+              nodeById={nodeById}
+              selected={visualSelection.edgeIds.has(edge.id)}
+              selection={visualSelection}
+              tool={interaction.tool}
+              onOpenContextMenu={onOpenContextMenu}
+              onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
+            />
+          </svg>
+        ))}
+        <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
+        <CanvasDrawingOverlay interaction={interaction} />
+        <CanvasSelectionOverlay interaction={interaction} />
+        <CanvasSnapGuides interaction={interaction} />
+        <CanvasCollaborationCursors
+          collaboration={collaboration}
+          zoom={interaction.viewport.zoom}
         />
-      ))}
+        {rendered.nodes.map((node) => (
+          <CanvasNode
+            key={node.id}
+            canEdit={canEdit}
+            content={content}
+            documentController={documentController}
+            interaction={interaction}
+            interactionController={interactionController}
+            node={node}
+            onOpenContextMenu={onOpenContextMenu}
+            renderEmbed={renderEmbed}
+            selected={visualSelection.nodeIds.has(node.id)}
+            showSelectionIndicator={
+              visualSelection.nodeIds.has(node.id) &&
+              (interaction.interaction.type === 'selecting' ||
+                interaction.interaction.type === 'dragging' ||
+                visualSelection.nodeIds.size > 1)
+            }
+            surface={surface}
+          />
+        ))}
+      </div>
       <CanvasSelectionBounds
         canEdit={canEdit}
         interaction={interaction}
@@ -135,7 +146,7 @@ export function CanvasScene({
         nodes={visualNodes}
         surface={surface}
       />
-    </div>
+    </>
   )
 }
 
@@ -182,6 +193,7 @@ function CanvasNode({
   onOpenContextMenu,
   renderEmbed,
   selected,
+  showSelectionIndicator,
   surface,
 }: {
   canEdit: boolean
@@ -193,6 +205,7 @@ function CanvasNode({
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
   renderEmbed: CanvasEmbedRenderer
   selected: boolean
+  showSelectionIndicator: boolean
   surface: RefObject<HTMLElement | null>
 }) {
   if (node.hidden) return null
@@ -280,6 +293,7 @@ function CanvasNode({
           saveTextNode(canEdit, documentController, node.id, nextContent)
         }
       />
+      {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={interaction.viewport.zoom} />}
       {canEdit && interaction.tool === 'edge' && (
         <CanvasNodeConnectionHandles
           interaction={interaction}
@@ -588,14 +602,16 @@ function CanvasSelectionOverlay({ interaction }: { interaction: CanvasInteractio
     return (
       <>
         <div
-          className="pointer-events-none absolute border border-primary bg-primary/10"
+          className="pointer-events-none absolute bg-canvas-selection-fill"
           data-testid="canvas-marquee"
           style={{
+            borderColor: 'var(--canvas-selection-stroke)',
+            borderStyle: 'solid',
             left: bounds.x,
             top: bounds.y,
             width: bounds.width,
             height: bounds.height,
-            borderWidth: 1 / interaction.viewport.zoom,
+            borderWidth: 1.5 / interaction.viewport.zoom,
           }}
         />
         {status && <CanvasSelectionStatus status={status} />}
@@ -611,11 +627,10 @@ function CanvasSelectionOverlay({ interaction }: { interaction: CanvasInteractio
         height="1"
       >
         <polygon
-          fill="var(--primary)"
-          fillOpacity={0.1}
+          fill="var(--canvas-selection-fill)"
           points={gesture.points.map(({ x, y }) => `${x},${y}`).join(' ')}
-          stroke="var(--primary)"
-          strokeWidth={1 / interaction.viewport.zoom}
+          stroke="var(--canvas-selection-stroke)"
+          strokeWidth={1.5 / interaction.viewport.zoom}
         />
       </svg>
       {status && <CanvasSelectionStatus status={status} />}

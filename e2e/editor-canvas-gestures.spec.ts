@@ -12,7 +12,9 @@ test.describe('canvas gesture parity', () => {
       targetPosition: { x: 360, y: 360 },
     })
     const beforeResize = await visibleBox(firstNode)
-    const handle = editor.getByRole('button', { name: 'Resize bottom right' })
+    const handle = editor.getByRole('button', {
+      name: 'Resize bottom-right selection corner',
+    })
     const handleBox = await visibleBox(handle)
     const surfaceBox = await visibleBox(surface)
     await dragPointer(

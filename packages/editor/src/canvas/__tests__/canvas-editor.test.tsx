@@ -525,6 +525,13 @@ describe('CanvasEditor', () => {
       height: '220px',
     })
     expect(screen.getByRole('status')).toHaveTextContent('Selecting 2 nodes and 1 edge')
+    expect(screen.getByTestId('canvas-pending-selection-preview-wrapper')).toHaveStyle({
+      height: '160px',
+      transform: 'translate(20px, 20px)',
+      width: '520px',
+    })
+    expect(screen.getAllByTestId('canvas-node-selection-indicator')).toHaveLength(2)
+    expect(screen.queryByTestId('canvas-selection-resize-wrapper')).not.toBeInTheDocument()
     expect(
       screen
         .getAllByTestId('canvas-node')
@@ -668,11 +675,27 @@ describe('CanvasEditor', () => {
     })
 
     expect(screen.getByTestId('canvas-selection-resize-wrapper')).toHaveStyle({
-      left: '20px',
-      top: '30px',
+      transform: 'translate(20px, 30px)',
       width: '480px',
       height: '80px',
     })
+    expect(screen.getByTestId('canvas-selection-resize-outline')).toHaveStyle({
+      borderWidth: '1.5px',
+      inset: '-3px',
+    })
+    expect(screen.getByTestId('canvas-selection-resize-zone-top-left')).toHaveStyle({
+      height: '18px',
+      left: '-9px',
+      top: '-9px',
+      width: '18px',
+    })
+    expect(screen.getByTestId('canvas-selection-resize-zone-top')).toHaveStyle({
+      height: '18px',
+      left: '9px',
+      right: '9px',
+      top: '-9px',
+    })
+    expect(screen.getAllByTestId('canvas-node-selection-indicator')).toHaveLength(2)
     expect(screen.getAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
     fireEvent.pointerDown(screen.getByTestId('canvas-selection-resize-zone-bottom-right'), {
       button: 0,

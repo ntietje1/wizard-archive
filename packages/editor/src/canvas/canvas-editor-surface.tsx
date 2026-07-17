@@ -240,7 +240,7 @@ export function CanvasEditorSurface({
       <section
         ref={attachSurface}
         aria-label="Canvas surface"
-        className={`relative size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
+        className={`relative z-0 size-full touch-none overflow-hidden bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] ${canvasToolCursor(interaction.tool)}`}
         data-tool={interaction.tool}
         data-testid="canvas-surface"
         tabIndex={-1}

@@ -162,7 +162,23 @@ test.describe('canvas performance smoke', () => {
     )
     await expect(selection).toBeVisible()
 
-    const resize = editor.getByRole('button', { name: 'Resize bottom right' })
+    await editor.getByRole('button', { name: 'Panning' }).click()
+    await dragPointerOnFrames(
+      page,
+      {
+        x: fittedBounds.x + fittedBounds.width / 2,
+        y: fittedBounds.y + fittedBounds.height - 30,
+      },
+      {
+        x: fittedBounds.x + fittedBounds.width / 2 + 250,
+        y: fittedBounds.y + fittedBounds.height - 30,
+      },
+      4,
+    )
+    await editor.getByRole('button', { name: 'Pointer' }).click()
+    const resize = editor.getByRole('button', {
+      name: 'Resize bottom-right selection corner',
+    })
     const resizeBounds = await visibleBox(resize)
     evidence.push(
       await measureCanvasGesture(page, 'resizing', async () => {
