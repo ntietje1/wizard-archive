@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator, paginationResultValidator } from 'convex/server'
 import { authQuery, campaignQuery, dmQuery } from '../functions'
 import { assertUsername, usernameValidator } from '../users/validation'
 import { getCampaignMembers } from './functions/getCampaignMembers'
@@ -15,13 +16,14 @@ import {
 } from './functions/getCampaign'
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
+import type { PaginationResult } from 'convex/server'
 import type { Campaign, CampaignMember, CampaignMemberSummary } from '../../shared/campaigns/types'
 
 export const getUserCampaigns = authQuery({
-  args: {},
-  returns: v.array(campaignValidator),
-  handler: async (ctx): Promise<Array<Campaign>> => {
-    return await getUserCampaignsFn(ctx)
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(campaignValidator),
+  handler: async (ctx, args): Promise<PaginationResult<Campaign>> => {
+    return await getUserCampaignsFn(ctx, args.paginationOpts)
   },
 })
 

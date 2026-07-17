@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Edit, Plus, Sword, Trash2, User, Users } from 'lucide-react'
+import { Edit, Loader2, Plus, Sword, Trash2, User, Users } from 'lucide-react'
 import { CampaignsContentError } from './campaigns-content-error'
 import type { Campaign } from 'shared/campaigns/types'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { CampaignDialog } from '~/features/campaigns/components/campaign-dialog'
 import { ContentGrid } from '@wizard-archive/ui/components/content-grid'
+import { ErrorBoundary } from '@wizard-archive/ui/components/error-boundary'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'
 import { CreateActionCard } from '~/features/campaigns/components/content-grid/create-action-card'
 import { ContentCard } from '~/features/campaigns/components/content-grid/content-card'
@@ -14,25 +15,29 @@ import { CardGridSkeleton } from '~/features/campaigns/components/content-grid/c
 import { useUserCampaignsQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 export function CampaignsContent() {
+  return (
+    <ErrorBoundary FallbackComponent={CampaignsContentError}>
+      <CampaignsContentProjection />
+    </ErrorBoundary>
+  )
+}
+
+function CampaignsContentProjection() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)
   const [editingCampaignId, setEditingCampaignId] = useState<CampaignId | null>(null)
   const [deletingCampaignId, setDeletingCampaignId] = useState<CampaignId | null>(null)
 
   const campaigns = useUserCampaignsQuery()
 
-  const currentlyEditingCampaign = campaigns.data?.find(
+  const currentlyEditingCampaign = campaigns.results.find(
     (campaign: Campaign) => campaign.id === editingCampaignId,
   )
-  const currentlyDeletingCampaign = campaigns.data?.find(
+  const currentlyDeletingCampaign = campaigns.results.find(
     (campaign: Campaign) => campaign.id === deletingCampaignId,
   )
 
-  if (campaigns.status === 'pending' && !campaigns.data) {
+  if (campaigns.status === 'LoadingFirstPage') {
     return <CampaignsContentLoading />
-  }
-
-  if (campaigns.status === 'error' && !campaigns.data) {
-    return <CampaignsContentError />
   }
 
   const handleDeleteSuccess = () => {
@@ -42,7 +47,7 @@ export function CampaignsContent() {
   return (
     <>
       <ContentGrid className="flex-1">
-        {!campaigns.data?.length ? (
+        {campaigns.results.length === 0 && campaigns.status === 'Exhausted' ? (
           <EmptyState
             icon={Sword}
             title="No campaigns yet"
@@ -67,7 +72,7 @@ export function CampaignsContent() {
               icon={Sword}
               minHeight="h-64"
             />
-            {Array.from(campaigns.data ?? [])
+            {Array.from(campaigns.results)
               .sort((a, b) => b.createdAt - a.createdAt)
               .map((campaign: Campaign) => {
                 return (
@@ -121,13 +126,29 @@ export function CampaignsContent() {
               })}
           </>
         )}
+        {(campaigns.status === 'CanLoadMore' || campaigns.status === 'LoadingMore') && (
+          <div className="col-span-full flex justify-center py-4">
+            <button
+              type="button"
+              aria-busy={campaigns.status === 'LoadingMore'}
+              disabled={campaigns.status === 'LoadingMore'}
+              className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+              onClick={campaigns.loadMore}
+            >
+              {campaigns.status === 'LoadingMore' && <Loader2 className="size-4 animate-spin" />}
+              {campaigns.status === 'LoadingMore'
+                ? 'Loading more campaigns…'
+                : 'Load more campaigns'}
+            </button>
+          </div>
+        )}
       </ContentGrid>
 
       <CampaignDialog
         mode="create"
         isOpen={creatingCampaign}
         onClose={() => setCreatingCampaign(false)}
-        campaigns={campaigns.data ?? []}
+        campaigns={campaigns.results}
       />
 
       <CampaignDialog
@@ -135,7 +156,7 @@ export function CampaignsContent() {
         isOpen={editingCampaignId !== null}
         onClose={() => setEditingCampaignId(null)}
         campaign={currentlyEditingCampaign ?? undefined}
-        campaigns={campaigns.data ?? []}
+        campaigns={campaigns.results}
       />
 
       {currentlyDeletingCampaign && (

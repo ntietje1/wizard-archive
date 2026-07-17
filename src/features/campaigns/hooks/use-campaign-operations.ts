@@ -1,14 +1,23 @@
 import { api } from 'convex/_generated/api'
+import { useConvexAuth, usePaginatedQuery } from 'convex/react'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+
+const CAMPAIGN_PAGE_SIZE = 24
 
 export function useCampaignByIdQuery(campaignId: CampaignId | null) {
   return useAuthQuery(api.campaigns.queries.getCampaignById, campaignId ? { campaignId } : 'skip')
 }
 
 export function useUserCampaignsQuery() {
-  return useAuthQuery(api.campaigns.queries.getUserCampaigns, {})
+  const { isAuthenticated, isLoading } = useConvexAuth()
+  const { loadMore, ...campaigns } = usePaginatedQuery(
+    api.campaigns.queries.getUserCampaigns,
+    !isLoading && isAuthenticated ? {} : 'skip',
+    { initialNumItems: CAMPAIGN_PAGE_SIZE },
+  )
+  return { ...campaigns, loadMore: () => loadMore(CAMPAIGN_PAGE_SIZE) }
 }
 
 export function useCampaignMembersQuery(campaignId: CampaignId | undefined) {

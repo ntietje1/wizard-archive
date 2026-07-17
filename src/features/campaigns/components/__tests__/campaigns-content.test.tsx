@@ -1,13 +1,12 @@
 import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { usePaginatedQuery } from 'convex/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { ReactNode } from 'react'
 import { CampaignsContent } from '~/features/campaigns/components/campaigns-content'
 import { createCampaign } from '~/test/factories/campaign-factory'
-import { mockAuthQuery, mockAuthQueryError } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 const mockNavigate = vi.fn()
 
@@ -21,8 +20,9 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ navigate: vi.fn() }),
 }))
 
-vi.mock('~/shared/hooks/useAuthQuery', () => ({
-  useAuthQuery: vi.fn(),
+vi.mock('convex/react', () => ({
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+  usePaginatedQuery: vi.fn(),
 }))
 
 vi.mock('~/shared/hooks/useAppMutation', () => ({
@@ -42,7 +42,12 @@ vi.mock('~/shared/hooks/useAppMutation', () => ({
 
 describe('CampaignsContent', () => {
   it('renders loading skeleton when query is pending', () => {
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(undefined))
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      isLoading: true,
+      loadMore: vi.fn(),
+      results: [],
+      status: 'LoadingFirstPage',
+    })
 
     render(
       <TestWrapper>
@@ -54,7 +59,9 @@ describe('CampaignsContent', () => {
   })
 
   it('renders error state when query fails', () => {
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQueryError(new Error('Failed')))
+    vi.mocked(usePaginatedQuery).mockImplementation(() => {
+      throw new Error('Failed')
+    })
 
     render(
       <TestWrapper>
@@ -66,7 +73,7 @@ describe('CampaignsContent', () => {
   })
 
   it('renders empty state when no campaigns exist', () => {
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery([]))
+    mockCampaignPage([])
 
     render(
       <TestWrapper>
@@ -84,7 +91,7 @@ describe('CampaignsContent', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
 
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery([campaign]))
+    mockCampaignPage([campaign])
 
     render(
       <TestWrapper>
@@ -100,7 +107,7 @@ describe('CampaignsContent', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
 
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery([campaign]))
+    mockCampaignPage([campaign])
 
     render(
       <TestWrapper>
@@ -117,7 +124,7 @@ describe('CampaignsContent', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
 
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery([campaign]))
+    mockCampaignPage([campaign])
 
     render(
       <TestWrapper>
@@ -128,4 +135,26 @@ describe('CampaignsContent', () => {
     expect(screen.queryByRole('button', { name: /edit campaign/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /delete campaign/i })).not.toBeInTheDocument()
   })
+
+  it('offers explicit continuation for an incomplete campaign page', () => {
+    const loadMore = vi.fn()
+    mockCampaignPage([createCampaign({ name: 'First page' })], 'CanLoadMore', loadMore)
+
+    render(
+      <TestWrapper>
+        <CampaignsContent />
+      </TestWrapper>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more campaigns' }))
+    expect(loadMore).toHaveBeenCalledWith(24)
+  })
 })
+
+function mockCampaignPage(
+  results: Array<ReturnType<typeof createCampaign>>,
+  status: 'CanLoadMore' | 'Exhausted' = 'Exhausted',
+  loadMore = vi.fn(),
+) {
+  vi.mocked(usePaginatedQuery).mockReturnValue({ isLoading: false, loadMore, results, status })
+}

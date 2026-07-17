@@ -152,25 +152,52 @@ describe('createCampaign', () => {
 
 describe('getUserCampaigns', () => {
   const t = createTestContext()
+  const firstPage = { paginationOpts: { cursor: null, numItems: 100 } }
 
   it('returns only Accepted membership campaigns', async () => {
     const user = await setupUser(t)
 
     const { campaignDomainId } = await createCampaignWithDm(t, user.profile)
 
-    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await user.authed.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
 
     expect(campaigns).toHaveLength(1)
     expect(campaigns[0].id).toBe(campaignDomainId)
   })
 
-  it('bounds the campaign projection for supported user counts', async () => {
+  it('paginates every accepted campaign without gaps or duplicates', async () => {
     const user = await setupUser(t)
-    await Promise.all(Array.from({ length: 101 }, () => createCampaignWithDm(t, user.profile)))
+    await Promise.all(Array.from({ length: 100 }, () => createCampaignWithDm(t, user.profile)))
+    const newest = await createCampaignWithDm(t, user.profile)
 
-    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    const first = await user.authed.query(api.campaigns.queries.getUserCampaigns, {
+      paginationOpts: { cursor: null, numItems: 1_000 },
+    })
+    const second = await user.authed.query(api.campaigns.queries.getUserCampaigns, {
+      paginationOpts: { cursor: first.continueCursor, numItems: 1_000 },
+    })
+    const third = await user.authed.query(api.campaigns.queries.getUserCampaigns, {
+      paginationOpts: { cursor: second.continueCursor, numItems: 1_000 },
+    })
+    const campaigns = [...first.page, ...second.page, ...third.page]
 
-    expect(campaigns).toHaveLength(100)
+    expect(first.isDone).toBe(false)
+    expect(second.isDone).toBe(false)
+    expect(third.isDone).toBe(true)
+    expect(first.page).toHaveLength(50)
+    expect(second.page).toHaveLength(50)
+    expect(third.page).toHaveLength(1)
+    expect(first.page.some((campaign) => campaign.id === newest.campaignDomainId)).toBe(true)
+    expect(campaigns).toHaveLength(101)
+    expect(new Set(campaigns.map((campaign) => campaign.id)).size).toBe(101)
+    expect(
+      campaigns.every(
+        (campaign, index) => campaign.createdAt >= (campaigns[index + 1]?.createdAt ?? 0),
+      ),
+    ).toBe(true)
   })
 
   it('excludes Pending memberships', async () => {
@@ -181,7 +208,10 @@ describe('getUserCampaigns', () => {
       status: 'Pending',
     })
 
-    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await user.authed.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
     expect(campaigns).toHaveLength(0)
   })
 
@@ -193,7 +223,10 @@ describe('getUserCampaigns', () => {
       status: 'Rejected',
     })
 
-    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await user.authed.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
     expect(campaigns).toHaveLength(0)
   })
 
@@ -205,7 +238,10 @@ describe('getUserCampaigns', () => {
       status: 'Removed',
     })
 
-    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await user.authed.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
     expect(campaigns).toHaveLength(0)
   })
 
@@ -216,7 +252,10 @@ describe('getUserCampaigns', () => {
       await ctx.db.delete('campaigns', campaignId)
     })
 
-    const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await user.authed.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
     expect(campaigns).toHaveLength(0)
   })
 
@@ -224,7 +263,10 @@ describe('getUserCampaigns', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const campaigns = await dmAuth.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await dmAuth.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
 
     expect(campaigns).toHaveLength(1)
     const campaign = campaigns[0]
@@ -239,7 +281,10 @@ describe('getUserCampaigns', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const campaigns = await playerAuth.query(api.campaigns.queries.getUserCampaigns, {})
+    const { page: campaigns } = await playerAuth.query(
+      api.campaigns.queries.getUserCampaigns,
+      firstPage,
+    )
 
     expect(campaigns).toHaveLength(1)
     const campaign = campaigns[0]
@@ -267,22 +312,22 @@ describe('getUserCampaigns', () => {
     const dm = await setupUser(t)
     const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
 
-    let campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign.id === campaignDomainId)).toMatchObject({
+    const before = await dm.authed.query(api.campaigns.queries.getUserCampaigns, firstPage)
+    expect(before.page.find((campaign) => campaign.id === campaignDomainId)).toMatchObject({
       acceptedMemberCount: 1,
     })
 
     const player = await setupUser(t)
     await addPlayerToCampaign(t, campaignId, player.profile)
 
-    campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign.id === campaignDomainId)).toMatchObject({
+    const after = await dm.authed.query(api.campaigns.queries.getUserCampaigns, firstPage)
+    expect(after.page.find((campaign) => campaign.id === campaignDomainId)).toMatchObject({
       acceptedMemberCount: 2,
     })
   })
 
   it('requires authentication', async () => {
-    await expectNotAuthenticated(t.query(api.campaigns.queries.getUserCampaigns, {}))
+    await expectNotAuthenticated(t.query(api.campaigns.queries.getUserCampaigns, firstPage))
   })
 })
 
