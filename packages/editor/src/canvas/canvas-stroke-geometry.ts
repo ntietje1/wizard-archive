@@ -77,3 +77,24 @@ export function canvasStrokeDocumentPoints(
     y: y + node.position.y,
   }))
 }
+
+export function canvasStrokeEndpoint(
+  node: CanvasStrokeDocumentNode,
+  endpoint: 'end' | 'start',
+): Readonly<{ handle: 'bottom' | 'left' | 'right' | 'top'; point: CanvasPoint }> | null {
+  const points = canvasStrokeDocumentPoints(node)
+  const endpointIndex = endpoint === 'start' ? 0 : points.length - 1
+  const point = points[endpointIndex]
+  if (!point) return null
+  if (points.length < 2) {
+    return { point, handle: endpoint === 'start' ? 'left' : 'right' }
+  }
+
+  const interior = points[endpoint === 'start' ? 1 : points.length - 2]
+  const dx = interior.x - point.x
+  const dy = interior.y - point.y
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return { point, handle: dx >= 0 ? 'left' : 'right' }
+  }
+  return { point, handle: dy >= 0 ? 'top' : 'bottom' }
+}

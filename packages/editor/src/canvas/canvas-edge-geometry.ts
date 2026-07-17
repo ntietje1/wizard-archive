@@ -10,6 +10,7 @@ import { createCanvasBoundsIndex } from './bounds-index'
 import type { CanvasBounds } from './canvas-bounds'
 import { resolveCanvasEdgeStyle } from './canvas-edge-style'
 import { canvasStepPoints } from './canvas-step-geometry'
+import { canvasStrokeEndpoint } from './canvas-stroke-geometry'
 
 const MIN_BEZIER_SEGMENTS = 24
 const MAX_BEZIER_SEGMENTS = 160
@@ -181,14 +182,27 @@ function edgeEndpoints(
   const targetNode = nodesById.get(edge.target)
   if (!sourceNode || !targetNode) return null
   const inferredHandles = inferConnectionHandles(sourceNode, targetNode)
-  const sourceHandle = parseConnectionHandle(edge.sourceHandle) ?? inferredHandles.source
-  const targetHandle = parseConnectionHandle(edge.targetHandle) ?? inferredHandles.target
+  const source = resolveEdgeEndpoint(sourceNode, edge.sourceHandle, inferredHandles.source)
+  const target = resolveEdgeEndpoint(targetNode, edge.targetHandle, inferredHandles.target)
   return {
-    source: canvasNodeHandlePoint(sourceNode, sourceHandle),
-    target: canvasNodeHandlePoint(targetNode, targetHandle),
-    handles: { source: sourceHandle, target: targetHandle },
+    source: source.point,
+    target: target.point,
+    handles: { source: source.handle, target: target.handle },
     bounds: { source: nodeBounds(sourceNode), target: nodeBounds(targetNode) },
   }
+}
+
+function resolveEdgeEndpoint(
+  node: CanvasDocumentNode,
+  handleId: string | null | undefined,
+  fallback: CanvasConnectionHandle,
+): Readonly<{ handle: CanvasConnectionHandle; point: CanvasPoint }> {
+  if (node.type === 'stroke' && (handleId === 'start' || handleId === 'end')) {
+    const endpoint = canvasStrokeEndpoint(node, handleId)
+    if (endpoint) return endpoint
+  }
+  const handle = parseConnectionHandle(handleId) ?? fallback
+  return { handle, point: canvasNodeHandlePoint(node, handle) }
 }
 
 function canvasPathBetween(

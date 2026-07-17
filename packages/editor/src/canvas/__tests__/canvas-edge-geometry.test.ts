@@ -210,6 +210,69 @@ describe('canvas edge geometry', () => {
     ])
   })
 
+  it('anchors legacy stroke handles to centerline endpoints and tangent directions', () => {
+    const stroke = {
+      id: NODE_A,
+      type: 'stroke' as const,
+      position: { x: 10, y: 20 },
+      data: {
+        bounds: { x: 0, y: 0, width: 100, height: 20 },
+        color: 'var(--foreground)',
+        opacity: 1,
+        points: [
+          [0, 10, 0.5],
+          [100, 10, 0.5],
+        ] as Array<[number, number, number]>,
+        size: 4,
+      },
+    }
+    const target = canvasNode(NODE_B, 200, 0)
+    const nodes = new Map<CanvasDocumentNode['id'], CanvasDocumentNode>([
+      [stroke.id, stroke],
+      [target.id, target],
+    ])
+
+    expect(
+      canvasEdgePath(
+        {
+          id: 'stroke-start',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'start',
+          targetHandle: 'left',
+          type: 'straight',
+        },
+        nodes,
+      ),
+    ).toBe('M 10 30 L 200 50')
+    expect(
+      canvasEdgePath(
+        {
+          id: 'stroke-end',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'end',
+          targetHandle: 'left',
+          type: 'straight',
+        },
+        nodes,
+      ),
+    ).toBe('M 110 30 L 200 50')
+    expect(
+      canvasEdgePath(
+        {
+          id: 'stroke-tangent',
+          source: NODE_A,
+          target: NODE_B,
+          sourceHandle: 'start',
+          targetHandle: 'left',
+          type: 'bezier',
+        },
+        nodes,
+      ),
+    ).toMatch(/^M 10 30 C -/)
+  })
+
   it('bounds routed geometry with its complete rendered stroke extent', () => {
     expect(
       canvasEdgeBounds(
