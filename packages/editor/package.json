@@ -145,6 +145,14 @@
     "./resources/source-classifier": {
       "types": "./dist/resources/resource-source-classifier.d.mts",
       "default": "./dist/resources/resource-source-classifier.mjs"
+    },
+    "./resources/transfer-job-contract": {
+      "types": "./dist/resources/transfer-job-contract.d.mts",
+      "default": "./dist/resources/transfer-job-contract.mjs"
+    },
+    "./resources/plain-transfer-inventory": {
+      "types": "./dist/resources/plain-transfer-inventory.d.mts",
+      "default": "./dist/resources/plain-transfer-inventory.mjs"
     }
   },
   "dependencies": {
