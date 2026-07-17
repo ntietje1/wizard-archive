@@ -4,8 +4,10 @@ import { canvasStrokePath } from './canvas-stroke-geometry'
 import { CanvasTextEditor } from './canvas-text-editor'
 import type { CanvasTextDocument } from './text/model'
 import { canvasEmbedLabel } from './canvas-embed-label'
+import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 
 type CanvasNodeVisualProps = {
+  activation: BlockNoteActivation | null
   embed?: ReactNode
   exclusivelySelected: boolean
   node: CanvasDocumentNode
@@ -16,7 +18,16 @@ type CanvasNodeVisualProps = {
 } & ({ editing: false } | { editing: true; onDefaultTextColorChange: (color: string) => void })
 
 export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
-  const { embed, exclusivelySelected, node, onFinishEditing, onSaveContent, selected, zoom } = props
+  const {
+    activation,
+    embed,
+    exclusivelySelected,
+    node,
+    onFinishEditing,
+    onSaveContent,
+    selected,
+    zoom,
+  } = props
   if (node.type === 'stroke') {
     const points = node.data.points.map(([x, y]) => `${x},${y}`).join(' ')
     const path = canvasStrokePath(node.data.points, node.data.size)
@@ -61,7 +72,7 @@ export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
   if (node.type === 'embed') {
     return (
       <div
-        className={`relative size-full overflow-hidden rounded-md border bg-card text-sm shadow-sm ${exclusivelySelected ? 'nowheel' : ''}`}
+        className={`relative size-full rounded-md border bg-card text-sm shadow-sm ${exclusivelySelected ? 'nowheel' : ''}`}
         style={sharedStyle}
       >
         {embed ?? (
@@ -81,6 +92,7 @@ export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
           }
         : { editing: false })}
       content={node.data.content}
+      activation={activation}
       exclusivelySelected={exclusivelySelected}
       onChange={onSaveContent}
       onFinish={onFinishEditing}

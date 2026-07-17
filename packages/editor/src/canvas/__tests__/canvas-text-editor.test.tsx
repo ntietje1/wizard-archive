@@ -34,6 +34,7 @@ describe('CanvasTextEditor', () => {
     const onFinish = vi.fn()
     const view = render(
       <CanvasTextEditor
+        activation={null}
         content={content}
         editing={false}
         exclusivelySelected
@@ -47,8 +48,10 @@ describe('CanvasTextEditor', () => {
     const editor = await screen.findByRole('textbox', { name: 'Canvas text' })
     const surface = editor.closest('.canvas-text-editor')
     if (!(surface instanceof HTMLElement)) throw new Error('Expected canvas text surface')
+    const viewport = surface.querySelector('[data-slot="scroll-area-viewport"]')
+    if (!(viewport instanceof HTMLElement)) throw new Error('Expected canvas text scroll viewport')
     const creationCount = createEditor.mock.calls.length
-    surface.scrollTop = 24
+    viewport.scrollTop = 24
 
     expect(editor).toHaveAttribute('contenteditable', 'false')
     expect(screen.getByRole('heading', { level: 2, name: /Harbor plan/ })).toBeVisible()
@@ -60,6 +63,7 @@ describe('CanvasTextEditor', () => {
 
     view.rerender(
       <CanvasTextEditor
+        activation={null}
         content={content}
         editing
         exclusivelySelected
@@ -75,7 +79,7 @@ describe('CanvasTextEditor', () => {
     expect(screen.getByRole('textbox', { name: 'Canvas text' })).toBe(editor)
     expect(editor).toHaveAttribute('contenteditable', 'true')
     expect(screen.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()
-    expect(surface).toHaveProperty('scrollTop', 24)
+    expect(viewport).toHaveProperty('scrollTop', 24)
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
 
     fireEvent.keyDown(editor, { key: 'Escape' })

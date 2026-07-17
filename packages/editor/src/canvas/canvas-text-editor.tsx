@@ -1,6 +1,6 @@
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { Fragment, useEffect, useLayoutEffect, useRef } from 'react'
+import { Fragment, useLayoutEffect, useRef } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
 import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
 import { createBlockNoteModifierClickSuppressionExtension } from '../rich-text/blocknote/modifier-click'
@@ -9,9 +9,13 @@ import { createCanvasTextDocument, parseCanvasTextDocument } from './text/model'
 import type { CanvasTextDocument } from './text/model'
 import { canvasTextEditorSchema } from './text/schema'
 import type { CanvasTextPartialBlock } from './text/schema'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
+import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
+import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import './canvas-text-editor.css'
 
 type CanvasTextEditorProps = {
+  activation: BlockNoteActivation | null
   content: CanvasTextDocument | undefined
   exclusivelySelected: boolean
   onChange: (content: CanvasTextDocument) => void
@@ -22,8 +26,17 @@ type CanvasTextEditorProps = {
 } & ({ editing: false } | { editing: true; onDefaultTextColorChange: (color: string) => void })
 
 export function CanvasTextEditor(props: CanvasTextEditorProps) {
-  const { content, editing, exclusivelySelected, onChange, onFinish, selected, style, textColor } =
-    props
+  const {
+    activation,
+    content,
+    editing,
+    exclusivelySelected,
+    onChange,
+    onFinish,
+    selected,
+    style,
+    textColor,
+  } = props
   const initialContent = normalizeCanvasTextContent(content)
   const editor = useCreateBlockNote(
     {
@@ -54,9 +67,7 @@ export function CanvasTextEditor(props: CanvasTextEditorProps) {
     publishedContentKey.current = canvasEditorDocumentKey(editor)
   }, [content, contentKey, editor])
 
-  useEffect(() => {
-    if (editing) editor.focus()
-  }, [editing, editor])
+  useBlockNoteActivation(editor, editing ? activation : null)
 
   const persist = () => {
     const parsed = parseCanvasTextDocument(structuredClone(editor.document))
@@ -78,21 +89,23 @@ export function CanvasTextEditor(props: CanvasTextEditorProps) {
         />
       )}
       <div
-        className={`canvas-text-editor size-full overflow-auto rounded-md border bg-card text-sm outline-none ${exclusivelySelected ? 'nowheel' : ''} ${editing ? 'nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
+        className={`canvas-text-editor size-full overflow-hidden rounded-md border bg-card text-sm outline-none ${exclusivelySelected ? 'nowheel' : ''} ${editing ? 'nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
         style={style}
         onKeyDownCapture={editing ? (event) => finishCanvasTextEditing(event, onFinish) : undefined}
         onPointerDown={editing ? (event) => event.stopPropagation() : undefined}
       >
-        <BlockNoteView
-          className="min-h-full bg-transparent"
-          editable={editing}
-          editor={editor}
-          formattingToolbar={false}
-          linkToolbar={false}
-          sideMenu={false}
-          slashMenu={false}
-          onChange={editing ? persist : undefined}
-        />
+        <ScrollArea className="size-full">
+          <BlockNoteView
+            className="min-h-full bg-transparent"
+            editable={editing}
+            editor={editor}
+            formattingToolbar={false}
+            linkToolbar={false}
+            sideMenu={false}
+            slashMenu={false}
+            onChange={editing ? persist : undefined}
+          />
+        </ScrollArea>
       </div>
     </Fragment>
   )

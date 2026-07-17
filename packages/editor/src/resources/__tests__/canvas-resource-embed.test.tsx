@@ -104,6 +104,7 @@ describe('CanvasResourceEmbed', () => {
     }
     const view = render(
       <CanvasResourceEmbed
+        activation={null}
         canEdit
         canvases={canvases}
         editing={false}
@@ -112,19 +113,27 @@ describe('CanvasResourceEmbed', () => {
         node={node}
         notes={notes}
         onEdit={onEdit}
+        zoom={2}
       />,
     )
     const editor = await screen.findByRole('textbox', { name: 'Ship manifest embedded note' })
     const creationCount = createEditor.mock.calls.length
 
     expect(editor).toHaveAttribute('contenteditable', 'false')
+    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent('Ship manifest')
+    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveStyle({
+      transform: 'scale(0.5)',
+      width: '200%',
+    })
+    expect(editor.closest('[data-slot="scroll-area"]')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Harbor ledger' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Supplies: 6 * 3' })).toBeVisible()
-    fireEvent.doubleClick(editor)
-    expect(onEdit).toHaveBeenCalledOnce()
+    fireEvent.doubleClick(editor, { clientX: 120, clientY: 85 })
+    expect(onEdit).toHaveBeenCalledWith({ x: 120, y: 85 })
 
     view.rerender(
       <CanvasResourceEmbed
+        activation={null}
         canEdit
         canvases={canvases}
         editing

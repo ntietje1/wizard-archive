@@ -8,6 +8,7 @@ import type { CanvasDocumentNode } from './document-contract'
 import type { ResourceId } from '../resources/domain-id'
 import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
+import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
@@ -28,9 +29,11 @@ export type CanvasDropResolver = Readonly<{
 }>
 
 export type CanvasEmbedRenderer = (props: {
+  activation: BlockNoteActivation | null
   editing: boolean
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
-  onEdit: () => void
+  onEdit: (point: Readonly<{ x: number; y: number }> | null) => void
+  zoom: number
 }) => ReactNode
 
 type CanvasEditorRuntime = Readonly<{

@@ -18,8 +18,11 @@ import { createBlockNoteModifierClickSuppressionExtension } from '../rich-text/b
 import './note-editor.css'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
 import type { NoteHeadingNavigation, NoteHeadingNavigationRef } from './note-heading-navigation'
+import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
+import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 
 type NoteEditorProps = {
+  activation?: BlockNoteActivation
   collaboration?: ContentCollaboration
   document: Y.Doc
   headingNavigationRef?: NoteHeadingNavigationRef
@@ -67,6 +70,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
     },
     [document],
   )
+  useBlockNoteActivation(editor, props.activation ?? null)
 
   useEffect(() => {
     if (!flush) return

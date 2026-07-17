@@ -142,6 +142,13 @@ export function CanvasScene({
               interaction.interaction.type === 'editing' &&
               interaction.interaction.nodeId === node.id
             }
+            editingActivation={
+              canEdit &&
+              interaction.interaction.type === 'editing' &&
+              interaction.interaction.nodeId === node.id
+                ? interaction.interaction.activation
+                : null
+            }
             erasing={
               interaction.interaction.type === 'erasing' &&
               interaction.interaction.nodeIds.has(node.id)
@@ -220,6 +227,7 @@ function CanvasNode({
   content,
   documentController,
   editing,
+  editingActivation,
   erasing,
   interactionController,
   node,
@@ -238,6 +246,7 @@ function CanvasNode({
   content: CanvasDocumentContent
   documentController: CanvasDocumentController
   editing: boolean
+  editingActivation: Readonly<{ x: number; y: number }> | null
   erasing: boolean
   interactionController: CanvasInteractionController
   node: CanvasDocumentNode
@@ -275,7 +284,7 @@ function CanvasNode({
         event.preventDefault()
         event.stopPropagation()
         interactionController.selectNode(node.id, false)
-        interactionController.editNode(node.id)
+        interactionController.editNode(node.id, { x: event.clientX, y: event.clientY })
       }}
       onContextMenu={(event) => {
         event.stopPropagation()
@@ -316,13 +325,26 @@ function CanvasNode({
         embed={
           node.type === 'embed'
             ? renderEmbed({
+                activation: editing
+                  ? editingActivation
+                    ? { kind: 'point', point: editingActivation }
+                    : { kind: 'end' }
+                  : null,
                 editing,
                 node,
-                onEdit: () => interactionController.editNode(node.id),
+                onEdit: (point) => interactionController.editNode(node.id, point ?? null),
+                zoom: viewport.zoom,
               })
             : undefined
         }
         node={node}
+        activation={
+          editing
+            ? editingActivation
+              ? { kind: 'point', point: editingActivation }
+              : { kind: 'end' }
+            : null
+        }
         selected={selected}
         zoom={viewport.zoom}
         onFinishEditing={() => interactionController.finishEditing()}

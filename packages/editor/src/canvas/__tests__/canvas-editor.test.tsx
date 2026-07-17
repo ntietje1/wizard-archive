@@ -488,7 +488,7 @@ describe('CanvasEditor', () => {
             onDoubleClick={(event) => {
               event.preventDefault()
               event.stopPropagation()
-              onEdit()
+              onEdit(null)
             }}
           />
         )}

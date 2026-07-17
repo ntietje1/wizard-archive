@@ -95,6 +95,7 @@ type CanvasInteraction =
   | Readonly<{
       type: 'editing'
       nodeId: CanvasNodeId
+      activation: Readonly<{ x: number; y: number }> | null
     }>
   | Readonly<{
       type: 'erasing'
@@ -1011,15 +1012,19 @@ class CanvasInteractionControllerState {
     return true
   }
 
-  editNode(nodeId: CanvasNodeId): void {
+  editNode(
+    nodeId: CanvasNodeId,
+    activation: Readonly<{ x: number; y: number }> | null = null,
+  ): void {
     this.#assertActive()
     if (
       this.#snapshot.interaction.type === 'editing' &&
-      this.#snapshot.interaction.nodeId === nodeId
+      this.#snapshot.interaction.nodeId === nodeId &&
+      this.#snapshot.interaction.activation === activation
     ) {
       return
     }
-    this.#publish({ ...this.#snapshot, interaction: { type: 'editing', nodeId } })
+    this.#publish({ ...this.#snapshot, interaction: { type: 'editing', nodeId, activation } })
   }
 
   finishEditing(): void {
