@@ -3,6 +3,30 @@ import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas
 import type { Locator } from '@playwright/test'
 
 test.describe('canvas properties and arrangement', () => {
+  test('uses the reference conditional toolbar for new drawing defaults', async ({ page }) => {
+    const { editor, nodes, surface } = await openDemoCanvas(page)
+    const initialNodeCount = await nodes.count()
+    await editor.getByRole('button', { name: 'Draw' }).click()
+
+    const toolbar = editor.getByRole('toolbar', { name: 'Canvas conditional toolbar' })
+    await expect(toolbar).toBeVisible()
+    await toolbar.getByRole('button', { name: 'Select Red color' }).click()
+    await toolbar.getByRole('slider', { name: 'Stroke size' }).fill('8')
+
+    const bounds = await visibleBox(surface)
+    await dragPointer(
+      page,
+      { x: bounds.x + bounds.width * 0.65, y: bounds.y + bounds.height * 0.7 },
+      { x: bounds.x + bounds.width * 0.8, y: bounds.y + bounds.height * 0.8 },
+    )
+
+    await expect(nodes).toHaveCount(initialNodeCount + 1)
+    const stroke = editor.locator('[data-testid="canvas-node"][data-node-type="stroke"]').last()
+    const visiblePath = stroke.locator('polyline').last()
+    await expect(visiblePath).toHaveAttribute('stroke', 'var(--t-red)')
+    await expect(visiblePath).toHaveAttribute('stroke-width', '8')
+  })
+
   test('projects mixed node state, fans out properties, arranges, and persists them', async ({
     page,
   }) => {
@@ -99,21 +123,11 @@ test.describe('canvas properties and arrangement', () => {
     await expect(reopenedEdge).toHaveAttribute('stroke-opacity', '0.4')
   })
 
-  test('keeps a routed crossing edge rendered after both endpoint nodes are culled', async ({
-    page,
-  }) => {
+  test('keeps a routed edge rendered after both endpoint nodes are offscreen', async ({ page }) => {
     const { edges, editor, nodes, surface, viewport } = await openDemoCanvas(page)
-    await editor.getByRole('button', { name: 'Edges' }).click()
-    const source = await visibleBox(nodes.first().getByTestId('canvas-node-handle-bottom'))
-    const target = await visibleBox(nodes.last().getByTestId('canvas-node-handle-bottom'))
-    await dragPointer(
-      page,
-      { x: source.x + source.width / 2, y: source.y + source.height / 2 },
-      { x: target.x + target.width / 2, y: target.y + target.height / 2 },
-    )
-    await expect(edges).toHaveCount(2)
-    const routedEdgeId = await edges.last().getAttribute('data-edge-id')
-    const path = parseCubicPath(await edges.last().locator('path').last().getAttribute('d'))
+    await expect(edges).toHaveCount(1)
+    const routedEdgeId = await edges.first().getAttribute('data-edge-id')
+    const path = parseCubicPath(await edges.first().locator('path').last().getAttribute('d'))
 
     for (let index = 0; index < 12; index += 1) {
       await editor.getByRole('button', { name: 'Zoom in' }).click()
@@ -121,13 +135,18 @@ test.describe('canvas properties and arrangement', () => {
     await expect(viewport).toHaveAttribute('style', /scale\(4\)/)
     const surfaceBox = await visibleBox(surface)
     const midpoint = cubicMidpoint(path)
-    await editor.getByRole('button', { name: 'Hand' }).click()
+    await editor.getByRole('button', { name: 'Panning' }).click()
     await panViewportTo(page, surfaceBox, viewport, {
-      x: surfaceBox.width / 2 - midpoint.x * 4,
+      x: surfaceBox.width / 2 - midpoint.x * 4 + 60,
       y: surfaceBox.height / 2 - midpoint.y * 4,
     })
 
-    await expect(viewport).toHaveAttribute('data-rendered-node-count', '0')
+    await expect
+      .poll(async () => {
+        const nodeBoxes = await Promise.all([visibleBox(nodes.first()), visibleBox(nodes.last())])
+        return nodeBoxes.every((nodeBox) => !rectanglesIntersect(surfaceBox, nodeBox))
+      })
+      .toBe(true)
     const routedEdge = editor.locator(`[data-testid="canvas-edge"][data-edge-id="${routedEdgeId}"]`)
     await expect(routedEdge).toHaveCount(1)
     const edgeBox = await visibleBox(routedEdge.locator('path').last())

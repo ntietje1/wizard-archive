@@ -58,6 +58,7 @@ function canvasRenderUpdateIsUrgent(
   return (
     previous.interaction.type !== next.interaction.type ||
     previous.tool !== next.tool ||
+    previous.toolSettings !== next.toolSettings ||
     previous.selection !== next.selection
   )
 }

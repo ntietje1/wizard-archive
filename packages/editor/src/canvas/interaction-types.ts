@@ -2,6 +2,13 @@ import type { CanvasNodeId } from '../resources/domain-id'
 
 export type CanvasTool = 'draw' | 'edge' | 'eraser' | 'hand' | 'lasso' | 'select' | 'text'
 
+export type CanvasToolSettings = Readonly<{
+  edgeType: 'bezier' | 'straight' | 'step'
+  strokeColor: string
+  strokeOpacity: number
+  strokeSize: number
+}>
+
 export type CanvasPoint = Readonly<{ x: number; y: number }>
 
 export type CanvasViewport = CanvasPoint & Readonly<{ zoom: number }>

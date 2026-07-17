@@ -426,6 +426,11 @@ describe('CanvasEditor', () => {
     const surface = screen.getByTestId('canvas-surface')
     installPointerCapture(surface)
     fireEvent.click(screen.getByRole('button', { name: 'Draw' }))
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
+    fireEvent.change(screen.getByRole('slider', { name: 'Stroke size' }), {
+      target: { value: '8' },
+    })
 
     fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 20, pointerId: 5 })
     fireEvent.pointerMove(surface, {
@@ -448,8 +453,8 @@ describe('CanvasEditor', () => {
           [10, 20, 0.5],
           [50, 60, 0.75],
         ],
-        color: 'var(--foreground)',
-        size: 4,
+        color: 'var(--t-red)',
+        size: 8,
         opacity: 100,
       },
     })
@@ -570,6 +575,11 @@ describe('CanvasEditor', () => {
     const surface = screen.getByTestId('canvas-surface')
     installPointerCapture(surface)
     fireEvent.click(screen.getByRole('button', { name: 'Edges' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Change edge type to Step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
+    fireEvent.change(screen.getByRole('slider', { name: 'Stroke size' }), {
+      target: { value: '6' },
+    })
 
     const sourceHandle = screen.getAllByTestId('canvas-node-handle-right')[0]
     fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 12 })
@@ -592,7 +602,12 @@ describe('CanvasEditor', () => {
       target: NODE_B,
       sourceHandle: 'right',
       targetHandle: 'left',
-      type: 'bezier',
+      type: 'step',
+      style: {
+        stroke: 'var(--t-red)',
+        strokeWidth: 6,
+        opacity: 1,
+      },
     })
     expect(screen.queryByTestId('canvas-connection-preview')).not.toBeInTheDocument()
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'true')

@@ -17,11 +17,7 @@ describe('createCanvasInteractionRenderStore', () => {
     })
     const rendered = vi.fn()
     store.subscribe(rendered)
-    controller.beginDrawing(4, { x: 0, y: 0 }, 0.5, {
-      color: '#112233',
-      size: 4,
-      opacity: 100,
-    })
+    controller.beginDrawing(4, { x: 0, y: 0 }, 0.5)
     for (let index = 1; index <= 3; index += 1) {
       controller.updateDrawing(4, { x: index, y: index }, 0.5, false)
     }

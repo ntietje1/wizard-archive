@@ -17,6 +17,7 @@ import type { CanvasContextMenuRequest } from './canvas-context-menu'
 import { CanvasSelectionActions } from './canvas-selection-actions'
 import { CanvasSelectionProperties } from './canvas-selection-properties'
 import { CanvasToolbar } from './canvas-toolbar'
+import { CanvasToolProperties } from './canvas-tool-properties'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
 import { canvasStrokeBounds } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
@@ -29,7 +30,6 @@ import { setCanvasCollaborationCursor } from './canvas-collaboration'
 import { useCanvasSurface } from './use-canvas-surface'
 
 const DEFAULT_TEXT_NODE_SIZE = { width: 180, height: 80 }
-const DEFAULT_DRAW_STYLE = { color: 'var(--foreground)', size: 4, opacity: 100 } as const
 const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
   ['1', 'select'],
   ['2', 'hand'],
@@ -219,6 +219,11 @@ export function CanvasEditorSurface({
         interaction={interaction}
         interactionController={interactionController}
         surface={surface}
+      />
+      <CanvasToolProperties
+        canEdit={canEdit}
+        interaction={interaction}
+        interactionController={interactionController}
       />
       <CanvasSelectionActions
         canEdit={canEdit}
@@ -431,12 +436,7 @@ function beginCanvasSurfaceInteraction(
     case 'draw':
       if (!canEdit) return
       event.currentTarget.setPointerCapture(event.pointerId)
-      interactionController.beginDrawing(
-        event.pointerId,
-        canvasPoint,
-        event.pressure,
-        DEFAULT_DRAW_STYLE,
-      )
+      interactionController.beginDrawing(event.pointerId, canvasPoint, event.pressure)
       return
     case 'eraser':
       if (!canEdit) return
@@ -611,6 +611,7 @@ function commitConnection(
   const interaction = interactionController.get().interaction
   const connecting = interaction.type === 'connecting' && interaction.pointerId === pointerId
   if (!connecting) return false
+  const settings = interactionController.get().toolSettings
   const connection = interactionController.commitConnection(pointerId)
   if (!connection) return true
   const id = `e-${connection.source.nodeId}-${connection.target.nodeId}-${crypto.randomUUID()}`
@@ -624,7 +625,12 @@ function commitConnection(
         target: connection.target.nodeId,
         sourceHandle: connection.source.handle,
         targetHandle: connection.target.handle,
-        type: 'bezier',
+        type: settings.edgeType,
+        style: {
+          stroke: settings.strokeColor,
+          strokeWidth: settings.strokeSize,
+          opacity: settings.strokeOpacity / 100,
+        },
       },
     ],
   })

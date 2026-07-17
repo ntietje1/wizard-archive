@@ -6,6 +6,7 @@ import type {
   CanvasResizeHandle,
   CanvasSelection,
   CanvasTool,
+  CanvasToolSettings,
   CanvasViewport,
 } from './interaction-types'
 import { DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport'
@@ -135,6 +136,7 @@ type CanvasGestureCandidates =
 
 export type CanvasInteractionSnapshot = Readonly<{
   tool: CanvasTool
+  toolSettings: CanvasToolSettings
   viewport: CanvasViewport
   selection: CanvasSelection
   interaction: CanvasInteraction
@@ -142,6 +144,12 @@ export type CanvasInteractionSnapshot = Readonly<{
 
 const MIN_CANVAS_ZOOM = 0.1
 const MAX_CANVAS_ZOOM = 4
+const INITIAL_CANVAS_TOOL_SETTINGS: CanvasToolSettings = {
+  edgeType: 'bezier',
+  strokeColor: 'var(--foreground)',
+  strokeOpacity: 100,
+  strokeSize: 4,
+}
 
 function emptySelection(): CanvasSelection {
   return { nodeIds: new Set(), edgeIds: new Set() }
@@ -453,6 +461,7 @@ class CanvasInteractionControllerState {
     this.#readContent = readContent
     this.#snapshot = {
       tool: 'select',
+      toolSettings: INITIAL_CANVAS_TOOL_SETTINGS,
       viewport: normalizeViewport(viewport),
       selection: emptySelection(),
       interaction: { type: 'idle' },
@@ -480,6 +489,21 @@ class CanvasInteractionControllerState {
     this.#assertActive()
     if (tool === this.#snapshot.tool) return
     this.#publish({ ...this.#snapshot, tool, interaction: { type: 'idle' } })
+  }
+
+  setToolSettings(settings: CanvasToolSettings): void {
+    this.#assertActive()
+    const next = normalizeToolSettings(settings)
+    const current = this.#snapshot.toolSettings
+    if (
+      next.edgeType === current.edgeType &&
+      next.strokeColor === current.strokeColor &&
+      next.strokeOpacity === current.strokeOpacity &&
+      next.strokeSize === current.strokeSize
+    ) {
+      return
+    }
+    this.#publish({ ...this.#snapshot, toolSettings: next })
   }
 
   setSelection(selection: CanvasSelection): void {
@@ -589,18 +613,13 @@ class CanvasInteractionControllerState {
     })
   }
 
-  beginDrawing(
-    pointerId: number,
-    point: CanvasPoint,
-    pressure: number,
-    style: CanvasDrawStyle,
-  ): void {
+  beginDrawing(pointerId: number, point: CanvasPoint, pressure: number): void {
     this.#assertActive()
-    if (style.color.length === 0 || !Number.isFinite(style.size) || style.size < 1) {
-      throw new TypeError('Canvas drawing requires a color and a stroke size of at least one')
-    }
-    if (!Number.isFinite(style.opacity) || style.opacity < 0 || style.opacity > 100) {
-      throw new TypeError('Canvas drawing opacity must be between zero and one hundred')
+    const settings = this.#snapshot.toolSettings
+    const style: CanvasDrawStyle = {
+      color: settings.strokeColor,
+      opacity: settings.strokeOpacity,
+      size: settings.strokeSize,
     }
     this.#publish({
       ...this.#snapshot,
@@ -1069,6 +1088,38 @@ class CanvasInteractionControllerState {
 
   #assertActive(): void {
     if (this.#disposed) throw new Error('CanvasInteractionController is disposed')
+  }
+}
+
+function normalizeToolSettings(settings: CanvasToolSettings): CanvasToolSettings {
+  if (
+    settings.edgeType !== 'bezier' &&
+    settings.edgeType !== 'straight' &&
+    settings.edgeType !== 'step'
+  ) {
+    throw new TypeError('Canvas edge type is invalid')
+  }
+  const strokeColor = settings.strokeColor.trim()
+  if (strokeColor.length === 0) throw new TypeError('Canvas stroke color cannot be empty')
+  if (
+    !Number.isFinite(settings.strokeSize) ||
+    settings.strokeSize < 1 ||
+    settings.strokeSize > 99
+  ) {
+    throw new TypeError('Canvas stroke size must be between one and ninety-nine')
+  }
+  if (
+    !Number.isFinite(settings.strokeOpacity) ||
+    settings.strokeOpacity < 0 ||
+    settings.strokeOpacity > 100
+  ) {
+    throw new TypeError('Canvas stroke opacity must be between zero and one hundred')
+  }
+  return {
+    edgeType: settings.edgeType,
+    strokeColor,
+    strokeOpacity: settings.strokeOpacity,
+    strokeSize: settings.strokeSize,
   }
 }
 

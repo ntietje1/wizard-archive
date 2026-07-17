@@ -142,11 +142,13 @@ describe('CanvasInteractionController selection', () => {
 describe('CanvasInteractionController pointer activities', () => {
   it('owns freehand preview and returns one constrained final stroke', () => {
     const controller = createCanvasInteractionController()
-    controller.beginDrawing(3, { x: 0, y: 0 }, 0, {
-      color: '#112233',
-      size: 4,
-      opacity: 60,
+    controller.setToolSettings({
+      edgeType: 'bezier',
+      strokeColor: '#112233',
+      strokeSize: 4,
+      strokeOpacity: 60,
     })
+    controller.beginDrawing(3, { x: 0, y: 0 }, 0)
     controller.updateDrawing(3, { x: 20, y: 8 }, 0.75, true)
     const interaction = controller.get().interaction
     expect(interaction.type).toBe('drawing')
@@ -164,11 +166,7 @@ describe('CanvasInteractionController pointer activities', () => {
     })
     expect(controller.get().interaction).toEqual({ type: 'idle' })
 
-    controller.beginDrawing(4, { x: 1, y: 2 }, 0.5, {
-      color: '#112233',
-      size: 4,
-      opacity: 60,
-    })
+    controller.beginDrawing(4, { x: 1, y: 2 }, 0.5)
     expect(controller.commitDrawing(4)).toBeNull()
     controller.dispose()
   })
@@ -176,11 +174,13 @@ describe('CanvasInteractionController pointer activities', () => {
   it('resamples drawing events beyond the point limit into one bounded stroke', () => {
     const controller = createCanvasInteractionController()
     const eventCount = CANVAS_WORKLOAD_LIMITS.pointsPerStroke * 2
-    controller.beginDrawing(5, { x: 0, y: 0 }, 0.5, {
-      color: '#112233',
-      size: 4,
-      opacity: 60,
+    controller.setToolSettings({
+      edgeType: 'bezier',
+      strokeColor: '#112233',
+      strokeSize: 4,
+      strokeOpacity: 60,
     })
+    controller.beginDrawing(5, { x: 0, y: 0 }, 0.5)
     for (let index = 1; index <= eventCount; index += 1) {
       controller.updateDrawing(5, { x: index, y: index }, 0.5, false)
     }

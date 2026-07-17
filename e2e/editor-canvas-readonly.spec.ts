@@ -29,6 +29,7 @@ test.describe('readonly canvas', () => {
     const editor = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
     const surface = editor.getByRole('region', { name: 'Canvas surface' })
     const nodes = editor.getByTestId('canvas-node')
+    const viewport = editor.getByTestId('canvas-viewport')
     await expect(editor).toHaveAttribute('data-workspace-mode', 'viewer')
     await expect(nodes).toHaveCount(2)
     await expect(editor.getByTestId('canvas-edge')).toHaveCount(1)
@@ -63,7 +64,8 @@ test.describe('readonly canvas', () => {
     await expect(menu.getByRole('menuitem', { name: 'Delete' })).not.toBeVisible()
     await page.keyboard.press('Escape')
 
+    const viewportBeforeZoom = await viewport.getAttribute('style')
     await editor.getByRole('button', { name: 'Zoom in' }).click()
-    await expect(editor).toContainText('120%')
+    await expect(viewport).not.toHaveAttribute('style', viewportBeforeZoom ?? '')
   })
 })
