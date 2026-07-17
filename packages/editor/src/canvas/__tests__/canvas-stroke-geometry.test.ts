@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { CanvasDocumentNode } from '../document-contract'
 import {
-  canvasStrokeLocalPoints,
+  canvasStrokeBounds,
+  canvasStrokeDocumentPoints,
+  canvasStrokePath,
   createCanvasEraserCandidateIndex,
 } from '../canvas-stroke-geometry'
 import { assertDomainId, DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
@@ -30,6 +32,21 @@ function stroke(id: typeof HIT, y: number): CanvasDocumentNode {
 }
 
 describe('canvas stroke eraser geometry', () => {
+  it('builds pressure-aware outline geometry for rendering and bounds', () => {
+    const points = [
+      [0, 0, 0.2],
+      [20, 10, 0.8],
+      [40, 0, 0.4],
+    ] as const
+    const bounds = canvasStrokeBounds(points, 8)
+
+    expect(canvasStrokePath(points, 8)).toMatch(/^M .+ Q .+ Z$/)
+    expect(bounds.x).toBeLessThanOrEqual(0)
+    expect(bounds.y).toBeLessThan(0)
+    expect(bounds.width).toBeGreaterThan(25)
+    expect(bounds.height).toBeGreaterThan(10)
+  })
+
   it('marks only visible strokes intersected by the bounded erase trail', () => {
     const nodes: Array<CanvasDocumentNode> = [
       stroke(HIT, 10),
@@ -67,9 +84,9 @@ describe('canvas stroke eraser geometry', () => {
     const resized = { ...stroke(HIT, 10), width: 180, height: 8 }
     expect(resized.type).toBe('stroke')
     if (resized.type !== 'stroke') throw new Error('Expected stroke node')
-    expect(canvasStrokeLocalPoints(resized)).toEqual([
-      { x: 0, y: 0 },
-      { x: 180, y: 0 },
+    expect(canvasStrokeDocumentPoints(resized)).toEqual([
+      { x: 10, y: 10 },
+      { x: 190, y: 10 },
     ])
   })
 

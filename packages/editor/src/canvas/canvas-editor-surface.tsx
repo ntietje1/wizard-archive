@@ -10,7 +10,13 @@ import type {
   CanvasInteractionSnapshot,
 } from './interaction-controller'
 import type { createCanvasInteractionRenderStore } from './interaction-render-store'
-import type { CanvasPoint, CanvasSelection, CanvasTool } from './interaction-types'
+import type {
+  CanvasDrawPoint,
+  CanvasPoint,
+  CanvasSelection,
+  CanvasTool,
+  CanvasViewport,
+} from './interaction-types'
 import { CanvasScene } from './canvas-scene'
 import { CanvasContextMenu } from './canvas-context-menu'
 import type { CanvasContextMenuRequest } from './canvas-context-menu'
@@ -270,18 +276,14 @@ export function CanvasEditorSurface({
         }}
         onPointerMove={(event) => {
           const point = localPoint(event, event.currentTarget)
-          setCanvasCollaborationCursor(
-            collaboration,
-            screenToCanvasPoint(point, interactionController.get().viewport),
-          )
+          const viewport = interactionController.get().viewport
+          setCanvasCollaborationCursor(collaboration, screenToCanvasPoint(point, viewport))
           interactionController.updatePan(event.pointerId, point)
           if (canEdit && (event.buttons & 1) === 1) {
-            const canvasPoint = screenToCanvasPoint(point, interactionController.get().viewport)
             updateCanvasEditGesture(
               interactionController,
               event.pointerId,
-              canvasPoint,
-              event.pressure,
+              canvasPointerSamples(event, event.currentTarget, viewport),
               event.shiftKey,
               event.metaKey || event.ctrlKey,
             )
@@ -301,8 +303,7 @@ export function CanvasEditorSurface({
             updateCanvasEditGesture(
               interactionController,
               event.pointerId,
-              canvasPoint,
-              event.pressure,
+              canvasPointerSamples(event, event.currentTarget, snapshot.viewport),
               event.shiftKey,
               event.metaKey || event.ctrlKey,
             )
@@ -465,12 +466,13 @@ function beginCanvasSurfaceInteraction(
 function updateCanvasEditGesture(
   controller: CanvasInteractionController,
   pointerId: number,
-  point: CanvasPoint,
-  pressure: number,
+  drawingPoints: ReadonlyArray<CanvasDrawPoint>,
   square: boolean,
   snap: boolean,
 ) {
-  controller.updateDrawing(pointerId, point, pressure, square)
+  const [x, y] = drawingPoints[drawingPoints.length - 1]!
+  const point = { x, y }
+  controller.updateDrawing(pointerId, drawingPoints, square)
   controller.updateErasing(pointerId, point)
   controller.updateConnection(pointerId, point)
   controller.updateResize(pointerId, point, square, snap)
@@ -505,6 +507,31 @@ function canvasHistoryState(controller: CanvasDocumentController): CanvasHistory
 function localPoint(event: PointerEvent<HTMLElement>, surface: HTMLElement): CanvasPoint {
   const bounds = surface.getBoundingClientRect()
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+}
+
+function canvasPointerSamples(
+  event: PointerEvent<HTMLElement>,
+  surface: HTMLElement,
+  viewport: CanvasViewport,
+): ReadonlyArray<CanvasDrawPoint> {
+  const bounds = surface.getBoundingClientRect()
+  const coalesced = event.nativeEvent.getCoalescedEvents?.() ?? []
+  const samples = [...coalesced]
+  const last = samples[samples.length - 1]
+  if (
+    !last ||
+    last.clientX !== event.nativeEvent.clientX ||
+    last.clientY !== event.nativeEvent.clientY
+  ) {
+    samples.push(event.nativeEvent)
+  }
+  return samples.map((sample) => {
+    const point = screenToCanvasPoint(
+      { x: sample.clientX - bounds.left, y: sample.clientY - bounds.top },
+      viewport,
+    )
+    return [point.x, point.y, sample.pressure] as const
+  })
 }
 
 function measureCanvasGestureFrame(

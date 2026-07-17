@@ -19,7 +19,7 @@ describe('createCanvasInteractionRenderStore', () => {
     store.subscribe(rendered)
     controller.beginDrawing(4, { x: 0, y: 0 }, 0.5)
     for (let index = 1; index <= 3; index += 1) {
-      controller.updateDrawing(4, { x: index, y: index }, 0.5, false)
+      controller.updateDrawing(4, [[index, index, 0.5]], false)
     }
 
     const controllerInteraction = controller.get().interaction

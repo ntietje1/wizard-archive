@@ -811,19 +811,35 @@ class CanvasInteractionControllerState {
     return interaction.nodeIds.size > 0 ? new Set(interaction.nodeIds) : null
   }
 
-  updateDrawing(pointerId: number, point: CanvasPoint, pressure: number, constrain: boolean): void {
+  updateDrawing(
+    pointerId: number,
+    points: ReadonlyArray<CanvasDrawPoint>,
+    constrain: boolean,
+  ): void {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
-    if (interaction.type !== 'drawing' || interaction.pointerId !== pointerId) return
-    const current = drawPoint(point, pressure)
-    const sampled = appendDrawPoint(interaction.rawPoints, current, interaction.sampleDistance)
+    if (
+      interaction.type !== 'drawing' ||
+      interaction.pointerId !== pointerId ||
+      points.length === 0
+    ) {
+      return
+    }
+    let rawPoints = interaction.rawPoints
+    let sampleDistance = interaction.sampleDistance
+    for (const point of points) {
+      const sampled = appendDrawPoint(rawPoints, point, sampleDistance)
+      rawPoints = sampled.points
+      sampleDistance = sampled.sampleDistance
+    }
+    const current = points[points.length - 1]!
     this.#publish({
       ...this.#snapshot,
       interaction: {
         ...interaction,
-        rawPoints: sampled.points,
+        rawPoints,
         current,
-        sampleDistance: sampled.sampleDistance,
+        sampleDistance,
         constrain,
       },
     })

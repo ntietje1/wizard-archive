@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import type { CanvasDocumentNode } from './document-contract'
-import { canvasNodeSize } from './canvas-layout'
-import { canvasStrokeLocalPoints } from './canvas-stroke-geometry'
+import { canvasStrokePath } from './canvas-stroke-geometry'
 import { CanvasTextEditor } from './canvas-text-editor'
 import type { CanvasTextDocument } from './text/model'
 import { canvasEmbedLabel } from './canvas-embed-label'
@@ -26,12 +25,15 @@ export function CanvasNodeVisual({
   zoom: number
 }) {
   if (node.type === 'stroke') {
-    const size = canvasNodeSize(node)
-    const points = canvasStrokeLocalPoints(node)
-      .map(({ x, y }) => `${x},${y}`)
-      .join(' ')
+    const points = node.data.points.map(([x, y]) => `${x},${y}`).join(' ')
+    const path = canvasStrokePath(node.data.points, node.data.size)
+    const bounds = node.data.bounds
     return (
-      <svg className="size-full overflow-visible" viewBox={`0 0 ${size.width} ${size.height}`}>
+      <svg
+        className="size-full overflow-visible"
+        preserveAspectRatio="none"
+        viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      >
         <polyline
           data-testid="canvas-stroke-hit-target"
           fill="none"
@@ -40,15 +42,11 @@ export function CanvasNodeVisual({
           stroke="transparent"
           strokeWidth={Math.max(node.data.size, 24 / zoom)}
         />
-        <polyline
-          fill="none"
-          points={points}
+        <path
+          d={path}
+          fill={node.data.color}
           pointerEvents="none"
-          stroke={node.data.color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeOpacity={(node.data.opacity ?? 100) / 100}
-          strokeWidth={node.data.size}
+          opacity={(node.data.opacity ?? 100) / 100}
         />
       </svg>
     )

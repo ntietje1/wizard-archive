@@ -647,13 +647,20 @@ describe('CanvasEditor', () => {
     })
 
     fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 20, pointerId: 5 })
-    fireEvent.pointerMove(surface, {
+    const drawingMove = createEvent.pointerMove(surface, {
       buttons: 1,
       clientX: 50,
       clientY: 60,
       pointerId: 5,
       pressure: 0.75,
     })
+    Object.defineProperty(drawingMove, 'getCoalescedEvents', {
+      value: () => [
+        { clientX: 20, clientY: 30, pressure: 0.6 },
+        { clientX: 35, clientY: 45, pressure: 0.7 },
+      ],
+    })
+    fireEvent(surface, drawingMove)
     expect(screen.getByTestId('canvas-drawing-preview')).toBeVisible()
     expect(readCanvasDocumentContent(session.document).nodes).toHaveLength(0)
 
@@ -665,6 +672,8 @@ describe('CanvasEditor', () => {
       data: {
         points: [
           [10, 20, 0.5],
+          [20, 30, 0.6],
+          [35, 45, 0.7],
           [50, 60, 0.75],
         ],
         color: 'var(--t-red)',
@@ -1253,8 +1262,10 @@ describe('CanvasEditor', () => {
     )
 
     const hitTarget = screen.getByTestId('canvas-stroke-hit-target')
-    expect(hitTarget).toHaveAttribute('points', '0,10 100,10')
+    expect(hitTarget).toHaveAttribute('points', '120,50 220,50')
     expect(hitTarget).toHaveAttribute('stroke-width', '24')
+    expect(hitTarget.closest('svg')).toHaveAttribute('viewBox', '120 40 100 20')
+    expect(hitTarget.closest('svg')).toHaveAttribute('preserveAspectRatio', 'none')
     fireEvent.pointerDown(hitTarget, { button: 0, clientX: 450, clientY: 110, pointerId: 11 })
     expect(screen.getByTestId('canvas-node')).toHaveAttribute('data-selected', 'true')
 

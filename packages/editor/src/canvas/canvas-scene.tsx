@@ -43,6 +43,7 @@ import type { CanvasTextDocument } from './text/model'
 import type { CanvasNodeId } from '../resources/domain-id'
 import type { ContentCollaboration } from '../resources/content-session-contract'
 import { CanvasCollaborationCursors } from './canvas-collaboration-cursors'
+import { canvasStrokePath } from './canvas-stroke-geometry'
 import { CanvasNodeVisual } from './canvas-node-visual'
 import type { CanvasEmbedRenderer } from './canvas-editor'
 import { projectCanvasRenderContent } from './canvas-render-projection'
@@ -585,9 +586,7 @@ function CanvasEdge({
 function CanvasDrawingOverlay({ interaction }: { interaction: CanvasInteractionSnapshot }) {
   const drawing = interaction.interaction
   if (drawing.type !== 'drawing') return null
-  const points = getCanvasDrawingPoints(drawing)
-    .map(([x, y]) => `${x},${y}`)
-    .join(' ')
+  const path = canvasStrokePath(getCanvasDrawingPoints(drawing), drawing.style.size)
   return (
     <svg
       className="pointer-events-none absolute left-0 top-0 overflow-visible"
@@ -595,15 +594,7 @@ function CanvasDrawingOverlay({ interaction }: { interaction: CanvasInteractionS
       width="1"
       height="1"
     >
-      <polyline
-        fill="none"
-        points={points}
-        stroke={drawing.style.color}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeOpacity={drawing.style.opacity / 100}
-        strokeWidth={drawing.style.size}
-      />
+      <path d={path} fill={drawing.style.color} fillOpacity={drawing.style.opacity / 100} />
     </svg>
   )
 }

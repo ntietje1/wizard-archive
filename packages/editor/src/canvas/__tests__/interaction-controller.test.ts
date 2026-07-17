@@ -149,7 +149,7 @@ describe('CanvasInteractionController pointer activities', () => {
       strokeOpacity: 60,
     })
     controller.beginDrawing(3, { x: 0, y: 0 }, 0)
-    controller.updateDrawing(3, { x: 20, y: 8 }, 0.75, true)
+    controller.updateDrawing(3, [[20, 8, 0.75]], true)
     const interaction = controller.get().interaction
     expect(interaction.type).toBe('drawing')
     if (interaction.type !== 'drawing') throw new Error('Expected drawing interaction')
@@ -171,6 +171,38 @@ describe('CanvasInteractionController pointer activities', () => {
     controller.dispose()
   })
 
+  it('records a coalesced drawing batch with one published interaction snapshot', () => {
+    const controller = createCanvasInteractionController()
+    let publications = 0
+    const unsubscribe = controller.subscribe(() => {
+      publications += 1
+    })
+    controller.beginDrawing(5, { x: 0, y: 0 }, 0.5)
+    publications = 0
+    controller.updateDrawing(
+      5,
+      [
+        [4, 2, 0.4],
+        [8, 5, 0.6],
+        [12, 9, 0.8],
+      ],
+      false,
+    )
+
+    const drawing = controller.get().interaction
+    expect(drawing.type).toBe('drawing')
+    if (drawing.type !== 'drawing') throw new Error('Expected drawing interaction')
+    expect(drawing.rawPoints).toEqual([
+      [0, 0, 0.5],
+      [4, 2, 0.4],
+      [8, 5, 0.6],
+      [12, 9, 0.8],
+    ])
+    expect(publications).toBe(1)
+    unsubscribe()
+    controller.dispose()
+  })
+
   it('resamples drawing events beyond the point limit into one bounded stroke', () => {
     const controller = createCanvasInteractionController()
     const eventCount = CANVAS_WORKLOAD_LIMITS.pointsPerStroke * 2
@@ -182,7 +214,7 @@ describe('CanvasInteractionController pointer activities', () => {
     })
     controller.beginDrawing(5, { x: 0, y: 0 }, 0.5)
     for (let index = 1; index <= eventCount; index += 1) {
-      controller.updateDrawing(5, { x: index, y: index }, 0.5, false)
+      controller.updateDrawing(5, [[index, index, 0.5]], false)
     }
 
     const drawing = controller.get().interaction
