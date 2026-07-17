@@ -142,7 +142,9 @@ describe('NoteEditor', () => {
     )
     const createEditor = vi.spyOn(BlockNoteEditor, 'create')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Health: 10' }))
+    fireEvent.contextMenu(await screen.findByRole('button', { name: 'Health: 10' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit Value' }))
+    expect(screen.getByRole('dialog', { name: 'Edit Health' })).toBeVisible()
     fireEvent.change(screen.getByRole('textbox', { name: 'Value label' }), {
       target: { value: 'Hit points' },
     })

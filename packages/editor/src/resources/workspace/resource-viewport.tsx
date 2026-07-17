@@ -24,6 +24,7 @@ import { WorkspaceCreationStatus } from './workspace-creation-status'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
+import { resourceContextMenuRequest } from './resource-context-menu-request'
 import {
   duplicateResourceKeys,
   resourceKindIcon,
@@ -84,7 +85,14 @@ export function ResourceViewport({
   }
   switch (resource.kind) {
     case 'note':
-      return <NoteViewport canEdit={canEdit} resource={resource} runtime={runtime} />
+      return (
+        <NoteViewport
+          canEdit={canEdit}
+          resource={resource}
+          runtime={runtime}
+          onOpenContextMenu={onOpenContextMenu}
+        />
+      )
     case 'file':
       return <FileViewport canEdit={canEdit} resource={resource} runtime={runtime} />
     case 'map':
@@ -192,10 +200,12 @@ function CanvasViewport({
 
 function NoteViewport({
   canEdit,
+  onOpenContextMenu,
   resource,
   runtime,
 }: {
   canEdit: boolean
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -205,16 +215,21 @@ function NoteViewport({
     return <ContentState resource={resource} state={state} />
   }
   return (
-    <NoteSessionEditor
-      canEdit={canEdit}
-      label={`${resource.title} note editor`}
-      scroll={{
-        kind: 'persistent',
-        campaignId: runtime.scope.campaignId,
-        resourceId: resource.id,
-      }}
-      state={state}
-    />
+    <div
+      className="flex min-h-0 flex-1"
+      onContextMenu={(event) => onOpenContextMenu(resourceContextMenuRequest(event, resource))}
+    >
+      <NoteSessionEditor
+        canEdit={canEdit}
+        label={`${resource.title} note editor`}
+        scroll={{
+          kind: 'persistent',
+          campaignId: runtime.scope.campaignId,
+          resourceId: resource.id,
+        }}
+        state={state}
+      />
+    </div>
   )
 }
 

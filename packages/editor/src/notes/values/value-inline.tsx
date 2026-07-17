@@ -1,5 +1,11 @@
 import { AlertTriangle, Sigma, X } from 'lucide-react'
 import { useId, useState } from 'react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@wizard-archive/ui/shadcn/components/context-menu'
 import { noteValueReference } from './runtime'
 import { useNoteValueRuntime } from './use-note-value-runtime'
 import type { NoteValueProps } from './schema'
@@ -21,22 +27,37 @@ export function NoteValueInline({
   }
   return (
     <span className="note-value-owner" contentEditable={false}>
-      <button
-        type="button"
-        className="note-value-inline"
-        aria-label={`${label}: ${state?.formatted ?? props.expressionSource}`}
-        data-note-value-id={props.valueId}
-        data-note-value-state={state?.status ?? 'error'}
-        draggable={editable}
-        onClick={() => {
-          if (editable) setOpen(true)
-        }}
-      >
-        <Sigma aria-hidden="true" />
-        <span>{label}</span>
-        <span className="note-value-result">{state?.formatted ?? props.expressionSource}</span>
-        {state?.status === 'error' && <AlertTriangle aria-label="Value error" />}
-      </button>
+      <ContextMenu>
+        <ContextMenuTrigger
+          disabled={!editable}
+          render={
+            <button
+              type="button"
+              className="note-value-inline"
+              aria-label={`${label}: ${state?.formatted ?? props.expressionSource}`}
+              data-note-value-id={props.valueId}
+              data-note-value-state={state?.status ?? 'error'}
+              draggable={editable}
+              onClick={() => {
+                if (editable) setOpen(true)
+              }}
+            >
+              <Sigma aria-hidden="true" />
+              <span>{label}</span>
+              <span className="note-value-result">
+                {state?.formatted ?? props.expressionSource}
+              </span>
+              {state?.status === 'error' && <AlertTriangle aria-label="Value error" />}
+            </button>
+          }
+        />
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => setOpen(true)}>
+            <Sigma />
+            Edit Value
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       {open && editable && (
         <span className="note-value-popover" role="dialog" aria-label={`Edit ${label}`}>
           <span className="note-value-popover-heading">
