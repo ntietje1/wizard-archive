@@ -147,4 +147,18 @@ test.describe('editor shell', () => {
       .poll(() => restoredViewport.evaluate((element) => element.scrollTop))
       .toBe(expectedScrollTop)
   })
+
+  test('retains opaque files independently of browser metadata', async ({ page }) => {
+    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
+    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
+    await page.getByLabel('Create resource: choose file').setInputFiles({
+      name: 'payload.exe',
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.from('opaque bytes'),
+    })
+
+    await expect(page.getByText('File uploaded')).toBeVisible()
+    await page.getByRole('button', { name: 'payload.exe', exact: true }).click()
+    await expect(page.getByText('This file type cannot be previewed.')).toBeVisible()
+  })
 })

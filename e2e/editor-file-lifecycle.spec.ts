@@ -68,16 +68,8 @@ test.describe.serial('canonical file lifecycle', () => {
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible()
   })
 
-  test('rejects unsupported and oversized files before reading them', async ({ page }) => {
+  test('rejects oversized files before reading them', async ({ page }) => {
     await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-    const input = page.getByLabel('Create resource: choose file')
-    await input.setInputFiles({
-      name: 'payload.exe',
-      mimeType: 'application/octet-stream',
-      buffer: Buffer.from('not executable code'),
-    })
-    await expect(page.getByText('Please upload a valid file type')).toBeVisible()
-
     await page.getByLabel('Create resource: choose file').evaluate((element) => {
       const file = new File(['small'], 'oversized.txt', { type: 'text/plain' })
       Object.defineProperty(file, 'size', { value: 100 * 1024 * 1024 + 1 })
@@ -88,7 +80,6 @@ test.describe.serial('canonical file lifecycle', () => {
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
     })
     await expect(page.getByText('File must be less than 100MB')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'payload.exe', exact: true })).toBeHidden()
     await expect(page.getByRole('button', { name: 'oversized.txt', exact: true })).toBeHidden()
   })
 })

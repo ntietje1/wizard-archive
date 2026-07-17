@@ -159,6 +159,39 @@ describe('plain transfer inventory', () => {
     expect(paths(continued)).toEqual(['campaign', 'campaign/Entry.md'])
   })
 
+  it.each([
+    {
+      name: 'a control root file with descendants',
+      entries: [
+        file('zip', '.wizardarchive', [1]),
+        file('zip', '.wizardarchive/manifest.json', [123, 125]),
+        markdown('zip', 'Note.md', 'Note'),
+      ],
+    },
+    {
+      name: 'an ordinary file with descendants',
+      entries: [file('zip', 'Assets', [1]), file('zip', 'Assets/map.png', [1, 2, 3])],
+    },
+    {
+      name: 'a nested control root',
+      entries: [
+        directory('zip', '.wizardarchive'),
+        directory('zip', '.wizardarchive/nested'),
+        file('zip', '.wizardarchive/nested/.wizardarchive/manifest.json', [123, 125]),
+        markdown('zip', 'Note.md', 'Note'),
+      ],
+    },
+  ])('rejects $name before selecting ordinary entries', async ({ entries }) => {
+    const sources = [zipSource('zip', 'campaign.zip')]
+
+    await expect(
+      buildPlainTransferInventory({
+        request: await plainRequest('plain_resources', sources, entries, 'continue_plain'),
+        entries,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_source' })
+  })
+
   it('classifies a sole-wrapper manifest before placement and excludes all control metadata', async () => {
     const sources = [zipSource('zip', 'campaign.zip')]
     const entries = [

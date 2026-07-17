@@ -175,6 +175,9 @@ async function preparePlainTransferInventory(
   }
   const canonical = canonicalEntries(request.sources, entries)
   if (canonical.status === 'rejected') return canonical
+  if (hasFileAncestor(canonical.entries, (entry) => entry.path)) {
+    return { status: 'rejected', reason: 'invalid_source' }
+  }
   if (canonical.entries.length > PLAIN_TRANSFER_LIMITS.maxEntries) {
     return { status: 'rejected', reason: 'entry_limit_exceeded' }
   }
@@ -213,7 +216,9 @@ function preparePlacedEntries(
   if (resourcePaths.length > PLAIN_TRANSFER_LIMITS.maxEntries) {
     return { status: 'rejected', reason: 'entry_limit_exceeded' }
   }
-  if (hasFileAncestor(resourcePaths)) return { status: 'rejected', reason: 'invalid_source' }
+  if (hasFileAncestor(resourcePaths, (entry) => entry.placedPath)) {
+    return { status: 'rejected', reason: 'invalid_source' }
+  }
   return resourcePaths
 }
 
@@ -438,7 +443,7 @@ function controlPathKind(path: string): 'control' | 'invalid' | 'manifest' | 'or
   const segments = path.split('/')
   const controlSegment = segments.indexOf('.wizardarchive')
   if (controlSegment === -1) return 'ordinary'
-  if (controlSegment !== 0) return 'invalid'
+  if (controlSegment !== 0 || segments.lastIndexOf('.wizardarchive') !== 0) return 'invalid'
   return path === '.wizardarchive/manifest.json' ? 'manifest' : 'control'
 }
 
@@ -496,11 +501,16 @@ function addImplicitDirectories(entries: ReadonlyArray<PlacedEntry>): ReadonlyAr
   )
 }
 
-function hasFileAncestor(entries: ReadonlyArray<PlacedEntry>): boolean {
-  const byPath = new Map(entries.map((entry) => [resourceKey(entry), entry]))
+function hasFileAncestor<TEntry extends CanonicalEntry>(
+  entries: ReadonlyArray<TEntry>,
+  pathOf: (entry: TEntry) => string,
+): boolean {
+  const byPath = new Map(
+    entries.map((entry) => [sourcePathKey(entry, pathOf(entry)), entry] as const),
+  )
   for (const entry of entries) {
-    for (const parent of ancestorPaths(entry.placedPath)) {
-      const ancestor = byPath.get(resourceKey(entry, parent))
+    for (const parent of ancestorPaths(pathOf(entry))) {
+      const ancestor = byPath.get(sourcePathKey(entry, parent))
       if (ancestor?.type === 'file') return true
     }
   }
@@ -546,6 +556,10 @@ function compareText(left: string, right: string): number {
 }
 
 function resourceKey(entry: Pick<PlacedEntry, 'source' | 'placedPath'>, path = entry.placedPath) {
+  return sourcePathKey(entry, path)
+}
+
+function sourcePathKey(entry: Pick<CanonicalEntry, 'source'>, path: string) {
   return `${entry.source.id}\0${path}`
 }
 

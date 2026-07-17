@@ -13,7 +13,7 @@ import type { ResourceKind } from '../resource-record'
 import type { ResourceUndoHistory } from '../resource-undo-history'
 import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
-import { validateFileUpload } from '../../../../../shared/storage/validation'
+import { validateFileUploadSize } from '../../../../../shared/storage/validation'
 
 export type WorkspaceReport = (message: string, retry?: () => void) => void
 
@@ -154,7 +154,7 @@ async function createWorkspaceFile(
   if (runtime.resources.structure.status !== 'available') {
     return { status: 'rejected', reason: 'read_only' } as const
   }
-  const validation = validateFileUpload(file.type || null, file.size, file.name)
+  const validation = validateFileUploadSize(file.size)
   if (!validation.valid) {
     return { status: 'rejected', reason: validation.error } as const
   }

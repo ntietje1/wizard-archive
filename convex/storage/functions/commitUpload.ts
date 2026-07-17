@@ -1,7 +1,7 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { FILE_STORAGE_STATUS } from '../types'
-import { validateFileUpload } from '../../../shared/storage/validation'
+import { validateFileUploadSize } from '../../../shared/storage/validation'
 import { getUserUploadSession } from './getUserUploadSession'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx, CampaignMutationCtx } from '../../functions'
@@ -27,11 +27,7 @@ export async function commitUpload(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'The uploaded file could not be found')
   }
 
-  const validation = validateFileUpload(
-    storageMetadata.contentType ?? null,
-    storageMetadata.size,
-    fileStorage.originalFileName,
-  )
+  const validation = validateFileUploadSize(storageMetadata.size)
   if (!validation.valid) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, validation.error)
   }

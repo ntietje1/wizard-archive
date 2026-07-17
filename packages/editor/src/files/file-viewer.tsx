@@ -1,10 +1,7 @@
 import { Download, File as FileIcon } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import {
-  FILE_UPLOAD_ACCEPT_PATTERN,
-  validateFileUpload,
-} from '../../../../shared/storage/validation'
+import { validateFileUploadSize } from '../../../../shared/storage/validation'
 import type { FileContentSource, FileResourceContent } from '../resources/content-session-contract'
 import type { VersionStamp } from '../resources/component-version'
 import type { ResourceId } from '../resources/domain-id'
@@ -163,7 +160,7 @@ function useFileReplacement(
     replace: async (target, candidate) =>
       await target.source.replace(target.resourceId, target.expectedVersion, candidate),
     validate: (file) => {
-      const result = validateFileUpload(file.type || null, file.size, file.name)
+      const result = validateFileUploadSize(file.size)
       return result.valid ? null : result.error
     },
     message: (result) => fileReplacementMessage(result.reason),
@@ -185,7 +182,6 @@ function FileReplacementControl({
   return (
     <div className={compact ? '' : 'mt-4 flex flex-col items-center gap-2'}>
       <AssetReplacementButton
-        accept={FILE_UPLOAD_ACCEPT_PATTERN}
         ariaLabel="Choose file replacement"
         compact={compact}
         compactLabel="Replace"

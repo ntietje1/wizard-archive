@@ -2,7 +2,6 @@ import { Upload } from 'lucide-react'
 import type { AssetReplacementController } from './asset-replacement'
 
 export function AssetReplacementButton({
-  accept,
   ariaLabel,
   compact,
   compactLabel,
@@ -10,7 +9,6 @@ export function AssetReplacementButton({
   pendingLabel,
   replacement,
 }: {
-  accept: string
   ariaLabel: string
   compact: boolean
   compactLabel: string
@@ -31,7 +29,6 @@ export function AssetReplacementButton({
       </button>
       <input
         ref={replacement.input}
-        accept={accept}
         aria-label={ariaLabel}
         className="sr-only"
         disabled={replacement.pending}

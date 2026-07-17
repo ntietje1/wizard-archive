@@ -262,7 +262,7 @@ describe('resource structure commands', () => {
     expect(await storedParentIds(laterChild)).toEqual([rootId])
   })
 
-  it('atomically creates a signature-classified file without inspecting its payload', async () => {
+  it('classifies live file bytes independently of generic metadata', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -272,15 +272,15 @@ describe('resource structure commands', () => {
       classification: 'viewable_image' as const,
       byteSize: bytes.byteLength,
       detectedFormat: 'png',
-      extension: 'png',
+      extension: 'bin',
       mediaType: 'image/png',
       viewerUnavailableReason: null,
     }
     const upload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([bytes], { type: 'image/png' }),
-      'evidence.png',
+      new Blob([bytes], { type: 'application/octet-stream' }),
+      'payload.bin',
     )
 
     const result = await asDm(campaign).action(api.resources.actions.createFileResource, {
@@ -321,8 +321,8 @@ describe('resource structure commands', () => {
     const conflictingUpload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([bytes], { type: 'image/png' }),
-      'evidence.png',
+      new Blob([bytes], { type: 'application/octet-stream' }),
+      'payload.bin',
     )
     await expect(
       asDm(campaign).action(api.resources.actions.createFileResource, {
@@ -758,8 +758,10 @@ describe('resource structure commands', () => {
     const original = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob([Uint8Array.from(originalBytes).buffer], { type: 'image/png' }),
-      'map.png',
+      new Blob([Uint8Array.from(originalBytes).buffer], {
+        type: 'application/octet-stream',
+      }),
+      'payload.bin',
     )
     const originalArgs = {
       campaignId: campaignUuid,

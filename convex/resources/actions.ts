@@ -18,7 +18,6 @@ import {
   versionStampValidator,
 } from './schema'
 import { operationIdValidator, resourceIdValidator } from './validators'
-import { validateFileUpload } from '../../shared/storage/validation'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredFileUpload = Readonly<{
@@ -49,8 +48,6 @@ async function loadFileUpload(
   )
   const blob = await ctx.storage.get(upload.storageId)
   if (!blob) throw new TypeError('Uploaded file bytes are unavailable')
-  const validation = validateFileUpload(blob.type || null, blob.size, upload.originalFileName)
-  if (!validation.valid) return null
   const bytes = new Uint8Array(await blob.arrayBuffer())
   return { bytes, upload }
 }

@@ -362,11 +362,19 @@ describe('FileViewer', () => {
     expect(replace.mock.calls[0]![0]).toBe(firstResourceId)
   })
 
-  it('rejects unsupported replacements before reading or uploading them', async () => {
-    const replace = vi.fn<FileContentSource['replace']>()
+  it('retains opaque replacements independently of file metadata', async () => {
+    const bytes = new TextEncoder().encode('binary')
+    const version = initialVersion(await sha256Digest(new Uint8Array()))
+    const nextVersion = initialVersion(await sha256Digest(bytes))
+    const replace = vi.fn<FileContentSource['replace']>(() =>
+      Promise.resolve({
+        status: 'completed',
+        content: fileContent({ attachment: 'attached', byteSize: bytes.byteLength }),
+        version: nextVersion,
+      }),
+    )
     const file = new File(['binary'], 'malware.exe', { type: 'application/octet-stream' })
-    const arrayBuffer = vi.fn()
-    Object.defineProperty(file, 'arrayBuffer', { value: arrayBuffer })
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(bytes.buffer) })
     render(
       <FileViewer
         canEdit
@@ -374,16 +382,18 @@ describe('FileViewer', () => {
         resourceId={testDomainId('resource', 'viewer-invalid')}
         source={fileSource(vi.fn(), replace)}
         title="Empty"
-        version={initialVersion(await sha256Digest(new Uint8Array()))}
+        version={version}
       />,
     )
 
     fireEvent.change(screen.getByLabelText('Choose file replacement'), {
       target: { files: [file] },
     })
-    expect(screen.getByRole('alert')).toHaveTextContent('Please upload a valid file type')
-    expect(arrayBuffer).not.toHaveBeenCalled()
-    expect(replace).not.toHaveBeenCalled()
+    await waitFor(() => expect(replace).toHaveBeenCalledOnce())
+    expect(replace.mock.calls[0]![0]).toBe(testDomainId('resource', 'viewer-invalid'))
+    expect(replace.mock.calls[0]![1]).toEqual(version)
+    expect(replace.mock.calls[0]![2].fileName).toBe('malware.exe')
+    expect(Array.from(replace.mock.calls[0]![2].bytes)).toEqual(Array.from(bytes))
   })
 })
 
