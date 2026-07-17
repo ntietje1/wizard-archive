@@ -90,9 +90,12 @@ export function CanvasScene({
         data-surface-height={surfaceSize.height}
         data-surface-width={surfaceSize.width}
         data-testid="canvas-viewport"
-        style={{
-          transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
-        }}
+        style={
+          {
+            '--canvas-zoom': interaction.viewport.zoom,
+            transform: `translate(${interaction.viewport.x}px, ${interaction.viewport.y}px) scale(${interaction.viewport.zoom})`,
+          } as CSSProperties
+        }
       >
         {rendered.edges.map((edge) => (
           <svg
@@ -248,9 +251,11 @@ function CanvasNode({
         zIndex: node.zIndex ?? 0,
         opacity: erasing ? 0.35 : undefined,
       }}
-      onDoubleClick={(event) => {
+      onDoubleClickCapture={(event) => {
         if (!canEdit || interaction.tool !== 'select' || node.type !== 'text') return
+        event.preventDefault()
         event.stopPropagation()
+        interactionController.selectNode(node.id, false)
         interactionController.editNode(node.id)
       }}
       onContextMenu={(event) => {
@@ -292,7 +297,13 @@ function CanvasNode({
       onPointerCancel={() => interactionController.cancelInteraction()}
     >
       <CanvasNodeVisual
-        editing={editing}
+        {...(editing
+          ? {
+              editing: true,
+              onDefaultTextColorChange: (textColor: string) =>
+                saveTextNodeData(canEdit, documentController, node.id, { textColor }),
+            }
+          : { editing: false })}
         exclusivelySelected={exclusivelySelected}
         embed={
           node.type === 'embed'
@@ -308,7 +319,7 @@ function CanvasNode({
         zoom={interaction.viewport.zoom}
         onFinishEditing={() => interactionController.finishEditing()}
         onSaveContent={(nextContent) =>
-          saveTextNode(canEdit, documentController, node.id, nextContent)
+          saveTextNodeData(canEdit, documentController, node.id, { content: nextContent })
         }
       />
       {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={interaction.viewport.zoom} />}
@@ -466,7 +477,9 @@ function commitNodeDrag(
   }
   const positions = interactionController.commitDrag(event.pointerId)
   if (!positions) {
-    if (!event.metaKey && !event.ctrlKey) interactionController.selectNode(nodeId, false)
+    if (captured && !event.metaKey && !event.ctrlKey) {
+      interactionController.selectNode(nodeId, false)
+    }
     return
   }
   const nodes: Array<CanvasDocumentNodeUpdate> = []
@@ -477,11 +490,11 @@ function commitNodeDrag(
   documentController.apply({ type: 'update', nodes, edges: [] })
 }
 
-function saveTextNode(
+function saveTextNodeData(
   canEdit: boolean,
   documentController: CanvasDocumentController,
   nodeId: CanvasNodeId,
-  content: CanvasTextDocument,
+  data: { content?: CanvasTextDocument; textColor?: string | null },
 ) {
   if (!canEdit) return
   const latest = documentController.read().nodes.find((candidate) => candidate.id === nodeId)
@@ -492,7 +505,7 @@ function saveTextNode(
       {
         id: latest.id,
         type: 'text',
-        data: { content },
+        data,
       },
     ],
     edges: [],

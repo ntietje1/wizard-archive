@@ -5,17 +5,7 @@ import { CanvasTextEditor } from './canvas-text-editor'
 import type { CanvasTextDocument } from './text/model'
 import { canvasEmbedLabel } from './canvas-embed-label'
 
-export function CanvasNodeVisual({
-  editing,
-  embed,
-  exclusivelySelected,
-  node,
-  onFinishEditing,
-  onSaveContent,
-  selected,
-  zoom,
-}: {
-  editing: boolean
+type CanvasNodeVisualProps = {
   embed?: ReactNode
   exclusivelySelected: boolean
   node: CanvasDocumentNode
@@ -23,7 +13,10 @@ export function CanvasNodeVisual({
   onSaveContent: (content: CanvasTextDocument) => void
   selected: boolean
   zoom: number
-}) {
+} & ({ editing: false } | { editing: true; onDefaultTextColorChange: (color: string) => void })
+
+export function CanvasNodeVisual(props: CanvasNodeVisualProps) {
+  const { embed, exclusivelySelected, node, onFinishEditing, onSaveContent, selected, zoom } = props
   if (node.type === 'stroke') {
     const points = node.data.points.map(([x, y]) => `${x},${y}`).join(' ')
     const path = canvasStrokePath(node.data.points, node.data.size)
@@ -79,13 +72,19 @@ export function CanvasNodeVisual({
   }
   return (
     <CanvasTextEditor
+      {...(props.editing
+        ? {
+            editing: true,
+            onDefaultTextColorChange: props.onDefaultTextColorChange,
+          }
+        : { editing: false })}
       content={node.data.content}
-      editing={editing}
       exclusivelySelected={exclusivelySelected}
       onChange={onSaveContent}
       onFinish={onFinishEditing}
       selected={selected}
       style={sharedStyle}
+      textColor={node.data.textColor ?? 'var(--foreground)'}
     />
   )
 }

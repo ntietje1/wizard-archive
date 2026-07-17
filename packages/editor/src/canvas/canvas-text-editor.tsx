@@ -1,8 +1,9 @@
-import { FormattingToolbarController, useCreateBlockNote } from '@blocknote/react'
+import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
-import { CanvasFormattingToolbar } from './canvas-formatting-toolbar'
+import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
+import { createBlockNoteModifierClickSuppressionExtension } from '../rich-text/blocknote/modifier-click'
 import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
 import { createCanvasTextDocument, parseCanvasTextDocument } from './text/model'
 import type { CanvasTextDocument } from './text/model'
@@ -10,23 +11,19 @@ import { canvasTextEditorSchema } from './text/schema'
 import type { CanvasTextPartialBlock } from './text/schema'
 import './canvas-text-editor.css'
 
-export function CanvasTextEditor({
-  content,
-  editing,
-  exclusivelySelected,
-  onChange,
-  onFinish,
-  selected,
-  style,
-}: {
+type CanvasTextEditorProps = {
   content: CanvasTextDocument | undefined
-  editing: boolean
   exclusivelySelected: boolean
   onChange: (content: CanvasTextDocument) => void
   onFinish: () => void
   selected: boolean
   style: CSSProperties
-}) {
+  textColor: string
+} & ({ editing: false } | { editing: true; onDefaultTextColorChange: (color: string) => void })
+
+export function CanvasTextEditor(props: CanvasTextEditorProps) {
+  const { content, editing, exclusivelySelected, onChange, onFinish, selected, style, textColor } =
+    props
   const initialContent = normalizeCanvasTextContent(content)
   const editor = useCreateBlockNote(
     {
@@ -35,7 +32,10 @@ export function CanvasTextEditor({
       autofocus: false,
       domAttributes: { editor: { 'aria-label': 'Canvas text' } },
       disableExtensions: ['uniqueID'],
-      extensions: [createBlockNoteUuidV7Extension(true)],
+      extensions: [
+        createBlockNoteUuidV7Extension(true),
+        createBlockNoteModifierClickSuppressionExtension(),
+      ],
       setIdAttribute: true,
     },
     [],
@@ -69,25 +69,32 @@ export function CanvasTextEditor({
   }
 
   return (
-    <div
-      className={`canvas-text-editor size-full overflow-auto rounded-md border bg-card text-sm outline-none ${exclusivelySelected ? 'nowheel' : ''} ${editing ? 'nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
-      style={style}
-      onKeyDownCapture={editing ? (event) => finishCanvasTextEditing(event, onFinish) : undefined}
-      onPointerDown={editing ? (event) => event.stopPropagation() : undefined}
-    >
-      <BlockNoteView
-        className="min-h-full bg-transparent"
-        editable={editing}
-        editor={editor}
-        formattingToolbar={false}
-        linkToolbar={false}
-        sideMenu={false}
-        slashMenu={false}
-        onChange={editing ? persist : undefined}
+    <Fragment>
+      {editing && (
+        <CanvasFloatingFormattingToolbar
+          defaultTextColor={textColor}
+          editor={editor}
+          onDefaultTextColorChange={props.onDefaultTextColorChange}
+        />
+      )}
+      <div
+        className={`canvas-text-editor size-full overflow-auto rounded-md border bg-card text-sm outline-none ${exclusivelySelected ? 'nowheel' : ''} ${editing ? 'nopan select-text ring-2 ring-ring' : `select-none shadow-sm ${selected ? 'ring-2 ring-ring' : ''}`}`}
+        style={style}
+        onKeyDownCapture={editing ? (event) => finishCanvasTextEditing(event, onFinish) : undefined}
+        onPointerDown={editing ? (event) => event.stopPropagation() : undefined}
       >
-        {editing && <FormattingToolbarController formattingToolbar={CanvasFormattingToolbar} />}
-      </BlockNoteView>
-    </div>
+        <BlockNoteView
+          className="min-h-full bg-transparent"
+          editable={editing}
+          editor={editor}
+          formattingToolbar={false}
+          linkToolbar={false}
+          sideMenu={false}
+          slashMenu={false}
+          onChange={editing ? persist : undefined}
+        />
+      </div>
+    </Fragment>
   )
 }
 

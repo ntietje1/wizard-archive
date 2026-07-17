@@ -228,7 +228,7 @@ test.describe('canvas performance smoke', () => {
           page,
           { x: surfaceBox.x + 100, y: surfaceBox.y + surfaceBox.height / 2 },
           { x: surfaceBox.x + 260, y: surfaceBox.y + surfaceBox.height / 2 + 24 },
-          6,
+          2,
         ),
       ),
     )

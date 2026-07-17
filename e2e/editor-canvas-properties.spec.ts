@@ -22,9 +22,9 @@ test.describe('canvas properties and arrangement', () => {
 
     await expect(nodes).toHaveCount(initialNodeCount + 1)
     const stroke = editor.locator('[data-testid="canvas-node"][data-node-type="stroke"]').last()
-    const visiblePath = stroke.locator('polyline').last()
-    await expect(visiblePath).toHaveAttribute('stroke', 'var(--t-red)')
-    await expect(visiblePath).toHaveAttribute('stroke-width', '8')
+    const visiblePath = stroke.locator('path')
+    await expect(visiblePath).toHaveAttribute('fill', 'var(--t-red)')
+    await expect(visiblePath).toHaveAttribute('opacity', '1')
   })
 
   test('projects mixed node state, fans out properties, arranges, and persists them', async ({

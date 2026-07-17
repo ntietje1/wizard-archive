@@ -41,6 +41,7 @@ describe('CanvasTextEditor', () => {
         onFinish={onFinish}
         selected
         style={{ color: 'rgb(30, 41, 59)' }}
+        textColor="rgb(30, 41, 59)"
       />,
     )
     const editor = await screen.findByRole('textbox', { name: 'Canvas text' })
@@ -63,14 +64,17 @@ describe('CanvasTextEditor', () => {
         editing
         exclusivelySelected
         onChange={onChange}
+        onDefaultTextColorChange={vi.fn()}
         onFinish={onFinish}
         selected
         style={{ color: 'rgb(30, 41, 59)' }}
+        textColor="rgb(30, 41, 59)"
       />,
     )
 
     expect(screen.getByRole('textbox', { name: 'Canvas text' })).toBe(editor)
     expect(editor).toHaveAttribute('contenteditable', 'true')
+    expect(screen.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()
     expect(surface).toHaveProperty('scrollTop', 24)
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
 

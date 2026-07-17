@@ -338,15 +338,13 @@ describe('CanvasEditor', () => {
     expect(nodes[1]).toHaveAttribute('data-selected', 'false')
     expect(nodes[0].querySelector('.canvas-text-editor')).toHaveClass('nowheel')
 
-    fireEvent.pointerDown(nodes[1], { button: 0, pointerId: 34 })
-    fireEvent.pointerUp(nodes[1], { pointerId: 34 })
-    fireEvent.pointerDown(nodes[1], { button: 0, pointerId: 35 })
-    fireEvent.pointerUp(nodes[1], { pointerId: 35 })
     fireEvent.doubleClick(nodes[1])
     expect(screen.getAllByRole('textbox', { name: 'Canvas text' })[1]).toHaveAttribute(
       'contenteditable',
       'true',
     )
+    expect(nodes[0]).toHaveAttribute('data-selected', 'false')
+    expect(nodes[1]).toHaveAttribute('data-selected', 'true')
 
     view.unmount()
     session.dispose()
@@ -451,6 +449,7 @@ describe('CanvasEditor', () => {
       <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Menu board" />,
     )
     const surface = screen.getByTestId('canvas-surface')
+    installPointerCapture(surface)
 
     fireEvent.contextMenu(screen.getAllByTestId('canvas-node')[0]!, {
       clientX: 100,
@@ -462,7 +461,11 @@ describe('CanvasEditor', () => {
 
     fireEvent.contextMenu(surface, { clientX: 500, clientY: 500 })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Select All' }))
-    fireEvent.contextMenu(screen.getAllByTestId('canvas-node')[0]!, {
+    const selectedNode = screen.getAllByTestId('canvas-node')[0]!
+    installPointerCapture(selectedNode)
+    fireEvent.pointerDown(selectedNode, { button: 2, pointerId: 41 })
+    fireEvent.pointerUp(selectedNode, { button: 2, pointerId: 41 })
+    fireEvent.contextMenu(selectedNode, {
       clientX: 100,
       clientY: 100,
     })

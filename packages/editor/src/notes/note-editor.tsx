@@ -14,6 +14,7 @@ import { noteValueTransferExtension } from './values/value-transfer'
 import { NoteSlashMenu } from './slash-menu/slash-menu'
 import { NoteSideMenu } from './side-menu/side-menu'
 import { createBlockNoteUuidV7Extension } from '../rich-text/blocknote/uuidv7'
+import { createBlockNoteModifierClickSuppressionExtension } from '../rich-text/blocknote/modifier-click'
 import './note-editor.css'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
 import type { NoteHeadingNavigation, NoteHeadingNavigationRef } from './note-heading-navigation'
@@ -58,7 +59,11 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         splitCells: true,
       },
       disableExtensions: ['uniqueID'],
-      extensions: [createBlockNoteUuidV7Extension(true), noteValueTransferExtension],
+      extensions: [
+        createBlockNoteUuidV7Extension(true),
+        createBlockNoteModifierClickSuppressionExtension(),
+        noteValueTransferExtension,
+      ],
     },
     [document],
   )

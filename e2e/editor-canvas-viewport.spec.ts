@@ -26,7 +26,7 @@ test.describe('canvas viewport parity', () => {
       .toBe(true)
 
     const beforeWheel = await viewportStyle()
-    await page.mouse.move(surfaceBox.x + surfaceBox.width / 2, surfaceBox.y + surfaceBox.height / 2)
+    await page.mouse.move(surfaceBox.x + 20, surfaceBox.y + surfaceBox.height - 20)
     await page.mouse.wheel(120, 80)
     await expect.poll(viewportStyle).not.toBe(beforeWheel)
 

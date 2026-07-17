@@ -20,6 +20,18 @@ test.describe('note authoring mechanics', () => {
     await expect(editor.locator('strong', { hasText: 'Toolbar bold passage' })).toBeVisible()
   })
 
+  test('does not turn modifier clicks into whole-block selections', async ({ page }) => {
+    const editor = await openNoteEditor(page)
+    await appendParagraph(page, editor)
+    await page.keyboard.type('Modifier click passage')
+
+    await editor
+      .locator('p', { hasText: 'Modifier click passage' })
+      .click({ modifiers: ['Control'] })
+
+    await expect(editor.locator('.ProseMirror-selectednode')).toHaveCount(0)
+  })
+
   test('applies inline keyboard formatting', async ({ page }) => {
     const editor = await openNoteEditor(page)
 
