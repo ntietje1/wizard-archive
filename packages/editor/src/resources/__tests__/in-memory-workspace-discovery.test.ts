@@ -72,12 +72,23 @@ describe('in-memory workspace search', () => {
       results: [{ resourceId }],
     })
 
+    state = { status: 'unavailable', reason: 'scope_unavailable' }
+    await expect(search.gateway.search('archive')).resolves.toEqual({
+      status: 'complete',
+      results: [],
+    })
+    await expect(search.gateway.search('field')).resolves.toMatchObject({
+      status: 'complete',
+      results: [{ resourceId, match: { type: 'title' } }],
+    })
+
+    state = { status: 'ready', session: replacementSession }
     resources = [{ ...resources[0]!, title: canonicalizeResourceTitle('Renamed notes') }]
     await expect(search.gateway.search('renamed')).resolves.toMatchObject({
       status: 'complete',
       results: [{ resourceId }],
     })
-    expect(getCount).toBe(4)
+    expect(getCount).toBe(6)
 
     resources = [
       {
@@ -89,14 +100,14 @@ describe('in-memory workspace search', () => {
       status: 'complete',
       results: [],
     })
-    expect(getCount).toBe(4)
+    expect(getCount).toBe(6)
 
     resources = [{ ...resources[0]!, lifecycle: { state: 'active' } }]
     await expect(search.gateway.search('archive')).resolves.toMatchObject({
       status: 'complete',
       results: [{ resourceId }],
     })
-    expect(getCount).toBe(5)
+    expect(getCount).toBe(7)
     expect(subscribe).not.toHaveBeenCalled()
 
     search.dispose()
@@ -145,5 +156,50 @@ describe('in-memory workspace search', () => {
     expect(get).not.toHaveBeenCalled()
     expect(subscribe).not.toHaveBeenCalled()
     search.dispose()
+  })
+
+  it('uses the live search budget for broad body-only matches', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const version = initialVersion(await sha256Digest(new TextEncoder().encode('resource')))
+    const resources: ReadonlyArray<ResourceRecord> = Array.from({ length: 65 }, (_, index) => ({
+      id: generateDomainId(DOMAIN_ID_KIND.resource),
+      campaignId,
+      parentId: null,
+      kind: 'note' as const,
+      title: canonicalizeResourceTitle(`Journal ${index.toString().padStart(2, '0')}`),
+      icon: null,
+      color: null,
+      lifecycle: { state: 'active' as const },
+      metadataVersion: version,
+      created: { at: 1, by: actorId },
+      updated: { at: 1, by: actorId },
+    }))
+    const document = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Shared archive' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const session = createInMemoryNoteSession(document, version)
+    const get = vi.fn((): NoteSessionState => ({ status: 'ready', session }))
+    const subscribe = vi.fn(() => () => undefined)
+    const notes: NoteSessionSource = {
+      get,
+      subscribe,
+      export: () => ({ status: 'unavailable', reason: 'capability_not_supported' }),
+      create: () =>
+        Promise.resolve({ status: 'not_committed', retryable: false, reason: 'invalid_response' }),
+      dispose: () => undefined,
+    }
+    const search = createInMemoryWorkspaceSearch(() => resources, notes)
+
+    await expect(search.gateway.search('archive')).resolves.toEqual({
+      status: 'incomplete',
+      results: [],
+    })
+    expect(get).toHaveBeenCalledTimes(65)
+    expect(subscribe).not.toHaveBeenCalled()
+
+    search.dispose()
+    session.dispose()
   })
 })
