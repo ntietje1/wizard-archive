@@ -22,8 +22,8 @@ import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-act
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import { NoteBlockAccessMenuProvider } from './sharing/note-block-access-menu'
 import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
-import { NoteEmbedRuntimeProvider } from './embeds/note-embed-runtime'
-import type { NoteEmbedBinding } from './embeds/note-embed-runtime-context'
+import { NoteResourceRuntimeProvider } from './note-resource-runtime'
+import type { NoteResourceBinding } from './note-resource-runtime-context'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -32,7 +32,7 @@ type NoteEditorProps = {
   document: Y.Doc
   formattingToolbar?: boolean
   headingNavigationRef?: NoteHeadingNavigationRef
-  embeds?: NoteEmbedBinding
+  resources?: NoteResourceBinding
   label: string
   scroll: NoteScrollBehavior
 } & (
@@ -137,7 +137,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         <div className="note-editor-fill-height">
           <div className="note-editor-surface">
             <div className="note-editor-core-surface">
-              <NoteEmbedRuntimeProvider binding={props.embeds} editable={editable}>
+              <NoteResourceRuntimeProvider binding={props.resources} editable={editable}>
                 <NoteValueRuntimeProvider editor={editor} editable={editable}>
                   <BlockNoteView
                     editable={editable}
@@ -156,7 +156,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
                     )}
                   </BlockNoteView>
                 </NoteValueRuntimeProvider>
-              </NoteEmbedRuntimeProvider>
+              </NoteResourceRuntimeProvider>
             </div>
           </div>
         </div>

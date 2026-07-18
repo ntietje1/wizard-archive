@@ -8,9 +8,27 @@ import {
   parseValueInlineExternalElement,
   renderValueInlineExternalElement,
 } from './values/external-format'
+import {
+  noteResourceLinkText,
+  parseNoteResourceLinkExternalElement,
+  renderNoteResourceLinkExternalElement,
+} from './links/resource-link-external'
+import type { NoteResourceLinkProps } from './links/resource-link-model'
 import type { NoteValueProps } from './values/schema'
 
 export const noteInlineContentSpecs = createCustomInlineContentSpecs({
+  resourceLink: {
+    parse: parseNoteResourceLinkExternalElement,
+    render: (inlineContent: { props: Partial<NoteResourceLinkProps> }) => {
+      const element = document.createElement('span')
+      element.className = 'note-resource-link'
+      element.textContent = noteResourceLinkText(inlineContent.props)
+      return { dom: element }
+    },
+    toExternalHTML: (inlineContent: { props: Partial<NoteResourceLinkProps> }) => ({
+      dom: renderNoteResourceLinkExternalElement(inlineContent.props),
+    }),
+  },
   valueInline: {
     parse: parseValueInlineExternalElement,
     render: (inlineContent: { props: Partial<NoteValueProps> }) => {

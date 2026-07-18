@@ -6,12 +6,11 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
-import {
-  parseSerializedAuthoredDestination,
-  remapAuthoredDestination,
-  serializeAuthoredDestination,
-} from '@wizard-archive/editor/resources/authored-destination'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import {
+  noteAuthoredDestinations,
+  remapNoteAuthoredDestinations,
+} from '@wizard-archive/editor/notes/authored-destinations'
 import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
@@ -144,7 +143,13 @@ export async function prepareNoteContentCopy(
     plan: {
       referenceableTargets,
       finalize: async (targetMap) => {
-        const finalized = copiedBlocks.map((block) => remapNoteBlockResources(block, targetMap))
+        const remapped = remapNoteAuthoredDestinations(
+          copiedBlocks,
+          targetMap,
+          'same_campaign_copy',
+        )
+        if (remapped.status !== 'completed') throw new TypeError('Unmapped authored destination')
+        const finalized = remapped.blocks
         const update = encodeYjsDocument(noteBlocksToYDoc(finalized, NOTE_YJS_FRAGMENT))
         const version = await initialNoteContentVersion(new Uint8Array(update))
         return async () => {
@@ -174,17 +179,13 @@ function allocateNoteBlock(source: NoteBlock, allocated: Array<AllocatedNoteBloc
 }
 
 function noteResourceIds(blocks: ReadonlyArray<NoteBlock>): Array<ResourceId> | null {
-  const result: Array<ResourceId> = []
-  const pending = [...blocks]
-  while (pending.length > 0) {
-    const block = pending.pop()!
-    pending.push(...(block.children ?? []))
-    if (block.type !== 'embed') continue
-    const destination = parseSerializedAuthoredDestination(block.props.destination)
-    if (!destination) return null
-    if (destination.kind === 'internal') result.push(destination.target.resourceId)
+  try {
+    return noteAuthoredDestinations(blocks).flatMap((destination) =>
+      destination.kind === 'internal' ? [destination.target.resourceId] : [],
+    )
+  } catch {
+    return null
   }
-  return result
 }
 
 async function noteReferencesAreValid(
@@ -195,32 +196,4 @@ async function noteReferencesAreValid(
   const resourceIds = noteResourceIds(blocks)
   if (!resourceIds) return false
   return await resourceReferencesAreValid(ctx, campaignId, resourceIds)
-}
-
-function remapNoteBlockResources(
-  block: NoteBlock,
-  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
-): NoteBlock {
-  const props = block.type === 'embed' ? remapNoteEmbed(block, targetMap) : block.props
-  return {
-    ...block,
-    props,
-    ...(block.children
-      ? { children: block.children.map((child) => remapNoteBlockResources(child, targetMap)) }
-      : {}),
-  } as NoteBlock
-}
-
-function remapNoteEmbed(
-  block: Extract<NoteBlock, { type: 'embed' }>,
-  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
-) {
-  const destination = parseSerializedAuthoredDestination(block.props.destination)
-  if (!destination) throw new TypeError('Invalid authored destination')
-  const result = remapAuthoredDestination(destination, targetMap, 'same_campaign_copy')
-  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
-  return {
-    ...block.props,
-    destination: serializeAuthoredDestination(result.destination),
-  }
 }

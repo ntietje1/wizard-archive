@@ -2,6 +2,11 @@ import {
   parseValueInlineExternalElement,
   renderValueInlineExternalElement,
 } from '../values/external-format'
+import {
+  parseNoteResourceLinkExternalElement,
+  renderNoteResourceLinkExternalElement,
+} from '../links/resource-link-external'
+import type { NoteResourceLinkProps } from '../links/resource-link-model'
 import type { NoteValueProps } from '../values/schema'
 
 function renderHeadlessSpec(): never {
@@ -10,6 +15,13 @@ function renderHeadlessSpec(): never {
 
 export const headlessRenderers = {
   embedBlock: renderHeadlessSpec,
+  resourceLink: {
+    parse: parseNoteResourceLinkExternalElement,
+    render: renderHeadlessSpec,
+    toExternalHTML: (inlineContent: { props: Partial<NoteResourceLinkProps> }) => ({
+      dom: renderNoteResourceLinkExternalElement(inlineContent.props),
+    }),
+  },
   valueInline: {
     parse: parseValueInlineExternalElement,
     render: renderHeadlessSpec,

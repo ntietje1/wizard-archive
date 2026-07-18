@@ -1,9 +1,5 @@
 import * as Y from 'yjs'
-import {
-  parseSerializedAuthoredDestination,
-  remapAuthoredDestination,
-  serializeAuthoredDestination,
-} from './authored-destination'
+import { remapAuthoredDestination } from './authored-destination'
 import { createCanvasDocumentDoc, parseCanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../canvas/document-contract'
 import type { NoteBlock } from '../notes/document/model'
@@ -12,6 +8,7 @@ import {
   noteBlocksToYDoc,
   noteYDocToBlocks,
 } from '../notes/document/headless-yjs'
+import { remapNoteAuthoredDestinations } from '../notes/document/authored-destinations'
 import type {
   CanvasSessionState,
   FileContentState,
@@ -217,10 +214,9 @@ async function finalizeContentCopy(
     case 'folder':
       return () => kinds.set(entry.destinationId, entry.kind)
     case 'note': {
-      const content = noteBlocksToYDoc(
-        entry.blocks.map((block) => remapNoteBlockDestinations(block, targetMap)),
-        NOTE_YJS_FRAGMENT,
-      )
+      const remapped = remapNoteAuthoredDestinations(entry.blocks, targetMap, 'same_campaign_copy')
+      if (remapped.status !== 'completed') throw new TypeError('Unmapped authored destination')
+      const content = noteBlocksToYDoc(remapped.blocks, NOTE_YJS_FRAGMENT)
       const version = await initialNoteContentVersion(Y.encodeStateAsUpdate(content))
       return () => {
         kinds.set(entry.destinationId, entry.kind)
@@ -329,32 +325,6 @@ function allocateNoteBlock(
         }
       : {}),
   } as NoteBlock
-}
-
-function remapNoteBlockDestinations(
-  block: NoteBlock,
-  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
-): NoteBlock {
-  const props =
-    block.type === 'embed' ? remapSerializedDestination(block.props, targetMap) : block.props
-  return {
-    ...block,
-    props,
-    ...(block.children
-      ? { children: block.children.map((child) => remapNoteBlockDestinations(child, targetMap)) }
-      : {}),
-  } as NoteBlock
-}
-
-function remapSerializedDestination(
-  props: Extract<NoteBlock, { type: 'embed' }>['props'],
-  targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
-) {
-  const destination = parseSerializedAuthoredDestination(props.destination)
-  if (!destination) throw new TypeError('Invalid authored destination')
-  const result = remapAuthoredDestination(destination, targetMap, 'same_campaign_copy')
-  if (result.status !== 'completed') throw new TypeError('Unmapped authored destination')
-  return { ...props, destination: serializeAuthoredDestination(result.destination) }
 }
 
 function remapCanvasNode(

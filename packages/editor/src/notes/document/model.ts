@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import { z as zod } from 'zod'
+import { noteResourceLinkPropsSchema } from '../links/resource-link-model'
 import { noteValuePropsSchema } from '../values/schema'
 import { parseSerializedAuthoredDestination } from '../../resources/authored-destination'
 import { isUuidV7 } from '../../resources/domain-id'
@@ -29,8 +30,14 @@ const valueInlineContentSchema = zod.strictObject({
   props: noteValuePropsSchema,
 })
 
+const resourceLinkInlineContentSchema = zod.strictObject({
+  type: zod.literal('resourceLink'),
+  props: noteResourceLinkPropsSchema,
+})
+
 const inlineContentSchema = zod.discriminatedUnion('type', [
   richTextTextSchema,
+  resourceLinkInlineContentSchema,
   valueInlineContentSchema,
 ])
 

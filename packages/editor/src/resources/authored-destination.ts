@@ -112,40 +112,53 @@ export async function resolveAuthoredDestination<TDisplay>(
   const authored = parseAuthoredDestination(destination)
   if (authored === null) return { status: 'unsupported' }
   switch (authored.kind) {
+    case 'externalUrl':
+    case 'unresolved':
+      return resolveAuthoredDestinationKnowledge(authored, campaignId)
+    case 'internal': {
+      const knowledge = await lookup(authored.target)
+      return resolveAuthoredDestinationKnowledge(authored, campaignId, knowledge)
+    }
+  }
+}
+
+export function resolveAuthoredDestinationKnowledge<TDisplay>(
+  destination: AuthoredDestination,
+  campaignId: CampaignId,
+  knowledge?: CanonicalTargetKnowledge<TDisplay>,
+): ResolvedAuthoredDestination<TDisplay> {
+  switch (destination.kind) {
     case 'externalUrl': {
-      const url = parseSafeHttpsUrl(authored.url)
+      const url = parseSafeHttpsUrl(destination.url)
       return url === null ? { status: 'unsupported' } : { status: 'external', url }
     }
     case 'unresolved':
-      return { status: 'unresolved', rawTarget: authored.rawTarget }
-    case 'internal': {
-      const knowledge = await lookup(authored.target)
-      switch (knowledge.state) {
-        case 'missing':
-          return {
+      return { status: 'unresolved', rawTarget: destination.rawTarget }
+    case 'internal':
+      if (!knowledge || knowledge.state === 'unavailable') {
+        return { status: 'unavailable', kind: 'internal', target: destination.target }
+      }
+      if (knowledge.state === 'missing') {
+        return {
+          status: 'broken',
+          kind: 'internal',
+          target: destination.target,
+          reason: 'missing',
+        }
+      }
+      return knowledge.campaignId === campaignId
+        ? {
+            status: 'available',
+            kind: 'internal',
+            target: destination.target,
+            display: knowledge.display,
+          }
+        : {
             status: 'broken',
             kind: 'internal',
-            target: authored.target,
-            reason: 'missing',
+            target: destination.target,
+            reason: 'cross_campaign',
           }
-        case 'unavailable':
-          return { status: 'unavailable', kind: 'internal', target: authored.target }
-        case 'available':
-          return knowledge.campaignId === campaignId
-            ? {
-                status: 'available',
-                kind: 'internal',
-                target: authored.target,
-                display: knowledge.display,
-              }
-            : {
-                status: 'broken',
-                kind: 'internal',
-                target: authored.target,
-                reason: 'cross_campaign',
-              }
-      }
-    }
   }
 }
 

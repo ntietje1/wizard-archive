@@ -2,7 +2,13 @@ import type { InlineContent, NoteBlock } from './model'
 
 function inlineText(content: InlineContent | undefined): string {
   return (content ?? [])
-    .map((item) => (item.type === 'text' ? item.text : item.props.expressionSource))
+    .map((item) =>
+      item.type === 'text'
+        ? item.text
+        : item.type === 'resourceLink'
+          ? item.props.label
+          : item.props.expressionSource,
+    )
     .join('')
 }
 

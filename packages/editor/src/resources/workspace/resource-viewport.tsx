@@ -271,7 +271,7 @@ function NoteViewport({
             : undefined
         }
         canEdit={canEdit}
-        embeds={{
+        resources={{
           drop: createWorkspaceAuthoredDestinationDropResolver({
             actions,
           }),

@@ -5,6 +5,7 @@ import { headlessRenderers } from './headless-renderers'
 import { createHeadlessBlockNoteEditor } from './headless-editor'
 
 const customInlineContentSpecs = createCustomInlineContentSpecs({
+  resourceLink: headlessRenderers.resourceLink,
   valueInline: headlessRenderers.valueInline,
 })
 

@@ -217,7 +217,7 @@ function normalizeDecodedNoteContent(content: unknown): unknown {
 function normalizeDecodedInlineContent(content: unknown): unknown {
   if (!content || typeof content !== 'object') return content
   const inlineContent = content as { content?: unknown; type?: unknown }
-  if (inlineContent.type === 'value') {
+  if (inlineContent.type === 'value' || inlineContent.type === 'resourceLink') {
     const { content: _blockNoteContent, ...valueInlineContent } = inlineContent
     return valueInlineContent
   }

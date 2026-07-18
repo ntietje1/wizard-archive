@@ -1,5 +1,6 @@
 import type * as Y from 'yjs'
 import { parseSerializedAuthoredDestination } from '../../resources/authored-destination'
+import { noteResourceLinkText } from '../links/resource-link-external'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from './headless-yjs'
 import type { InlineContent, NoteBlock } from './model'
 
@@ -59,6 +60,9 @@ function inlineToMarkdown(content: InlineContent | undefined): string {
       if (item.type === 'value') {
         return escapeMarkdown(item.props.label || item.props.expressionSource || 'value')
       }
+      if (item.type === 'resourceLink') {
+        return escapeMarkdown(noteResourceLinkText(item.props))
+      }
       if (item.styles?.code) return codeSpan(item.text)
       let text = escapeMarkdown(item.text)
       if (item.styles?.bold) text = `**${text}**`
@@ -110,9 +114,11 @@ function embedToMarkdown(serializedDestination: string): string {
 
 function inlinePlainText(content: InlineContent | undefined): string {
   return (content ?? [])
-    .map((item) =>
-      item.type === 'text' ? item.text : item.props.label || item.props.expressionSource,
-    )
+    .map((item) => {
+      if (item.type === 'text') return item.text
+      if (item.type === 'resourceLink') return noteResourceLinkText(item.props)
+      return item.props.label || item.props.expressionSource
+    })
     .join('')
 }
 

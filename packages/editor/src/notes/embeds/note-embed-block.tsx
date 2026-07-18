@@ -17,7 +17,7 @@ import type { EditorRuntime } from '../../resources/editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import { ResourcePreviewSurface } from '../../resources/workspace/resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
-import { useNoteEmbedRuntime } from './use-note-embed-runtime'
+import { useNoteResourceRuntime } from '../use-note-resource-runtime'
 
 type NoteEmbedRenderProps = ReactCustomBlockRenderProps<
   'embed',
@@ -26,7 +26,7 @@ type NoteEmbedRenderProps = ReactCustomBlockRenderProps<
 >
 
 export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
-  const surface = useNoteEmbedRuntime()
+  const surface = useNoteResourceRuntime()
   const destination = parseSerializedAuthoredDestination(block.props.destination)
   const empty = destination?.kind === 'unresolved' && destination.rawTarget.length === 0
   const [linking, setLinking] = useState(false)
@@ -96,7 +96,7 @@ function NoteEmbedContent({
   pending: 'drop' | 'upload' | null
   setDestination: (destination: AuthoredDestination) => void
   setLinking: (linking: boolean) => void
-  surface: ReturnType<typeof useNoteEmbedRuntime>
+  surface: ReturnType<typeof useNoteResourceRuntime>
   uploadFile: (file: File) => void
 }) {
   if (pending === 'drop') {
@@ -147,7 +147,7 @@ function useNoteEmbedBlockDrop({
 }: {
   empty: boolean
   setDestination: (destination: AuthoredDestination) => void
-  surface: ReturnType<typeof useNoteEmbedRuntime>
+  surface: ReturnType<typeof useNoteResourceRuntime>
 }) {
   const [pending, setPending] = useState<'drop' | 'upload' | null>(null)
   const operation = useRef<AbortController | null>(null)
@@ -219,8 +219,8 @@ function InternalNoteEmbed({
 }: {
   ancestry: ReadonlySet<ResourceId>
   destination: Extract<AuthoredDestination, { kind: 'internal' }>
-  drop: ReturnType<typeof useNoteEmbedRuntime>['drop']
-  renderNote: ReturnType<typeof useNoteEmbedRuntime>['renderNote']
+  drop: ReturnType<typeof useNoteResourceRuntime>['drop']
+  renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime | null
 }) {
   if (!runtime) return <EmbedState>Embedded resources are unavailable here</EmbedState>
@@ -246,8 +246,8 @@ function InternalResourceEmbed({
   target,
 }: {
   ancestry: ReadonlySet<ResourceId>
-  drop: ReturnType<typeof useNoteEmbedRuntime>['drop']
-  renderNote: ReturnType<typeof useNoteEmbedRuntime>['renderNote']
+  drop: ReturnType<typeof useNoteResourceRuntime>['drop']
+  renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime
   target: Extract<AuthoredDestination, { kind: 'internal' }>['target']
 }) {

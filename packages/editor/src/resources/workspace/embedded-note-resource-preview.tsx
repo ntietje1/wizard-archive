@@ -1,4 +1,4 @@
-import type { EmbeddedNoteResourceRenderer } from '../../notes/embeds/note-embed-runtime-context'
+import type { EmbeddedNoteResourceRenderer } from '../../notes/note-resource-runtime-context'
 import { EPHEMERAL_NOTE_SCROLL } from '../../notes/note-scroll-persistence'
 import { NoteSessionEditor } from '../../notes/note-session-editor'
 
@@ -11,7 +11,7 @@ export const renderEmbeddedNoteResource: EmbeddedNoteResourceRenderer = ({
 }) => (
   <NoteSessionEditor
     canEdit={false}
-    embeds={{
+    resources={{
       ancestors,
       drop: drop ?? undefined,
       renderNote: renderEmbeddedNoteResource,

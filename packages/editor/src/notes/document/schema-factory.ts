@@ -1,4 +1,5 @@
 import { createBlockSpec, createInlineContentSpec, defaultBlockSpecs } from '@blocknote/core'
+import { noteResourceLinkInlineConfig } from '../links/resource-link-model'
 import { noteValueInlineConfig } from '../values/block-config'
 import { EMPTY_AUTHORED_DESTINATION_SERIALIZED } from '../../resources/authored-destination'
 import type {
@@ -18,6 +19,7 @@ type ValueInlineRenderer = CustomInlineContentImplementation<
 >
 
 type NoteDocumentSpecRenderers = {
+  resourceLink: CustomInlineContentImplementation<typeof noteResourceLinkInlineConfig, StyleSchema>
   valueInline: ValueInlineRenderer
 }
 
@@ -44,13 +46,21 @@ function createEmbedBlockSpec(render: EmbedBlockRenderer) {
 }
 
 export function createCustomInlineContentSpecs(
-  renderers: Pick<NoteDocumentSpecRenderers, 'valueInline'>,
+  renderers: Pick<NoteDocumentSpecRenderers, 'resourceLink' | 'valueInline'>,
 ) {
+  const resourceLinkSpec = createInlineContentSpec(
+    noteResourceLinkInlineConfig,
+    renderers.resourceLink,
+  )
   const valueInlineSpec = createInlineContentSpec(noteValueInlineConfig, renderers.valueInline)
   return {
     ...commonRichTextInlineContentSpecs,
+    resourceLink: resourceLinkSpec,
     value: valueInlineSpec,
-  } as InlineContentSpecs & { value: typeof valueInlineSpec }
+  } as InlineContentSpecs & {
+    resourceLink: typeof resourceLinkSpec
+    value: typeof valueInlineSpec
+  }
 }
 
 export function createNoteBlockSpecs({

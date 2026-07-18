@@ -1,20 +1,20 @@
 import type { ReactNode } from 'react'
-import { NoteEmbedRuntimeContext } from './note-embed-runtime-context'
-import type { NoteEmbedBinding } from './note-embed-runtime-context'
+import { NoteResourceRuntimeContext } from './note-resource-runtime-context'
+import type { NoteResourceBinding } from './note-resource-runtime-context'
 
-export function NoteEmbedRuntimeProvider({
+export function NoteResourceRuntimeProvider({
   binding,
   children,
   editable,
 }: {
-  binding?: NoteEmbedBinding
+  binding?: NoteResourceBinding
   children: ReactNode
   editable: boolean
 }) {
   const ancestry = new Set(binding?.ancestors)
   if (binding) ancestry.add(binding.sourceResourceId)
   return (
-    <NoteEmbedRuntimeContext.Provider
+    <NoteResourceRuntimeContext.Provider
       value={{
         ancestry,
         editable,
@@ -24,6 +24,6 @@ export function NoteEmbedRuntimeProvider({
       }}
     >
       {children}
-    </NoteEmbedRuntimeContext.Provider>
+    </NoteResourceRuntimeContext.Provider>
   )
 }

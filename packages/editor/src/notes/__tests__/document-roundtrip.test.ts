@@ -13,6 +13,10 @@ import {
   noteBlocksToYDoc,
   noteYDocToBlocks,
 } from '../document/headless-yjs'
+import {
+  parseSerializedAuthoredDestination,
+  serializeAuthoredDestination,
+} from '../../resources/authored-destination'
 
 describe('canonical note document', () => {
   it('allocates canonical identities for every partial block and rejects empty documents', () => {
@@ -119,6 +123,48 @@ describe('canonical note document', () => {
     expect(decoded[2]?.content).toEqual([
       { type: 'value', props: { valueId, label: 'Armor', expressionSource: '12' } },
     ])
+  })
+
+  it('round-trips canonical inline destinations without title or path identity', () => {
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const destination = serializeAuthoredDestination({
+      kind: 'internal',
+      target: { kind: 'resource', resourceId },
+    })
+    const document = noteBlocksToYDoc(
+      [
+        {
+          id: blockId,
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'See ' },
+            { type: 'resourceLink', props: { destination, label: 'Harbor notes' } },
+          ],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+
+    const [block] = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
+
+    expect(block).toMatchObject({
+      id: blockId,
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'See ' },
+        { type: 'resourceLink', props: { destination, label: 'Harbor notes' } },
+      ],
+    })
+    if (block?.type !== 'paragraph') return
+    const link = block.content?.[1]
+    expect(link?.type).toBe('resourceLink')
+    if (link?.type === 'resourceLink') {
+      expect(parseSerializedAuthoredDestination(link.props.destination)).toEqual({
+        kind: 'internal',
+        target: { kind: 'resource', resourceId },
+      })
+    }
   })
 
   it('rejects legacy value identities instead of decoding a compatibility shape', () => {

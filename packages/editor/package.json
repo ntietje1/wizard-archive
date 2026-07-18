@@ -42,6 +42,10 @@
       "types": "./dist/notes/document/markdown.d.mts",
       "default": "./dist/notes/document/markdown.mjs"
     },
+    "./notes/authored-destinations": {
+      "types": "./dist/notes/document/authored-destinations.d.mts",
+      "default": "./dist/notes/document/authored-destinations.mjs"
+    },
     "./canvas/native-document": {
       "types": "./dist/canvas/native-document.d.mts",
       "default": "./dist/canvas/native-document.mjs"

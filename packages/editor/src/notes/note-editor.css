@@ -50,6 +50,40 @@
   vertical-align: baseline;
 }
 
+.resource-note-editor .note-resource-link {
+  display: inline-flex;
+  max-width: 24rem;
+  align-items: baseline;
+  gap: 0.25rem;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.resource-note-editor .note-resource-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.resource-note-editor .note-resource-link > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.resource-note-editor
+  .note-resource-link:is(
+    [data-note-resource-link-state='broken'],
+    [data-note-resource-link-state='unavailable']
+  ) {
+  color: var(--muted-foreground);
+  cursor: default;
+  text-decoration-style: dotted;
+}
+
+.resource-note-editor .note-resource-link[data-note-resource-link-state='external'] {
+  color: var(--primary);
+}
+
 .resource-note-editor .note-value-inline > svg,
 .note-value-popover-heading svg {
   width: 0.875rem;

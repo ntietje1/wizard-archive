@@ -8,7 +8,7 @@ import {
 import { parseSafeHttpsUrl } from '../../../resources/authored-destination-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { NoteEmbedBlock } from '../note-embed-block'
-import { NoteEmbedRuntimeProvider } from '../note-embed-runtime'
+import { NoteResourceRuntimeProvider } from '../../note-resource-runtime'
 import { createEmbedItem } from '../../slash-menu/embed-slash-menu'
 
 describe('NoteEmbedBlock', () => {
@@ -58,7 +58,7 @@ describe('NoteEmbedBlock', () => {
       ),
     }
     render(
-      <NoteEmbedRuntimeProvider
+      <NoteResourceRuntimeProvider
         binding={{
           drop: resolver,
           renderNote: () => null,
@@ -72,7 +72,7 @@ describe('NoteEmbedBlock', () => {
           contentRef={() => {}}
           editor={editor as never}
         />
-      </NoteEmbedRuntimeProvider>,
+      </NoteResourceRuntimeProvider>,
     )
     const dataTransfer = { types: ['application/x-test'] }
 
@@ -109,7 +109,7 @@ describe('NoteEmbedBlock', () => {
       ),
     }
     const { container } = render(
-      <NoteEmbedRuntimeProvider
+      <NoteResourceRuntimeProvider
         binding={{
           drop: resolver,
           renderNote: () => null,
@@ -123,7 +123,7 @@ describe('NoteEmbedBlock', () => {
           contentRef={() => {}}
           editor={editor as never}
         />
-      </NoteEmbedRuntimeProvider>,
+      </NoteResourceRuntimeProvider>,
     )
     const file = new File(['map'], 'map.png', { type: 'image/png' })
     const input = container.querySelector<HTMLInputElement>('input[type="file"]')
@@ -179,13 +179,13 @@ function renderNoteEmbed(
   editable = true,
 ) {
   return render(
-    <NoteEmbedRuntimeProvider editable={editable}>
+    <NoteResourceRuntimeProvider editable={editable}>
       <NoteEmbedBlock
         block={embedBlock(destination) as never}
         contentRef={() => {}}
         editor={editor as never}
       />
-    </NoteEmbedRuntimeProvider>,
+    </NoteResourceRuntimeProvider>,
   )
 }
 

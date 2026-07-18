@@ -62,7 +62,7 @@ export function CanvasResourceEmbed({
             <NoteSessionEditor
               activation={editing ? (activation ?? undefined) : undefined}
               canEdit={editing}
-              embeds={{
+              resources={{
                 ancestors: new Set([sourceResourceId]),
                 renderNote: renderEmbeddedNoteResource,
                 runtime,
