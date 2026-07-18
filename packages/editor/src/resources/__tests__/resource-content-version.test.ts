@@ -7,6 +7,7 @@ import {
   initialFileContentVersion,
   initialNoteContentVersion,
   noteContentDigest,
+  noteContentProjectionVersion,
 } from '../resource-content-version'
 import type { FileOwnedMetadata } from '../file-content-contract'
 
@@ -61,5 +62,17 @@ describe('resource content versions', () => {
     await expect(
       advanceFileContentVersion(file, bytes, { ...fileMetadata, extension: null }),
     ).resolves.toMatchObject({ revision: 2 })
+  })
+
+  it('identifies read-only note projections without advancing canonical revision', async () => {
+    const canonical = await initialNoteContentVersion(new Uint8Array([1, 2, 3]))
+    const first = await noteContentProjectionVersion(canonical, new Uint8Array([1]))
+    const repeated = await noteContentProjectionVersion(canonical, new Uint8Array([1]))
+    const changed = await noteContentProjectionVersion(canonical, new Uint8Array([2]))
+
+    expect(first.revision).toBe(canonical.revision)
+    expect(first.digest).not.toBe(canonical.digest)
+    expect(repeated).toEqual(first)
+    expect(changed).not.toEqual(first)
   })
 })

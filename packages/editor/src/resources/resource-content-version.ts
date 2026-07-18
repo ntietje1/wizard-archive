@@ -57,6 +57,21 @@ export async function advanceNoteContentVersion(
   return advanceVersion(current, await noteContentDigest(update))
 }
 
+export async function noteContentProjectionVersion(
+  canonical: VersionStamp,
+  update: Uint8Array,
+): Promise<VersionStamp> {
+  const canonicalIdentity = encoder.encode(
+    `${canonical.scheme}:${canonical.revision}:${canonical.digest}`,
+  )
+  return {
+    ...canonical,
+    digest: await sha256Digest(
+      encodeParts('note-content-projection-v1', [canonicalIdentity, update]),
+    ),
+  }
+}
+
 export async function fileContentDigest(bytes: Uint8Array, metadata: FileOwnedMetadata) {
   if (bytes.byteLength !== metadata.byteSize) {
     throw new TypeError('File byte size does not match canonical metadata')

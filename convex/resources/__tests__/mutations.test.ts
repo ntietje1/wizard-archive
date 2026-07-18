@@ -3044,7 +3044,7 @@ describe('resource structure commands', () => {
     })
   })
 
-  it('replays one canonical block access command without advancing projection twice', async () => {
+  it('replays one canonical block access command without advancing note content', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Blocks')
@@ -3084,7 +3084,8 @@ describe('resource structure commands', () => {
         .query('resourceNoteContents')
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', noteId))
         .unique()
-      expect(content?.version.revision).toBe(snapshot.version.revision + 1)
+      expect(content?.update).toEqual(snapshot.update)
+      expect(content?.version).toEqual(snapshot.version)
       await expect(
         ctx.db
           .query('noteBlockAudienceAccess')
@@ -3093,6 +3094,94 @@ describe('resource structure commands', () => {
               .eq('campaignUuid', campaignUuid)
               .eq('noteUuid', noteId)
               .eq('blockUuid', block!.id),
+          )
+          .unique(),
+      ).resolves.not.toBeNull()
+    })
+  })
+
+  it('preserves concurrent note content and block access changes', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: noteId,
+        kind: 'note',
+        parentId: null,
+        title: 'Concurrent blocks',
+        icon: null,
+        color: null,
+      },
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: blockId,
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Base' }],
+        },
+      ]),
+    })
+    const snapshot = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    if (snapshot.status !== 'ready') throw new TypeError('Expected note content')
+    const client = new Y.Doc()
+    Y.applyUpdate(client, new Uint8Array(snapshot.update))
+    const deltas: Array<Uint8Array> = []
+    client.on('update', (update) => deltas.push(Uint8Array.from(update)))
+    noteTextType(client).insert(noteTextType(client).length, ' concurrent edit')
+    const update = Uint8Array.from(Y.mergeUpdates(deltas)).buffer
+    client.destroy()
+
+    const [access, content] = await Promise.all([
+      asDm(campaign).mutation(api.resources.mutations.executeNoteBlockAccessCommand, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'setNoteBlockAudienceAccess',
+          noteId,
+          blockIds: [blockId],
+          shared: true,
+        },
+      }),
+      asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+        update,
+      }),
+    ])
+
+    expect(access.status).toBe('completed')
+    expect(content).toMatchObject({
+      status: 'completed',
+      version: { revision: snapshot.version.revision + 1 },
+    })
+    const current = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    expect(current).toMatchObject({
+      status: 'ready',
+      version: { revision: snapshot.version.revision + 1 },
+    })
+    if (current.status !== 'ready') throw new TypeError('Expected updated note content')
+    expect(
+      JSON.stringify(decodeNoteYjsUpdatesToBlocks([{ update: current.update }], NOTE_YJS_FRAGMENT)),
+    ).toContain('concurrent edit')
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('noteBlockAudienceAccess')
+          .withIndex('by_note_and_block', (query) =>
+            query
+              .eq('campaignUuid', campaignUuid)
+              .eq('noteUuid', noteId)
+              .eq('blockUuid', blockId),
           )
           .unique(),
       ).resolves.not.toBeNull()

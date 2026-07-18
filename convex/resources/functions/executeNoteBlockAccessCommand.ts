@@ -13,10 +13,6 @@ import type {
   NoteBlockAccessCommandResult,
   NoteBlockAccessReceipt,
 } from '@wizard-archive/editor/resources/command-contract'
-import {
-  assertVersionStamp,
-  successorVersion,
-} from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { NoteBlockId, OperationId } from '@wizard-archive/editor/resources/domain-id'
 import { NOTE_BLOCK_VISIBILITY } from '@wizard-archive/editor/resources/note-block-access-policy'
@@ -69,14 +65,8 @@ export async function executeNoteBlockAccessCommand(
 
   const target = await loadCommandTarget(ctx, command)
   if (target.status === 'rejected') return target
-  const content = target.content
   const writes = await planWrites(ctx, command)
-  const nextVersion = nextContentVersion(content, writes.length > 0)
-  if (!nextVersion) return { status: 'rejected', reason: 'version_exhausted' }
   await Promise.all(writes.map((write) => applyWrite(ctx, command.noteId, write)))
-  if (writes.length > 0) {
-    await ctx.db.patch('resourceNoteContents', content._id, { version: nextVersion })
-  }
 
   const receipt: NoteBlockAccessReceipt = {
     campaignId: ctx.resourceScope.campaignId,
@@ -130,7 +120,7 @@ async function loadCommandTarget(ctx: CampaignMutationCtx, command: NoteBlockAcc
   if (command.blockIds.some((blockId) => !knownBlockIds.has(blockId))) {
     return { status: 'rejected' as const, reason: 'block_missing' as const }
   }
-  return { status: 'ready' as const, content }
+  return { status: 'ready' as const }
 }
 
 function decodeBlockIds(update: ArrayBuffer): Set<NoteBlockId> | null {
@@ -138,16 +128,6 @@ function decodeBlockIds(update: ArrayBuffer): Set<NoteBlockId> | null {
     return new Set(
       flattenNoteBlockIds(decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)),
     )
-  } catch {
-    return null
-  }
-}
-
-function nextContentVersion(content: Doc<'resourceNoteContents'>, changed: boolean) {
-  if (!changed) return content.version
-  try {
-    const current = assertVersionStamp(content.version)
-    return successorVersion(current, current.digest)
   } catch {
     return null
   }

@@ -1,5 +1,6 @@
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import { noteContentProjectionVersion } from '@wizard-archive/editor/resources/content-version'
 import type { CampaignQueryCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { findNoteContent } from './noteContent'
@@ -11,7 +12,7 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
 
   const content = await findNoteContent(ctx.db, resourceId)
   if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
-  if (ctx.resourceScope.projection !== 'dm') {
+  if (ctx.resourceScope.projection !== 'dm' && authorization.permission !== 'edit') {
     const projection = await filterNoteContentForMember(
       ctx,
       resourceId,
@@ -24,15 +25,13 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
     if (projection.status === 'empty') {
       return { status: 'empty' as const, reason: 'no_visible_blocks' as const }
     }
-    if (projection.update !== content.update) {
-      return {
-        status: 'ready' as const,
-        update: projection.update,
-        version: {
-          ...content.version,
-          digest: await sha256Digest(new Uint8Array(projection.update)),
-        },
-      }
+    return {
+      status: 'ready' as const,
+      update: projection.update,
+      version: await noteContentProjectionVersion(
+        assertVersionStamp(content.version),
+        new Uint8Array(projection.update),
+      ),
     }
   }
   return {

@@ -625,6 +625,11 @@ describe('authorized resource projection', () => {
         },
       ]),
     })
+    const canonical = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    if (canonical.status !== 'ready') throw new TypeError('Expected canonical note content')
     await executeAccess(campaign, campaignUuid, {
       type: 'setMemberAccess',
       resourceIds: [noteId],
@@ -657,6 +662,8 @@ describe('authorized resource projection', () => {
     })
     expect(filtered.status).toBe('ready')
     if (filtered.status !== 'ready') throw new TypeError('Expected filtered note content')
+    expect(filtered.version.revision).toBe(canonical.version.revision)
+    expect(filtered.version.digest).not.toBe(canonical.version.digest)
     const blocks = decodeNoteYjsUpdatesToBlocks([{ update: filtered.update }], NOTE_YJS_FRAGMENT)
     expect(blocks.map((block) => block.id)).toEqual([parentId])
     expect((blocks[0]?.children ?? []).map((block) => block.id)).toEqual([childId])
@@ -703,6 +710,7 @@ describe('authorized resource projection', () => {
     })
     expect(editable.status).toBe('ready')
     if (editable.status !== 'ready') throw new TypeError('Expected editable note content')
+    expect(editable.version).toEqual(canonical.version)
     expect(
       decodeNoteYjsUpdatesToBlocks([{ update: editable.update }], NOTE_YJS_FRAGMENT).map(
         (block) => block.id,

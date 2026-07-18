@@ -6,7 +6,6 @@ import {
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
-import { successorVersion } from '@wizard-archive/editor/resources/component-version'
 import {
   advanceNoteContentVersion,
   initialNoteContentVersion,
@@ -193,7 +192,7 @@ describe('LiveNoteContentSource', () => {
     provider.emit(resourceId, {
       status: 'ready',
       update: secondUpdate,
-      version: successorVersion(firstVersion, secondDigest),
+      version: { ...firstVersion, digest: secondDigest },
     })
     const second = source.get(resourceId)
     if (second.status !== 'ready') throw new TypeError('Expected replacement projection')
