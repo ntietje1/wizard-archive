@@ -320,7 +320,7 @@ export const fileContentReplaceResultValidator = v.union(
 export const resourceProjectionScopeValidator = v.object({
   campaignId: campaignIdValidator,
   actorId: campaignMemberIdValidator,
-  projection: literals('dm', 'player'),
+  projection: literals('dm', 'player', 'view_as_player'),
   schema: v.literal(RESOURCE_INDEX_SCHEMA),
 })
 

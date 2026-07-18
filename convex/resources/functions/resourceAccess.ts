@@ -20,7 +20,6 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
@@ -196,7 +195,7 @@ export async function authorizeResourcePermission(
   ) {
     return { status: 'unauthorized' as const }
   }
-  if (ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
+  if (ctx.resourceScope.projection === 'dm') {
     return { status: 'authorized' as const, resource, permission: RESOURCE_PERMISSION.edit }
   }
   const resolver = createResourceAccessResolver(

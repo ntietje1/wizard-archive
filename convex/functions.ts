@@ -24,7 +24,11 @@ import type {
   CampaignMemberId as DomainCampaignMemberId,
 } from '@wizard-archive/editor/resources/domain-id'
 import { getAssetIdByStorageId } from './storage/functions/assetIdentity'
-import { findCampaignRow } from './campaigns/functions/campaignIdentity'
+import {
+  findCampaignRow,
+  requireCampaignMemberRowForCampaign,
+} from './campaigns/functions/campaignIdentity'
+import type { ResourceProjection } from '@wizard-archive/editor/resources/index-contract'
 
 // --- Context enrichment ---
 
@@ -140,6 +144,7 @@ type CampaignScopeInputResult = {
     resourceScope: {
       campaignId: DomainCampaignId
       actorId: DomainCampaignMemberId
+      projection: Exclude<ResourceProjection, 'local'>
     }
   }
   args: {}
@@ -157,7 +162,50 @@ async function campaignScopeInput(
   }
   const { campaign, membership } = await checkCampaignMembership(ctx, campaignDoc._id)
   const actorId = assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid)
-  return { ctx: { campaign, membership, resourceScope: { campaignId, actorId } }, args: {} }
+  const projection = membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'
+  return {
+    ctx: { campaign, membership, resourceScope: { campaignId, actorId, projection } },
+    args: {},
+  }
+}
+
+type ResourceQueryScopeInputArgs = CampaignScopeInputArgs & {
+  viewAsParticipantId?: string
+}
+
+async function resourceQueryScopeInput(
+  ctx: object,
+  input: ResourceQueryScopeInputArgs,
+): Promise<CampaignScopeInputResult> {
+  assertAuthenticatedCtx(ctx)
+  const scoped = await campaignScopeInput(ctx, input)
+  if (input.viewAsParticipantId === undefined) return scoped
+  if (scoped.ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can view as a player')
+  }
+  const participantId = assertDomainId(DOMAIN_ID_KIND.campaignMember, input.viewAsParticipantId)
+  const participant = await requireCampaignMemberRowForCampaign(
+    ctx,
+    scoped.ctx.resourceScope.campaignId,
+    participantId,
+  )
+  if (
+    participant.role !== CAMPAIGN_MEMBER_ROLE.Player ||
+    participant.status !== CAMPAIGN_MEMBER_STATUS.Accepted
+  ) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only accepted players can be viewed')
+  }
+  return {
+    ...scoped,
+    ctx: {
+      ...scoped.ctx,
+      resourceScope: {
+        ...scoped.ctx.resourceScope,
+        actorId: participantId,
+        projection: 'view_as_player',
+      },
+    },
+  }
 }
 
 async function dmScopeInput(
@@ -184,6 +232,7 @@ async function campaignRowScopeInput(
       resourceScope: {
         campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
         actorId: assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid),
+        projection: membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player',
       },
     },
     args: {},
@@ -201,6 +250,14 @@ async function dmRowScopeInput(ctx: object, input: { campaignId: Id<'campaigns'>
 export const campaignQuery = customQuery(authQuery, {
   args: campaignArgs,
   input: campaignScopeInput,
+})
+
+export const resourceQuery = customQuery(authQuery, {
+  args: {
+    ...campaignArgs,
+    viewAsParticipantId: v.optional(v.string()),
+  },
+  input: resourceQueryScopeInput,
 })
 
 const authInternalQuery = customQuery(

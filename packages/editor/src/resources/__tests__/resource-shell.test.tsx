@@ -57,6 +57,46 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('keeps the view-as exit available while the player projection is loading', async () => {
+    const { core } = await shellRuntime(true)
+    await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
+    const selectedParticipantId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const select = vi.fn()
+    const runtime = {
+      ...withControlledRootReadiness(
+        core.runtime,
+        () => new Promise<ResourceLoadResult>(() => undefined),
+      ),
+      viewAs: {
+        status: 'available' as const,
+        value: {
+          pending: false,
+          participants: [
+            {
+              id: selectedParticipantId,
+              displayName: 'Mina',
+              username: 'mina',
+              imageUrl: null,
+            },
+          ],
+          selectedParticipantId,
+          select,
+        },
+      },
+    }
+
+    const view = render(
+      <ResourceShell ariaLabel="Loading player view" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    expect(screen.getByText('Viewing as')).toBeInTheDocument()
+    expect(screen.getByText('Mina')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Exit' }))
+    expect(select).toHaveBeenCalledExactlyOnceWith(null)
+    view.unmount()
+    core.dispose()
+  })
+
   it('renders initial projection failure separately and retries to readiness', async () => {
     const { core } = await shellRuntime(true)
     await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })

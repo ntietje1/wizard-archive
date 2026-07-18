@@ -19,6 +19,7 @@ import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
   storeCommittedTestUploadSession,
@@ -96,6 +97,48 @@ describe('authorized resource projection', () => {
         complete: true,
       },
     ])
+  })
+
+  it('lets only a DM request the exact readonly projection of an accepted player', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const sharedId = await createResource(campaign, campaignUuid, 'note', null, 'Shared')
+    const privateId = await createResource(campaign, campaignUuid, 'note', null, 'Private')
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [sharedId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+
+    const shared = await asDm(campaign).query(api.resources.queries.loadResource, {
+      campaignId: campaignUuid,
+      viewAsParticipantId: campaign.player.memberDomainId,
+      resourceId: sharedId,
+    })
+    const hidden = await asDm(campaign).query(api.resources.queries.loadResource, {
+      campaignId: campaignUuid,
+      viewAsParticipantId: campaign.player.memberDomainId,
+      resourceId: privateId,
+    })
+
+    expect(shared.scope).toEqual({
+      campaignId: campaignUuid,
+      actorId: campaign.player.memberDomainId,
+      projection: 'view_as_player',
+      schema: RESOURCE_INDEX_SCHEMA,
+    })
+    expect(shared.resources).toEqual([
+      expect.objectContaining({ id: sharedId, permission: 'view' }),
+    ])
+    expect(hidden).toMatchObject({ resources: [], missingResourceIds: [privateId] })
+    await expectPermissionDenied(
+      asPlayer(campaign).query(api.resources.queries.loadResource, {
+        campaignId: campaignUuid,
+        viewAsParticipantId: campaign.player.memberDomainId,
+        resourceId: sharedId,
+      }),
+    )
   })
 
   it('preserves reference precedence and folder inheritance stops in player projections', async () => {
@@ -421,6 +464,19 @@ describe('authorized resource projection', () => {
         resourceId,
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [resourceId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        viewAsParticipantId: campaign.player.memberDomainId,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'ready', update, version: expect.any(Object) })
 
     await t.run(async (ctx) => {
       const content = await ctx.db

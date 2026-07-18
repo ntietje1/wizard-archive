@@ -18,6 +18,7 @@ import type { WorkspacePreferences } from '../workspace-preferences'
 import type { WorkspaceActions } from './resource-operations'
 import { ResourceSharingMenu } from './resource-sharing-menu'
 import { useResourceUndoSnapshot } from './resource-undo'
+import { ResourceViewAsMenu } from './resource-view-as-menu'
 
 export function ResourceTopbar({
   actions,
@@ -111,6 +112,7 @@ export function ResourceTopbar({
           ))}
         </div>
       )}
+      <ResourceViewAsMenu viewAs={runtime.viewAs} />
       <ResourceUndoButtons actions={actions} runtime={runtime} />
       {runtime.scope.projection === 'player' && (
         <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">

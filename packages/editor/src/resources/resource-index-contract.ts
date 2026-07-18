@@ -19,11 +19,12 @@ const RESOURCE_KINDS: ReadonlySet<string> = new Set(Object.values(RESOURCE_KIND)
 
 export type IndexRevision = string & { readonly [indexRevisionBrand]: true }
 export type ResourceCollectionKey = string & { readonly [resourceCollectionKeyBrand]: true }
+export type ResourceProjection = 'dm' | 'player' | 'view_as_player' | 'local'
 
 export type ResourceProjectionScope = Readonly<{
   campaignId: CampaignId
   actorId: CampaignMemberId
-  projection: 'dm' | 'player' | 'local'
+  projection: ResourceProjection
   schema: typeof RESOURCE_INDEX_SCHEMA
 }>
 

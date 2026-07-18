@@ -24,6 +24,7 @@ import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
 import { useCommittedRuntime } from '../../committed-runtime'
 import { createLiveResourceAccessGateway } from './live-resource-access-gateway'
+import { executeResourceWrite, resourceQueryScope } from './resource-query-scope'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -41,11 +42,18 @@ function subscribeToWatch<T>(
   return unsubscribe
 }
 
+const READONLY_PRESENCE_BACKEND: LiveResourcePresenceBackend = {
+  heartbeatPresence: () => Promise.resolve({ status: 'unavailable' }),
+  updatePresence: () => Promise.resolve({ status: 'unavailable' }),
+  watchPresence: () => () => undefined,
+  disconnectPresence: () => Promise.resolve({ status: 'unavailable' }),
+}
+
 export function useLiveResourceCore(
   scope: ResourceProjectionScope,
   navigation: ResourceNavigation,
   collaborationUser: CollaborationUser,
-): EditorRuntime | null {
+): Omit<EditorRuntime, 'viewAs'> | null {
   const convex = useConvex()
   return useCommittedRuntime(() =>
     createScopedLiveResourceRuntime(scope, navigation, collaborationUser, convex),
@@ -59,16 +67,18 @@ function createScopedLiveResourceRuntime(
   convex: ReturnType<typeof useConvex>,
 ) {
   const currentScope: ResourceProjectionScope = { ...scope }
+  const queryScope = resourceQueryScope(currentScope)
+  const write = <T>(operation: () => Promise<T>) => executeResourceWrite(currentScope, operation)
   const base = createLiveResourceIndexRuntime(currentScope, {
     loadResource: (args) => convex.query(api.resources.queries.loadResource, args),
     loadCollection: (args) => convex.query(api.resources.queries.loadCollection, args),
   })
   const authoritativeStructure = createLiveResourceStructureGateway(
     currentScope.campaignId,
-    (args) => convex.mutation(api.resources.mutations.executeStructureCommand, args),
+    (args) => write(() => convex.mutation(api.resources.mutations.executeStructureCommand, args)),
   )
   const compensation = createLiveResourceCompensationGateway(currentScope.campaignId, (args) =>
-    convex.mutation(api.resources.mutations.compensateResourceOperation, args),
+    write(() => convex.mutation(api.resources.mutations.compensateResourceOperation, args)),
   )
   const optimistic = createOptimisticResourceStructureRuntime(base.index, authoritativeStructure)
   const undo = createResourceUndoHistory(
@@ -82,48 +92,57 @@ function createScopedLiveResourceRuntime(
       base.loader.ensureCollection({ parentId, lifecycle: 'active' }),
     ])
   }
-  const presenceBackend: LiveResourcePresenceBackend = {
+  const livePresenceBackend: LiveResourcePresenceBackend = {
     heartbeatPresence: (args) =>
-      convex.mutation(api.resources.mutations.heartbeatResourcePresence, {
-        campaignId: currentScope.campaignId,
-        ...args,
-      }),
+      write(() =>
+        convex.mutation(api.resources.mutations.heartbeatResourcePresence, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
+      ),
     updatePresence: (args) =>
-      convex.mutation(api.resources.mutations.updateResourcePresence, {
-        campaignId: currentScope.campaignId,
-        ...args,
-      }),
+      write(() =>
+        convex.mutation(api.resources.mutations.updateResourcePresence, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
+      ),
     disconnectPresence: (args) =>
-      convex.mutation(api.resources.mutations.disconnectResourcePresence, {
-        campaignId: currentScope.campaignId,
-        ...args,
-      }),
+      write(() =>
+        convex.mutation(api.resources.mutations.disconnectResourcePresence, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
+      ),
     watchPresence: (resourceId, roomToken, apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadResourcePresence, {
-        campaignId: currentScope.campaignId,
+        ...queryScope,
         resourceId,
         roomToken,
       })
       return subscribeToWatch(watch, apply)
     },
   }
+  const presenceBackend =
+    currentScope.projection === 'view_as_player' ? READONLY_PRESENCE_BACKEND : livePresenceBackend
   const notes = createLiveNoteContentSource(
     currentScope.campaignId,
     currentScope.actorId,
     collaborationUser,
     {
       ...presenceBackend,
-      create: (args) => convex.mutation(api.resources.mutations.createNoteResource, args),
+      create: (args) =>
+        write(() => convex.mutation(api.resources.mutations.createNoteResource, args)),
       refresh,
-      save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
+      save: (args) => write(() => convex.mutation(api.resources.mutations.saveNoteContent, args)),
       load: (resourceId) =>
         convex.query(api.resources.queries.loadNoteContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         }),
       watch: (resourceId, apply) => {
         const watch = convex.watchQuery(api.resources.queries.loadNoteContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         })
         return subscribeToWatch(watch, apply)
@@ -132,12 +151,11 @@ function createScopedLiveResourceRuntime(
     undo.beginRecording,
   )
   const discardUpload = async (sessionId: Id<'fileStorage'>) => {
-    await convex.mutation(api.storage.mutations.discardUpload, { sessionId })
+    await write(() => convex.mutation(api.storage.mutations.discardUpload, { sessionId }))
   }
   const uploadFile = async (source: { bytes: Uint8Array; fileName: string }) => {
-    const { sessionId, uploadUrl } = await convex.mutation(
-      api.storage.mutations.createUploadSession,
-      {},
+    const { sessionId, uploadUrl } = await write(() =>
+      convex.mutation(api.storage.mutations.createUploadSession, {}),
     )
     const response = await fetch(uploadUrl, {
       method: 'POST',
@@ -146,11 +164,13 @@ function createScopedLiveResourceRuntime(
     })
     if (!response.ok) throw new Error('File upload failed')
     const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
-    await convex.mutation(api.storage.mutations.bindUpload, {
-      sessionId,
-      storageId,
-      originalFileName: source.fileName,
-    })
+    await write(() =>
+      convex.mutation(api.storage.mutations.bindUpload, {
+        sessionId,
+        storageId,
+        originalFileName: source.fileName,
+      }),
+    )
     return sessionId
   }
   const files = createLiveFileContentSource(
@@ -158,25 +178,25 @@ function createScopedLiveResourceRuntime(
     {
       load: (resourceId) =>
         convex.query(api.resources.queries.loadFileContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         }),
       watch: (resourceId, apply) => {
         const watch = convex.watchQuery(api.resources.queries.loadFileContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         })
         return subscribeToWatch(watch, apply)
       },
-      create: (args) => convex.action(api.resources.actions.createFileResource, args),
+      create: (args) => write(() => convex.action(api.resources.actions.createFileResource, args)),
       download: (resourceId) =>
         convex.query(api.resources.queries.loadFileDownload, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         }),
       discard: discardUpload,
       refresh,
-      replace: (args) => convex.action(api.resources.actions.replaceFileContent, args),
+      replace: (args) => write(() => convex.action(api.resources.actions.replaceFileContent, args)),
       upload: uploadFile,
     },
     undo.beginRecording,
@@ -186,27 +206,29 @@ function createScopedLiveResourceRuntime(
     {
       load: (resourceId) =>
         convex.query(api.resources.queries.loadMapContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         }),
       watch: (resourceId, apply) => {
         const watch = convex.watchQuery(api.resources.queries.loadMapContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         })
         return subscribeToWatch(watch, apply)
       },
-      create: (args) => convex.mutation(api.resources.mutations.createMapResource, args),
+      create: (args) =>
+        write(() => convex.mutation(api.resources.mutations.createMapResource, args)),
       discard: discardUpload,
       download: (resourceId, layerId) =>
         convex.query(api.resources.queries.loadMapImage, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
           layerId,
         }),
-      execute: (args) => convex.mutation(api.resources.mutations.executeMapContentCommand, args),
+      execute: (args) =>
+        write(() => convex.mutation(api.resources.mutations.executeMapContentCommand, args)),
       refresh,
-      replace: (args) => convex.action(api.resources.actions.replaceMapImage, args),
+      replace: (args) => write(() => convex.action(api.resources.actions.replaceMapImage, args)),
       upload: uploadFile,
     },
     undo.beginRecording,
@@ -219,18 +241,19 @@ function createScopedLiveResourceRuntime(
       ...presenceBackend,
       load: (resourceId) =>
         convex.query(api.resources.queries.loadCanvasContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         }),
       watch: (resourceId, apply) => {
         const watch = convex.watchQuery(api.resources.queries.loadCanvasContent, {
-          campaignId: currentScope.campaignId,
+          ...queryScope,
           resourceId,
         })
         return subscribeToWatch(watch, apply)
       },
-      create: (args) => convex.mutation(api.resources.mutations.createCanvasResource, args),
-      save: (args) => convex.mutation(api.resources.mutations.saveCanvasContent, args),
+      create: (args) =>
+        write(() => convex.mutation(api.resources.mutations.createCanvasResource, args)),
+      save: (args) => write(() => convex.mutation(api.resources.mutations.saveCanvasContent, args)),
       refresh,
     },
     undo.beginRecording,
@@ -255,7 +278,8 @@ function createScopedLiveResourceRuntime(
     currentScope.campaignId,
     optimistic.index,
     currentScope.projection === 'dm'
-      ? (args) => convex.mutation(api.resources.mutations.executeResourceAccessCommand, args)
+      ? (args) =>
+          write(() => convex.mutation(api.resources.mutations.executeResourceAccessCommand, args))
       : null,
     currentScope.projection === 'dm'
       ? (resourceId, apply) => {
@@ -311,7 +335,7 @@ function createScopedLiveResourceRuntime(
     },
     start: () => {
       preferences.start()
-      bookmarks.start()
+      if (currentScope.projection === 'dm') bookmarks.start()
     },
     dispose: () => {
       for (const source of Object.values(content)) source.dispose()

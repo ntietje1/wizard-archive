@@ -107,7 +107,9 @@ describe('useLiveResourceCore', () => {
   })
 })
 
-function requireRuntime(runtime: EditorRuntime | null): EditorRuntime {
+function requireRuntime(
+  runtime: Omit<EditorRuntime, 'viewAs'> | null,
+): Omit<EditorRuntime, 'viewAs'> {
   if (!runtime) throw new TypeError('Expected committed runtime')
   return runtime
 }

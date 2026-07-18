@@ -16,7 +16,6 @@ import { MAX_RESOURCE_CATALOG_PAGE_SIZE } from '@wizard-archive/editor/resources
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
 import { indexRevision } from '@wizard-archive/editor/resources/workspace-index'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { CampaignQueryCtx } from '../../functions'
 import { ConvexResourceCatalog } from './ConvexResourceCatalog'
 import { createResourceAccessResolver } from './resourceAccess'
@@ -36,7 +35,6 @@ type ResourceProjectionCache = Readonly<{
 function projectionScope(ctx: CampaignQueryCtx): ResourceProjectionScope {
   return {
     ...ctx.resourceScope,
-    projection: ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player',
     schema: RESOURCE_INDEX_SCHEMA,
   }
 }
@@ -130,7 +128,7 @@ function createResourceProjectionCache(
     loadResource,
     folderSpines: new Map(),
     access:
-      ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
+      ctx.resourceScope.projection === 'dm'
         ? null
         : createResourceAccessResolver(ctx, campaignId, ctx.resourceScope.actorId, loadResource),
   }

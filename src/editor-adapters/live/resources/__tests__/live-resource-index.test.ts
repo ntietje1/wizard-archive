@@ -44,7 +44,7 @@ function snapshot(
       complete: boolean
     }>
     scopeOverride?: Partial<Omit<ResourceProjectionScope, 'projection' | 'schema'>> & {
-      projection?: 'dm' | 'player'
+      projection?: Exclude<ResourceProjectionScope['projection'], 'local'>
       schema?: typeof RESOURCE_INDEX_SCHEMA
     }
   } = {},
@@ -80,6 +80,36 @@ describe('createLiveResourceIndexRuntime', () => {
       value: [{ id: folderId }],
     })
     expect(loadResource).toHaveBeenCalledWith({ campaignId: scope.campaignId, resourceId: noteId })
+  })
+
+  it('includes the selected participant in every view-as projection request', async () => {
+    const resourceId = testDomainId('resource', 'view-as-resource')
+    const actorId = testDomainId('campaignMember', 'view-as-actor')
+    const viewAsScope = {
+      ...scope,
+      actorId,
+      projection: 'view_as_player',
+    } satisfies ResourceProjectionScope
+    const loadResource = vi.fn(() =>
+      Promise.resolve(
+        snapshot([resource(resourceId)], {
+          scopeOverride: { actorId, projection: 'view_as_player' },
+        }),
+      ),
+    )
+    const runtime = createLiveResourceIndexRuntime(viewAsScope, {
+      loadResource,
+      loadCollection: vi.fn(),
+    })
+
+    await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
+      status: 'completed',
+    })
+    expect(loadResource).toHaveBeenCalledWith({
+      campaignId: scope.campaignId,
+      viewAsParticipantId: actorId,
+      resourceId,
+    })
   })
 
   it('retains prior knowledge while loading a collection', async () => {

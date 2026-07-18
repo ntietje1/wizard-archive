@@ -897,6 +897,7 @@ export function createInMemoryEditorRuntime({
       preferences,
       search: { status: 'available', value: search.gateway },
       history: unsupported,
+      viewAs: unsupported,
     },
     dispose: () => {
       search.dispose()

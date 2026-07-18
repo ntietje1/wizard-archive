@@ -27,6 +27,7 @@ import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
 import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
 import { ResourceSearchDialog } from './workspace/resource-search-dialog'
 import { useResourceSnapshot } from './workspace/use-resource-snapshot'
+import { ResourceViewAsBanner } from './workspace/resource-view-as-banner'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
 import { createWorkspaceActions } from './workspace/resource-operations'
 import type { WorkspaceActions, WorkspaceReport } from './workspace/resource-operations'
@@ -168,7 +169,12 @@ export function ResourceShell({
 
   if (rootCollection.state === 'unknown') {
     return (
-      <WorkspaceReadinessBoundary ariaLabel={ariaLabel} load={rootLoad} onRetry={rootLoad.retry} />
+      <WorkspaceReadinessBoundary
+        ariaLabel={ariaLabel}
+        load={rootLoad}
+        viewAs={runtime.viewAs}
+        onRetry={rootLoad.retry}
+      />
     )
   }
 
@@ -287,6 +293,7 @@ export function ResourceShell({
           onClose={() => setMoveResourceIds(null)}
         />
       )}
+      <ResourceViewAsBanner viewAs={runtime.viewAs} />
       {notice && (
         <div
           role="status"
@@ -316,10 +323,12 @@ function WorkspaceReadinessBoundary({
   ariaLabel,
   load,
   onRetry,
+  viewAs,
 }: {
   ariaLabel: string
   load: ReturnType<typeof useEnsureResourceCollection>
   onRetry: () => void
+  viewAs: EditorRuntime['viewAs']
 }) {
   const result = load.result
   const failed = result !== null && result.status !== 'completed'
@@ -327,7 +336,7 @@ function WorkspaceReadinessBoundary({
     <section
       aria-label={ariaLabel}
       aria-busy={failed ? 'false' : 'true'}
-      className="flex h-full min-h-0 items-center justify-center bg-background text-foreground"
+      className="relative flex h-full min-h-0 items-center justify-center bg-background text-foreground"
     >
       {failed ? (
         <div role="alert" className="space-y-2 text-center">
@@ -339,6 +348,7 @@ function WorkspaceReadinessBoundary({
       ) : (
         <p role="status">Loading workspace…</p>
       )}
+      <ResourceViewAsBanner viewAs={viewAs} />
     </section>
   )
 }

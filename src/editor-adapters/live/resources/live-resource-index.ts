@@ -19,6 +19,7 @@ import {
   indexRevision,
 } from '@wizard-archive/editor/resources/workspace-index'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { resourceQueryScope } from './resource-query-scope'
 
 type LoadResourceArgs = FunctionArgs<typeof api.resources.queries.loadResource>
 type LoadResourceResult = FunctionReturnType<typeof api.resources.queries.loadResource>
@@ -118,14 +119,17 @@ export function createLiveResourceIndexRuntime(
     loader: createResourceIndexLoader(index, {
       loadResource: async (currentScope, resourceId) => {
         if (!sameResourceProjectionScope(scope, currentScope)) return { status: 'scope_changed' }
-        const snapshot = await queries.loadResource({ campaignId: scope.campaignId, resourceId })
+        const snapshot = await queries.loadResource({
+          ...resourceQueryScope(scope),
+          resourceId,
+        })
         return apply(snapshot)
       },
       loadCollection: async (currentScope, query) => {
         if (!sameResourceProjectionScope(scope, currentScope)) return { status: 'scope_changed' }
         const key = resourceCollectionQueryKey(query)
         const page = await queries.loadCollection({
-          campaignId: scope.campaignId,
+          ...resourceQueryScope(scope),
           query: {
             parentId: query.parentId,
             lifecycle: query.lifecycle,

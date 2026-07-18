@@ -1,6 +1,6 @@
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
-import { campaignQuery, dmQuery } from '../functions'
+import { dmQuery, resourceQuery } from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
@@ -87,7 +87,7 @@ function storedSnapshot(
   }
 }
 
-export const loadResource = campaignQuery({
+export const loadResource = resourceQuery({
   args: { resourceId: resourceIdValidator },
   returns: authorizedResourceSnapshotValidator,
   handler: async (ctx, args): Promise<StoredAuthorizedResourceSnapshot> => {
@@ -97,7 +97,7 @@ export const loadResource = campaignQuery({
   },
 })
 
-export const loadCollection = campaignQuery({
+export const loadCollection = resourceQuery({
   args: {
     query: resourceCollectionQueryValidator,
     cursor: v.optional(v.nullable(v.string())),
@@ -148,7 +148,7 @@ export const loadResourceAccess = dmQuery({
   },
 })
 
-export const loadNoteContent = campaignQuery({
+export const loadNoteContent = resourceQuery({
   args: { resourceId: resourceIdValidator },
   returns: noteContentSnapshotValidator,
   handler: async (ctx, args) => {
@@ -157,7 +157,7 @@ export const loadNoteContent = campaignQuery({
   },
 })
 
-export const loadResourcePresence = campaignQuery({
+export const loadResourcePresence = resourceQuery({
   args: { resourceId: resourceIdValidator, roomToken: v.string() },
   returns: resourcePresenceSnapshotValidator,
   handler: async (ctx, args) =>
@@ -168,7 +168,7 @@ export const loadResourcePresence = campaignQuery({
     ),
 })
 
-export const loadFileContent = campaignQuery({
+export const loadFileContent = resourceQuery({
   args: { resourceId: resourceIdValidator },
   returns: fileContentSnapshotValidator,
   handler: async (ctx, args) => {
@@ -177,7 +177,7 @@ export const loadFileContent = campaignQuery({
   },
 })
 
-export const loadMapContent = campaignQuery({
+export const loadMapContent = resourceQuery({
   args: { resourceId: resourceIdValidator },
   returns: mapContentSnapshotValidator,
   handler: async (ctx, args) => {
@@ -186,7 +186,7 @@ export const loadMapContent = campaignQuery({
   },
 })
 
-export const loadCanvasContent = campaignQuery({
+export const loadCanvasContent = resourceQuery({
   args: { resourceId: resourceIdValidator },
   returns: canvasContentSnapshotValidator,
   handler: async (ctx, args) => {
@@ -195,7 +195,7 @@ export const loadCanvasContent = campaignQuery({
   },
 })
 
-export const loadFileDownload = campaignQuery({
+export const loadFileDownload = resourceQuery({
   args: { resourceId: resourceIdValidator },
   returns: fileDownloadSnapshotValidator,
   handler: async (ctx, args) => {
@@ -203,7 +203,7 @@ export const loadFileDownload = campaignQuery({
   },
 })
 
-export const loadMapImage = campaignQuery({
+export const loadMapImage = resourceQuery({
   args: { resourceId: resourceIdValidator, layerId: v.nullable(v.string()) },
   returns: mapImageDownloadSnapshotValidator,
   handler: async (ctx, args) => {

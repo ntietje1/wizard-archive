@@ -71,6 +71,20 @@ export interface ReadonlyResourceHistory {
   list(resourceId: ResourceId): Promise<ReadonlyArray<ResourceHistoryEntry>>
 }
 
+export type EditorViewAsParticipant = Readonly<{
+  id: CampaignMemberId
+  displayName: string
+  username: string
+  imageUrl: string | null
+}>
+
+export interface EditorViewAsController {
+  readonly pending: boolean
+  readonly participants: ReadonlyArray<EditorViewAsParticipant>
+  readonly selectedParticipantId: CampaignMemberId | null
+  select(participantId: CampaignMemberId | null): void
+}
+
 export interface EditorRuntime {
   readonly scope: ResourceProjectionScope
   readonly resources: {
@@ -92,4 +106,5 @@ export interface EditorRuntime {
   readonly preferences: WorkspacePreferencesSource
   readonly search: ResourceCapability<WorkspaceSearch>
   readonly history: ResourceCapability<ReadonlyResourceHistory>
+  readonly viewAs: ResourceCapability<EditorViewAsController>
 }
