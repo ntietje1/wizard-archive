@@ -18,6 +18,8 @@ import { useAssetReplacement } from '../resources/asset-replacement'
 import type { AssetReplacementController } from '../resources/asset-replacement'
 import { AssetReplacementButton } from '../resources/asset-replacement-button'
 import { useMapImageUrl } from './use-map-image-url'
+import { resolveMapFocus } from './map-focus'
+import type { MapFocus } from './map-focus'
 
 export function MapViewer({
   canEdit,
@@ -101,24 +103,49 @@ export function MapViewer({
 
 function useSelectedMapLayer(session: MapSession, focusedPinId: MapPinId | null) {
   const layers = session.content.layers
-  const focusedLayerId =
-    session.content.pins.find((pin) => pin.id === focusedPinId)?.layerId ?? null
+  const focus = resolveMapFocus(session.content, focusedPinId)
   const [selected, setSelected] = useState<{
-    focusedPinId: MapPinId | null
+    focus: MapFocus
     session: MapSession
     layerId: string | null
-  }>(() => ({ focusedPinId, session, layerId: focusedLayerId ?? layers[0]?.id ?? null }))
+  }>(() => ({ focus, session, layerId: initialMapLayerId(focus, layers) }))
   const validSelection =
     selected.session === session &&
-    selected.focusedPinId === focusedPinId &&
+    mapFocusesEqual(selected.focus, focus) &&
     (selected.layerId === null || layers.some((layer) => layer.id === selected.layerId))
-  const id = validSelection ? selected.layerId : (focusedLayerId ?? layers[0]?.id ?? null)
+  const id = validSelection ? selected.layerId : initialMapLayerId(focus, layers)
   const selectedLayer = id === null ? null : layers.find((layer) => layer.id === id)!
   return {
     id,
     image: selectedLayer?.image ?? session.content.image,
     name: selectedLayer?.name ?? 'Base map',
-    select: (layerId: string | null) => setSelected({ focusedPinId, session, layerId }),
+    select: (layerId: string | null) => setSelected({ focus, session, layerId }),
+  }
+}
+
+function initialMapLayerId(focus: MapFocus, layers: MapResourceContent['layers']) {
+  switch (focus.kind) {
+    case 'base':
+      return null
+    case 'layer':
+      return focus.layerId
+    case 'missing':
+    case 'none':
+      return layers[0]?.id ?? null
+  }
+}
+
+function mapFocusesEqual(left: MapFocus, right: MapFocus) {
+  if (left.kind !== right.kind) return false
+  switch (left.kind) {
+    case 'none':
+      return true
+    case 'base':
+      return right.kind === 'base' && left.pinId === right.pinId
+    case 'layer':
+      return right.kind === 'layer' && left.pinId === right.pinId && left.layerId === right.layerId
+    case 'missing':
+      return right.kind === 'missing' && left.pinId === right.pinId
   }
 }
 

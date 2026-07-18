@@ -62,6 +62,78 @@ describe('CanvasEditor', () => {
     session.dispose()
   })
 
+  it('consumes a focused target once while local selection and viewport survive document updates', async () => {
+    const bounds = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 800, height: 600 }))
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: NODE_B, type: 'text', position: { x: 400, y: 300 }, data: {} },
+      ],
+      edges: [],
+    })
+    const editor = (focusedNodeId: typeof NODE_A) => (
+      <CanvasEditor
+        canEdit
+        focusedNodeId={focusedNodeId}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Focused board"
+      />
+    )
+    const view = render(editor(NODE_B))
+    try {
+      const nodes = screen.getAllByTestId('canvas-node')
+      await waitFor(() => expect(nodes[1]).toHaveAttribute('data-selected', 'true'))
+      const surface = screen.getByTestId('canvas-surface')
+      installPointerCapture(nodes[0]!)
+      installPointerCapture(surface)
+
+      fireEvent.pointerDown(nodes[0], {
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+        pointerId: 81,
+      })
+      fireEvent.pointerUp(nodes[0], { clientX: 10, clientY: 10, pointerId: 81 })
+      expect(nodes[0]).toHaveAttribute('data-selected', 'true')
+
+      fireEvent.wheel(surface, { deltaX: 40, deltaY: 30 })
+      const viewport = screen.getByTestId('canvas-viewport')
+      const userViewport = viewport.style.transform
+
+      const externalController = createCanvasDocumentController(session.document)
+      act(() => {
+        externalController.apply({
+          type: 'update',
+          nodes: [
+            {
+              id: NODE_B,
+              type: 'text',
+              data: { content: createCanvasTextDocument('Remote update') },
+            },
+          ],
+          edges: [],
+        })
+      })
+      externalController.dispose()
+
+      expect(await screen.findByText('Remote update')).toBeVisible()
+      expect(nodes[0]).toHaveAttribute('data-selected', 'true')
+      expect(nodes[1]).toHaveAttribute('data-selected', 'false')
+      expect(viewport).toHaveStyle({ transform: userViewport })
+
+      view.rerender(editor(NODE_A))
+      await waitFor(() => expect(viewport.style.transform).not.toBe(userViewport))
+    } finally {
+      view.unmount()
+      session.dispose()
+      bounds.mockRestore()
+      window.localStorage.clear()
+    }
+  })
+
   it('owns a fresh controller runtime for each committed StrictMode effect lifetime', async () => {
     const session = await createSession({
       nodes: [{ id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} }],

@@ -85,6 +85,11 @@ export function CanvasEditorSurface({
     interactionRenderStore.get,
   )
   const history = useCanvasHistoryState(documentController)
+  const consumedFocus = useRef<{
+    documentController: CanvasDocumentController
+    nodeId: CanvasNodeId
+    stage: 'pending' | 'selected' | 'completed'
+  } | null>(null)
   const dropTarget = useCanvasDropTarget({
     canEdit,
     documentController,
@@ -122,14 +127,31 @@ export function CanvasEditorSurface({
   }, [interactionController, resourceId])
 
   useEffect(() => {
-    if (!focusedNodeId) return
+    if (!focusedNodeId) {
+      consumedFocus.current = null
+      return
+    }
+    if (
+      consumedFocus.current?.documentController !== documentController ||
+      consumedFocus.current.nodeId !== focusedNodeId
+    ) {
+      consumedFocus.current = {
+        documentController,
+        nodeId: focusedNodeId,
+        stage: 'pending',
+      }
+    }
+    const focus = consumedFocus.current
     const node = content.nodes.find(
       (candidate) => candidate.id === focusedNodeId && !candidate.hidden,
     )
     if (!node) return
-    interactionController.setTool('select')
-    interactionController.setSelection({ nodeIds: new Set([node.id]), edgeIds: new Set() })
-    if (surfaceSize.width <= 0 || surfaceSize.height <= 0) return
+    if (focus.stage === 'pending') {
+      interactionController.setTool('select')
+      interactionController.setSelection({ nodeIds: new Set([node.id]), edgeIds: new Set() })
+      focus.stage = 'selected'
+    }
+    if (focus.stage === 'completed' || surfaceSize.width <= 0 || surfaceSize.height <= 0) return
     const size = canvasNodeSize(node)
     const zoom = interactionController.get().viewport.zoom
     interactionController.setViewport(
@@ -140,7 +162,8 @@ export function CanvasEditorSurface({
       },
       true,
     )
-  }, [content.nodes, focusedNodeId, interactionController, surfaceSize])
+    focus.stage = 'completed'
+  }, [content.nodes, documentController, focusedNodeId, interactionController, surfaceSize])
 
   useEffect(() => () => setCanvasCollaborationCursor(collaboration, null), [collaboration])
 

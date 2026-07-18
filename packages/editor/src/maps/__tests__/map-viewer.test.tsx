@@ -12,6 +12,7 @@ import { testDomainId } from '../../test/domain-id'
 import { canonicalizeResourceTitle } from '../../resources/resource-record'
 import { readWorkspaceResourceDrag } from '../../resources/workspace-resource-drag'
 import { planMapResourcePins } from '../map-pin-placement'
+import type { MapPinId } from '../../resources/domain-id'
 
 vi.mock('react-zoom-pan-pinch', () => ({
   TransformWrapper: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -67,6 +68,77 @@ describe('MapViewer', () => {
     await waitFor(() => expect(loadImage).toHaveBeenCalledWith(null))
     view.unmount()
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:verified-map')
+  })
+
+  it('distinguishes base, layered, missing, delayed, and changed focused pins', () => {
+    const basePinId = testDomainId('mapPin', 'base-focus')
+    const layerPinId = testDomainId('mapPin', 'layer-focus')
+    const delayedPinId = testDomainId('mapPin', 'delayed-focus')
+    const targetId = testDomainId('resource', 'focus-target')
+    const destination = {
+      kind: 'internal' as const,
+      target: { kind: 'resource' as const, resourceId: targetId },
+    }
+    let content: MapResourceContent = {
+      image: { status: 'unattached' },
+      layers: [
+        { id: 'day', image: { status: 'unattached' }, name: 'Day' },
+        { id: 'night', image: { status: 'unattached' }, name: 'Night' },
+      ],
+      pins: [
+        {
+          id: basePinId,
+          destination,
+          layerId: null,
+          visible: true,
+          x: 10,
+          y: 10,
+        },
+        {
+          id: layerPinId,
+          destination,
+          layerId: 'night',
+          visible: true,
+          x: 20,
+          y: 20,
+        },
+      ],
+    }
+    const session = mapSession(content)
+    Object.defineProperty(session, 'content', { get: () => content })
+    const view = render(mapViewer(session, true, basePinId))
+    const layer = screen.getByRole('combobox', { name: 'Map layer' })
+
+    expect(layer).toHaveValue('')
+    view.rerender(mapViewer(session, true, layerPinId))
+    expect(layer).toHaveValue('night')
+    view.rerender(mapViewer(session, true, delayedPinId))
+    expect(layer).toHaveValue('day')
+
+    content = {
+      ...content,
+      pins: [
+        ...content.pins,
+        {
+          id: delayedPinId,
+          destination,
+          layerId: 'night',
+          visible: true,
+          x: 30,
+          y: 30,
+        },
+      ],
+    }
+    view.rerender(mapViewer(session, true, delayedPinId))
+    expect(layer).toHaveValue('night')
+
+    fireEvent.change(layer, { target: { value: 'day' } })
+    content = { ...content, pins: [...content.pins] }
+    view.rerender(mapViewer(session, true, delayedPinId))
+    expect(layer).toHaveValue('day')
+
+    view.rerender(mapViewer(session, true, basePinId))
+    expect(layer).toHaveValue('')
   })
 
   it('keeps the verified image mounted across pin-only content projections', async () => {
@@ -398,10 +470,11 @@ function renderMap(session: MapSession, canEdit = true) {
   return render(mapViewer(session, canEdit))
 }
 
-function mapViewer(session: MapSession, canEdit = true) {
+function mapViewer(session: MapSession, canEdit = true, focusedPinId: MapPinId | null = null) {
   return (
     <MapViewer
       canEdit={canEdit}
+      focusedPinId={focusedPinId}
       mapResourceId={testDomainId('resource', 'map-viewer')}
       openDestination={vi.fn()}
       resolveResource={() => null}
