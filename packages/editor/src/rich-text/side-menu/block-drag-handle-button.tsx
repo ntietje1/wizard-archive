@@ -1,4 +1,5 @@
 import { SideMenuExtension } from '@blocknote/core/extensions'
+import type { BlockNoteEditor } from '@blocknote/core'
 import {
   useBlockNoteEditor,
   useComponentsContext,
@@ -42,26 +43,30 @@ import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import {
   RICH_TEXT_COLOR_PRESETS,
   RICH_TEXT_HIGHLIGHT_PRESETS,
-} from '../../../rich-text/blocknote/rich-text-selection-colors'
+} from '../blocknote/rich-text-selection-colors'
 import {
   blockTypeSupportsProp,
   getSupportedBlockTypeOptions,
-} from '../../../rich-text/formatting-toolbar/formatting-toolbar-model'
-import { duplicateNoteBlock } from './duplicate-note-block'
-import type { NoteBlockNoteEditor } from '../../note-editor-schema'
-import type { BlockTypeOption } from '../../../rich-text/formatting-toolbar/formatting-toolbar-model'
+} from '../formatting-toolbar/formatting-toolbar-model'
+import type { BlockTypeOption } from '../formatting-toolbar/formatting-toolbar-model'
 
-type NoteEditorBlock = NoteBlockNoteEditor['document'][number]
+export type RichTextSideMenuEditor = BlockNoteEditor<any, any, any>
+export type RichTextSideMenuBlock = RichTextSideMenuEditor['document'][number]
 
 export function BlockDragHandleButton({
   menuOpen,
+  onDuplicate,
   onMenuOpenChange,
+  variant,
 }: {
   menuOpen: boolean
+  onDuplicate: (editor: RichTextSideMenuEditor, block: RichTextSideMenuBlock) => void
   onMenuOpenChange: (open: boolean) => void
+  variant: 'canvas-text' | 'note'
 }) {
+  const noteActions = variant === 'note'
   const Components = useComponentsContext()!
-  const editor = useBlockNoteEditor() as NoteBlockNoteEditor
+  const editor = useBlockNoteEditor() as RichTextSideMenuEditor
   const sideMenu = useExtension(SideMenuExtension)
   const block = useExtensionState(SideMenuExtension, {
     selector: (state) => state?.block,
@@ -75,7 +80,7 @@ export function BlockDragHandleButton({
 
   if (!block) return null
   const sideMenuBlock = block
-  const activeBlock = sideMenuBlock as NoteEditorBlock
+  const activeBlock = sideMenuBlock as RichTextSideMenuBlock
 
   function handleDragStart(event: React.DragEvent) {
     sideMenu.freezeMenu()
@@ -100,8 +105,8 @@ export function BlockDragHandleButton({
         <TooltipTrigger
           render={
             <DropdownMenuTrigger
-              onClick={() => onMenuOpenChange(!menuOpen)}
-              onMouseDown={(event) => event.preventBaseUIHandler()}
+              onClick={noteActions ? () => onMenuOpenChange(!menuOpen) : undefined}
+              onMouseDown={noteActions ? (event) => event.preventBaseUIHandler() : undefined}
               render={
                 <Components.SideMenu.Button
                   label="Drag block"
@@ -113,6 +118,7 @@ export function BlockDragHandleButton({
                     menuOpen && 'bg-accent',
                   )}
                   icon={<GripVertical size={18} style={{ pointerEvents: 'none' }} />}
+                  data-block-drag-actions={variant}
                   data-testid="block-drag-handle-button"
                 />
               }
@@ -132,7 +138,12 @@ export function BlockDragHandleButton({
           </span>
         </TooltipContent>
       </Tooltip>
-      <BlockDragHandleMenu block={activeBlock} editor={editor} />
+      <BlockDragHandleMenu
+        block={activeBlock}
+        editor={editor}
+        noteActions={noteActions}
+        onDuplicate={onDuplicate}
+      />
     </DropdownMenu>
   )
 }
@@ -151,9 +162,13 @@ function showNativeBlockDragPreview(event: React.DragEvent) {
 function BlockDragHandleMenu({
   block,
   editor,
+  noteActions,
+  onDuplicate,
 }: {
-  block: NoteEditorBlock
-  editor: NoteBlockNoteEditor
+  block: RichTextSideMenuBlock
+  editor: RichTextSideMenuEditor
+  noteActions: boolean
+  onDuplicate: (editor: RichTextSideMenuEditor, block: RichTextSideMenuBlock) => void
 }) {
   return (
     <DropdownMenuContent
@@ -166,15 +181,17 @@ function BlockDragHandleMenu({
       <BlockTypeSubmenu block={block} editor={editor} />
       <BlockColorSubmenu block={block} editor={editor} />
       <DropdownMenuSeparator />
-      <MenuItem
-        icon={<Copy className="size-4" />}
-        label="Copy link to block"
-        onClick={comingSoon}
-      />
+      {noteActions && (
+        <MenuItem
+          icon={<Copy className="size-4" />}
+          label="Copy link to block"
+          onClick={comingSoon}
+        />
+      )}
       <MenuItem
         icon={<Files className="size-4" />}
         label="Duplicate"
-        onClick={() => duplicateNoteBlock(editor, block)}
+        onClick={() => onDuplicate(editor, block)}
       />
       <MenuItem
         destructive
@@ -182,7 +199,13 @@ function BlockDragHandleMenu({
         label="Delete"
         onClick={() => editor.removeBlocks([block])}
       />
-      <MenuItem icon={<MessageSquare className="size-4" />} label="Comment" onClick={comingSoon} />
+      {noteActions && (
+        <MenuItem
+          icon={<MessageSquare className="size-4" />}
+          label="Comment"
+          onClick={comingSoon}
+        />
+      )}
     </DropdownMenuContent>
   )
 }
@@ -191,8 +214,8 @@ function BlockTypeSubmenu({
   block,
   editor,
 }: {
-  block: NoteEditorBlock
-  editor: NoteBlockNoteEditor
+  block: RichTextSideMenuBlock
+  editor: RichTextSideMenuEditor
 }) {
   const options = getSupportedBlockTypeOptions(editor, 'full')
   const canChangeType = Array.isArray(block.content)
@@ -217,8 +240,8 @@ function BlockTypeMenuItem({
   editor,
   option,
 }: {
-  block: NoteEditorBlock
-  editor: NoteBlockNoteEditor
+  block: RichTextSideMenuBlock
+  editor: RichTextSideMenuEditor
   option: BlockTypeOption
 }) {
   const active =
@@ -241,8 +264,8 @@ function BlockColorSubmenu({
   block,
   editor,
 }: {
-  block: NoteEditorBlock
-  editor: NoteBlockNoteEditor
+  block: RichTextSideMenuBlock
+  editor: RichTextSideMenuEditor
 }) {
   const supportsTextColor = blockTypeSupportsProp(editor, block.type, 'textColor')
   const supportsBackgroundColor = blockTypeSupportsProp(editor, block.type, 'backgroundColor')
@@ -255,14 +278,14 @@ function BlockColorSubmenu({
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="z-[10000] w-52">
         {supportsTextColor && (
-          <DropdownMenuGroup>
+          <DropdownMenuGroup aria-label="Text color">
             <DropdownMenuLabel>Text color</DropdownMenuLabel>
             {RICH_TEXT_COLOR_PRESETS.map((preset) => (
               <BlockColorMenuItem
                 key={`text-${preset.label}`}
                 active={getBlockProp(block, 'textColor') === preset.value.color}
                 color={preset.value.color}
-                label={`${preset.label} text`}
+                label={preset.label}
                 onClick={() =>
                   editor.updateBlock(block, { props: { textColor: preset.value.color } })
                 }
@@ -272,16 +295,14 @@ function BlockColorSubmenu({
         )}
         {supportsTextColor && supportsBackgroundColor && <DropdownMenuSeparator />}
         {supportsBackgroundColor && (
-          <DropdownMenuGroup>
+          <DropdownMenuGroup aria-label="Background color">
             <DropdownMenuLabel>Background color</DropdownMenuLabel>
             {RICH_TEXT_HIGHLIGHT_PRESETS.map((preset) => (
               <BlockColorMenuItem
                 key={`background-${preset.label}`}
                 active={getBlockProp(block, 'backgroundColor') === preset.value}
                 color={preset.value}
-                label={
-                  preset.label === 'No highlight' ? preset.label : `${preset.label} background`
-                }
+                label={preset.label}
                 onClick={() =>
                   editor.updateBlock(block, { props: { backgroundColor: preset.value } })
                 }
@@ -341,6 +362,6 @@ function comingSoon() {
   toast.info('Coming soon')
 }
 
-function getBlockProp(block: NoteEditorBlock, name: string) {
+function getBlockProp(block: RichTextSideMenuBlock, name: string) {
   return (block.props as Record<string, unknown>)[name]
 }

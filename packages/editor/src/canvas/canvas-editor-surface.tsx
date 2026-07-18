@@ -336,7 +336,7 @@ export function CanvasEditorSurface({
         style={{
           backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
           backgroundPosition: `${interaction.viewport.x}px ${interaction.viewport.y}px`,
-          backgroundSize: `${36 * interaction.viewport.zoom}px ${36 * interaction.viewport.zoom}px`,
+          backgroundSize: `${36 * Math.sqrt(interaction.viewport.zoom)}px ${36 * Math.sqrt(interaction.viewport.zoom)}px`,
         }}
         tabIndex={-1}
         onDragEnter={dropTarget.onDragEnter}

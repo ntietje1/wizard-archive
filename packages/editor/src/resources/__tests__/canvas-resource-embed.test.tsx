@@ -123,6 +123,7 @@ describe('CanvasResourceEmbed', () => {
     const view = render(
       <CanvasResourceEmbed
         activation={null}
+        onDefaultTextColorChange={vi.fn()}
         canEdit
         editing={false}
         node={node}
@@ -159,6 +160,7 @@ describe('CanvasResourceEmbed', () => {
     view.rerender(
       <CanvasResourceEmbed
         activation={null}
+        onDefaultTextColorChange={vi.fn()}
         canEdit
         editing
         node={node}
@@ -183,6 +185,7 @@ describe('CanvasResourceEmbed', () => {
     })
     await waitFor(() => expect(editor).toHaveAttribute('contenteditable', 'true'))
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
+    expect(screen.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeInTheDocument()
 
     index.replaceSnapshot({
       scope,
@@ -207,6 +210,7 @@ describe('CanvasResourceEmbed', () => {
     view.rerender(
       <CanvasResourceEmbed
         activation={null}
+        onDefaultTextColorChange={vi.fn()}
         canEdit={false}
         editing
         node={node}
@@ -300,6 +304,7 @@ describe('CanvasResourceEmbed', () => {
     const view = render(
       <CanvasResourceEmbed
         activation={null}
+        onDefaultTextColorChange={vi.fn()}
         canEdit
         editing={false}
         node={{
@@ -369,6 +374,7 @@ describe('CanvasResourceEmbed', () => {
     render(
       <CanvasResourceEmbed
         activation={null}
+        onDefaultTextColorChange={vi.fn()}
         canEdit
         editing={false}
         node={{
@@ -575,6 +581,7 @@ function renderFolderEmbed(
   render(
     <CanvasResourceEmbed
       activation={null}
+      onDefaultTextColorChange={vi.fn()}
       canEdit
       editing={false}
       node={{

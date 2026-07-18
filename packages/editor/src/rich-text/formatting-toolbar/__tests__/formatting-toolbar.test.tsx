@@ -28,6 +28,10 @@ describe('RichTextFormattingToolbar', () => {
     expect(screen.getByRole('button', { name: 'Block type' })).toHaveAttribute('type', 'button')
     expect(screen.getByRole('button', { name: 'Text color' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Highlight color' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo note edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Redo note edit' }))
+    expect(editor.undo).toHaveBeenCalledOnce()
+    expect(editor.redo).toHaveBeenCalledOnce()
   })
 
   it('keeps the canvas toolbar aligned with the shared core formatting controls', () => {
@@ -48,6 +52,8 @@ describe('RichTextFormattingToolbar', () => {
     expect(screen.getByRole('button', { name: 'Block type' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Text color' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Highlight color' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Undo note edit' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Redo note edit' })).not.toBeInTheDocument()
   })
 
   it('adds and removes inline styles for future text at a collapsed cursor', () => {
@@ -391,7 +397,7 @@ describe('RichTextFormattingToolbar', () => {
     fireEvent.click(highlightTrigger)
     fireEvent.click(screen.getByRole('button', { name: 'Select Red highlight color' }))
 
-    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--bg-red)' })
+    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--t-red)' })
   })
 
   it('uses the latest editor cursor when applying swatches from an already-open palette', () => {
@@ -499,7 +505,7 @@ describe('RichTextFormattingToolbar', () => {
       editor.emitSelectionChange()
     })
 
-    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--bg-blue)' })
+    expect(highlightTrigger.querySelector('svg')).toHaveStyle({ color: 'var(--t-blue)' })
   })
 
   it('clears the pending caret color when the collapsed cursor moves', () => {

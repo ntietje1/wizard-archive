@@ -224,7 +224,10 @@ test.describe('note authoring mechanics', () => {
     await authoredBlock.hover()
     await page.getByRole('button', { name: 'Drag block' }).click()
     await page.getByRole('menuitem', { name: 'Color' }).hover()
-    await page.getByRole('menuitem', { name: 'Blue text' }).click()
+    await page
+      .getByRole('group', { name: 'Text color' })
+      .getByRole('menuitem', { name: 'Blue', exact: true })
+      .click()
     await expect(
       authoredBlock.locator('.bn-block-content[data-text-color="var(--t-blue)"]'),
     ).toBeVisible()

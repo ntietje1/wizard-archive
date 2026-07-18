@@ -27,6 +27,7 @@ import type { NoteResourceBinding } from './note-resource-runtime-context'
 import { NoteResourceLinkMenu } from './links/resource-link-menu'
 import { useResourcePreviewPublication } from '../resources/use-resource-preview-publication'
 import type { ResourcePreviewPublicationBinding } from '../resources/use-resource-preview-publication'
+import type { NoteBlockNoteEditor } from './note-editor-schema'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -37,6 +38,7 @@ type NoteEditorProps = {
   headingNavigationRef?: NoteHeadingNavigationRef
   resources?: NoteResourceBinding
   label: string
+  onEditorChange?: (editor: NoteBlockNoteEditor | null) => void
   previewPublication?: ResourcePreviewPublicationBinding
   scroll: NoteScrollBehavior
 } & (
@@ -51,6 +53,7 @@ export function NoteEditor(props: NoteEditorProps) {
 
 function NoteDocumentEditor(props: NoteEditorProps) {
   const { collaboration, document, headingNavigationRef, label } = props
+  const onEditorChange = props.onEditorChange
   const editable = props.mode === 'edit'
   const flush = props.mode === 'edit' && props.persistence === 'ready' ? props.onFlush : null
   const resolvedTheme = useResolvedTheme()
@@ -83,6 +86,11 @@ function NoteDocumentEditor(props: NoteEditorProps) {
     [document],
   )
   useBlockNoteActivation(editor, props.activation ?? null)
+
+  useEffect(() => {
+    onEditorChange?.(editor)
+    return () => onEditorChange?.(null)
+  }, [editor, onEditorChange])
 
   useEffect(() => {
     if (!flush) return

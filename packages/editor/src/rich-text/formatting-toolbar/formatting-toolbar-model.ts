@@ -56,10 +56,12 @@ export type RichTextFormattingEditor = Pick<
   | 'onChange'
   | 'onSelectionChange'
   | 'removeStyles'
+  | 'redo'
   | 'replaceBlocks'
   | 'schema'
   | 'toggleStyles'
   | 'transact'
+  | 'undo'
   | 'updateBlock'
 >
 

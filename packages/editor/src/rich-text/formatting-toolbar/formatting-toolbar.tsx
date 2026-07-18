@@ -1,4 +1,4 @@
-import { Pilcrow } from 'lucide-react'
+import { Pilcrow, Redo2, Undo2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import {
   applyFormattingToolbarBlockType,
@@ -36,6 +36,7 @@ import type {
   ToolbarSnapshot,
 } from './formatting-toolbar-model'
 import type { BlockNoteSelectionSnapshot } from '../blocknote/blocknote-selection-adapter'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 interface RichTextFormattingToolbarProps {
   ariaLabel: string
@@ -205,6 +206,31 @@ function FormattingToolbarContent({
         preventEditorBlur(event)
       }}
     >
+      {mode === 'full' && (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Undo note edit"
+            title="Undo note edit (Ctrl+Z)"
+            onClick={() => editor.undo()}
+          >
+            <Undo2 className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Redo note edit"
+            title="Redo note edit (Ctrl+Shift+Z)"
+            onClick={() => editor.redo()}
+          >
+            <Redo2 className="size-4" />
+          </Button>
+          <Separator orientation="vertical" />
+        </>
+      )}
       <BlockTypeControl
         activeBlockTypeId={snapshot.activeBlockTypeId}
         blockTypeIcon={BlockTypeIcon}

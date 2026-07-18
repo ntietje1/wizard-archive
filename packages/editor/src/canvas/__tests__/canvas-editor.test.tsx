@@ -246,7 +246,8 @@ describe('CanvasEditor', () => {
     })
     fireEvent(nestedScrollRegion, zoomEvent)
     expect(zoomEvent.defaultPrevented).toBe(true)
-    expect(surface.style.backgroundSize).toBe('72px 72px')
+    const expectedGridSize = `${36 * Math.sqrt(2)}px ${36 * Math.sqrt(2)}px`
+    expect(surface.style.backgroundSize).toBe(expectedGridSize)
     fireEvent.wheel(surface, { ctrlKey: true, clientX: 0, clientY: 0, deltaY: 500 })
     view.unmount()
     session.dispose()
@@ -503,6 +504,8 @@ describe('CanvasEditor', () => {
     expect(screen.getByLabelText('Canvas surface')).toBeVisible()
     expect(screen.getAllByTestId('canvas-node')).toHaveLength(2)
     expect(screen.getByTestId('canvas-edge')).toBeVisible()
+    expect(screen.getByTestId('canvas-edge-plane')).toHaveClass('z-0')
+    expect(screen.getByTestId('canvas-node-plane')).toHaveClass('z-10')
     expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '0' })
     expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
@@ -1489,9 +1492,9 @@ describe('CanvasEditor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Bring to front' }))
     expect(screen.getByTestId('canvas-edge-layer')).toHaveStyle({ zIndex: '2' })
-    expect(nodes[0]).toHaveStyle({ zIndex: '4' })
+    expect(nodes[0]).toHaveStyle({ zIndex: '1' })
     expect(readCanvasDocumentContent(session.document)).toMatchObject({
-      nodes: [{ zIndex: 4 }, { zIndex: 5 }],
+      nodes: [{ zIndex: 1 }, { zIndex: 3 }],
       edges: [{ zIndex: 2 }],
     })
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))

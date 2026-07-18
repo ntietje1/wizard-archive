@@ -8,10 +8,7 @@ import {
 } from '@wizard-archive/ui/shadcn/components/popover'
 import { CheckerboardSwatch } from '@wizard-archive/ui/components/checkerboard-swatch'
 import { ColorIcon } from './color-icon'
-import {
-  RICH_TEXT_COLOR_PRESETS,
-  RICH_TEXT_HIGHLIGHT_PRESETS,
-} from '../blocknote/rich-text-selection-colors'
+import { RICH_TEXT_COLOR_PRESETS } from '../blocknote/rich-text-selection-colors'
 import { paintColorValuesEqual } from '@wizard-archive/ui/utils/paint-color-values'
 import { preventEditorBlur, stopPropagation } from './formatting-toolbar-events'
 import type { CSSProperties } from 'react'
@@ -23,9 +20,22 @@ const TEXT_COLOR_OPTIONS = RICH_TEXT_COLOR_PRESETS.map(({ label, surfaceColor, v
   surfaceColor,
   value: value.color,
 }))
+const BACKGROUND_COLOR_OPTIONS = [
+  { label: 'No highlight', value: 'default' },
+  { label: 'Grey', value: 'var(--border)' },
+  { label: 'Brown', value: 'var(--bg-brown)', displayColor: 'var(--t-brown)' },
+  { label: 'Red', value: 'var(--bg-red)', displayColor: 'var(--t-red)' },
+  { label: 'Orange', value: 'var(--bg-orange)', displayColor: 'var(--t-orange)' },
+  { label: 'Yellow', value: 'var(--bg-yellow)', displayColor: 'var(--t-yellow)' },
+  { label: 'Green', value: 'var(--bg-green)', displayColor: 'var(--t-green)' },
+  { label: 'Blue', value: 'var(--bg-blue)', displayColor: 'var(--t-blue)' },
+  { label: 'Purple', value: 'var(--bg-purple)', displayColor: 'var(--t-purple)' },
+  { label: 'Pink', value: 'var(--bg-pink)', displayColor: 'var(--t-pink)' },
+] as const
 
 type FormattingColorKind = 'background' | 'text'
 type FormattingColorOption = {
+  displayColor?: string
   label: string
   surfaceColor?: string
   value: string
@@ -65,7 +75,7 @@ export function ColorControls({
   const mixed = typeof activeColor !== 'string' && activeColor.kind === 'mixed'
   const triggerLabel = mixed ? `${label} (mixed values)` : label
   const options: ReadonlyArray<FormattingColorOption> =
-    kind === 'text' ? TEXT_COLOR_OPTIONS : RICH_TEXT_HIGHLIGHT_PRESETS
+    kind === 'text' ? TEXT_COLOR_OPTIONS : BACKGROUND_COLOR_OPTIONS
 
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
@@ -228,7 +238,7 @@ function getHighlighterIconColor(
   }
 
   const activeOption = options.find((option) => option.value === activeValue)
-  return activeOption ? activeOption.value : activeValue
+  return activeOption ? getColorOptionDisplayColor(activeOption) : activeValue
 }
 
 function colorOptionIsActive({
@@ -292,9 +302,15 @@ function getColorOptionStateVariables(
 }
 
 function getColorOptionBorderColor(kind: FormattingColorKind, preset: FormattingColorOption) {
-  const borderColor = isClearHighlightOption(kind, preset) ? 'var(--border)' : preset.value
+  const borderColor = isClearHighlightOption(kind, preset)
+    ? 'var(--border)'
+    : getColorOptionDisplayColor(preset)
 
   return `color-mix(in srgb, ${borderColor} 70%, transparent)`
+}
+
+function getColorOptionDisplayColor(preset: FormattingColorOption) {
+  return preset.displayColor ?? preset.value
 }
 
 function getColorOptionSurfaceColor(kind: FormattingColorKind, preset: FormattingColorOption) {
@@ -318,7 +334,11 @@ function ColorOptionPreview({
         className="flex size-full items-center justify-center"
         style={{ backgroundColor: getTransparentColor(preset.value, 28) }}
       >
-        <Highlighter className="size-4" stroke={preset.value} style={{ color: preset.value }} />
+        <Highlighter
+          className="size-4"
+          stroke={getColorOptionDisplayColor(preset)}
+          style={{ color: getColorOptionDisplayColor(preset) }}
+        />
       </span>
     )
   }

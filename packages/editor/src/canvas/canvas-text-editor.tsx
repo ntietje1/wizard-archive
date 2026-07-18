@@ -1,6 +1,6 @@
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { Fragment, useLayoutEffect, useRef } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
 import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
 import { createBlockNoteModifierClickSuppressionExtension } from '../rich-text/blocknote/modifier-click'
@@ -13,6 +13,7 @@ import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import './canvas-text-editor.css'
+import { CanvasTextSideMenuController } from './canvas-text-side-menu'
 
 type CanvasTextEditorProps = {
   activation: BlockNoteActivation | null
@@ -38,6 +39,7 @@ export function CanvasTextEditor(props: CanvasTextEditorProps) {
     textColor,
   } = props
   const initialContent = normalizeCanvasTextContent(content)
+  const [sideMenuOpen, setSideMenuOpen] = useState(false)
   const editor = useCreateBlockNote(
     {
       schema: canvasTextEditorSchema,
@@ -104,7 +106,14 @@ export function CanvasTextEditor(props: CanvasTextEditorProps) {
             sideMenu={false}
             slashMenu={false}
             onChange={editing ? persist : undefined}
-          />
+          >
+            {editing && (
+              <CanvasTextSideMenuController
+                menuOpen={sideMenuOpen}
+                onMenuOpenChange={setSideMenuOpen}
+              />
+            )}
+          </BlockNoteView>
         </ScrollArea>
       </div>
     </Fragment>

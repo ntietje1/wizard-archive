@@ -102,6 +102,7 @@ export function createFormattingToolbarTestEditor({
     }),
     prosemirrorView,
     removeStyles: vi.fn(),
+    redo: vi.fn(),
     replaceBlocks: vi.fn(),
     schema: {
       blockSchema: {
@@ -169,6 +170,7 @@ export function createFormattingToolbarTestEditor({
     },
     toggleStyles: vi.fn(),
     transact: vi.fn((callback: () => void) => callback()),
+    undo: vi.fn(),
     updateBlock: vi.fn(),
   }
 }

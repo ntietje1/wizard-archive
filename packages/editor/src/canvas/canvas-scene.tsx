@@ -102,91 +102,95 @@ export function CanvasScene({
           } as CSSProperties
         }
       >
-        {rendered.edges.map((edge) => (
-          <svg
-            key={edge.id}
-            className="pointer-events-none absolute left-0 top-0 overflow-visible"
-            data-edge-id={edge.id}
-            data-testid="canvas-edge-layer"
-            style={{ zIndex: edge.zIndex ?? 0 }}
-            width="1"
-            height="1"
-          >
-            <CanvasEdge
-              edge={edge}
-              nodeById={nodeById}
-              pendingSelected={
-                interaction.interaction.type === 'selecting' &&
-                interaction.interaction.candidate?.edgeIds.has(edge.id) === true
-              }
-              selection={visualSelection}
-              tool={interaction.tool}
-              visuallySelected={visualSelection.edgeIds.has(edge.id)}
-              zoom={interaction.viewport.zoom}
-              onOpenContextMenu={onOpenContextMenu}
-              onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
-            />
-          </svg>
-        ))}
+        <div className="absolute left-0 top-0 size-0 z-0" data-testid="canvas-edge-plane">
+          {rendered.edges.map((edge) => (
+            <svg
+              key={edge.id}
+              className="pointer-events-none absolute left-0 top-0 overflow-visible"
+              data-edge-id={edge.id}
+              data-testid="canvas-edge-layer"
+              style={{ zIndex: edge.zIndex ?? 0 }}
+              width="1"
+              height="1"
+            >
+              <CanvasEdge
+                edge={edge}
+                nodeById={nodeById}
+                pendingSelected={
+                  interaction.interaction.type === 'selecting' &&
+                  interaction.interaction.candidate?.edgeIds.has(edge.id) === true
+                }
+                selection={visualSelection}
+                tool={interaction.tool}
+                visuallySelected={visualSelection.edgeIds.has(edge.id)}
+                zoom={interaction.viewport.zoom}
+                onOpenContextMenu={onOpenContextMenu}
+                onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
+              />
+            </svg>
+          ))}
+        </div>
         <CanvasConnectionOverlay interaction={interaction} nodeById={nodeById} />
         <CanvasDrawingOverlay interaction={interaction} />
         <CanvasTextPlacementOverlay interaction={interaction} />
         <CanvasSelectionOverlay interaction={interaction} />
         <CanvasSnapGuides interaction={interaction} />
-        {rendered.nodes.map((node) => (
-          <CanvasNode
-            key={node.id}
-            canEdit={canEdit}
-            content={content}
-            documentController={documentController}
-            editing={
-              canEdit &&
-              interaction.interaction.type === 'editing' &&
-              interaction.interaction.nodeId === node.id
-            }
-            editingActivation={
-              canEdit &&
-              interaction.interaction.type === 'editing' &&
-              interaction.interaction.nodeId === node.id
-                ? interaction.interaction.activation
-                : null
-            }
-            erasing={
-              interaction.interaction.type === 'erasing' &&
-              interaction.interaction.nodeIds.has(node.id)
-            }
-            snappedConnectionHandle={
-              interaction.interaction.type === 'connecting' &&
-              interaction.interaction.target?.nodeId === node.id
-                ? interaction.interaction.target.handle
-                : null
-            }
-            interactionController={interactionController}
-            node={node}
-            onOpenContextMenu={onOpenContextMenu}
-            renderEmbed={renderEmbed}
-            exclusivelySelected={
-              visualSelection.nodeIds.size === 1 && visualSelection.nodeIds.has(node.id)
-            }
-            selected={visualSelection.nodeIds.has(node.id)}
-            showSelectionIndicator={
-              visualSelection.nodeIds.has(node.id) &&
-              (interaction.interaction.type === 'selecting' ||
-                interaction.interaction.type === 'dragging' ||
-                visualSelection.nodeIds.size > 1)
-            }
-            surface={surface}
-            tool={interaction.tool}
-            viewport={interaction.viewport}
-            zIndex={
-              canEdit &&
-              interaction.interaction.type === 'editing' &&
-              interaction.interaction.nodeId === node.id
-                ? activeNodeZIndex
-                : (node.zIndex ?? defaultNodeZIndex.get(node.id) ?? 0)
-            }
-          />
-        ))}
+        <div className="absolute left-0 top-0 size-0 z-10" data-testid="canvas-node-plane">
+          {rendered.nodes.map((node) => (
+            <CanvasNode
+              key={node.id}
+              canEdit={canEdit}
+              content={content}
+              documentController={documentController}
+              editing={
+                canEdit &&
+                interaction.interaction.type === 'editing' &&
+                interaction.interaction.nodeId === node.id
+              }
+              editingActivation={
+                canEdit &&
+                interaction.interaction.type === 'editing' &&
+                interaction.interaction.nodeId === node.id
+                  ? interaction.interaction.activation
+                  : null
+              }
+              erasing={
+                interaction.interaction.type === 'erasing' &&
+                interaction.interaction.nodeIds.has(node.id)
+              }
+              snappedConnectionHandle={
+                interaction.interaction.type === 'connecting' &&
+                interaction.interaction.target?.nodeId === node.id
+                  ? interaction.interaction.target.handle
+                  : null
+              }
+              interactionController={interactionController}
+              node={node}
+              onOpenContextMenu={onOpenContextMenu}
+              renderEmbed={renderEmbed}
+              exclusivelySelected={
+                visualSelection.nodeIds.size === 1 && visualSelection.nodeIds.has(node.id)
+              }
+              selected={visualSelection.nodeIds.has(node.id)}
+              showSelectionIndicator={
+                visualSelection.nodeIds.has(node.id) &&
+                (interaction.interaction.type === 'selecting' ||
+                  interaction.interaction.type === 'dragging' ||
+                  visualSelection.nodeIds.size > 1)
+              }
+              surface={surface}
+              tool={interaction.tool}
+              viewport={interaction.viewport}
+              zIndex={
+                canEdit &&
+                interaction.interaction.type === 'editing' &&
+                interaction.interaction.nodeId === node.id
+                  ? activeNodeZIndex
+                  : (node.zIndex ?? defaultNodeZIndex.get(node.id) ?? 0)
+              }
+            />
+          ))}
+        </div>
         <CanvasCollaborationCursors
           collaboration={collaboration}
           zoom={interaction.viewport.zoom}
@@ -348,6 +352,8 @@ function CanvasNode({
                   : null,
                 editing,
                 node,
+                onDefaultTextColorChange: (textColor) =>
+                  saveNodeTextColor(canEdit, documentController, node.id, textColor),
                 onMediaLayout: (layout) => {
                   if (!canEdit) return
                   const latest = documentController
@@ -562,6 +568,22 @@ function saveTextNodeData(
         data,
       },
     ],
+    edges: [],
+  })
+}
+
+function saveNodeTextColor(
+  canEdit: boolean,
+  documentController: CanvasDocumentController,
+  nodeId: CanvasNodeId,
+  textColor: string,
+) {
+  if (!canEdit) return
+  const latest = documentController.read().nodes.find((candidate) => candidate.id === nodeId)
+  if (!latest || (latest.type !== 'text' && latest.type !== 'embed')) return
+  documentController.apply({
+    type: 'update',
+    nodes: [{ id: latest.id, type: latest.type, data: { textColor } }],
     edges: [],
   })
 }

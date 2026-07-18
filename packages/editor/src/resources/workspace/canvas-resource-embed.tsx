@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { CanvasDocumentNode } from '../../canvas/document-contract'
 import { canvasEmbedLabel } from '../../canvas/canvas-embed-label'
@@ -12,6 +12,8 @@ import { RESOURCE_PERMISSION, resourcePermissionAllows } from '../resource-acces
 import { ResourcePreviewSurface } from './resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
+import { CanvasFloatingFormattingToolbar } from '../../canvas/canvas-floating-formatting-toolbar'
+import type { NoteBlockNoteEditor } from '../../notes/note-editor-schema'
 
 const MISSING_RESOURCE = { state: 'missing' as const }
 
@@ -20,6 +22,7 @@ export function CanvasResourceEmbed({
   canEdit,
   editing,
   node,
+  onDefaultTextColorChange,
   onMediaLayout,
   runtime,
   sourceResourceId,
@@ -29,11 +32,13 @@ export function CanvasResourceEmbed({
   canEdit: boolean
   editing: boolean
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
+  onDefaultTextColorChange: (color: string) => void
   onMediaLayout?: EmbedMediaLayoutReporter
   runtime: EditorRuntime
   sourceResourceId: ResourceId
   zoom?: number
 }) {
+  const [noteEditor, setNoteEditor] = useState<NoteBlockNoteEditor | null>(null)
   const resourceId =
     node.data.destination?.kind === 'internal' ? node.data.destination.target.resourceId : null
   const target = node.data.destination?.kind === 'internal' ? node.data.destination.target : null
@@ -57,6 +62,13 @@ export function CanvasResourceEmbed({
 
   return (
     <CanvasEmbedFrame label={resource.value.title} zoom={zoom}>
+      {editing && noteEditor && (
+        <CanvasFloatingFormattingToolbar
+          defaultTextColor={node.data.textColor ?? 'var(--foreground)'}
+          editor={noteEditor}
+          onDefaultTextColorChange={onDefaultTextColorChange}
+        />
+      )}
       <ResourcePreviewSurface
         onMediaLayout={onMediaLayout}
         resource={resource.value}
@@ -71,6 +83,17 @@ export function CanvasResourceEmbed({
               <NoteSessionEditor
                 activation={noteEditing ? (activation ?? undefined) : undefined}
                 canEdit={noteEditing}
+                blockAccess={
+                  runtime.resources.noteBlockAccess.status === 'available' &&
+                  runtime.resources.access.status === 'available'
+                    ? {
+                        campaignId: runtime.scope.campaignId,
+                        gateway: runtime.resources.noteBlockAccess.value,
+                        noteId: note.id,
+                        resourceAccess: runtime.resources.access.value,
+                      }
+                    : undefined
+                }
                 resources={{
                   ancestors: new Set([sourceResourceId]),
                   renderNote: renderEmbeddedNoteResource,
@@ -79,6 +102,7 @@ export function CanvasResourceEmbed({
                 }}
                 formattingToolbar={false}
                 label={`${note.title} embedded note`}
+                onEditorChange={noteEditing ? setNoteEditor : undefined}
                 scroll={EPHEMERAL_NOTE_SCROLL}
                 state={state}
               />
@@ -143,6 +167,7 @@ function CanvasNoteSurface({
     <div
       className="flex size-full min-h-0 flex-col overflow-hidden text-left"
       data-canvas-editable-embed={canEdit && !editing}
+      onPointerDown={editing ? (event) => event.stopPropagation() : undefined}
     >
       {children}
     </div>

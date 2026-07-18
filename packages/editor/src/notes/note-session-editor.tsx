@@ -8,6 +8,7 @@ import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-men
 import type { NoteResourceBinding } from './note-resource-runtime-context'
 import type { ResourcePreviewPublicationGateway } from '../resources/editor-runtime-contract'
 import type { ResourceId } from '../resources/domain-id'
+import type { NoteBlockNoteEditor } from './note-editor-schema'
 
 type RenderableNoteSessionState = Extract<
   NoteSessionState,
@@ -22,6 +23,7 @@ export function NoteSessionEditor({
   resources,
   headingNavigationRef,
   label,
+  onEditorChange,
   previewPublication,
   scroll,
   state,
@@ -33,6 +35,7 @@ export function NoteSessionEditor({
   resources?: NoteResourceBinding
   headingNavigationRef?: NoteHeadingNavigationRef
   label: string
+  onEditorChange?: (editor: NoteBlockNoteEditor | null) => void
   previewPublication?: Readonly<{
     gateway: ResourcePreviewPublicationGateway
     resourceId: ResourceId
@@ -54,6 +57,7 @@ export function NoteSessionEditor({
         resources={resources}
         headingNavigationRef={headingNavigationRef}
         label={label}
+        onEditorChange={onEditorChange}
         mode="edit"
         persistence="initializing"
         scroll={scroll}
@@ -66,6 +70,7 @@ export function NoteSessionEditor({
         resources={resources}
         headingNavigationRef={headingNavigationRef}
         label={label}
+        onEditorChange={onEditorChange}
         mode="view"
         scroll={scroll}
       />
@@ -82,6 +87,7 @@ export function NoteSessionEditor({
       resources={resources}
       headingNavigationRef={headingNavigationRef}
       label={label}
+      onEditorChange={onEditorChange}
       mode="edit"
       persistence="ready"
       previewPublication={
@@ -99,6 +105,7 @@ export function NoteSessionEditor({
       resources={resources}
       headingNavigationRef={headingNavigationRef}
       label={label}
+      onEditorChange={onEditorChange}
       mode="view"
       scroll={scroll}
     />

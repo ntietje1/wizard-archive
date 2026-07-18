@@ -30,29 +30,30 @@ export function createCanvasReorderChange(
   direction: CanvasReorderDirection,
 ): CanvasDocumentChange | null {
   if (!canvasSelectionWithinWorkload(selection)) return null
-  const elements = sortCanvasElements([
-    ...content.nodes.map((value) => ({
+  const nodeElements = sortCanvasElements(
+    content.nodes.map((value) => ({
       key: `node:${value.id}`,
       kind: 'node' as const,
       value,
       zIndex: value.zIndex,
     })),
-    ...content.edges.map((value) => ({
+  )
+  const edgeElements = sortCanvasElements(
+    content.edges.map((value) => ({
       key: `edge:${value.id}`,
       kind: 'edge' as const,
       value,
       zIndex: value.zIndex,
     })),
-  ])
+  )
   const requested = new Set([
     ...Array.from(selection.nodeIds, (id) => `node:${id}`),
     ...Array.from(selection.edgeIds, (id) => `edge:${id}`),
   ])
-  const selected = new Set(
-    elements.flatMap((element) => (requested.has(element.key) ? [element.key] : [])),
-  )
-  if (selected.size === 0) return null
-  const updates = reorderCanvasElements(elements, selected, direction)
+  const updates = [
+    ...reorderSelectedCanvasElements(nodeElements, requested, direction),
+    ...reorderSelectedCanvasElements(edgeElements, requested, direction),
+  ]
   const nodes: Array<CanvasDocumentNodeUpdate> = []
   const edges: Array<CanvasDocumentEdgeUpdate> = []
   updates.forEach(({ element, zIndex }) => {
@@ -64,6 +65,17 @@ export function createCanvasReorderChange(
     }
   })
   return nodes.length > 0 || edges.length > 0 ? { type: 'update', nodes, edges } : null
+}
+
+function reorderSelectedCanvasElements(
+  elements: ReadonlyArray<CanvasOrderedElement>,
+  requested: ReadonlySet<string>,
+  direction: CanvasReorderDirection,
+) {
+  const selected = new Set(
+    elements.flatMap((element) => (requested.has(element.key) ? [element.key] : [])),
+  )
+  return selected.size === 0 ? [] : reorderCanvasElements(elements, selected, direction)
 }
 
 function sortCanvasElements<TElement extends Readonly<{ zIndex?: number }>>(

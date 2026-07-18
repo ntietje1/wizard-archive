@@ -204,12 +204,20 @@ function CanvasViewport({
       drop={createWorkspaceAuthoredDestinationDropResolver({
         actions,
       })}
-      renderEmbed={({ activation, editing, node, onMediaLayout, zoom }) => (
+      renderEmbed={({
+        activation,
+        editing,
+        node,
+        onDefaultTextColorChange,
+        onMediaLayout,
+        zoom,
+      }) => (
         <CanvasResourceEmbed
           activation={activation}
           canEdit={canEdit}
           editing={editing}
           node={node}
+          onDefaultTextColorChange={onDefaultTextColorChange}
           onMediaLayout={onMediaLayout}
           runtime={runtime}
           sourceResourceId={resource.id}

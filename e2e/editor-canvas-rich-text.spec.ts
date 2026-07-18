@@ -1,6 +1,57 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('canvas rich text', () => {
+  test('keeps embedded and canvas-text block controls inside the active editor', async ({
+    page,
+  }) => {
+    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
+    const canvas = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
+    await expect(canvas).toBeVisible()
+    const surface = canvas.getByRole('region', { name: 'Canvas surface' })
+
+    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'The Lantern Market', exact: true })
+      .dragTo(surface, { targetPosition: { x: 420, y: 280 } })
+    const noteEditor = canvas
+      .getByRole('textbox', { name: 'The Lantern Market embedded note' })
+      .last()
+    const noteBlock = noteEditor.locator('[data-node-type="blockContainer"]').first()
+    await noteBlock.dblclick()
+    await expect(page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()
+    await noteBlock.hover()
+    const noteDragHandle = page.locator('[data-block-drag-actions="note"]')
+    await expect(noteDragHandle).toBeVisible()
+    await noteDragHandle.click()
+    await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await noteBlock.dblclick()
+    await noteBlock.hover()
+    await expect(noteDragHandle).toBeVisible()
+    const noteTransfer = await page.evaluateHandle(() => new DataTransfer())
+    await noteDragHandle.dispatchEvent('dragstart', { dataTransfer: noteTransfer })
+    await expect(page.locator('.bn-drag-preview')).toBeVisible()
+    await noteDragHandle.dispatchEvent('dragend', { dataTransfer: noteTransfer })
+
+    await canvas.getByRole('button', { name: 'Text', exact: true }).click()
+    const surfaceBox = await surface.boundingBox()
+    if (!surfaceBox) throw new Error('Canvas surface is not visible')
+    await page.mouse.click(surfaceBox.x + 700, surfaceBox.y + 420)
+    const textEditor = canvas.getByRole('textbox', { name: 'Canvas text' }).last()
+    await textEditor.fill('Canvas block controls')
+    const textBlock = textEditor.locator('[data-node-type="blockContainer"]').first()
+    await textBlock.hover()
+    const textDragHandle = page.locator('[data-block-drag-actions="canvas-text"]')
+    await expect(textDragHandle).toBeVisible()
+    await textDragHandle.dispatchEvent('mousedown', { button: 0 })
+    await textDragHandle.click()
+    await expect(textDragHandle).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Comment' })).toHaveCount(0)
+  })
+
   test('places text and embedded-note carets at the double-click point', async ({ page }) => {
     await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
     const canvas = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })

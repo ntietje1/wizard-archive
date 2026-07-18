@@ -103,7 +103,7 @@ export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: bool
           >
             <Components.SideMenu.Button
               label={blockIds.length > 1 ? `Share ${blockIds.length} blocks` : 'Share'}
-              className={`${shared ? '!text-primary' : '!text-muted-foreground'} ${
+              className={`!size-6 !p-0 ${shared ? '!text-primary' : '!text-muted-foreground'} ${
                 runtime.pending || knowledge.state !== 'known'
                   ? 'pointer-events-none opacity-50'
                   : ''

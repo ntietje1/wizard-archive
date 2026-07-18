@@ -29,6 +29,7 @@ export type CanvasEmbedRenderer = (props: {
   activation: BlockNoteActivation | null
   editing: boolean
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
+  onDefaultTextColorChange: (color: string) => void
   onMediaLayout: EmbedMediaLayoutReporter
   zoom: number
 }) => ReactNode

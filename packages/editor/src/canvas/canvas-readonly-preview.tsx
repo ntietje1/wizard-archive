@@ -62,61 +62,65 @@ export function CanvasReadonlyPreview({
       data-testid="canvas-readonly-preview"
     >
       <div ref={viewport} className="absolute left-0 top-0 size-0 origin-top-left">
-        {content.edges.map((edge) => {
-          if (edge.hidden) return null
-          const path = canvasEdgePath(edge, nodeById)
-          if (!path) return null
-          const style = resolveCanvasEdgeStyle(edge.style)
-          return (
-            <svg
-              key={edge.id}
-              className="absolute left-0 top-0 overflow-visible"
-              style={{ zIndex: edge.zIndex ?? 0 }}
-              width="1"
-              height="1"
-            >
-              <path
-                d={path}
-                fill="none"
-                stroke={style.stroke}
-                strokeLinecap="square"
-                strokeLinejoin="round"
-                strokeOpacity={style.opacity}
-                strokeWidth={style.strokeWidth}
-              />
-            </svg>
-          )
-        })}
-        {nodes.map((node) => {
-          if (node.hidden) return null
-          const size = canvasNodeSize(node)
-          return (
-            <div
-              key={node.id}
-              className="absolute rounded-md"
-              data-node-id={node.id}
-              data-node-type={node.type}
-              data-testid="canvas-preview-node"
-              style={{
-                width: size.width,
-                height: size.height,
-                transform: `translate(${node.position.x}px, ${node.position.y}px)`,
-                zIndex: node.zIndex ?? 0,
-              }}
-            >
-              <CanvasNodeVisual
-                activation={null}
-                editing={false}
-                exclusivelySelected={false}
-                node={node}
-                onFinishEditing={ignore}
-                onSaveContent={ignore}
-                selected={node.id === focusedNodeId}
-                zoom={1}
-              />
-            </div>
-          )
-        })}
+        <div className="absolute left-0 top-0 size-0 z-0">
+          {content.edges.map((edge) => {
+            if (edge.hidden) return null
+            const path = canvasEdgePath(edge, nodeById)
+            if (!path) return null
+            const style = resolveCanvasEdgeStyle(edge.style)
+            return (
+              <svg
+                key={edge.id}
+                className="absolute left-0 top-0 overflow-visible"
+                style={{ zIndex: edge.zIndex ?? 0 }}
+                width="1"
+                height="1"
+              >
+                <path
+                  d={path}
+                  fill="none"
+                  stroke={style.stroke}
+                  strokeLinecap="square"
+                  strokeLinejoin="round"
+                  strokeOpacity={style.opacity}
+                  strokeWidth={style.strokeWidth}
+                />
+              </svg>
+            )
+          })}
+        </div>
+        <div className="absolute left-0 top-0 size-0 z-10">
+          {nodes.map((node) => {
+            if (node.hidden) return null
+            const size = canvasNodeSize(node)
+            return (
+              <div
+                key={node.id}
+                className="absolute rounded-md"
+                data-node-id={node.id}
+                data-node-type={node.type}
+                data-testid="canvas-preview-node"
+                style={{
+                  width: size.width,
+                  height: size.height,
+                  transform: `translate(${node.position.x}px, ${node.position.y}px)`,
+                  zIndex: node.zIndex ?? 0,
+                }}
+              >
+                <CanvasNodeVisual
+                  activation={null}
+                  editing={false}
+                  exclusivelySelected={false}
+                  node={node}
+                  onFinishEditing={ignore}
+                  onSaveContent={ignore}
+                  selected={node.id === focusedNodeId}
+                  zoom={1}
+                />
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

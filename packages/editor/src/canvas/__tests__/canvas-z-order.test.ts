@@ -27,17 +27,17 @@ describe('canvas z-order', () => {
     expect(
       createCanvasReorderChange(
         tied,
-        { nodeIds: new Set([NODE_A]), edgeIds: new Set() },
+        { nodeIds: new Set([NODE_B]), edgeIds: new Set() },
         'sendToBack',
       ),
     ).toEqual({
       type: 'update',
-      nodes: [{ id: NODE_A, type: 'text', zIndex: -1 }],
+      nodes: [{ id: NODE_B, type: 'text', zIndex: -1 }],
       edges: [],
     })
   })
 
-  it('reorders mixed node-edge layers with isolated order fields', () => {
+  it('reorders edges within the edge plane', () => {
     expect(
       createCanvasReorderChange(
         CONTENT,
@@ -51,22 +51,22 @@ describe('canvas z-order', () => {
     })
   })
 
-  it('moves grouped selections one layer without crossing selected neighbors', () => {
+  it('reorders mixed selections independently within the node and edge planes', () => {
     expect(
       createCanvasReorderChange(
         CONTENT,
-        { nodeIds: new Set([NODE_A, NODE_B]), edgeIds: new Set() },
+        { nodeIds: new Set([NODE_A]), edgeIds: new Set(['edge-a']) },
         'bringForward',
       ),
     ).toEqual({
       type: 'update',
       nodes: [
-        { id: NODE_A, type: 'text', zIndex: 2 },
-        { id: NODE_B, type: 'text', zIndex: 4 },
+        { id: NODE_A, type: 'text', zIndex: 3 },
+        { id: NODE_B, type: 'text', zIndex: 1 },
       ],
       edges: [
-        { id: 'edge-a', zIndex: 1 },
-        { id: 'edge-b', zIndex: 3 },
+        { id: 'edge-a', zIndex: 4 },
+        { id: 'edge-b', zIndex: 2 },
       ],
     })
   })
