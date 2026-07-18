@@ -48,6 +48,7 @@ import { createResourceUndoHistory } from './resource-undo-history'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
 import type { ResourceCatalogSnapshot, SourcePathAlias } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
+import type { GrantedResourcePermission } from './resource-access-policy'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
@@ -126,6 +127,7 @@ export type InMemoryEditorContent = Readonly<{
 export type InMemoryEditorRuntimeInput = Readonly<{
   authorize?: InMemoryResourceRuntimeOptions['authorize']
   canEdit?: boolean
+  permission?: GrantedResourcePermission
   scope: ResourceProjectionScope
   snapshot: ResourceCatalogSnapshot
   content?: InMemoryEditorContent
@@ -779,6 +781,7 @@ export function createInMemoryEditorRuntime({
   content = {},
   navigation,
   now,
+  permission,
   scope,
   snapshot,
 }: InMemoryEditorRuntimeInput): Readonly<{ runtime: EditorRuntime; dispose(): void }> {
@@ -826,6 +829,7 @@ export function createInMemoryEditorRuntime({
     scope,
     initialSnapshot: snapshot,
     authorize: authorize ?? (() => canEdit),
+    ...(permission ? { permission } : {}),
     contentCopy: createInMemoryContentCopyPlanner(kinds, { notes, files, maps, canvases }),
     ...(now ? { now } : {}),
   })

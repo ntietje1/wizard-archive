@@ -76,6 +76,7 @@ export interface NoteSession {
   readonly awareness: SessionAwareness
   readonly collaboration: ContentCollaboration
   readonly flush: () => Promise<ContentSessionSaveResult>
+  retain(): () => void
   dispose(): void
 }
 
@@ -85,6 +86,7 @@ export interface CanvasSession {
   readonly awareness: SessionAwareness
   readonly collaboration: ContentCollaboration
   readonly flush: () => Promise<ContentSessionSaveResult>
+  retain(): () => void
   dispose(): void
 }
 

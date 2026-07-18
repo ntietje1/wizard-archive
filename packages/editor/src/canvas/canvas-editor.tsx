@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { CanvasEditorSurface } from './canvas-editor-surface'
 import { createCanvasDocumentController } from './document-controller'
@@ -42,6 +42,7 @@ type CanvasEditorRuntime = Readonly<{
 }>
 
 export function CanvasEditor(props: CanvasEditorProps) {
+  useEffect(() => props.session.retain(), [props.session])
   const [runtimeStore] = useState(() => createCanvasEditorRuntimeStore(props.session.document))
   const runtime = useSyncExternalStore(runtimeStore.subscribe, runtimeStore.get, runtimeStore.get)
   if (!runtime) return <div role="status">Loading canvas</div>

@@ -147,6 +147,74 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('edits player content with resource edit permission while structure remains unavailable', async () => {
+    const { core, resource } = await shellRuntime(false, 'active', 'edit', 'note')
+
+    render(
+      <ResourceShell
+        ariaLabel="Player resources"
+        runtime={core.runtime}
+        workspaceName="Player view"
+      />,
+    )
+
+    const editor = await screen.findByRole('textbox', { name: `${resource.title} note editor` })
+    expect(editor).toHaveAttribute('contenteditable', 'true')
+    expect(screen.queryByText('Read only')).not.toBeInTheDocument()
+    expect(core.runtime.resources.structure).toMatchObject({
+      status: 'unavailable',
+      reason: 'unauthorized',
+    })
+    core.dispose()
+  })
+
+  it('keeps view permission, view-as, and viewer preference read only', async () => {
+    const viewPermission = await shellRuntime(false, 'active', 'view', 'note')
+    const view = render(
+      <ResourceShell
+        ariaLabel="View permission"
+        runtime={viewPermission.core.runtime}
+        workspaceName="Player view"
+      />,
+    )
+    expect(
+      await screen.findByRole('textbox', { name: `${viewPermission.resource.title} note editor` }),
+    ).toHaveAttribute('contenteditable', 'false')
+    view.unmount()
+    viewPermission.core.dispose()
+
+    const viewAs = await shellRuntime(false, 'active', 'edit', 'note', 'view_as_player')
+    const viewAsRender = render(
+      <ResourceShell
+        ariaLabel="View as player"
+        runtime={viewAs.core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    expect(
+      await screen.findByRole('textbox', { name: `${viewAs.resource.title} note editor` }),
+    ).toHaveAttribute('contenteditable', 'false')
+    viewAsRender.unmount()
+    viewAs.core.dispose()
+
+    const viewerPreference = await shellRuntime(false, 'active', 'edit', 'note')
+    await viewerPreference.core.runtime.preferences.change({ type: 'mode', mode: 'viewer' })
+    render(
+      <ResourceShell
+        ariaLabel="Viewer preference"
+        runtime={viewerPreference.core.runtime}
+        workspaceName="Player view"
+      />,
+    )
+    expect(
+      await screen.findByRole('textbox', {
+        name: `${viewerPreference.resource.title} note editor`,
+      }),
+    ).toHaveAttribute('contenteditable', 'false')
+    expect(screen.getByText('Viewer mode — editing is disabled')).toBeInTheDocument()
+    viewerPreference.core.dispose()
+  })
+
   it('renders the canonical note session in view mode without persistence triggers', async () => {
     const { core, resource } = await shellRuntime(false)
     const summary = {
@@ -177,6 +245,7 @@ describe('ResourceShell', () => {
           user: { name: 'Player', color: '#5e6ad2' },
         },
         flush,
+        retain: () => () => undefined,
         dispose: vi.fn(),
       },
     }
@@ -1409,7 +1478,13 @@ async function createFolderFromSidebar(title: string) {
   await waitFor(() => expect(screen.getByRole('button', { name: 'Create resource' })).toBeEnabled())
 }
 
-async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 'active') {
+async function shellRuntime(
+  canEdit: boolean,
+  lifecycle: 'active' | 'trashed' = 'active',
+  permission: 'edit' | 'view' = canEdit ? 'edit' : 'view',
+  kind: 'folder' | 'note' = 'folder',
+  projection: 'dm' | 'player' | 'view_as_player' = canEdit ? 'dm' : 'player',
+) {
   const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
   const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -1418,7 +1493,7 @@ async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 
     id: resourceId,
     campaignId,
     parentId: null,
-    kind: 'folder',
+    kind,
     title: canonicalizeResourceTitle('Campaign folder'),
     icon: null,
     color: null,
@@ -1431,10 +1506,11 @@ async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 
   const navigation = createNavigation(resourceId)
   const core = createInMemoryEditorRuntime({
     canEdit,
+    permission,
     scope: {
       campaignId,
       actorId,
-      projection: canEdit ? 'dm' : 'player',
+      projection,
       schema: RESOURCE_INDEX_SCHEMA,
     },
     snapshot: {
@@ -1444,6 +1520,22 @@ async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 
       aliases: [],
       assetsFolderId: null,
     },
+    ...(kind === 'note'
+      ? {
+          content: {
+            notes: [
+              {
+                resourceId,
+                content: noteBlocksToYDoc(
+                  [{ type: 'paragraph', content: [{ type: 'text', text: 'Player note' }] }],
+                  NOTE_YJS_FRAGMENT,
+                ),
+                version,
+              },
+            ],
+          },
+        }
+      : {}),
     navigation,
   })
   return { core, navigation, resource }

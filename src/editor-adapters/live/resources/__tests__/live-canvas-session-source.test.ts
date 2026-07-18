@@ -11,8 +11,27 @@ import {
 import type { CanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
 import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
 import { testDomainId } from '../../../../../shared/test/domain-id'
-import { createLiveCanvasSessionSource } from '../live-canvas-session-source'
+import { createLiveCanvasSessionSource as createSource } from '../live-canvas-session-source'
 import { createYjsUpdateOutbox } from '../yjs-update-outbox'
+import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
+
+function createLiveCanvasSessionSource(
+  campaign: Parameters<typeof createSource>[0],
+  member: Parameters<typeof createSource>[1],
+  collaborationUser: Parameters<typeof createSource>[2],
+  backend: Parameters<typeof createSource>[3],
+  beginUndo: Parameters<typeof createSource>[4],
+  readonly = false,
+) {
+  return createSource(
+    campaign,
+    member,
+    collaborationUser,
+    backend,
+    beginUndo,
+    createLiveResourceContentAuthorityFixture(!readonly).authority,
+  )
+}
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
 type SaveCanvasArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
@@ -118,6 +137,67 @@ describe('LiveCanvasSessionSource', () => {
     expect(save).not.toHaveBeenCalled()
     expect(heartbeatPresence).not.toHaveBeenCalled()
     expect(watchPresence).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
+  it('opens and closes collaborative canvas sessions with authoritative edit permission', async () => {
+    const campaignId = testDomainId('campaign', 'canvas-authority-campaign')
+    const memberId = testDomainId('campaignMember', 'canvas-authority-member')
+    const resourceId = testDomainId('resource', 'canvas-authority-resource')
+    const document = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    document.destroy()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const heartbeatPresence = vi.fn(() =>
+      Promise.resolve({
+        status: 'active' as const,
+        roomToken: 'room-token',
+        sessionToken: 'session-token',
+      }),
+    )
+    const save = vi.fn()
+    const fixture = createLiveResourceContentAuthorityFixture(false)
+    const source = createSource(
+      campaignId,
+      memberId,
+      collaborationUser,
+      {
+        ...presenceBackend(),
+        heartbeatPresence,
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, updateSnapshot) => {
+          apply = updateSnapshot
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+      fixture.authority,
+    )
+    source.subscribe(resourceId, () => {})
+    apply({ status: 'ready', update, version })
+    const readonly = source.get(resourceId)
+    if (readonly.status !== 'ready') throw new TypeError('Expected readonly canvas')
+
+    fixture.setCanEdit(true)
+    const editable = source.get(resourceId)
+    if (editable.status !== 'ready') throw new TypeError('Expected editable canvas')
+    expect(editable.session).not.toBe(readonly.session)
+    expect(editable.session.document).toBe(readonly.session.document)
+    expect(editable.session.collaboration).toBe(readonly.session.collaboration)
+    await vi.waitFor(() => expect(heartbeatPresence).toHaveBeenCalled())
+
+    fixture.setCanEdit(false)
+    const restoredReadonly = source.get(resourceId)
+    if (restoredReadonly.status !== 'ready')
+      throw new TypeError('Expected restored readonly canvas')
+    expect(restoredReadonly.session).not.toBe(editable.session)
+    expect(restoredReadonly.session.document).toBe(editable.session.document)
+    expect(restoredReadonly.session.collaboration).toBe(editable.session.collaboration)
+    await expect(restoredReadonly.session.flush()).resolves.toMatchObject({ status: 'completed' })
+    expect(save).not.toHaveBeenCalled()
     source.dispose()
   })
 

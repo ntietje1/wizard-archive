@@ -7,6 +7,7 @@ import type {
   ResourceCompensationGateway,
 } from './resource-command-contract'
 import type { ResourceId } from './domain-id'
+import type { GrantedResourcePermission } from './resource-access-policy'
 import { InMemoryResourceCatalog } from './in-memory-resource-catalog'
 import type { InMemoryResourceOperationsOptions } from './in-memory-resource-catalog'
 import type {
@@ -33,6 +34,7 @@ export type InMemoryResourceRuntimeOptions<TContentCopyPlan = never> = Readonly<
   scope: ResourceProjectionScope
   initialSnapshot: ResourceCatalogSnapshot
   authorize: InMemoryResourceOperationsOptions<TContentCopyPlan>['authorize']
+  permission?: GrantedResourcePermission
   contentCopy?: ContentCopyPlanner<TContentCopyPlan, () => void>
   now?: () => number
 }>
@@ -62,6 +64,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   scope,
   initialSnapshot,
   authorize,
+  permission = 'edit',
   contentCopy,
   now,
 }: InMemoryResourceRuntimeOptions<TContentCopyPlan>) {
@@ -95,7 +98,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
         resource.lifecycle.state === 'trashed' && parent?.lifecycle.state !== 'trashed'
           ? null
           : resource.parentId
-      return authorizedResourceSummaryFromRecord(resource, 'edit', displayParentId)
+      return authorizedResourceSummaryFromRecord(resource, permission, displayParentId)
     })
     const resourcesById = new Map(resources.map((resource) => [resource.id, resource]))
     const includedIds = new Set<ResourceId>()

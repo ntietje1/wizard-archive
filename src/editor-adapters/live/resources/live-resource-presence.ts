@@ -68,6 +68,7 @@ class LiveResourcePresence {
   #disposeRequest: Promise<void> | null = null
   #heartbeatTimer: ReturnType<typeof setInterval>
   #pendingState: ArrayBuffer | null = null
+  #preserveAwareness = false
   #roomToken: string | null = null
   #sendRequest: Promise<void> | null = null
   #sessionToken: string | null = null
@@ -82,9 +83,10 @@ class LiveResourcePresence {
     user: CollaborationUser,
     private readonly backend: LiveResourcePresenceBackend,
     private readonly collaboratorsChanged: () => void,
+    collaboration?: ContentCollaboration,
   ) {
-    this.#awareness = new Awareness(document)
-    this.collaboration = { provider: { awareness: this.#awareness }, user }
+    this.#awareness = collaboration?.provider.awareness ?? new Awareness(document)
+    this.collaboration = collaboration ?? { provider: { awareness: this.#awareness }, user }
     this.#memberIds.set(document.clientID, memberId)
     this.#awareness.on('update', this.#onAwarenessUpdate)
     this.#awareness.setLocalStateField('user', user)
@@ -136,6 +138,12 @@ class LiveResourcePresence {
     return this.#disposeRequest
   }
 
+  detachCollaboration(): ContentCollaboration {
+    this.#preserveAwareness = true
+    void this.dispose()
+    return this.collaboration
+  }
+
   async #dispose(): Promise<void> {
     this.#status = 'disposed'
     this.#awareness.off('update', this.#onAwarenessUpdate)
@@ -145,7 +153,7 @@ class LiveResourcePresence {
     this.#unsubscribe = null
     if (this.#connectRequest) await this.#connectRequest
     await this.flush()
-    this.#awareness.destroy()
+    if (!this.#preserveAwareness) this.#awareness.destroy()
     if (this.#sessionToken) {
       await this.backend
         .disconnectPresence({ resourceId: this.resourceId, sessionToken: this.#sessionToken })
@@ -283,6 +291,7 @@ export function createLiveResourcePresence(
   user: CollaborationUser,
   backend: LiveResourcePresenceBackend,
   collaboratorsChanged: () => void,
+  collaboration?: ContentCollaboration,
 ) {
   return new LiveResourcePresence(
     document,
@@ -291,6 +300,7 @@ export function createLiveResourcePresence(
     user,
     backend,
     collaboratorsChanged,
+    collaboration,
   )
 }
 

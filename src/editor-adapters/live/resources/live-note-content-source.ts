@@ -44,10 +44,20 @@ import {
   yjsUpdateArrayBuffer,
   YjsUpdateOutboxUnavailableError,
 } from './live-yjs-document-session'
-import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-session'
+import type { RejectedYjsSave } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
 import type { YjsUpdateOutbox } from './yjs-update-outbox'
 import { createReadonlyYjsSession, isReadonlyYjsSession } from './readonly-yjs-session'
+import type { ReadonlyYjsSession } from './readonly-yjs-session'
+import {
+  createLiveAuthorityBoundYjsSession,
+  createYjsSessionAuthorityBinding,
+} from './live-resource-content-authority'
+import type {
+  LiveResourceContentAuthority,
+  YjsSessionAuthorityTransition,
+  YjsSessionAuthorityBinding,
+} from './live-resource-content-authority'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
@@ -111,60 +121,36 @@ function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
   }
 }
 
-class LiveNoteSession implements NoteSession {
-  readonly #liveAwareness: ReturnType<typeof createLiveCollaborativeYjsSession>['awareness']
-  readonly #session: ReturnType<typeof createLiveCollaborativeYjsSession>['session']
-
-  constructor(
-    readonly document: Y.Doc,
-    version: NoteSession['version'],
-    campaignId: CampaignId,
-    resourceId: ResourceId,
-    backend: LiveNoteContentBackend,
-    memberId: CampaignMemberId,
-    user: CollaborationUser,
-    changed: () => void,
-    failed: (result: RejectedYjsSave) => void,
-  ) {
-    const collaborative = createLiveCollaborativeYjsSession({
-      presenceBackend: backend,
-      document,
-      version,
-      resourceId,
-      memberId,
-      user,
-      outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
-      persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
-      canonicalize: () => 'unchanged',
-      changed,
-      failed,
-    })
-    this.#liveAwareness = collaborative.awareness
-    this.#session = collaborative.session
-  }
-
-  get version() {
-    return this.#session.version
-  }
-
-  get awareness() {
-    return this.#liveAwareness.awareness
-  }
-
-  get collaboration(): ContentCollaboration {
-    return this.#liveAwareness.collaboration
-  }
-
-  apply(update: ArrayBuffer, version: NoteSession['version']): YjsVersionDecision {
-    return this.#session.apply(update, version)
-  }
-
-  readonly flush = () => this.#session.flush()
-
-  dispose(): void {
-    this.#session.dispose()
-  }
+function createLiveNoteSession(
+  document: Y.Doc,
+  version: NoteSession['version'],
+  campaignId: CampaignId,
+  resourceId: ResourceId,
+  backend: LiveNoteContentBackend,
+  memberId: CampaignMemberId,
+  user: CollaborationUser,
+  changed: () => void,
+  failed: (result: RejectedYjsSave) => void,
+  collaboration?: ContentCollaboration,
+) {
+  const collaborative = createLiveCollaborativeYjsSession({
+    presenceBackend: backend,
+    document,
+    version,
+    resourceId,
+    memberId,
+    user,
+    outbox: createYjsUpdateOutbox('note', campaignId, resourceId, memberId),
+    persist: createBackendYjsPersistence(campaignId, resourceId, (args) => backend.save(args)),
+    canonicalize: () => 'unchanged',
+    changed,
+    failed,
+    collaboration,
+  })
+  return createLiveAuthorityBoundYjsSession(collaborative.awareness, collaborative.session)
 }
+
+type LiveNoteSession = ReturnType<typeof createLiveNoteSession>
 
 function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
   return {
@@ -175,8 +161,11 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 
 class LiveNoteSessionSource implements NoteSessionSource {
   readonly #store: NoteStore
+  readonly #awaitingEditable = new Set<ResourceId>()
   readonly #creates = new Map<ResourceId, LocalCreate>()
-  readonly #sessions = new Map<ResourceId, NoteSession>()
+  readonly #editableLoads = new Map<ResourceId, symbol>()
+  readonly #sessions = new Map<ResourceId, LiveNoteSession | ReadonlyYjsSession>()
+  readonly #authorityBinding: YjsSessionAuthorityBinding
 
   constructor(
     private readonly campaignId: CampaignId,
@@ -184,12 +173,32 @@ class LiveNoteSessionSource implements NoteSessionSource {
     private readonly user: CollaborationUser,
     private readonly backend: LiveNoteContentBackend,
     private readonly beginCreateUndo: () => ResourceUndoRecording,
-    private readonly readonlyProjection: boolean,
+    private readonly authority: LiveResourceContentAuthority,
   ) {
     this.#store = createResourceWatchStore<NoteSnapshot, NoteSessionState>(
       backend.watch,
       (resourceId, snapshot) => this.#apply(resourceId, snapshot),
       { status: 'loading' },
+    )
+    const applyAuthorityTransition = (
+      resourceId: ResourceId,
+      transition: YjsSessionAuthorityTransition,
+    ) => {
+      if (transition.editable) {
+        this.#awaitingEditable.add(resourceId)
+        this.#setState(resourceId, { status: 'loading' })
+        transition.release?.()
+        this.#loadEditable(resourceId)
+        return
+      }
+      this.#editableLoads.delete(resourceId)
+      this.#setReady(resourceId, transition.document, transition.version, transition.collaboration)
+    }
+    this.#authorityBinding = createYjsSessionAuthorityBinding(
+      authority,
+      this.#sessions,
+      isReadonlyYjsSession,
+      applyAuthorityTransition,
     )
   }
 
@@ -282,6 +291,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
   }
 
   dispose(): void {
+    this.#authorityBinding.dispose()
     this.#store.dispose()
     for (const session of this.#sessions.values()) session.dispose()
     for (const create of this.#creates.values()) {
@@ -289,6 +299,8 @@ class LiveNoteSessionSource implements NoteSessionSource {
       create.doc.destroy()
     }
     this.#sessions.clear()
+    this.#awaitingEditable.clear()
+    this.#editableLoads.clear()
     this.#creates.clear()
   }
 
@@ -310,21 +322,20 @@ class LiveNoteSessionSource implements NoteSessionSource {
     snapshot: Extract<NoteSnapshot, { status: 'ready' }>,
   ) {
     const version = assertVersionStamp(snapshot.version)
+    this.#authorityBinding.reconcile(resourceId)
     const session = this.#sessions.get(resourceId)
-    if (session && this.readonlyProjection) {
+    if (session && isReadonlyYjsSession(session)) {
       this.#applyReadonlyProjection(resourceId, snapshot, version, session)
       return
     }
-    if (session && !this.readonlyProjection) {
-      if (!(session instanceof LiveNoteSession)) {
-        throw new TypeError('Editable note source owns a readonly session')
-      }
+    if (session) {
       session.apply(snapshot.update, version)
       return
     }
     const doc = new Y.Doc()
     try {
       Y.applyUpdate(doc, new Uint8Array(snapshot.update))
+      this.#awaitingEditable.delete(resourceId)
       this.#setReady(resourceId, doc, version)
     } catch {
       doc.destroy()
@@ -384,17 +395,42 @@ class LiveNoteSessionSource implements NoteSessionSource {
     )
   }
 
-  #setReady(resourceId: ResourceId, document: Y.Doc, version: NoteSession['version']): void {
+  #loadEditable(resourceId: ResourceId): void {
+    const token = Symbol()
+    this.#editableLoads.set(resourceId, token)
+    void this.backend
+      .load(resourceId)
+      .then((snapshot) => {
+        if (this.#editableLoads.get(resourceId) !== token || !this.authority.canEdit(resourceId)) {
+          return
+        }
+        this.#editableLoads.delete(resourceId)
+        this.#apply(resourceId, snapshot)
+      })
+      .catch(() => {
+        if (this.#editableLoads.get(resourceId) !== token) return
+        this.#editableLoads.delete(resourceId)
+        this.#awaitingEditable.delete(resourceId)
+        this.#setState(resourceId, { status: 'unavailable', reason: 'scope_unavailable' })
+      })
+  }
+
+  #setReady(
+    resourceId: ResourceId,
+    document: Y.Doc,
+    version: NoteSession['version'],
+    collaboration?: ContentCollaboration,
+  ): LiveNoteSession | ReadonlyYjsSession | null {
     this.#clearSession(resourceId)
-    if (this.readonlyProjection) {
-      const session = createReadonlyYjsSession(document, version, this.user)
+    if (!this.authority.canEdit(resourceId)) {
+      const session = createReadonlyYjsSession(document, version, this.user, collaboration)
       this.#sessions.set(resourceId, session)
       this.#setState(resourceId, { status: 'ready', session })
-      return
+      return session
     }
     let session: LiveNoteSession
     try {
-      session = new LiveNoteSession(
+      session = createLiveNoteSession(
         document,
         version,
         this.campaignId,
@@ -403,14 +439,17 @@ class LiveNoteSessionSource implements NoteSessionSource {
         this.memberId,
         this.user,
         () => {
-          const current = this.#sessions.get(resourceId)
-          if (current) this.#setState(resourceId, { status: 'ready', session: current })
+          if (this.#sessions.get(resourceId) === session) {
+            this.#setState(resourceId, { status: 'ready', session })
+          }
         },
         (result) => {
-          if (this.#sessions.get(resourceId)?.document !== document) return
+          if (this.#sessions.get(resourceId) !== session) return
           this.#sessions.delete(resourceId)
+          this.#awaitingEditable.delete(resourceId)
           this.#setState(resourceId, failedYjsSessionState(result))
         },
+        collaboration,
       )
     } catch (error) {
       document.destroy()
@@ -420,14 +459,18 @@ class LiveNoteSessionSource implements NoteSessionSource {
           ? { status: 'unavailable', reason: 'scope_unavailable' }
           : { status: 'integrity_error', issue: 'content_corrupt' },
       )
-      return
+      return null
     }
     this.#sessions.set(resourceId, session)
     this.#setState(resourceId, { status: 'ready', session })
+    return session
   }
 
   #clearSession(resourceId: ResourceId): void {
-    this.#sessions.get(resourceId)?.dispose()
+    const session = this.#sessions.get(resourceId)
+    this.#awaitingEditable.delete(resourceId)
+    this.#editableLoads.delete(resourceId)
+    session?.dispose()
     this.#sessions.delete(resourceId)
   }
 
@@ -476,14 +519,7 @@ export function createLiveNoteContentSource(
   user: CollaborationUser,
   backend: LiveNoteContentBackend,
   beginCreateUndo: () => ResourceUndoRecording,
-  readonlyProjection = false,
+  authority: LiveResourceContentAuthority,
 ) {
-  return new LiveNoteSessionSource(
-    campaignId,
-    memberId,
-    user,
-    backend,
-    beginCreateUndo,
-    readonlyProjection,
-  )
+  return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreateUndo, authority)
 }

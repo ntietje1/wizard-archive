@@ -4,15 +4,67 @@ import type { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { createLiveFileContentSource } from '../live-file-content-source'
+import { createLiveFileContentSource as createSource } from '../live-file-content-source'
+import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
+
+function createLiveFileContentSource(
+  campaign: Parameters<typeof createSource>[0],
+  backend: Parameters<typeof createSource>[1],
+  beginUndo: Parameters<typeof createSource>[2],
+) {
+  return createSource(
+    campaign,
+    backend,
+    beginUndo,
+    createLiveResourceContentAuthorityFixture().authority,
+  )
+}
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('LiveFileContentSource', () => {
+  it('rejects replacement before upload when the canonical resource permission is read only', async () => {
+    const resourceId = testDomainId('resource', 'readonly-file')
+    const upload = vi.fn()
+    const replace = vi.fn()
+    const fixture = createLiveResourceContentAuthorityFixture(false)
+    const source = createSource(
+      testDomainId('campaign', 'readonly-file-campaign'),
+      {
+        load: vi.fn(),
+        watch: vi.fn(() => () => undefined),
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        refresh: vi.fn(),
+        replace,
+        upload,
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+      fixture.authority,
+    )
+
+    await expect(
+      source.replace(
+        resourceId,
+        assertVersionStamp({
+          scheme: 'authoritative-revision-v1',
+          revision: 1,
+          digest: 'a'.repeat(64),
+        }),
+        { bytes: new Uint8Array([1]), fileName: 'readonly.txt' },
+      ),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    expect(upload).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
   it('keeps loading, initializing, ready, unavailable, and integrity states distinct', () => {
     const resourceId = testDomainId('resource', 'file-content')
     const campaignId = testDomainId('campaign', 'file-content-campaign')

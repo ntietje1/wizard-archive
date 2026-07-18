@@ -31,6 +31,7 @@ import {
 } from './live-resource-structure-gateway'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
+import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 
 type CreateFileArgs = FunctionArgs<typeof api.resources.actions.createFileResource>
 type CreateFileResult = FunctionReturnType<typeof api.resources.actions.createFileResource>
@@ -115,6 +116,7 @@ export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
   beginCreateUndo: () => ResourceUndoRecording,
+  authority: LiveResourceContentAuthority,
 ): FileContentSource {
   const content = new LiveFileContentStateSource(backend)
   const pending = new Map<ResourceId, PendingFileCreate>()
@@ -215,6 +217,9 @@ export function createLiveFileContentSource(
       }
     },
     replace: async (resourceId, expectedVersion, source) => {
+      if (!authority.canEdit(resourceId)) {
+        return { status: 'rejected', reason: 'unauthorized' }
+      }
       let sessionId: Id<'fileStorage'> | null = null
       try {
         sessionId = await backend.upload(source)

@@ -35,6 +35,8 @@ const sharedNoteTitle = `Block visibility ${Date.now()}`
 const accessNoteTitle = `Resource access ${Date.now()}`
 const visibleBlockText = `Visible passage ${Date.now()}`
 const hiddenBlockText = `Hidden passage ${Date.now()}`
+const accessSeedText = `Editable passage ${Date.now()}`
+const playerEditText = `Player edit ${Date.now()}`
 
 let campaignId: CampaignId
 let sharedNoteId: ResourceId
@@ -67,7 +69,13 @@ test.describe('canonical sharing and view-as', () => {
         content: [{ type: 'text', text: hiddenBlockText }],
       },
     ])
-    accessNoteId = await provisionNoteResource(campaignId, accessNoteTitle)
+    accessNoteId = await provisionNoteResource(campaignId, accessNoteTitle, [
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: accessSeedText }],
+      },
+    ])
 
     const invitation = await getCampaignInvitationRoute(campaignId)
     playerContext = await browser.newContext()
@@ -96,6 +104,9 @@ test.describe('canonical sharing and view-as', () => {
   })
 
   test('round-trips all-player and member resource permissions', async ({ page }) => {
+    const playerErrors: Array<Error> = []
+    const recordPlayerError = (error: Error) => playerErrors.push(error)
+    playerPage.on('pageerror', recordPlayerError)
     await openResource(page, accessNoteId)
     let dialog = await openResourceSharing(page)
     await setPermission(
@@ -120,23 +131,41 @@ test.describe('canonical sharing and view-as', () => {
     )
     await page.keyboard.press('Escape')
 
+    const accessShareButton = await blockShareButton(page, accessSeedText, accessNoteTitle)
+    await accessShareButton.click({ button: 'right' })
+    const blockDialog = page.getByRole('dialog', { name: /share (?:\d+ )?blocks?/i })
+    await blockDialog.getByRole('button', { name: 'Share with all players' }).click()
+    await expect(blockDialog).not.toBeVisible()
+
     await expectPlayerSidebarResource(accessNoteTitle, true)
     await navigatePlayerToCampaign(playerPage, accessNoteId)
     const playerSidebarResource = playerPage
       .getByRole('navigation', { name: 'Sidebar' })
       .getByRole('button', { name: accessNoteTitle, exact: true })
-    const playerEmptyContent = playerPage.getByText('No visible content', { exact: true })
-    await expect(playerEmptyContent).toBeVisible()
+    const playerEditor = playerPage.getByRole('textbox', {
+      name: `${accessNoteTitle} note editor`,
+    })
+    await expect(playerEditor).toBeVisible({ timeout: 10_000 })
+    await expect(playerEditor).toHaveAttribute('contenteditable', 'false')
+    await expect(playerEditor.getByText(accessSeedText, { exact: true })).toBeVisible()
 
     dialog = await openResourceSharing(page)
     await setPermission(
       page,
       dialog.getByRole('combobox', { name: 'All Players permission' }),
-      'None',
+      'Edit',
     )
     await page.keyboard.press('Escape')
-    await expect(playerSidebarResource).not.toBeVisible({ timeout: 10_000 })
-    await expect(playerEmptyContent).not.toBeVisible({ timeout: 10_000 })
+    await expect(playerEditor).toHaveAttribute('contenteditable', 'true', { timeout: 10_000 })
+    expect(playerErrors.map((error) => error.message)).toEqual([])
+    await playerEditor.getByText(accessSeedText, { exact: true }).click()
+    await playerPage.keyboard.press('End')
+    await playerPage.keyboard.type(` ${playerEditText}`)
+    await expect(playerEditor).toContainText(`${accessSeedText} ${playerEditText}`)
+    await playerEditor.blur()
+    await expect(
+      page.getByRole('textbox', { name: `${accessNoteTitle} note editor` }),
+    ).toContainText(`${accessSeedText} ${playerEditText}`, { timeout: 10_000 })
 
     dialog = await openResourceSharing(page)
     await setPermission(
@@ -145,8 +174,36 @@ test.describe('canonical sharing and view-as', () => {
       'View',
     )
     await page.keyboard.press('Escape')
+    await expect(playerEditor).toHaveAttribute('contenteditable', 'false', { timeout: 10_000 })
+    await expect(playerEditor).toContainText(`${accessSeedText} ${playerEditText}`)
+    expect(playerErrors.map((error) => error.message)).toEqual([])
+
+    dialog = await openResourceSharing(page)
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: 'All Players permission' }),
+      'Edit',
+    )
+    await page.keyboard.press('Escape')
+    await expect(playerEditor).toHaveAttribute('contenteditable', 'true', { timeout: 10_000 })
+    await expect(playerEditor).toContainText(`${accessSeedText} ${playerEditText}`)
+    await expect(
+      page.getByRole('textbox', { name: `${accessNoteTitle} note editor` }),
+    ).toContainText(`${accessSeedText} ${playerEditText}`, { timeout: 10_000 })
+    expect(playerErrors.map((error) => error.message)).toEqual([])
+
+    dialog = await openResourceSharing(page)
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: 'All Players permission' }),
+      'View',
+    )
+    await page.keyboard.press('Escape')
+    await expect(playerEditor).toHaveAttribute('contenteditable', 'false', { timeout: 10_000 })
+    await navigatePlayerToCampaign(playerPage, accessNoteId)
+    await expect(playerEditor).toContainText(`${accessSeedText} ${playerEditText}`)
     await expect(playerSidebarResource).toBeVisible({ timeout: 10_000 })
-    await expect(playerEmptyContent).toBeVisible({ timeout: 10_000 })
+    expect(playerErrors.map((error) => error.message)).toEqual([])
 
     dialog = await openResourceSharing(page)
     await setPermission(
@@ -156,6 +213,9 @@ test.describe('canonical sharing and view-as', () => {
     )
     await page.keyboard.press('Escape')
     await expect(playerSidebarResource).not.toBeVisible({ timeout: 10_000 })
+    await expect(playerEditor).not.toBeVisible({ timeout: 10_000 })
+    expect(playerErrors.map((error) => error.message)).toEqual([])
+    playerPage.off('pageerror', recordPlayerError)
   })
 
   test('keeps block visibility subordinate to note access and projects only visible blocks', async ({
@@ -263,8 +323,8 @@ async function openResourceSharing(page: Page) {
   return dialog
 }
 
-async function openBlockSharing(page: Page, blockText: string) {
-  const shareButton = await blockShareButton(page, blockText)
+async function openBlockSharing(page: Page, blockText: string, noteTitle = sharedNoteTitle) {
+  const shareButton = await blockShareButton(page, blockText, noteTitle)
   await shareButton.click()
   const dialog = page.getByRole('dialog', { name: /share (?:\d+ )?blocks?/i })
   await expect(dialog.getByText('All players', { exact: true })).toBeVisible()
@@ -272,8 +332,8 @@ async function openBlockSharing(page: Page, blockText: string) {
   return dialog
 }
 
-async function blockShareButton(page: Page, blockText: string) {
-  const editor = page.getByRole('textbox', { name: `${sharedNoteTitle} note editor` })
+async function blockShareButton(page: Page, blockText: string, noteTitle = sharedNoteTitle) {
+  const editor = page.getByRole('textbox', { name: `${noteTitle} note editor` })
   const block = editor
     .locator('[data-node-type="blockContainer"]')
     .filter({ hasText: blockText })

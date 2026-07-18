@@ -96,7 +96,7 @@ export function ResourceShell({
   const actions = createWorkspaceActions(runtime, report)
   const leftVisible = showResourcePanel && preferences.panels.left.visible
   const rightVisible = selected.state === 'known' && preferences.panels.right.visible
-  const canEdit =
+  const canEditStructure =
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
   const changeSelection = (action: WorkspaceSelectionAction) =>
     setSelection((current) => updateWorkspaceSelection(current, action))
@@ -127,7 +127,7 @@ export function ResourceShell({
       runUndoShortcut(command, event, actions, runtime.resources.undo.status === 'available')
       return
     }
-    if (!canEdit) return
+    if (!canEditStructure) return
     runResourceShortcut({
       actions,
       clipboard,
@@ -193,7 +193,7 @@ export function ResourceShell({
         >
           <ResourceSidebar
             actions={actions}
-            canEdit={canEdit}
+            canEdit={canEditStructure}
             bookmarks={bookmarks}
             view={sidebarView}
             runtime={runtime}
@@ -215,7 +215,7 @@ export function ResourceShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <SelectedResource
           actions={actions}
-          canEdit={canEdit}
+          canEditStructure={canEditStructure}
           knowledge={selected}
           noteHeadingNavigation={noteHeadingNavigation}
           leftSidebarAvailable={showResourcePanel}
@@ -262,7 +262,7 @@ export function ResourceShell({
       {runtime.search.status === 'available' && (
         <ResourceSearchDialog
           actions={actions}
-          canEdit={canEdit}
+          canEdit={canEditStructure}
           open={searchOpen}
           runtime={runtime}
           onOpenChange={setSearchOpen}
@@ -273,7 +273,7 @@ export function ResourceShell({
           actions={actions}
           bookmarksAvailable={runtime.resources.bookmarks.status === 'available'}
           campaignId={runtime.scope.campaignId}
-          canEdit={canEdit}
+          canEdit={canEditStructure}
           clipboard={clipboard}
           navigation={runtime.navigation}
           request={contextMenu.request}
@@ -428,7 +428,7 @@ function runResourceShortcut({
 
 function SelectedResource({
   actions,
-  canEdit,
+  canEditStructure,
   knowledge,
   noteHeadingNavigation,
   leftSidebarAvailable,
@@ -448,7 +448,7 @@ function SelectedResource({
   sort,
 }: {
   actions: WorkspaceActions
-  canEdit: boolean
+  canEditStructure: boolean
   knowledge: ResourceKnowledge<AuthorizedResourceSummary>
   noteHeadingNavigation: NoteHeadingNavigationRef
   leftSidebarAvailable: boolean
@@ -497,11 +497,16 @@ function SelectedResource({
     )
   }
   const resource = knowledge.value
+  const canEditContent =
+    mode === 'editor' &&
+    runtime.scope.projection !== 'view_as_player' &&
+    resource.permission === 'edit'
+  const canEditViewport = resource.kind === 'folder' ? canEditStructure : canEditContent
   return (
     <>
       <ResourceTopbar
         actions={actions}
-        canEdit={canEdit}
+        canEdit={canEditStructure}
         leftSidebarAvailable={leftSidebarAvailable}
         leftSidebarVisible={leftSidebarVisible}
         mode={mode}
@@ -512,16 +517,14 @@ function SelectedResource({
         onOpenLeftSidebar={onOpenLeftSidebar}
         onOpenRightSidebar={onOpenRightSidebar}
       />
-      {!canEdit && (
+      {!canEditViewport && (
         <div className="shrink-0 border-b border-border bg-muted/50 px-3 py-1 text-center text-xs text-muted-foreground">
-          {runtime.resources.structure.status === 'available'
-            ? 'Viewer mode — editing is disabled'
-            : 'Read only'}
+          {mode === 'viewer' ? 'Viewer mode — editing is disabled' : 'Read only'}
         </div>
       )}
       <ResourceViewport
         actions={actions}
-        canEdit={canEdit}
+        canEdit={canEditViewport}
         noteHeadingNavigation={noteHeadingNavigation}
         resource={resource}
         runtime={runtime}

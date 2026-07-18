@@ -1,4 +1,5 @@
 import type { NoteSessionState } from '../resources/content-session-contract'
+import { useEffect } from 'react'
 import { NoteEditor } from './note-editor'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
 import type { NoteHeadingNavigationRef } from './note-heading-navigation'
@@ -29,9 +30,13 @@ export function NoteSessionEditor({
   scroll: NoteScrollBehavior
   state: RenderableNoteSessionState
 }) {
+  const session = state.status === 'ready' ? state.session : null
+  useEffect(() => session?.retain(), [session])
+
   if (state.status === 'initializing') {
     return canEdit ? (
       <NoteEditor
+        key={state.local.guid}
         document={state.local}
         activation={activation}
         blockAccess={blockAccess}
@@ -44,6 +49,7 @@ export function NoteSessionEditor({
       />
     ) : (
       <NoteEditor
+        key={state.local.guid}
         document={state.local}
         formattingToolbar={formattingToolbar}
         headingNavigationRef={headingNavigationRef}
@@ -55,6 +61,7 @@ export function NoteSessionEditor({
   }
   return canEdit ? (
     <NoteEditor
+      key={state.session.document.guid}
       collaboration={state.session.collaboration}
       activation={activation}
       blockAccess={blockAccess}
@@ -69,6 +76,7 @@ export function NoteSessionEditor({
     />
   ) : (
     <NoteEditor
+      key={state.session.document.guid}
       collaboration={state.session.collaboration}
       document={state.session.document}
       formattingToolbar={formattingToolbar}

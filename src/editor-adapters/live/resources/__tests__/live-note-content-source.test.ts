@@ -18,7 +18,26 @@ import {
   decodeNoteYjsUpdatesToBlocks,
   noteBlocksToYDoc,
 } from '@wizard-archive/editor/notes/document-yjs'
-import { createLiveNoteContentSource } from '../live-note-content-source'
+import { createLiveNoteContentSource as createSource } from '../live-note-content-source'
+import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
+
+function createLiveNoteContentSource(
+  campaign: Parameters<typeof createSource>[0],
+  member: Parameters<typeof createSource>[1],
+  collaborationUser: Parameters<typeof createSource>[2],
+  provider: Parameters<typeof createSource>[3],
+  beginUndo: Parameters<typeof createSource>[4],
+  readonly = false,
+) {
+  return createSource(
+    campaign,
+    member,
+    collaborationUser,
+    provider,
+    beginUndo,
+    createLiveResourceContentAuthorityFixture(!readonly).authority,
+  )
+}
 
 type LiveNoteContentBackend = Parameters<typeof createLiveNoteContentSource>[3]
 
@@ -77,7 +96,7 @@ function arrayBuffer(update: Uint8Array): ArrayBuffer {
 }
 
 function backend() {
-  const listeners = new Map<ResourceId, (snapshot: never) => void>()
+  const listeners = new Map<ResourceId, Set<(snapshot: never) => void>>()
   const updates = new Map<ResourceId, Array<Uint8Array>>()
   const versions = new Map<ResourceId, VersionStamp>()
   const save: LiveNoteContentBackend['save'] = async ({ resourceId, update }) => {
@@ -115,8 +134,13 @@ function backend() {
     refresh: vi.fn(() => Promise.resolve()),
     save: vi.fn(save),
     watch: vi.fn((resourceId: ResourceId, apply: (snapshot: never) => void) => {
-      listeners.set(resourceId, apply)
-      return () => listeners.delete(resourceId)
+      const resourceListeners = listeners.get(resourceId) ?? new Set()
+      resourceListeners.add(apply)
+      listeners.set(resourceId, resourceListeners)
+      return () => {
+        resourceListeners.delete(apply)
+        if (resourceListeners.size === 0) listeners.delete(resourceId)
+      }
     }),
     watchPresence: vi.fn(() => () => {}),
     emit(resourceId: ResourceId, snapshot: unknown) {
@@ -129,7 +153,7 @@ function backend() {
         updates.set(resourceId, [new Uint8Array(candidate.update)])
         versions.set(resourceId, candidate.version)
       }
-      listeners.get(resourceId)?.(snapshot as never)
+      for (const listener of listeners.get(resourceId) ?? []) listener(snapshot as never)
     },
   }
 }
@@ -214,6 +238,125 @@ describe('LiveNoteContentSource', () => {
     expect(provider.watchPresence).not.toHaveBeenCalled()
     document.destroy()
     source.dispose()
+  })
+
+  it('switches player sessions with authoritative edit permission and drains before readonly', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const fixture = createLiveResourceContentAuthorityFixture()
+    const source = createSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+      fixture.authority,
+    )
+    const document = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    const update = arrayBuffer(Y.encodeStateAsUpdate(document))
+    const version = await versionFor(update)
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update, version })
+    const editable = source.get(resourceId)
+    if (editable.status !== 'ready') throw new TypeError('Expected editable player note')
+
+    editable.session.document.getMap('player-edit').set('persisted', true)
+    fixture.setCanEdit(false)
+    const readonly = source.get(resourceId)
+    if (readonly.status !== 'ready') throw new TypeError('Expected readonly player note')
+
+    expect(readonly.session).not.toBe(editable.session)
+    expect(readonly.session.document).toBe(editable.session.document)
+    expect(readonly.session.collaboration).toBe(editable.session.collaboration)
+    await vi.waitFor(() => expect(provider.save).toHaveBeenCalledOnce())
+    await expect(readonly.session.flush()).resolves.toMatchObject({ status: 'completed' })
+    expect(provider.save).toHaveBeenCalledOnce()
+
+    const editableProjection = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    const editableUpdate = arrayBuffer(Y.encodeStateAsUpdate(editableProjection))
+    provider.load.mockResolvedValueOnce({
+      status: 'ready',
+      update: editableUpdate,
+      version,
+    })
+    fixture.setCanEdit(true)
+    expect(source.get(resourceId)).toEqual({ status: 'loading' })
+    await vi.waitFor(() => expect(source.get(resourceId).status).toBe('ready'))
+    const restored = source.get(resourceId)
+    if (restored.status !== 'ready') throw new TypeError('Expected restored editable player note')
+    expect(restored.session).not.toBe(readonly.session)
+    expect(restored.session.document).not.toBe(readonly.session.document)
+    expect(restored.session.collaboration).not.toBe(readonly.session.collaboration)
+    restored.session.document.getMap('player-edit').set('restored', true)
+    await restored.session.flush()
+    expect(provider.save).toHaveBeenCalledTimes(2)
+    editableProjection.destroy()
+    document.destroy()
+    source.dispose()
+  })
+
+  it('converges concurrent DM and editable-player note updates through the same merge path', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const playerMemberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const provider = backend()
+    const dm = createSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+      createLiveResourceContentAuthorityFixture().authority,
+    )
+    const player = createSource(
+      campaignId,
+      playerMemberId,
+      { name: 'Player', color: '#5e6ad2' },
+      provider,
+      historyRecording,
+      createLiveResourceContentAuthorityFixture().authority,
+    )
+    const initialDocument = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    const initialUpdate = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+    const initialVersion = await versionFor(initialUpdate)
+    dm.subscribe(resourceId, () => {})
+    player.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: initialUpdate,
+      version: initialVersion,
+    })
+    const dmReady = dm.get(resourceId)
+    const playerReady = player.get(resourceId)
+    if (dmReady.status !== 'ready' || playerReady.status !== 'ready') {
+      throw new TypeError('Expected both collaborative note sessions')
+    }
+
+    dmReady.session.document.getMap('convergence').set('dm', true)
+    playerReady.session.document.getMap('convergence').set('player', true)
+    await dmReady.session.flush()
+    const playerSave = await playerReady.session.flush()
+    if (playerSave.status !== 'completed') throw new TypeError('Expected player save')
+    const canonicalUpdate = Y.mergeUpdates([
+      new Uint8Array(initialUpdate),
+      ...provider.save.mock.calls.map(([args]) => new Uint8Array(args.update)),
+    ])
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: arrayBuffer(canonicalUpdate),
+      version: playerSave.version,
+    })
+
+    expect(dmReady.session.document.getMap('convergence').toJSON()).toEqual({
+      dm: true,
+      player: true,
+    })
+    expect(playerReady.session.document.getMap('convergence').toJSON()).toEqual({
+      dm: true,
+      player: true,
+    })
+    initialDocument.destroy()
+    dm.dispose()
+    player.dispose()
   })
 
   it('loads an unopened note once for Markdown export without starting a live session', async () => {

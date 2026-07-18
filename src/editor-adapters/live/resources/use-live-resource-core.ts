@@ -26,6 +26,7 @@ import { useCommittedRuntime } from '../../committed-runtime'
 import { createLiveResourceAccessGateway } from './live-resource-access-gateway'
 import { createLiveNoteBlockAccessGateway } from './live-note-block-access-gateway'
 import { executeResourceWrite, resourceQueryScope } from './resource-query-scope'
+import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -95,6 +96,14 @@ function createScopedLiveResourceRuntime(
     write(() => convex.mutation(api.resources.mutations.compensateResourceOperation, args)),
   )
   const optimistic = createOptimisticResourceStructureRuntime(base.index, authoritativeStructure)
+  const contentAuthority: LiveResourceContentAuthority = {
+    canEdit: (resourceId) => {
+      if (currentScope.projection === 'view_as_player') return false
+      const resource = optimistic.index.getSnapshot().lookup(resourceId)
+      return resource.state === 'known' && resource.value.permission === 'edit'
+    },
+    subscribe: (listener) => optimistic.index.subscribe(listener),
+  }
   const undo = createResourceUndoHistory(
     currentScope.campaignId,
     optimistic.structure,
@@ -163,7 +172,7 @@ function createScopedLiveResourceRuntime(
       },
     },
     undo.beginRecording,
-    currentScope.projection !== 'dm',
+    contentAuthority,
   )
   const discardUpload = async (sessionId: Id<'fileStorage'>) => {
     await write(() => convex.mutation(api.storage.mutations.discardUpload, { sessionId }))
@@ -215,6 +224,7 @@ function createScopedLiveResourceRuntime(
       upload: uploadFile,
     },
     undo.beginRecording,
+    contentAuthority,
   )
   const maps = createLiveMapSessionSource(
     currentScope.campaignId,
@@ -247,6 +257,7 @@ function createScopedLiveResourceRuntime(
       upload: uploadFile,
     },
     undo.beginRecording,
+    contentAuthority,
   )
   const canvases = createLiveCanvasSessionSource(
     currentScope.campaignId,
@@ -272,7 +283,7 @@ function createScopedLiveResourceRuntime(
       refresh,
     },
     undo.beginRecording,
-    currentScope.projection !== 'dm',
+    contentAuthority,
   )
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
   const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, base.applyProjection, {

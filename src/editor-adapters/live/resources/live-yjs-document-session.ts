@@ -17,7 +17,7 @@ type RetryableYjsUpdate = Readonly<{
   reason: 'dependency_pending'
   stateVector: ArrayBuffer
 }>
-export type YjsVersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
+type YjsVersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
 export type LiveYjsDocumentSessionOptions = Readonly<{
   document: Y.Doc
@@ -48,6 +48,8 @@ class LiveYjsDocumentSession {
   readonly #disposeCompanion: NonNullable<LiveYjsDocumentSessionOptions['disposeCompanion']>
   #version: VersionStamp
   #drainPromise: Promise<ContentSessionSaveResult> | null = null
+  #destroyDocument = true
+  #leases = 0
   #lifecycle: 'closing' | 'destroyed' | 'open' = 'open'
   #pendingUpdate: Uint8Array | null = null
   #terminal: RejectedYjsSave | null = null
@@ -88,6 +90,10 @@ class LiveYjsDocumentSession {
       this.#fail({ status: 'rejected', reason: 'content_corrupt' })
       return 'conflict'
     }
+    if (this.#lifecycle === 'closing') {
+      this.#version = version
+      return 'applied'
+    }
     const canonicalization = this.document.transact(() => {
       Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_YJS_UPDATE)
       return this.#canonicalizeDocument()
@@ -115,6 +121,25 @@ class LiveYjsDocumentSession {
     if (this.#lifecycle !== 'open') return
     this.#close()
     void this.flush().finally(() => this.#destroy())
+  }
+
+  retain(): () => void {
+    if (this.#lifecycle === 'destroyed') throw new TypeError('Yjs session is destroyed')
+    this.#leases += 1
+    let retained = true
+    return () => {
+      if (!retained) return
+      retained = false
+      this.#leases -= 1
+      if (this.#lifecycle === 'closing' && !this.#drainPromise) this.#destroy()
+    }
+  }
+
+  detachDocument(): Y.Doc {
+    if (this.#lifecycle !== 'open') throw new TypeError('Yjs session is not open')
+    this.#destroyDocument = false
+    this.dispose()
+    return this.document
   }
 
   readonly #onUpdate = (update: Uint8Array, origin: unknown) => {
@@ -228,9 +253,11 @@ class LiveYjsDocumentSession {
   }
 
   #destroy(): void {
-    if (this.#lifecycle === 'destroyed') return
+    if (this.#lifecycle === 'destroyed' || this.#leases > 0) return
     this.#lifecycle = 'destroyed'
-    void this.#disposeCompanion().finally(() => this.document.destroy())
+    void this.#disposeCompanion().finally(() => {
+      if (this.#destroyDocument) this.document.destroy()
+    })
   }
 }
 

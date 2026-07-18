@@ -45,6 +45,7 @@ export function createInMemoryYjsSession(
       }
       return result
     },
+    retain: () => () => undefined,
     dispose() {
       if (disposed) return
       document.off('update', onUpdate)

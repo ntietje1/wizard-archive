@@ -36,6 +36,7 @@ import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import { createLiveFixedContentResource } from './live-fixed-content-create'
 import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
+import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 
 type MapSnapshot = FunctionReturnType<typeof api.resources.queries.loadMapContent>
 type RawMapImage =
@@ -81,6 +82,7 @@ export function createLiveMapSessionSource(
   campaignId: CampaignId,
   backend: LiveMapBackend,
   beginCreateUndo: () => ResourceUndoRecording,
+  authority: LiveResourceContentAuthority,
 ): MapSessionSource {
   const sessions = new Map<ResourceId, LiveMapSession>()
   let store: MapStore
@@ -97,7 +99,7 @@ export function createLiveMapSessionSource(
       const version = assertVersionStamp(snapshot.version)
       const session =
         sessions.get(resourceId) ??
-        new LiveMapSession(campaignId, resourceId, content, version, backend, () => {
+        new LiveMapSession(campaignId, resourceId, content, version, backend, authority, () => {
           const current = sessions.get(resourceId)
           if (current) store.set(resourceId, { status: 'ready', session: current })
         })
@@ -184,6 +186,7 @@ class LiveMapSession implements MapSession {
     private currentContent: MapResourceContent,
     private currentVersion: ReturnType<typeof assertVersionStamp>,
     private readonly backend: LiveMapBackend,
+    private readonly authority: LiveResourceContentAuthority,
     private readonly publish: () => void,
   ) {}
 
@@ -210,6 +213,9 @@ class LiveMapSession implements MapSession {
 
   async execute(command: MapContentCommand): Promise<MapContentMutationResult> {
     if (this.#disposed) return { status: 'rejected', reason: 'resource_missing' }
+    if (!this.authority.canEdit(this.resourceId)) {
+      return { status: 'rejected', reason: 'unauthorized' }
+    }
     const args = {
       campaignId: this.campaignId,
       resourceId: this.resourceId,
@@ -243,6 +249,9 @@ class LiveMapSession implements MapSession {
     source: FileResourceSource,
   ): Promise<MapContentMutationResult> {
     if (this.#disposed) return { status: 'rejected', reason: 'resource_missing' }
+    if (!this.authority.canEdit(this.resourceId)) {
+      return { status: 'rejected', reason: 'unauthorized' }
+    }
     let sessionId: Id<'fileStorage'> | null = null
     try {
       sessionId = await this.backend.upload(source)

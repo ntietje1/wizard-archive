@@ -1,4 +1,7 @@
-import type { CollaborationUser } from '@wizard-archive/editor/resources/content-session-contract'
+import type {
+  CollaborationUser,
+  ContentCollaboration,
+} from '@wizard-archive/editor/resources/content-session-contract'
 import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { createLiveResourcePresence } from './live-resource-presence'
 import type { LiveResourcePresenceBackend } from './live-resource-presence'
@@ -14,10 +17,11 @@ type LiveCollaborativeYjsSessionOptions = Omit<
     memberId: CampaignMemberId
     resourceId: ResourceId
     user: CollaborationUser
+    collaboration?: ContentCollaboration
   }>
 
 export function createLiveCollaborativeYjsSession(options: LiveCollaborativeYjsSessionOptions) {
-  const { presenceBackend, memberId, resourceId, user, ...sessionOptions } = options
+  const { presenceBackend, memberId, resourceId, user, collaboration, ...sessionOptions } = options
   const presence = createLiveResourcePresence(
     sessionOptions.document,
     resourceId,
@@ -25,6 +29,7 @@ export function createLiveCollaborativeYjsSession(options: LiveCollaborativeYjsS
     user,
     presenceBackend,
     sessionOptions.changed,
+    collaboration,
   )
   try {
     const session = createLiveYjsDocumentSession({

@@ -2,16 +2,92 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
+import {
+  assertVersionStamp,
+  sha256Digest,
+} from '@wizard-archive/editor/resources/component-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { testDomainId } from '../../../../../shared/test/domain-id'
-import { createLiveMapSessionSource } from '../live-map-session-source'
+import { createLiveMapSessionSource as createSource } from '../live-map-session-source'
+import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
+
+function createLiveMapSessionSource(
+  campaign: Parameters<typeof createSource>[0],
+  backend: Parameters<typeof createSource>[1],
+  beginUndo: Parameters<typeof createSource>[2],
+) {
+  return createSource(
+    campaign,
+    backend,
+    beginUndo,
+    createLiveResourceContentAuthorityFixture().authority,
+  )
+}
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadMapContent>
 type ImageDownload = FunctionReturnType<typeof api.resources.queries.loadMapImage>
 
 describe('LiveMapSessionSource', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('rejects map mutations before transport when canonical resource permission is read only', async () => {
+    const resourceId = testDomainId('resource', 'readonly-map')
+    const campaignId = testDomainId('campaign', 'readonly-map-campaign')
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const execute = vi.fn()
+    const upload = vi.fn()
+    const replace = vi.fn()
+    const fixture = createLiveResourceContentAuthorityFixture(false)
+    const source = createSource(
+      campaignId,
+      {
+        load: vi.fn(),
+        watch: (_resourceId, update) => {
+          apply = update
+          return () => undefined
+        },
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        execute,
+        refresh: vi.fn(),
+        replace,
+        upload,
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+      fixture.authority,
+    )
+    source.subscribe(resourceId, () => undefined)
+    const version = assertVersionStamp({
+      scheme: 'authoritative-revision-v1' as const,
+      revision: 1,
+      digest: 'a'.repeat(64),
+    })
+    apply({
+      status: 'ready',
+      content: { image: { status: 'unattached' }, layers: [], pins: [] },
+      version,
+    })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected readonly map')
+
+    await expect(
+      ready.session.execute({
+        type: 'removePin',
+        pinId: testDomainId('mapPin', 'readonly-map-pin'),
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    await expect(
+      ready.session.replaceImage(null, version, {
+        bytes: new Uint8Array([1]),
+        fileName: 'readonly.png',
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    expect(execute).not.toHaveBeenCalled()
+    expect(upload).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+    source.dispose()
+  })
 
   it('loads an unopened map once for native export without a subscription', async () => {
     const resourceId = testDomainId('resource', 'map-export')
