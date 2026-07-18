@@ -191,6 +191,11 @@ export const noteBlockAccessPresentationValidator = v.object({
   ),
 })
 
+export const noteBlockAccessPresentationPageValidator = v.object({
+  presentation: v.nullable(noteBlockAccessPresentationValidator),
+  cursor: v.nullable(v.string()),
+})
+
 const resourceAccessPolicyValidator = v.union(
   v.object({
     resourceId: resourceIdValidator,

@@ -1,3 +1,4 @@
+import { DOMAIN_ID_KIND, assertDomainId } from './domain-id'
 import type { CampaignMemberId, NoteBlockId, ResourceId } from './domain-id'
 import { RESOURCE_PERMISSION, resourcePermissionAllows } from './resource-access-policy'
 import type { ResourcePermission } from './resource-access-policy'
@@ -32,6 +33,7 @@ export type NoteBlockAccessPresentation = Readonly<{
   noteId: ResourceId
   blocks: ReadonlyArray<NoteBlockAccessPolicy>
   participants: ReadonlyArray<NoteBlockAccessParticipant>
+  participantsComplete: boolean
 }>
 
 export type AggregateNoteBlockVisibility = NoteBlockVisibility | 'mixed'
@@ -54,6 +56,19 @@ export type NoteBlockSelectionAccess = Readonly<{
 }>
 
 export const MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS = 100
+
+export function normalizeNoteBlockAccessSelection(
+  blockIds: ReadonlyArray<NoteBlockId>,
+): ReadonlyArray<NoteBlockId> {
+  const normalized = Array.from(
+    new Set(blockIds.map((blockId) => assertDomainId(DOMAIN_ID_KIND.noteBlock, blockId))),
+  ).sort()
+  if (normalized.length === 0) throw new TypeError('A note block selection cannot be empty')
+  if (normalized.length > MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS) {
+    throw new TypeError('Note block access selection is too large')
+  }
+  return normalized
+}
 
 export function noteBlockIsVisible(
   notePermission: ResourcePermission,

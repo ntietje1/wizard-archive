@@ -113,8 +113,6 @@ describe('createLiveResourceAccessGateway', () => {
     expect(gateway.getPresentation(resourceId)).toBe(unknown)
     const unsubscribeFirst = gateway.subscribe(resourceId, vi.fn())
     const unsubscribeSecond = gateway.subscribe(resourceId, vi.fn())
-    gateway.loadPresentation(resourceId)
-    gateway.loadPresentation(resourceId)
     apply?.({
       cursor: null,
       presentation: {
@@ -141,6 +139,35 @@ describe('createLiveResourceAccessGateway', () => {
     expect(gateway.getPresentation(resourceId)).toEqual({ state: 'unknown' })
     gateway.dispose()
     expect(dispose).toHaveBeenCalledOnce()
+  })
+
+  it('caches a synchronous initial projection without notifying during subscription', () => {
+    let publish:
+      | ((value: { presentation: PagePresentation | null; cursor: string | null }) => void)
+      | undefined
+    const watch = vi.fn((_resourceId, _cursor, apply) => {
+      publish = apply
+      apply({ cursor: null, presentation: presentation([memberId]) })
+      return vi.fn()
+    })
+    const gateway = createLiveResourceAccessGateway(
+      campaignId,
+      resourceIndex('edit'),
+      vi.fn(),
+      watch,
+    )
+    const listener = vi.fn()
+
+    const unsubscribe = gateway.subscribe(resourceId, listener)
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(gateway.getPresentation(resourceId)).toMatchObject({
+      state: 'known',
+      value: { participants: [{ id: memberId }] },
+    })
+    publish?.({ cursor: null, presentation: presentation([]) })
+    expect(listener).toHaveBeenCalledOnce()
+    unsubscribe()
   })
 
   it('assembles live participant pages and releases the entire page chain', () => {

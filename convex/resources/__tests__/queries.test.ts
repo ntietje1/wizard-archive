@@ -661,23 +661,34 @@ describe('authorized resource projection', () => {
     expect(blocks.map((block) => block.id)).toEqual([parentId])
     expect((blocks[0]?.children ?? []).map((block) => block.id)).toEqual([childId])
 
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadNoteBlockAccess, {
-        campaignId: campaignUuid,
-        noteId,
-      }),
-    ).resolves.toMatchObject({
+    const blockAccess = await asDm(campaign).query(api.resources.queries.loadNoteBlockAccess, {
+      campaignId: campaignUuid,
       noteId,
-      blocks: [
-        {
-          blockId: parentId,
-          audienceVisibility: 'hidden',
-          memberAccess: [{ memberId: campaign.player.memberDomainId, visibility: 'visible' }],
-        },
-        { blockId: childId, audienceVisibility: 'visible' },
-        { blockId: siblingId, audienceVisibility: 'hidden' },
-      ],
+      blockIds: [parentId, childId, siblingId],
+      cursor: null,
+    })
+    expect(blockAccess.cursor).toBeNull()
+    expect(blockAccess.presentation).toMatchObject({
+      noteId,
       participants: [{ id: campaign.player.memberDomainId, notePermission: 'view' }],
+    })
+    const policies = new Map(
+      blockAccess.presentation?.blocks.map((policy) => [policy.blockId, policy]),
+    )
+    expect(policies.get(parentId)).toEqual({
+      blockId: parentId,
+      audienceVisibility: 'hidden',
+      memberAccess: [{ memberId: campaign.player.memberDomainId, visibility: 'visible' }],
+    })
+    expect(policies.get(childId)).toEqual({
+      blockId: childId,
+      audienceVisibility: 'visible',
+      memberAccess: [],
+    })
+    expect(policies.get(siblingId)).toEqual({
+      blockId: siblingId,
+      audienceVisibility: 'hidden',
+      memberAccess: [],
     })
 
     await executeAccess(campaign, campaignUuid, {
@@ -698,6 +709,53 @@ describe('authorized resource projection', () => {
       ),
     ).toEqual([parentId, siblingId])
   })
+
+  it('pages players for only the requested note block selection without gaps or duplicates', async () => {
+    const campaign = await setupMultiPlayerContext(t, 9)
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const selectedBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const otherBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaign.campaignDomainId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: noteId,
+        kind: 'note',
+        parentId: null,
+        title: 'Paged block access',
+        icon: null,
+        color: null,
+      },
+      update: makeYjsUpdateWithBlocks([
+        { id: selectedBlockId, type: 'paragraph' },
+        { id: otherBlockId, type: 'paragraph' },
+      ]),
+    })
+
+    const first = await asDm(campaign).query(api.resources.queries.loadNoteBlockAccess, {
+      campaignId: campaign.campaignDomainId,
+      noteId,
+      blockIds: [selectedBlockId, selectedBlockId],
+      cursor: null,
+    })
+    expect(first.presentation?.blocks.map((block) => block.blockId)).toEqual([selectedBlockId])
+    expect(first.presentation?.participants).toHaveLength(8)
+    expect(first.cursor).not.toBeNull()
+    const second = await asDm(campaign).query(api.resources.queries.loadNoteBlockAccess, {
+      campaignId: campaign.campaignDomainId,
+      noteId,
+      blockIds: [selectedBlockId],
+      cursor: first.cursor,
+    })
+    expect(second.presentation?.participants).toHaveLength(1)
+    expect(second.cursor).toBeNull()
+    const participantIds = [
+      ...(first.presentation?.participants ?? []),
+      ...(second.presentation?.participants ?? []),
+    ].map((participant) => participant.id)
+    expect(new Set(participantIds).size).toBe(9)
+  }, 20_000)
 
   it('loads file, map, and canvas content through their owning queries', async () => {
     const campaign = await setupCampaignContext(t)

@@ -4,7 +4,13 @@ import type {
   MapSessionSource,
   NoteSessionSource,
 } from './content-session-contract'
-import type { AssetId, CampaignMemberId, HistoryEntryId, ResourceId } from './domain-id'
+import type {
+  AssetId,
+  CampaignMemberId,
+  HistoryEntryId,
+  NoteBlockId,
+  ResourceId,
+} from './domain-id'
 import type {
   ResourceAccessCommandGateway,
   ResourceBookmarkCommandGateway,
@@ -34,15 +40,21 @@ export type ResourceCapability<T> =
 export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
   get(resourceId: ResourceId): ResourceKnowledge<ResourcePermission>
   getPresentation(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
-  loadPresentation(resourceId: ResourceId): void
   loadMorePresentation(resourceId: ResourceId): void
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
 export interface NoteBlockAccessGateway extends NoteBlockAccessCommandGateway {
-  getPresentation(noteId: ResourceId): ResourceKnowledge<NoteBlockAccessPresentation>
-  loadPresentation(noteId: ResourceId): void
-  subscribe(noteId: ResourceId, listener: () => void): () => void
+  getPresentation(
+    noteId: ResourceId,
+    blockIds: ReadonlyArray<NoteBlockId>,
+  ): ResourceKnowledge<NoteBlockAccessPresentation>
+  loadMorePresentation(noteId: ResourceId, blockIds: ReadonlyArray<NoteBlockId>): void
+  subscribe(
+    noteId: ResourceId,
+    blockIds: ReadonlyArray<NoteBlockId>,
+    listener: () => void,
+  ): () => void
 }
 
 export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway {

@@ -53,62 +53,76 @@ describe('createLiveNoteBlockAccessGateway', () => {
   it('owns one live presentation subscription and disposes it', () => {
     const dispose = vi.fn()
     let publish:
-      | ((
-          value: {
-            noteId: string
-            blocks: Array<{
-              blockId: typeof blockId
-              audienceVisibility: 'hidden' | 'visible'
-              memberAccess: Array<{
-                memberId: typeof memberId
-                visibility: 'hidden' | 'visible'
-              }>
-            }>
-            participants: Array<{
-              id: typeof memberId
-              displayName: string
-              username: string
-              imageUrl: string | null
-              notePermission: 'none' | 'view' | 'edit'
-            }>
-          } | null,
-        ) => void)
+      | ((value: {
+          presentation: ReturnType<typeof pagePresentation> | null
+          cursor: string | null
+        }) => void)
       | undefined
-    const watch = vi.fn((_noteId, apply) => {
+    const watch = vi.fn((_noteId, _blockIds, _cursor, apply) => {
       publish = apply
       return dispose
     })
     const gateway = createLiveNoteBlockAccessGateway(campaignId, vi.fn(), watch)
     const listener = vi.fn()
-    const unsubscribe = gateway.subscribe(noteId, listener)
+    const unsubscribe = gateway.subscribe(noteId, [blockId], listener)
 
-    gateway.loadPresentation(noteId)
-    gateway.loadPresentation(noteId)
     publish?.({
-      noteId,
-      blocks: [{ blockId, audienceVisibility: 'hidden', memberAccess: [] }],
-      participants: [
-        {
-          id: memberId,
-          displayName: 'Player',
-          username: 'player',
-          imageUrl: null,
-          notePermission: 'view',
-        },
-      ],
+      cursor: null,
+      presentation: pagePresentation(memberId),
     })
 
     expect(watch).toHaveBeenCalledTimes(1)
     expect(listener).toHaveBeenCalledOnce()
-    expect(gateway.getPresentation(noteId)).toMatchObject({
+    expect(gateway.getPresentation(noteId, [blockId])).toMatchObject({
       state: 'known',
-      value: { noteId, blocks: [{ blockId }] },
+      value: { noteId, blocks: [{ blockId }], participantsComplete: true },
     })
     unsubscribe()
     expect(dispose).toHaveBeenCalledOnce()
-    expect(gateway.getPresentation(noteId)).toEqual({ state: 'unknown' })
+    expect(gateway.getPresentation(noteId, [blockId])).toEqual({ state: 'unknown' })
     gateway.dispose()
     expect(dispose).toHaveBeenCalledOnce()
+  })
+
+  it('merges participant pages for one normalized block selection', () => {
+    const publishes: Array<
+      (value: {
+        presentation: ReturnType<typeof pagePresentation> | null
+        cursor: string | null
+      }) => void
+    > = []
+    const disposes = [vi.fn(), vi.fn()]
+    const watch = vi.fn((_noteId, _blockIds, _cursor, apply) => {
+      const index = publishes.push(apply) - 1
+      return disposes[index]!
+    })
+    const gateway = createLiveNoteBlockAccessGateway(campaignId, vi.fn(), watch)
+    const unsubscribe = gateway.subscribe(noteId, [blockId, blockId], vi.fn())
+    publishes[0]!({ presentation: pagePresentation(memberId), cursor: 'next' })
+    gateway.loadMorePresentation(noteId, [blockId])
+    const secondMemberId = testDomainId('campaignMember', 'live-block-access-second')
+    publishes[1]!({ presentation: pagePresentation(secondMemberId), cursor: null })
+
+    expect(watch.mock.calls.map((call) => call.slice(0, 3))).toEqual([
+      [noteId, [blockId], null],
+      [noteId, [blockId], 'next'],
+    ])
+    expect(gateway.getPresentation(noteId, [blockId])).toMatchObject({
+      state: 'known',
+      value: {
+        participants: [{ id: memberId }, { id: secondMemberId }],
+        blocks: [
+          {
+            blockId,
+            memberAccess: [{ memberId }, { memberId: secondMemberId }],
+          },
+        ],
+        participantsComplete: true,
+      },
+    })
+    unsubscribe()
+    expect(disposes[0]).toHaveBeenCalledOnce()
+    expect(disposes[1]).toHaveBeenCalledOnce()
   })
 
   it('rejects mutation when the capability is not authoritative', async () => {
@@ -130,3 +144,25 @@ describe('createLiveNoteBlockAccessGateway', () => {
     })
   })
 })
+
+function pagePresentation(participantId: typeof memberId) {
+  return {
+    noteId,
+    blocks: [
+      {
+        blockId,
+        audienceVisibility: 'hidden' as const,
+        memberAccess: [{ memberId: participantId, visibility: 'visible' as const }],
+      },
+    ],
+    participants: [
+      {
+        id: participantId,
+        displayName: 'Player',
+        username: 'player',
+        imageUrl: null,
+        notePermission: 'view' as const,
+      },
+    ],
+  }
+}

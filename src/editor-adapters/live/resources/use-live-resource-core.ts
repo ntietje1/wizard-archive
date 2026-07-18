@@ -331,10 +331,12 @@ function createScopedLiveResourceRuntime(
           write(() => convex.mutation(api.resources.mutations.executeNoteBlockAccessCommand, args))
       : null,
     currentScope.projection === 'dm'
-      ? (noteId, apply) => {
+      ? (noteId, blockIds, cursor, apply) => {
           const watch = convex.watchQuery(api.resources.queries.loadNoteBlockAccess, {
             campaignId: currentScope.campaignId,
             noteId,
+            blockIds: [...blockIds],
+            cursor,
           })
           return subscribeToWatch(watch, apply)
         }

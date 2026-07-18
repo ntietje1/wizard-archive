@@ -28,7 +28,7 @@ export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
   const presentations = new Map<TId, ResourceKnowledge<TPresentation>>()
   const pages = new Map<TId, Array<LoadedPage<TPage>>>()
 
-  const publish = (id: TId) => {
+  const publish = (id: TId, notify: boolean) => {
     const loaded = pages.get(id) ?? []
     if (loaded.length === 0 || loaded[0]!.presentation === undefined) return
     const values = loaded.flatMap((page) => (page.presentation ? [page.presentation] : []))
@@ -41,7 +41,7 @@ export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
             value: merge(values, loaded.at(-1)?.nextCursor === null),
           },
     )
-    subscriptions.publish(id)
+    if (notify) subscriptions.publish(id)
   }
 
   const start = (id: TId, cursor: string | null) => {
@@ -56,6 +56,7 @@ export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
     }
     loaded.push(page)
     pages.set(id, loaded)
+    let subscribed = false
     page.dispose = watch(id, cursor, (value) => {
       const index = loaded.indexOf(page)
       if (index < 0) return
@@ -64,8 +65,9 @@ export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
       }
       page.nextCursor = value.cursor
       page.presentation = value.presentation
-      publish(id)
+      publish(id, subscribed)
     })
+    subscribed = true
   }
 
   const release = (id: TId) => {
@@ -78,7 +80,6 @@ export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
   return {
     get: (id: TId): ResourceKnowledge<TPresentation> =>
       presentations.get(id) ?? UNKNOWN_PRESENTATION,
-    load: (id: TId) => start(id, null),
     loadMore: (id: TId) => {
       const last = pages.get(id)?.at(-1)
       if (last?.presentation && last.nextCursor !== null) start(id, last.nextCursor)

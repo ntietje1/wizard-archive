@@ -9,7 +9,11 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/ca
 type CampaignMemberProfileCtx = CampaignQueryCtx
 export const CAMPAIGN_MEMBER_PRESENTATION_PAGE_SIZE = 16
 
-export async function getAcceptedPlayerPage(ctx: CampaignMemberProfileCtx, cursor: string | null) {
+export async function getAcceptedPlayerPage(
+  ctx: CampaignMemberProfileCtx,
+  cursor: string | null,
+  pageSize: number,
+) {
   const page = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_status_role_member', (query) =>
@@ -18,7 +22,7 @@ export async function getAcceptedPlayerPage(ctx: CampaignMemberProfileCtx, curso
         .eq('status', CAMPAIGN_MEMBER_STATUS.Accepted)
         .eq('role', CAMPAIGN_MEMBER_ROLE.Player),
     )
-    .paginate({ cursor, numItems: CAMPAIGN_MEMBER_PRESENTATION_PAGE_SIZE })
+    .paginate({ cursor, numItems: pageSize })
   return {
     members: page.page,
     cursor: page.isDone ? null : page.continueCursor,

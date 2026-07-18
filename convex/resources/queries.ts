@@ -13,7 +13,7 @@ import {
   fileDownloadSnapshotValidator,
   mapContentSnapshotValidator,
   mapImageDownloadSnapshotValidator,
-  noteBlockAccessPresentationValidator,
+  noteBlockAccessPresentationPageValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
   resourceAccessPresentationPageValidator,
@@ -26,17 +26,14 @@ import { loadResourcePresence as loadResourcePresenceFn } from './functions/reso
 import { loadCanvasContent as loadCanvasContentFn } from './functions/canvasContent'
 import { loadFileContent as loadFileContentFn } from './functions/fileContent'
 import { loadMapContent as loadMapContentFn } from './functions/mapContent'
-import { importJobIdValidator, resourceIdValidator } from './validators'
+import { importJobIdValidator, noteBlockIdValidator, resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
 import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
 import { loadPlainFileTransfer as loadPlainFileTransferFn } from './functions/plainFileTransfer'
 import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 import { projectResourceAccess } from './functions/resourceAccess'
-import {
-  getAcceptedPlayerPresentationPage,
-  getCampaignMembers,
-} from '../campaigns/functions/getCampaignMembers'
+import { getAcceptedPlayerPresentationPage } from '../campaigns/functions/getCampaignMembers'
 import { projectNoteBlockAccess } from './functions/noteBlockAccess'
 import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
 import {
@@ -44,9 +41,10 @@ import {
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
 } from '../../shared/campaigns/types'
+import { normalizeNoteBlockAccessSelection } from '@wizard-archive/editor/resources/note-block-access-policy'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
-type StoredNoteBlockAccessPresentation = Infer<typeof noteBlockAccessPresentationValidator>
+const NOTE_BLOCK_ACCESS_PARTICIPANT_PAGE_SIZE = 8
 
 const authorizedResourceCollectionPageValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
@@ -229,38 +227,39 @@ export const loadResourceAccess = dmQuery({
 })
 
 export const loadNoteBlockAccess = dmQuery({
-  args: { noteId: resourceIdValidator },
-  returns: v.nullable(noteBlockAccessPresentationValidator),
-  handler: async (ctx, args): Promise<StoredNoteBlockAccessPresentation | null> => {
-    const members = await getCampaignMembers(ctx)
-    const participants = members.flatMap((member) =>
-      member.role === CAMPAIGN_MEMBER_ROLE.Player
-        ? [
-            {
-              id: member.id,
-              displayName: member.userProfile.name?.trim() || member.userProfile.username,
-              username: member.userProfile.username,
-              imageUrl: member.userProfile.imageUrl,
-            },
-          ]
-        : [],
+  args: {
+    noteId: resourceIdValidator,
+    blockIds: v.array(noteBlockIdValidator),
+    cursor: v.nullable(v.string()),
+  },
+  returns: noteBlockAccessPresentationPageValidator,
+  handler: async (ctx, args) => {
+    const blockIds = normalizeNoteBlockAccessSelection(args.blockIds)
+    const page = await getAcceptedPlayerPresentationPage(
+      ctx,
+      args.cursor,
+      NOTE_BLOCK_ACCESS_PARTICIPANT_PAGE_SIZE,
     )
     const presentation = await projectNoteBlockAccess(
       ctx,
       assertDomainId(DOMAIN_ID_KIND.resource, args.noteId),
-      participants,
+      blockIds,
+      page.participants,
     )
-    return presentation
-      ? {
-          noteId: presentation.noteId,
-          blocks: presentation.blocks.map((block) => ({
-            blockId: block.blockId,
-            audienceVisibility: block.audienceVisibility,
-            memberAccess: block.memberAccess.map((access) => ({ ...access })),
-          })),
-          participants: presentation.participants.map((participant) => ({ ...participant })),
-        }
-      : null
+    return {
+      presentation: presentation
+        ? {
+            noteId: presentation.noteId,
+            blocks: presentation.blocks.map((block) => ({
+              blockId: block.blockId,
+              audienceVisibility: block.audienceVisibility,
+              memberAccess: block.memberAccess.map((access) => ({ ...access })),
+            })),
+            participants: presentation.participants.map((participant) => ({ ...participant })),
+          }
+        : null,
+      cursor: presentation ? page.cursor : null,
+    }
   },
 })
 

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CircleAlert, LoaderCircle, Lock, Users } from 'lucide-react'
@@ -19,18 +19,19 @@ import type {
   NoteBlockAccessGateway,
   ResourceAccessGateway,
 } from '../../resources/editor-runtime-contract'
-import type { ResourceKnowledge } from '../../resources/resource-index-contract'
 import {
   NOTE_BLOCK_VISIBILITY,
   projectNoteBlockSelectionAccess,
 } from '../../resources/note-block-access-policy'
 import type {
   AggregateNoteBlockVisibility,
-  NoteBlockAccessPresentation,
   NoteBlockSelectionParticipant,
 } from '../../resources/note-block-access-policy'
 
-import { NoteBlockAccessMenuContext } from './note-block-access-menu-context'
+import {
+  NoteBlockAccessMenuContext,
+  useNoteBlockAccessKnowledge,
+} from './note-block-access-menu-context'
 import type { NoteBlockAccessMenuState } from './note-block-access-menu-context'
 
 export type NoteBlockAccessMenuBinding = Readonly<{
@@ -56,11 +57,7 @@ export function NoteBlockAccessMenuProvider({
   const [menu, setMenu] = useState<NoteBlockAccessMenuState | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
-  const knowledge = useKnowledge(gateway, noteId)
 
-  useEffect(() => {
-    gateway.loadPresentation(noteId)
-  }, [gateway, noteId])
   useEffect(() => {
     if (!menu) return
     menu.sideMenu.freezeMenu()
@@ -105,7 +102,7 @@ export function NoteBlockAccessMenuProvider({
     <NoteBlockAccessMenuContext.Provider
       value={{
         error,
-        knowledge,
+        gateway,
         noteId,
         pending,
         execute,
@@ -121,11 +118,11 @@ export function NoteBlockAccessMenuProvider({
         typeof document !== 'undefined' &&
         createPortal(
           <FloatingBlockAccessMenu
+            gateway={gateway}
             menu={menu}
             noteId={noteId}
             error={error}
             pending={pending}
-            knowledge={knowledge}
             execute={execute}
             shareNote={shareNote}
             close={() => setMenu(null)}
@@ -136,19 +133,11 @@ export function NoteBlockAccessMenuProvider({
   )
 }
 
-function useKnowledge(gateway: NoteBlockAccessGateway, noteId: ResourceId) {
-  return useSyncExternalStore(
-    (listener) => gateway.subscribe(noteId, listener),
-    () => gateway.getPresentation(noteId),
-    () => gateway.getPresentation(noteId),
-  )
-}
-
 function FloatingBlockAccessMenu({
   close,
   execute,
   error,
-  knowledge,
+  gateway,
   menu,
   noteId,
   pending,
@@ -157,7 +146,7 @@ function FloatingBlockAccessMenu({
   close: () => void
   execute: (command: NoteBlockAccessCommand) => Promise<boolean>
   error: boolean
-  knowledge: ResourceKnowledge<NoteBlockAccessPresentation>
+  gateway: NoteBlockAccessGateway
   menu: NoteBlockAccessMenuState
   noteId: ResourceId
   pending: boolean
@@ -165,6 +154,7 @@ function FloatingBlockAccessMenu({
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [position, setPosition] = useState(menu.position)
+  const knowledge = useNoteBlockAccessKnowledge(gateway, noteId, menu.blockIds)
   useLayoutEffect(() => {
     const rect = dialog.current?.getBoundingClientRect()
     if (!rect) return
@@ -277,10 +267,20 @@ function FloatingBlockAccessMenu({
                   value={participant}
                 />
               ))}
-              {selection.participants.length === 0 && (
+              {selection.participants.length === 0 && knowledge.value.participantsComplete && (
                 <p className="px-1 py-2 text-xs text-muted-foreground">
                   No players in this campaign yet.
                 </p>
+              )}
+              {!knowledge.value.participantsComplete && (
+                <Button
+                  className="w-full"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => gateway.loadMorePresentation(noteId, menu.blockIds)}
+                >
+                  Load more players
+                </Button>
               )}
             </>
           )}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { ChevronDown, ChevronUp, LoaderCircle, Lock, Users } from 'lucide-react'
 import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
@@ -74,14 +74,12 @@ function AvailableResourceSharingControl({
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
-  const knowledge = useSyncExternalStore(
-    (listener) => access.subscribe(resource.id, listener),
-    () => access.getPresentation(resource.id),
+  const subscribe = useCallback(
+    (listener: () => void) => access.subscribe(resource.id, listener),
+    [access, resource.id],
   )
-
-  useEffect(() => {
-    access.loadPresentation(resource.id)
-  }, [access, resource.id])
+  const getSnapshot = useCallback(() => access.getPresentation(resource.id), [access, resource.id])
+  const knowledge = useSyncExternalStore(subscribe, getSnapshot)
 
   const ready = knowledge.state === 'known'
   const shared = ready && hasSharedAccess(knowledge.value)

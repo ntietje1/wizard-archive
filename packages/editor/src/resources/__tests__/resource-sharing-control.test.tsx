@@ -103,7 +103,6 @@ describe('ResourceSharingControl', () => {
       execute,
       get: () => ({ state: 'known', value: 'edit' }),
       getPresentation: () => presentationKnowledge,
-      loadPresentation: vi.fn(),
       loadMorePresentation: vi.fn(),
       subscribe: () => () => undefined,
     }
@@ -187,7 +186,6 @@ describe('ResourceSharingControl', () => {
       execute: vi.fn(),
       get: () => ({ state: 'known', value: 'edit' }),
       getPresentation: () => pagedKnowledge,
-      loadPresentation: vi.fn(),
       loadMorePresentation,
       subscribe: () => () => undefined,
     }

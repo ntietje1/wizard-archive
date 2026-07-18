@@ -18,7 +18,10 @@ import {
 } from '../../resources/note-block-access-policy'
 import type { NoteBlockNoteEditor } from '../note-editor-schema'
 import { getBlockShareTargetIds, getBlockShareTitle } from '../sharing/block-share-targets'
-import { useNoteBlockAccessMenu } from '../sharing/note-block-access-menu-context'
+import {
+  useNoteBlockAccessKnowledge,
+  useNoteBlockAccessMenu,
+} from '../sharing/note-block-access-menu-context'
 
 export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: boolean }) {
   const runtime = useNoteBlockAccessMenu()
@@ -28,12 +31,15 @@ export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: bool
   const block = useExtensionState(SideMenuExtension, {
     selector: (state) => state?.block,
   })
+  const blockIds = block ? getBlockShareTargetIds(editor, block.id as NoteBlockId) : []
+  const knowledge = useNoteBlockAccessKnowledge(
+    runtime?.gateway ?? null,
+    runtime?.noteId ?? null,
+    blockIds,
+  )
   if (!runtime || !block) return null
-  const blockIds = getBlockShareTargetIds(editor, block.id as NoteBlockId)
   const selection =
-    runtime.knowledge.state === 'known'
-      ? projectNoteBlockSelectionAccess(runtime.knowledge.value, blockIds)
-      : null
+    knowledge.state === 'known' ? projectNoteBlockSelectionAccess(knowledge.value, blockIds) : null
   const shared =
     selection?.audienceVisibility === NOTE_BLOCK_VISIBILITY.visible ||
     selection?.participants.some(
@@ -52,7 +58,7 @@ export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: bool
   )
 
   const open = (event: React.MouseEvent | React.KeyboardEvent, kind: 'context' | 'sharing') => {
-    if (runtime.pending || runtime.knowledge.state !== 'known') return
+    if (runtime.pending || knowledge.state !== 'known') return
     const rect = event.currentTarget.getBoundingClientRect()
     runtime.open({
       blockIds,
@@ -66,7 +72,7 @@ export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: bool
     })
   }
   const click = (event: React.MouseEvent | React.KeyboardEvent) => {
-    if (runtime.pending || runtime.knowledge.state !== 'known' || event.ctrlKey || event.metaKey) {
+    if (runtime.pending || knowledge.state !== 'known' || event.ctrlKey || event.metaKey) {
       return
     }
     event.preventDefault()
@@ -98,11 +104,11 @@ export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: bool
             <Components.SideMenu.Button
               label={blockIds.length > 1 ? `Share ${blockIds.length} blocks` : 'Share'}
               className={`${shared ? '!text-primary' : '!text-muted-foreground'} ${
-                runtime.pending || runtime.knowledge.state !== 'known'
+                runtime.pending || knowledge.state !== 'known'
                   ? 'pointer-events-none opacity-50'
                   : ''
               }`}
-              aria-disabled={runtime.pending || runtime.knowledge.state !== 'known'}
+              aria-disabled={runtime.pending || knowledge.state !== 'known'}
               icon={
                 <span className="relative">
                   <Share2 size={18} />

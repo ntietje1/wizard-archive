@@ -58,7 +58,6 @@ export function createLiveResourceAccessGateway(
         : resource
     },
     getPresentation: presentations.get,
-    loadPresentation: presentations.load,
     loadMorePresentation: presentations.loadMore,
     subscribe: (resourceId, listener) => {
       const unsubscribeIndex = index.subscribe(listener)

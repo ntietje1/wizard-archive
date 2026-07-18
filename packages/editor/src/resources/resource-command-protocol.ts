@@ -1,7 +1,7 @@
 import { sha256Digest } from './component-version'
 import type { Sha256Digest } from './component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from './domain-id'
-import type { CampaignMemberId, NoteBlockId, OperationId, ResourceId } from './domain-id'
+import type { CampaignMemberId, OperationId, ResourceId } from './domain-id'
 import type {
   DeepCopyResourcesCommand,
   MoveResourcesCommand,
@@ -14,7 +14,7 @@ import type {
   TrashResourcesCommand,
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
-import { MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS } from './note-block-access-policy'
+import { normalizeNoteBlockAccessSelection } from './note-block-access-policy'
 import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from './resource-command-contract'
 import {
   FOLDER_ACCESS_INHERITANCE,
@@ -62,14 +62,6 @@ function normalizeParentId(value: ResourceId | null): ResourceId | null {
 
 function normalizeMemberId(value: CampaignMemberId): CampaignMemberId {
   return assertDomainId(DOMAIN_ID_KIND.campaignMember, value)
-}
-
-function normalizeNoteBlockIdSet(values: ReadonlyArray<NoteBlockId>): ReadonlyArray<NoteBlockId> {
-  const normalized = Array.from(
-    new Set(values.map((value) => assertDomainId(DOMAIN_ID_KIND.noteBlock, value))),
-  ).sort()
-  if (normalized.length === 0) throw new TypeError('A note block selection cannot be empty')
-  return normalized
 }
 
 function normalizePermission(value: ResourcePermission): ResourcePermission {
@@ -238,10 +230,7 @@ export function normalizeResourceBookmarkCommand(
 export function normalizeNoteBlockAccessCommand(
   command: NoteBlockAccessCommand,
 ): NoteBlockAccessCommand {
-  const blockIds = normalizeNoteBlockIdSet(command.blockIds)
-  if (blockIds.length > MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS) {
-    throw new TypeError('Note block access selection is too large')
-  }
+  const blockIds = normalizeNoteBlockAccessSelection(command.blockIds)
   switch (command.type) {
     case 'setNoteBlockAudienceAccess':
       return {

@@ -104,5 +104,6 @@ function presentation(): NoteBlockAccessPresentation {
         notePermission: RESOURCE_PERMISSION.edit,
       },
     ],
+    participantsComplete: true,
   }
 }

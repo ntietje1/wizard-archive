@@ -11,19 +11,27 @@ import type {
   NoteBlockAccessReceipt,
 } from '@wizard-archive/editor/resources/command-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  NoteBlockId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { NoteBlockAccessGateway } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { normalizeNoteBlockAccessSelection } from '@wizard-archive/editor/resources/note-block-access-policy'
 import type { NoteBlockAccessPresentation } from '@wizard-archive/editor/resources/note-block-access-policy'
-import { createLivePresentationStore } from './live-presentation-store'
+import { createLivePaginatedPresentationStore } from './live-paginated-presentation-store'
 
 type ExecuteArgs = FunctionArgs<typeof api.resources.mutations.executeNoteBlockAccessCommand>
 type ExecuteResult = FunctionReturnType<
   typeof api.resources.mutations.executeNoteBlockAccessCommand
 >
 type PresentationSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteBlockAccess>
+type PagePresentation = Omit<NoteBlockAccessPresentation, 'participantsComplete'>
 type ExecuteMutation = (args: ExecuteArgs) => Promise<ExecuteResult>
 type WatchPresentation = (
   noteId: ResourceId,
+  blockIds: ReadonlyArray<NoteBlockId>,
+  cursor: string | null,
   apply: (value: PresentationSnapshot) => void,
 ) => () => void
 
@@ -34,18 +42,47 @@ export function createLiveNoteBlockAccessGateway(
   executeMutation: ExecuteMutation | null,
   watchPresentation: WatchPresentation | null,
 ): LiveNoteBlockAccessGateway {
-  const presentations = createLivePresentationStore(
+  const presentations = createLivePaginatedPresentationStore<
+    string,
+    PagePresentation,
+    NoteBlockAccessPresentation
+  >(
     watchPresentation
-      ? (noteId: ResourceId, apply: (value: NoteBlockAccessPresentation | null) => void) =>
-          watchPresentation(noteId, (value) =>
-            apply(value === null ? null : readPresentation(value)),
+      ? (key, cursor, apply) => {
+          const selection = readSelectionKey(key)
+          return watchPresentation(selection.noteId, selection.blockIds, cursor, (value) =>
+            apply({
+              cursor: value.cursor,
+              presentation:
+                value.presentation === null ? null : readPresentation(value.presentation),
+            }),
           )
+        }
       : null,
+    (pages, participantsComplete) => {
+      const first = pages[0]
+      if (!first) throw new TypeError('Note block access page is unavailable')
+      return {
+        noteId: first.noteId,
+        blocks: first.blocks.map((block) => ({
+          ...block,
+          memberAccess: pages.flatMap(
+            (page) =>
+              page.blocks.find((candidate) => candidate.blockId === block.blockId)?.memberAccess ??
+              [],
+          ),
+        })),
+        participants: pages.flatMap((page) => page.participants),
+        participantsComplete,
+      }
+    },
   )
   return {
-    getPresentation: presentations.get,
-    loadPresentation: presentations.load,
-    subscribe: presentations.subscribe,
+    getPresentation: (noteId, blockIds) => presentations.get(selectionKey(noteId, blockIds)),
+    loadMorePresentation: (noteId, blockIds) =>
+      presentations.loadMore(selectionKey(noteId, blockIds)),
+    subscribe: (noteId, blockIds, listener) =>
+      presentations.subscribe(selectionKey(noteId, blockIds), listener),
     execute: async (envelope) => {
       if (envelope.campaignId !== campaignId) return scopeUnavailable()
       if (!executeMutation) return unauthorized()
@@ -85,7 +122,21 @@ export function createLiveNoteBlockAccessGateway(
   }
 }
 
-function readPresentation(value: Exclude<PresentationSnapshot, null>): NoteBlockAccessPresentation {
+function selectionKey(noteId: ResourceId, blockIds: ReadonlyArray<NoteBlockId>) {
+  return JSON.stringify([noteId, ...normalizeNoteBlockAccessSelection(blockIds)])
+}
+
+function readSelectionKey(key: string) {
+  const [noteId, ...blockIds] = JSON.parse(key) as Array<string>
+  return {
+    noteId: assertDomainId(DOMAIN_ID_KIND.resource, noteId),
+    blockIds: blockIds.map((blockId) => assertDomainId(DOMAIN_ID_KIND.noteBlock, blockId)),
+  }
+}
+
+function readPresentation(
+  value: NonNullable<PresentationSnapshot['presentation']>,
+): PagePresentation {
   return {
     noteId: assertDomainId(DOMAIN_ID_KIND.resource, value.noteId),
     blocks: value.blocks.map((block) => ({

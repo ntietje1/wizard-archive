@@ -2,6 +2,7 @@ import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { logger } from '../../common/logger'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
 import {
+  CAMPAIGN_MEMBER_PRESENTATION_PAGE_SIZE,
   getAcceptedPlayerPage,
   getCampaignMemberRows,
   loadProfilesByMemberUserId,
@@ -33,8 +34,9 @@ export async function getCampaignMembers(
 export async function getAcceptedPlayerPresentationPage(
   ctx: CampaignQueryCtx,
   cursor: string | null,
+  pageSize = CAMPAIGN_MEMBER_PRESENTATION_PAGE_SIZE,
 ) {
-  const page = await getAcceptedPlayerPage(ctx, cursor)
+  const page = await getAcceptedPlayerPage(ctx, cursor, pageSize)
   const profilesByUserId = await loadProfilesByMemberUserId(ctx, page.members)
   const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
   return {
