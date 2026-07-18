@@ -8,6 +8,9 @@ import {
   deleteCampaignResourceBatch as deleteCampaignResourceBatchFn,
 } from './functions/resourceDeletion'
 import { campaignIdValidator } from '../campaigns/schema'
+import { versionStampValidator } from './schema'
+import { resourceIdValidator } from './validators'
+import { cleanupNoteBlockAccess as cleanupNoteBlockAccessFn } from './functions/noteBlockAccessCleanup'
 
 const workResult = v.union(
   v.object({ status: v.literal('unavailable') }),
@@ -35,6 +38,19 @@ export const deleteCampaignResourceBatch = internalMutation({
         stage: 'sessions',
       })
     }
+    return null
+  },
+})
+
+export const cleanupNoteBlockAccess = internalMutation({
+  args: {
+    campaignId: campaignIdValidator,
+    noteId: resourceIdValidator,
+    contentVersion: versionStampValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await cleanupNoteBlockAccessFn(ctx, args.campaignId, args.noteId, args.contentVersion)
     return null
   },
 })

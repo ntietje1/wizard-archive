@@ -33,3 +33,10 @@ export async function authorizeResourceContentKinds(
     permission: authorization.permission,
   }
 }
+
+export function contentWriteAuthorizationRejection(
+  authorization: Awaited<ReturnType<typeof authorizeResourceContent>>,
+): 'unauthorized' | 'content_corrupt' | null {
+  if (authorization.status === 'authorized') return null
+  return authorization.reason === 'unauthorized' ? 'unauthorized' : 'content_corrupt'
+}

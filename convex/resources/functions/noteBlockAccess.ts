@@ -22,11 +22,13 @@ import type {
   NoteBlockId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import { encodeYjsDocument } from './contentCopyTypes'
 import { findCanonicalResource } from './findCanonicalResource'
 import { findNoteContent } from './noteContent'
 import { projectResourceAccess } from './resourceAccess'
+
+const MAX_NOTE_BLOCK_ACTOR_POLICY_ROWS = 4_096
 
 export async function projectNoteBlockAccess(
   ctx: CampaignQueryCtx,
@@ -128,10 +130,13 @@ export async function filterNoteContentForMember(
   memberId: CampaignMemberId,
   notePermission: ResourcePermission,
 ): Promise<
-  { status: 'ready'; update: ArrayBuffer } | { status: 'empty' } | { status: 'integrity_error' }
+  | { status: 'ready'; update: ArrayBuffer }
+  | { status: 'empty' }
+  | { status: 'capacity_exceeded' }
+  | { status: 'integrity_error' }
 > {
   const loaded = await loadNoteBlockPolicies(ctx, noteId)
-  if (!loaded) return { status: 'integrity_error' }
+  if (loaded.status !== 'ready') return loaded
   const visibleBlocks = filterVisibleBlocks(
     loaded.blocks,
     notePermission,
@@ -271,12 +276,27 @@ async function loadExactNoteBlockMemberAccess(
 
 async function loadNoteBlockPolicies(ctx: CampaignQueryCtx, noteId: ResourceId) {
   const note = await loadCanonicalNoteBlocks(ctx, noteId)
-  if (!note) return null
-  const { audienceRows, memberRows } = await loadNoteBlockAccessRows(
-    ctx,
-    ctx.resourceScope.campaignId,
-    noteId,
-  )
+  if (!note) return { status: 'integrity_error' as const }
+  const audienceRows = await ctx.db
+    .query('noteBlockAudienceAccess')
+    .withIndex('by_note', (query) =>
+      query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('noteUuid', noteId),
+    )
+    .take(MAX_NOTE_BLOCK_ACTOR_POLICY_ROWS + 1)
+  if (audienceRows.length > MAX_NOTE_BLOCK_ACTOR_POLICY_ROWS) {
+    return { status: 'capacity_exceeded' as const }
+  }
+  const remaining = MAX_NOTE_BLOCK_ACTOR_POLICY_ROWS - audienceRows.length
+  const memberRows = await ctx.db
+    .query('noteBlockMemberAccess')
+    .withIndex('by_note_and_member', (query) =>
+      query
+        .eq('campaignUuid', ctx.resourceScope.campaignId)
+        .eq('noteUuid', noteId)
+        .eq('memberUuid', ctx.resourceScope.actorId),
+    )
+    .take(remaining + 1)
+  if (memberRows.length > remaining) return { status: 'capacity_exceeded' as const }
   const audienceVisibility = new Map<NoteBlockId, NoteBlockVisibility>(
     audienceRows.map((row) => [row.blockUuid, NOTE_BLOCK_VISIBILITY.visible]),
   )
@@ -289,31 +309,20 @@ async function loadNoteBlockPolicies(ctx: CampaignQueryCtx, noteId: ResourceId) 
     entries.push([row.memberUuid, row.visibility])
     memberVisibility.set(row.blockUuid, entries)
   }
+  if (
+    audienceVisibility.size !== audienceRows.length ||
+    Array.from(memberVisibility.values()).some((entries) => entries.length !== 1)
+  ) {
+    return { status: 'integrity_error' as const }
+  }
   return {
+    status: 'ready' as const,
     blocks: note.blocks,
     blockIds: flattenNoteBlockIds(note.blocks),
     contentUpdate: note.contentUpdate,
     audienceVisibility,
     memberVisibility,
   }
-}
-
-export async function loadNoteBlockAccessRows(
-  ctx: Pick<CampaignMutationCtx | CampaignQueryCtx, 'db'>,
-  campaignId: CampaignQueryCtx['resourceScope']['campaignId'],
-  noteId: ResourceId,
-) {
-  const [audienceRows, memberRows] = await Promise.all([
-    ctx.db
-      .query('noteBlockAudienceAccess')
-      .withIndex('by_note', (query) => query.eq('campaignUuid', campaignId).eq('noteUuid', noteId))
-      .collect(),
-    ctx.db
-      .query('noteBlockMemberAccess')
-      .withIndex('by_note', (query) => query.eq('campaignUuid', campaignId).eq('noteUuid', noteId))
-      .collect(),
-  ])
-  return { audienceRows, memberRows }
 }
 
 function filterVisibleBlocks(

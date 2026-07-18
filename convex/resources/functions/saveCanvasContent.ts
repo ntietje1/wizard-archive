@@ -11,7 +11,10 @@ import {
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
-import { authorizeResourceContent } from './authorizeResourceContent'
+import {
+  authorizeResourceContent,
+  contentWriteAuthorizationRejection,
+} from './authorizeResourceContent'
 import { loadCanvasContentDeletion } from './canvasContent'
 import { applyYjsContentDelta, contentMergeRejection } from './contentVersion'
 import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
@@ -43,12 +46,8 @@ export async function saveCanvasContent(
   args: { resourceId: ResourceId; update: ArrayBuffer },
 ): Promise<SaveCanvasContentResult> {
   const authorization = await authorizeResourceContent(ctx, args.resourceId, 'canvas', 'edit')
-  if (authorization.status !== 'authorized') {
-    return {
-      status: 'rejected',
-      reason: authorization.reason === 'unauthorized' ? 'unauthorized' : 'content_corrupt',
-    }
-  }
+  const rejection = contentWriteAuthorizationRejection(authorization)
+  if (rejection) return { status: 'rejected', reason: rejection }
   const resourceId = args.resourceId
   const content = await loadCanvasContentDeletion(ctx, resourceId)
   if (!content) return { status: 'rejected', reason: 'content_missing' }

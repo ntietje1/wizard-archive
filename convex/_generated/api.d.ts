@@ -76,6 +76,7 @@ import type * as resources_functions_loadMapImage from "../resources/functions/l
 import type * as resources_functions_loadNoteContent from "../resources/functions/loadNoteContent.js";
 import type * as resources_functions_mapContent from "../resources/functions/mapContent.js";
 import type * as resources_functions_noteBlockAccess from "../resources/functions/noteBlockAccess.js";
+import type * as resources_functions_noteBlockAccessCleanup from "../resources/functions/noteBlockAccessCleanup.js";
 import type * as resources_functions_noteContent from "../resources/functions/noteContent.js";
 import type * as resources_functions_plainFileTransfer from "../resources/functions/plainFileTransfer.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
@@ -211,6 +212,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/loadNoteContent": typeof resources_functions_loadNoteContent;
   "resources/functions/mapContent": typeof resources_functions_mapContent;
   "resources/functions/noteBlockAccess": typeof resources_functions_noteBlockAccess;
+  "resources/functions/noteBlockAccessCleanup": typeof resources_functions_noteBlockAccessCleanup;
   "resources/functions/noteContent": typeof resources_functions_noteContent;
   "resources/functions/plainFileTransfer": typeof resources_functions_plainFileTransfer;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;

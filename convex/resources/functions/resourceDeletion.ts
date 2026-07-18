@@ -19,6 +19,7 @@ type ResourceDeletionPlan = {
   memberAccess: Array<Doc<'resourceMemberAccess'>>
   noteBlockAudienceAccess: Array<Doc<'noteBlockAudienceAccess'>>
   noteBlockMemberAccess: Array<Doc<'noteBlockMemberAccess'>>
+  noteBlockAccessCleanupIntents: Array<Doc<'noteBlockAccessCleanupIntents'>>
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
@@ -39,6 +40,7 @@ function createPlan(): ResourceDeletionPlan {
     memberAccess: [],
     noteBlockAudienceAccess: [],
     noteBlockMemberAccess: [],
+    noteBlockAccessCleanupIntents: [],
     aliases: [],
     assetsFolders: [],
     noteContents: [],
@@ -64,6 +66,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.memberAccess,
     plan.noteBlockAudienceAccess,
     plan.noteBlockMemberAccess,
+    plan.noteBlockAccessCleanupIntents,
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
@@ -89,7 +92,7 @@ async function addContent(
     case 'note': {
       const content = await loadNoteContentDeletion(ctx, resourceId)
       if (content) plan.noteContents.push(content)
-      const [audienceRows, memberRows] = await Promise.all([
+      const [audienceRows, memberRows, cleanupIntent] = await Promise.all([
         ctx.db
           .query('noteBlockAudienceAccess')
           .withIndex('by_note', (query) =>
@@ -102,9 +105,16 @@ async function addContent(
             query.eq('campaignUuid', resource.campaignUuid).eq('noteUuid', resourceId),
           )
           .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1),
+        ctx.db
+          .query('noteBlockAccessCleanupIntents')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', resource.campaignUuid).eq('noteUuid', resourceId),
+          )
+          .unique(),
       ])
       plan.noteBlockAudienceAccess.push(...audienceRows)
       plan.noteBlockMemberAccess.push(...memberRows)
+      if (cleanupIntent) plan.noteBlockAccessCleanupIntents.push(cleanupIntent)
       return
     }
     case 'file': {
@@ -223,6 +233,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'memberAccess',
   'noteBlockAudienceAccess',
   'noteBlockMemberAccess',
+  'noteBlockAccessCleanupIntents',
   'noteBlockAccessOperations',
   'accessOperations',
   'bookmarkOperations',
@@ -250,6 +261,7 @@ type CampaignResourceRow =
   | Doc<'resourceMemberAccess'>
   | Doc<'noteBlockAudienceAccess'>
   | Doc<'noteBlockMemberAccess'>
+  | Doc<'noteBlockAccessCleanupIntents'>
   | Doc<'noteBlockAccessOperations'>
   | Doc<'resourceAccessOperations'>
   | Doc<'resourceBookmarkOperations'>
@@ -302,6 +314,8 @@ async function loadCampaignResourceDeletionBatch(
   campaignId: CampaignId,
   stage: Exclude<CampaignResourceDeletionStage, 'assetOwners' | 'referenceEdges'>,
 ): Promise<Array<CampaignResourceRow>> {
+  const accessRows = await loadCampaignAccessDeletionBatch(ctx, campaignId, stage)
+  if (accessRows) return accessRows
   switch (stage) {
     case 'resources':
       return await ctx.db
@@ -312,26 +326,6 @@ async function loadCampaignResourceDeletionBatch(
       return await ctx.db
         .query('resourceBookmarks')
         .withIndex('by_member', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'accessPolicies':
-      return await ctx.db
-        .query('resourceAccessPolicies')
-        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'memberAccess':
-      return await ctx.db
-        .query('resourceMemberAccess')
-        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'noteBlockAudienceAccess':
-      return await ctx.db
-        .query('noteBlockAudienceAccess')
-        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'noteBlockMemberAccess':
-      return await ctx.db
-        .query('noteBlockMemberAccess')
-        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'noteBlockAccessOperations':
       return await ctx.db
@@ -395,6 +389,43 @@ async function loadCampaignResourceDeletionBatch(
         .query('resourceAssetCopyIntents')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
+  }
+  throw new TypeError(`Unknown campaign resource deletion stage: ${stage}`)
+}
+
+async function loadCampaignAccessDeletionBatch(
+  ctx: ResourceDeletionCtx,
+  campaignId: CampaignId,
+  stage: CampaignResourceDeletionStage,
+): Promise<Array<CampaignResourceRow> | null> {
+  switch (stage) {
+    case 'accessPolicies':
+      return await ctx.db
+        .query('resourceAccessPolicies')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'memberAccess':
+      return await ctx.db
+        .query('resourceMemberAccess')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteBlockAudienceAccess':
+      return await ctx.db
+        .query('noteBlockAudienceAccess')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteBlockMemberAccess':
+      return await ctx.db
+        .query('noteBlockMemberAccess')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteBlockAccessCleanupIntents':
+      return await ctx.db
+        .query('noteBlockAccessCleanupIntents')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    default:
+      return null
   }
 }
 

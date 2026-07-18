@@ -3520,6 +3520,178 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('projects only the current actor policies when other-member volume exceeds the read bound', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Bounded policies')
+    const snapshot = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    if (snapshot.status !== 'ready') throw new TypeError('Expected note content')
+    const [block] = decodeNoteYjsUpdatesToBlocks([{ update: snapshot.update }], NOTE_YJS_FRAGMENT)
+    if (!block) throw new TypeError('Expected note block')
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [noteId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+    await asDm(campaign).mutation(api.resources.mutations.executeNoteBlockAccessCommand, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'setNoteBlockAudienceAccess',
+        noteId,
+        blockIds: [block.id],
+        shared: true,
+      },
+    })
+    const unrelatedRows = Array.from({ length: 4_100 }, () => ({
+      blockId: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+      memberId: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+    }))
+    for (let offset = 0; offset < unrelatedRows.length; offset += 250) {
+      const chunk = unrelatedRows.slice(offset, offset + 250)
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop
+      await t.run(async (ctx) => {
+        await Promise.all(
+          chunk.map(({ blockId, memberId }) =>
+            ctx.db.insert('noteBlockMemberAccess', {
+              campaignUuid,
+              noteUuid: noteId,
+              blockUuid: blockId,
+              memberUuid: memberId,
+              visibility: 'visible',
+            }),
+          ),
+        )
+      })
+    }
+
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready' })
+  })
+
+  it('acknowledges note saves before removed-block policy cleanup drains in bounded batches', async () => {
+    vi.useFakeTimers()
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockIds = Array.from({ length: 130 }, () => generateDomainId(DOMAIN_ID_KIND.noteBlock))
+    const update = makeYjsUpdateWithBlocks(
+      blockIds.map((id, index) => ({
+        id,
+        type: 'paragraph',
+        content: [{ type: 'text', text: `Block ${index}` }],
+      })),
+    )
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: noteId,
+        kind: 'note',
+        parentId: null,
+        title: 'Cleanup',
+        icon: null,
+        color: null,
+      },
+      update,
+    })
+    await t.run(async (ctx) => {
+      await Promise.all(
+        blockIds.flatMap((blockId) => [
+          ctx.db.insert('noteBlockAudienceAccess', {
+            campaignUuid,
+            noteUuid: noteId,
+            blockUuid: blockId,
+          }),
+          ctx.db.insert('noteBlockMemberAccess', {
+            campaignUuid,
+            noteUuid: noteId,
+            blockUuid: blockId,
+            memberUuid: campaign.player.memberDomainId,
+            visibility: 'visible',
+          }),
+        ]),
+      )
+    })
+    const document = new Y.Doc()
+    Y.applyUpdate(document, new Uint8Array(update))
+    const stateVector = Y.encodeStateVector(document)
+    const blockGroup = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)
+    if (!(blockGroup instanceof Y.XmlElement)) throw new TypeError('Expected note block group')
+    blockGroup.delete(1, blockIds.length - 1)
+    const delta = Uint8Array.from(Y.encodeStateAsUpdate(document, stateVector)).buffer
+    document.destroy()
+
+    const saved = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+      update: delta,
+    })
+    expect(saved).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    if (saved.status !== 'completed') throw new TypeError('Expected completed save')
+    await t.run(async (ctx) => {
+      expect(
+        await ctx.db
+          .query('noteBlockAudienceAccess')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('noteUuid', noteId),
+          )
+          .collect(),
+      ).toHaveLength(130)
+      await expect(
+        ctx.db
+          .query('noteBlockAccessCleanupIntents')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('noteUuid', noteId),
+          )
+          .unique(),
+      ).resolves.toMatchObject({ stage: 'audience', cursor: null })
+    })
+
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    await t.run(async (ctx) => {
+      const [audienceRows, memberRows, intent] = await Promise.all([
+        ctx.db
+          .query('noteBlockAudienceAccess')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('noteUuid', noteId),
+          )
+          .collect(),
+        ctx.db
+          .query('noteBlockMemberAccess')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('noteUuid', noteId),
+          )
+          .collect(),
+        ctx.db
+          .query('noteBlockAccessCleanupIntents')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('noteUuid', noteId),
+          )
+          .unique(),
+      ])
+      expect(audienceRows.map((row) => row.blockUuid)).toEqual([blockIds[0]])
+      expect(memberRows.map((row) => row.blockUuid)).toEqual([blockIds[0]])
+      expect(intent).toBeNull()
+    })
+    await expect(
+      t.mutation(internal.resources.internalMutations.cleanupNoteBlockAccess, {
+        campaignId: campaignUuid,
+        noteId,
+        contentVersion: saved.version,
+      }),
+    ).resolves.toBeNull()
+  })
+
   it('revokes a removed member immediately without deleting retained access rows', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

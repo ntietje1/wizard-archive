@@ -22,6 +22,9 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
     if (projection.status === 'integrity_error') {
       return { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
     }
+    if (projection.status === 'capacity_exceeded') {
+      return { status: 'integrity_error' as const, issue: 'content_limit_exceeded' as const }
+    }
     if (projection.status === 'empty') {
       return { status: 'empty' as const, reason: 'no_visible_blocks' as const }
     }

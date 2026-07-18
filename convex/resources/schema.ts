@@ -1060,7 +1060,18 @@ export const resourceTables = {
     .index('by_note', ['campaignUuid', 'noteUuid'])
     .index('by_note_and_block', ['campaignUuid', 'noteUuid', 'blockUuid'])
     .index('by_block_and_member', ['campaignUuid', 'noteUuid', 'blockUuid', 'memberUuid'])
+    .index('by_note_and_member', ['campaignUuid', 'noteUuid', 'memberUuid'])
     .index('by_member', ['campaignUuid', 'memberUuid']),
+
+  noteBlockAccessCleanupIntents: defineTable({
+    campaignUuid: campaignIdValidator,
+    noteUuid: resourceIdValidator,
+    contentVersion: versionStampValidator,
+    stage: v.union(v.literal('audience'), v.literal('member')),
+    cursor: v.nullable(v.string()),
+  })
+    .index('by_campaign', ['campaignUuid'])
+    .index('by_note', ['campaignUuid', 'noteUuid']),
 
   noteBlockAccessOperations: defineTable({
     campaignUuid: campaignIdValidator,
