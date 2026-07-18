@@ -26,8 +26,9 @@ vi.mock('../../files/image-file-viewer', () => ({
 }))
 
 describe('CanvasResourceEmbed', () => {
-  it('keeps the complete canonical note surface mounted across canvas activation', async () => {
+  it('keeps the canonical note surface mounted while activation and target permission change', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const scope = {
@@ -63,6 +64,7 @@ describe('CanvasResourceEmbed', () => {
     )
     const version = initialVersion(await sha256Digest(Y.encodeStateAsUpdate(document)))
     const session = createInMemoryNoteSession(document, version)
+    const flush = vi.spyOn(session, 'flush')
     const noteState = { status: 'ready' as const, session }
     const notes = {
       get: () => noteState,
@@ -80,25 +82,24 @@ describe('CanvasResourceEmbed', () => {
       subscribe: () => () => {},
     } satisfies MapPreviewSource
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
+    const note = {
+      id: resourceId,
+      campaignId,
+      displayParentId: null,
+      kind: 'note' as const,
+      title: canonicalizeResourceTitle('Ship manifest'),
+      icon: null,
+      color: null,
+      lifecycle: 'active' as const,
+      permission: 'edit' as const,
+      metadataVersion: version,
+      createdAt: 1,
+      updatedAt: 1,
+    }
     index.replaceSnapshot({
       scope,
       revision: indexRevision('known-note'),
-      resources: [
-        {
-          id: resourceId,
-          campaignId,
-          displayParentId: null,
-          kind: 'note',
-          title: canonicalizeResourceTitle('Ship manifest'),
-          icon: null,
-          color: null,
-          lifecycle: 'active',
-          permission: 'edit',
-          metadataVersion: version,
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      ],
+      resources: [note],
       missingResourceIds: [],
       collections: [],
     })
@@ -118,14 +119,15 @@ describe('CanvasResourceEmbed', () => {
         },
       },
     }
+    const runtime = previewRuntime({ canvases, index, loader, maps, notes, scope })
     const view = render(
       <CanvasResourceEmbed
         activation={null}
         canEdit
         editing={false}
         node={node}
-        runtime={previewRuntime({ canvases, index, loader, maps, notes, scope })}
-        sourceResourceId={generateDomainId(DOMAIN_ID_KIND.resource)}
+        runtime={runtime}
+        sourceResourceId={sourceResourceId}
         zoom={2}
       />,
     )
@@ -143,22 +145,76 @@ describe('CanvasResourceEmbed', () => {
     expect(screen.getByRole('button', { name: 'Supplies: 6 * 3' })).toBeVisible()
     expect(editor.closest('[data-canvas-editable-embed="true"]')).toBeInTheDocument()
 
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('view-note'),
+      resources: [{ ...note, permission: 'view' }],
+      missingResourceIds: [],
+      collections: [],
+    })
+    await waitFor(() =>
+      expect(editor.closest('[data-canvas-editable-embed="true"]')).not.toBeInTheDocument(),
+    )
+
     view.rerender(
       <CanvasResourceEmbed
         activation={null}
         canEdit
         editing
         node={node}
-        runtime={previewRuntime({ canvases, index, loader, maps, notes, scope })}
-        sourceResourceId={generateDomainId(DOMAIN_ID_KIND.resource)}
+        runtime={runtime}
+        sourceResourceId={sourceResourceId}
       />,
     )
 
     expect(screen.getByRole('textbox', { name: 'Ship manifest embedded note' })).toBe(editor)
-    expect(editor).toHaveAttribute('contenteditable', 'true')
+    expect(editor).toHaveAttribute('contenteditable', 'false')
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
+    expect(flush).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Value' })).not.toBeInTheDocument()
     expect(loader.ensureResource).not.toHaveBeenCalled()
+
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('editable-note'),
+      resources: [note],
+      missingResourceIds: [],
+      collections: [],
+    })
+    await waitFor(() => expect(editor).toHaveAttribute('contenteditable', 'true'))
+    expect(createEditor).toHaveBeenCalledTimes(creationCount)
+
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('downgraded-note'),
+      resources: [{ ...note, permission: 'view' }],
+      missingResourceIds: [],
+      collections: [],
+    })
+    await waitFor(() => expect(editor).toHaveAttribute('contenteditable', 'false'))
+    expect(flush).toHaveBeenCalledOnce()
+
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('regranted-note'),
+      resources: [note],
+      missingResourceIds: [],
+      collections: [],
+    })
+    await waitFor(() => expect(editor).toHaveAttribute('contenteditable', 'true'))
+    expect(createEditor).toHaveBeenCalledTimes(creationCount)
+
+    view.rerender(
+      <CanvasResourceEmbed
+        activation={null}
+        canEdit={false}
+        editing
+        node={node}
+        runtime={runtime}
+        sourceResourceId={sourceResourceId}
+      />,
+    )
+    expect(editor).toHaveAttribute('contenteditable', 'false')
 
     createEditor.mockRestore()
     view.unmount()

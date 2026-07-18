@@ -7,6 +7,7 @@ import { NoteSessionEditor } from '../../notes/note-session-editor'
 import type { BlockNoteActivation } from '../../rich-text/blocknote/use-blocknote-activation'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { ResourceId } from '../domain-id'
+import { RESOURCE_PERMISSION, resourcePermissionAllows } from '../resource-access-policy'
 import { ResourcePreviewSurface } from './resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
@@ -57,24 +58,29 @@ export function CanvasResourceEmbed({
         resource={resource.value}
         runtime={runtime}
         target={target ?? { kind: 'resource', resourceId: resource.value.id }}
-        renderNote={({ resource: note, state }) => (
-          <CanvasNoteSurface canEdit={canEdit} editing={editing}>
-            <NoteSessionEditor
-              activation={editing ? (activation ?? undefined) : undefined}
-              canEdit={editing}
-              resources={{
-                ancestors: new Set([sourceResourceId]),
-                renderNote: renderEmbeddedNoteResource,
-                runtime,
-                sourceResourceId: note.id,
-              }}
-              formattingToolbar={false}
-              label={`${note.title} embedded note`}
-              scroll={EPHEMERAL_NOTE_SCROLL}
-              state={state}
-            />
-          </CanvasNoteSurface>
-        )}
+        renderNote={({ resource: note, state }) => {
+          const noteCanEdit =
+            canEdit && resourcePermissionAllows(note.permission, RESOURCE_PERMISSION.edit)
+          const noteEditing = editing && noteCanEdit
+          return (
+            <CanvasNoteSurface canEdit={noteCanEdit} editing={noteEditing}>
+              <NoteSessionEditor
+                activation={noteEditing ? (activation ?? undefined) : undefined}
+                canEdit={noteEditing}
+                resources={{
+                  ancestors: new Set([sourceResourceId]),
+                  renderNote: renderEmbeddedNoteResource,
+                  runtime,
+                  sourceResourceId: note.id,
+                }}
+                formattingToolbar={false}
+                label={`${note.title} embedded note`}
+                scroll={EPHEMERAL_NOTE_SCROLL}
+                state={state}
+              />
+            </CanvasNoteSurface>
+          )
+        }}
       />
     </CanvasEmbedFrame>
   )
