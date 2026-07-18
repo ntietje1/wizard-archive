@@ -24,8 +24,8 @@ export function NoteResourceLinkMenu({ editor }: { editor: NoteBlockNoteEditor }
 
   return (
     <SuggestionMenuController<typeof getItems>
-      triggerCharacter="["
-      minQueryLength={1}
+      triggerCharacter="[["
+      minQueryLength={0}
       getItems={getItems}
       suggestionMenuComponent={NoteSuggestionMenu}
       onItemClick={(suggestion) => insertResourceLink(editor, suggestion)}

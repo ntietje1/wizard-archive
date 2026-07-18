@@ -11,19 +11,16 @@ import { resourceLinkInlineContent, resourceLinkSuggestions } from '../resource-
 import { parseSerializedAuthoredDestination } from '../../../resources/authored-destination'
 
 describe('resource link autocomplete', () => {
-  it('keeps duplicate titles as separate exact resource suggestions', async () => {
+  it('offers known resources before filtering and keeps duplicate titles exact', async () => {
     const fixture = await runtimeFixture()
 
     await expect(
-      resourceLinkSuggestions(fixture.core.runtime, fixture.source.id, 'Rules'),
-    ).resolves.toEqual([])
-    await expect(
-      resourceLinkSuggestions(fixture.core.runtime, fixture.source.id, '['),
+      resourceLinkSuggestions(fixture.core.runtime, fixture.source.id, ''),
     ).resolves.toHaveLength(3)
     const suggestions = await resourceLinkSuggestions(
       fixture.core.runtime,
       fixture.source.id,
-      '[Rules',
+      'Rules',
     )
 
     expect(new Set(suggestions.map(({ key }) => key))).toEqual(
@@ -43,7 +40,7 @@ describe('resource link autocomplete', () => {
     const suggestions = await resourceLinkSuggestions(
       fixture.core.runtime,
       fixture.source.id,
-      '[#Combat#actions',
+      '#Combat#actions',
     )
 
     expect(suggestions).toMatchObject([
@@ -65,7 +62,7 @@ describe('resource link autocomplete', () => {
     const suggestions = await resourceLinkSuggestions(
       fixture.core.runtime,
       fixture.source.id,
-      '[Rules',
+      'Rules',
     )
     const suggestion = suggestions.find(({ resource }) => resource.id === fixture.note.id)
     if (!suggestion) throw new Error('Expected the note suggestion')

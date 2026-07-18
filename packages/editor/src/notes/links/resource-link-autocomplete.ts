@@ -27,16 +27,16 @@ export type ResourceLinkSuggestion = Readonly<{
 
 function parseResourceLinkAutocompleteQuery(
   controllerQuery: string,
-): ResourceLinkAutocompleteQuery | null {
-  if (!controllerQuery.startsWith('[')) return null
-  const query = controllerQuery.slice(1)
-  const headingSeparator = query.indexOf('#')
-  if (headingSeparator < 0) return { mode: 'resource', resourceQuery: query.trim() }
-  const headingQuerySeparator = query.lastIndexOf('#')
+): ResourceLinkAutocompleteQuery {
+  const headingSeparator = controllerQuery.indexOf('#')
+  if (headingSeparator < 0) {
+    return { mode: 'resource', resourceQuery: controllerQuery.trim() }
+  }
+  const headingQuerySeparator = controllerQuery.lastIndexOf('#')
   return {
     mode: 'heading',
-    resourceQuery: query.slice(0, headingSeparator).trim(),
-    headingQuery: query.slice(headingQuerySeparator + 1).trim(),
+    resourceQuery: controllerQuery.slice(0, headingSeparator).trim(),
+    headingQuery: controllerQuery.slice(headingQuerySeparator + 1).trim(),
   }
 }
 
@@ -46,7 +46,7 @@ export async function resourceLinkSuggestions(
   controllerQuery: string,
 ): Promise<ReadonlyArray<ResourceLinkSuggestion>> {
   const query = parseResourceLinkAutocompleteQuery(controllerQuery)
-  if (!query || runtime.search.status !== 'available') return []
+  if (runtime.search.status !== 'available') return []
   const search = runtime.search.value
   const results = query.resourceQuery
     ? (await search.search(query.resourceQuery)).results
