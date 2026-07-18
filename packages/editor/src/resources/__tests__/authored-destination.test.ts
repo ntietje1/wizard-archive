@@ -3,7 +3,6 @@ import type { AuthoredDestination, CanonicalTarget } from '../authored-destinati
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import {
   MAX_RESOURCE_REFERENCE_TARGETS,
-  backlinksForResource,
   projectReferenceGraph,
   parseSerializedAuthoredDestination,
   remapAuthoredDestination,
@@ -223,7 +222,7 @@ describe('authored destinations', () => {
     })
   })
 
-  it('derives deterministic outgoing and backlink rows from exact content versions', () => {
+  it('derives deterministic reference edges from exact content versions', () => {
     const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, '01890f47-f6c8-7a5b-8c9d-0123456789ab')
     const blockTarget = {
       kind: 'noteBlock',
@@ -240,8 +239,7 @@ describe('authored destinations', () => {
 
     expect(edges).toHaveLength(2)
     expect(edges.every((edge) => edge.sourceVersion === version)).toBe(true)
-    expect(backlinksForResource(edges, targetId)).toEqual(edges)
-    expect(backlinksForResource(edges, copiedTargetId)).toEqual([])
+    expect(edges.map((edge) => edge.target.resourceId)).toEqual([targetId, targetId])
   })
 
   it('rejects reference projections that exceed the synchronous graph bound', () => {

@@ -96,7 +96,7 @@ export function MapPinSurface({
       aria-label="Map canvas"
       imageRef={imageRef}
       pins={pins.map((pin) => {
-        const targetId = pinTargetResourceId(pin)
+        const targetId = pinDestinationResourceId(pin)
         const target = targetId ? resolveResource(targetId) : null
         const label = pinLabel(pin, target)
         return (
@@ -308,7 +308,7 @@ function PinMenuButton({ label, onClick }: { label: string; onClick: () => void 
   )
 }
 
-function pinTargetResourceId(pin: MapPin): ResourceId | null {
+function pinDestinationResourceId(pin: MapPin): ResourceId | null {
   return pin.destination.kind === 'internal' ? pin.destination.target.resourceId : null
 }
 

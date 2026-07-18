@@ -239,13 +239,6 @@ export function projectReferenceGraph(
     .map(([, target]) => ({ sourceResourceId, sourceVersion, target }))
 }
 
-export function backlinksForResource(
-  edges: ReadonlyArray<ReferenceGraphEdge>,
-  resourceId: ResourceId,
-): ReadonlyArray<ReferenceGraphEdge> {
-  return edges.filter((edge) => edge.target.resourceId === resourceId)
-}
-
 export function parseAuthoredDestination(value: unknown): AuthoredDestination | null {
   if (!isRecord(value) || typeof value.kind !== 'string') return null
   switch (value.kind) {

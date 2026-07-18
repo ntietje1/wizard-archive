@@ -112,7 +112,16 @@ export function createFormattingToolbarTestEditor({
           propSchema: { backgroundColor: {}, checked: {}, textAlignment: {}, textColor: {} },
         },
         codeBlock: { propSchema: { language: {} } },
-        embed: { propSchema: { name: {}, targetKind: {}, url: {} } },
+        embed: {
+          propSchema: {
+            backgroundColor: {},
+            destination: {},
+            previewAspectRatio: {},
+            previewHeight: {},
+            previewWidth: {},
+            textAlignment: {},
+          },
+        },
         heading: {
           propSchema: {
             backgroundColor: {},
