@@ -1408,12 +1408,18 @@ describe('ResourceShell', () => {
   it('offers an accessible continuation action for incomplete folder knowledge', async () => {
     const { core, resource } = await shellRuntime(false)
     const summary = authorizedResourceSummaryFromRecord(resource, 'edit')
+    const child = {
+      ...summary,
+      id: generateDomainId(DOMAIN_ID_KIND.resource),
+      kind: 'note' as const,
+      title: canonicalizeResourceTitle('Child note'),
+    }
     const baseSnapshot = core.runtime.resources.index.getSnapshot()
     const snapshot = {
       ...baseSnapshot,
       list: (candidate: Parameters<typeof baseSnapshot.list>[0]) =>
         candidate.parentId === resource.id
-          ? { state: 'known' as const, items: [summary], complete: false }
+          ? { state: 'known' as const, items: [child], complete: false }
           : baseSnapshot.list(candidate),
     }
     const ensureCollection = vi.fn(() => Promise.resolve({ status: 'completed' as const }))

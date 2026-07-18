@@ -1,5 +1,8 @@
 import { Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
+import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
+import { noteBlocksPlainText } from '../../notes/document/plain-text'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import { FileEmbedPreview } from '../../files/file-embed-preview'
 import { MapEmbedPreview } from '../../maps/map-embed-preview'
@@ -33,7 +36,7 @@ export function ResourcePreviewSurface({
   resource,
   runtime,
 }: {
-  renderNote: ResourceNotePreviewRenderer
+  renderNote?: ResourceNotePreviewRenderer
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -56,7 +59,7 @@ function NoteResourcePreview({
   resource,
   runtime,
 }: {
-  render: ResourceNotePreviewRenderer
+  render?: ResourceNotePreviewRenderer
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -64,7 +67,34 @@ function NoteResourcePreview({
   if (state.status !== 'initializing' && state.status !== 'ready') {
     return <PreviewContentState kind={resource.kind} state={state} />
   }
-  return render({ resource, state })
+  return render ? (
+    render({ resource, state })
+  ) : (
+    <StaticNoteResourcePreview resource={resource} state={state} />
+  )
+}
+
+function StaticNoteResourcePreview({
+  resource,
+  state,
+}: {
+  resource: AuthorizedResourceSummary
+  state: RenderableNoteState
+}) {
+  const session = state.status === 'ready' ? state.session : null
+  useEffect(() => session?.retain(), [session])
+  const document = state.status === 'ready' ? state.session.document : state.local
+  const text = noteBlocksPlainText(noteYDocToBlocks(document, NOTE_YJS_FRAGMENT))
+  return text ? (
+    <div
+      aria-label={`${resource.title} preview`}
+      className="size-full overflow-hidden whitespace-pre-wrap p-3 text-sm leading-relaxed text-foreground"
+    >
+      {text}
+    </div>
+  ) : (
+    <PreviewState label="No visible note content" />
+  )
 }
 
 function FolderResourcePreview({

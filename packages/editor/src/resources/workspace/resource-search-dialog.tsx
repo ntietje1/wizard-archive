@@ -12,6 +12,7 @@ import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
+import { ResourcePreviewSurface } from './resource-preview-surface'
 
 type SearchState =
   | Readonly<{ status: 'idle'; results: ReadonlyArray<WorkspaceSearchResult> }>
@@ -256,7 +257,7 @@ function OpenResourceSearchDialog({
             </div>
           </div>
         </div>
-        {showPreview && <SearchPreview resource={selectedResource} />}
+        {showPreview && <SearchPreview resource={selectedResource} runtime={runtime} />}
       </div>
       <div className="flex gap-3 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
         <span>↑↓ Navigate</span>
@@ -327,7 +328,13 @@ function SearchItem({
   )
 }
 
-function SearchPreview({ resource }: { resource: AuthorizedResourceSummary | null }) {
+function SearchPreview({
+  resource,
+  runtime,
+}: {
+  resource: AuthorizedResourceSummary | null
+  runtime: EditorRuntime
+}) {
   if (!resource) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -335,15 +342,15 @@ function SearchPreview({ resource }: { resource: AuthorizedResourceSummary | nul
       </div>
     )
   }
-  const Icon = resourceKindIcon(resource.kind)
   return (
-    <div className="w-1/2 p-5">
-      <Icon className="mb-3 size-8 text-muted-foreground" />
-      <h3 className="font-medium">{resource.title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{resourceKindLabel(resource.kind)}</p>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Updated {new Date(resource.updatedAt).toLocaleString()}
-      </p>
+    <div className="flex w-1/2 min-h-0 flex-col">
+      <div className="border-b border-border p-4">
+        <h3 className="truncate font-medium">{resource.title}</h3>
+        <p className="text-sm text-muted-foreground">{resourceKindLabel(resource.kind)}</p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <ResourcePreviewSurface resource={resource} runtime={runtime} />
+      </div>
     </div>
   )
 }

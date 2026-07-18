@@ -32,8 +32,6 @@ import {
 } from './resource-presentation'
 import { NoteSessionEditor } from '../../notes/note-session-editor'
 import { CanvasEditor } from '../../canvas/canvas-editor'
-import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
-import type { CanvasPreviewSource } from '../content-session-contract'
 import { CanvasResourceEmbed } from './canvas-resource-embed'
 import { createWorkspaceAuthoredDestinationDropResolver } from './workspace-authored-destination-drop'
 import { FileViewer } from '../../files/file-viewer'
@@ -41,6 +39,7 @@ import { MapViewer } from '../../maps/map-viewer'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
+import { ResourcePreviewSurface } from './resource-preview-surface'
 
 export function ResourceViewport({
   actions,
@@ -326,8 +325,8 @@ function FolderViewport({
             ambiguous={ambiguous.has(resourcePresentationKey(resource))}
             canEdit={canEdit}
             key={resource.id}
-            previews={runtime.content.canvases.previews}
             resource={resource}
+            runtime={runtime}
             selected={selectedIds.has(resource.id)}
             selection={selection}
             visibleIds={visibleIds}
@@ -445,8 +444,8 @@ function ResourceCard({
   canEdit,
   onSelectionChange,
   onOpenContextMenu,
-  previews,
   resource,
+  runtime,
   selected,
   selection,
   visibleIds,
@@ -456,8 +455,8 @@ function ResourceCard({
   canEdit: boolean
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  previews: CanvasPreviewSource
   resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
   selected: boolean
   selection: WorkspaceSelection
   visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
@@ -465,9 +464,7 @@ function ResourceCard({
   const Icon = resourceKindIcon(resource.kind)
   const folder = resource.kind === 'folder'
   return (
-    <button
-      type="button"
-      aria-label={resource.title}
+    <article
       data-selected={selected}
       {...workspaceResourceInteractionProps({
         actions,
@@ -479,11 +476,16 @@ function ResourceCard({
       })}
       className={
         folder
-          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
-          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
+          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
+          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
       }
-      onClick={(event) => selectCard({ actions, event, resource, visibleIds, onSelectionChange })}
     >
+      <button
+        type="button"
+        aria-label={resource.title}
+        className="absolute inset-0 z-10 rounded-md outline-none"
+        onClick={(event) => selectCard({ actions, event, resource, visibleIds, onSelectionChange })}
+      />
       {folder && (
         <span className="absolute left-0 top-0 h-3 w-20 rounded-tr border-r border-border bg-muted" />
       )}
@@ -491,31 +493,19 @@ function ResourceCard({
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{resource.title}</span>
       </span>
-      {resource.kind === 'canvas' && (
-        <CanvasCardPreview previews={previews} resourceId={resource.id} />
-      )}
+      <div
+        inert
+        aria-hidden="true"
+        className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60 bg-background"
+      >
+        <ResourcePreviewSurface resource={resource} runtime={runtime} />
+      </div>
       <span className="mt-auto text-xs text-muted-foreground">
         {ambiguous
           ? `${resourceKindLabel(resource.kind)} · ${resource.id.slice(-6)}`
           : resourceKindLabel(resource.kind)}
       </span>
-    </button>
-  )
-}
-
-function CanvasCardPreview({
-  previews,
-  resourceId,
-}: {
-  previews: CanvasPreviewSource
-  resourceId: AuthorizedResourceSummary['id']
-}) {
-  const state = useResourceStoreSnapshot(previews, resourceId)
-  if (state.status !== 'ready') return null
-  return (
-    <div className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60">
-      <CanvasReadonlyPreview document={state.document} />
-    </div>
+    </article>
   )
 }
 
