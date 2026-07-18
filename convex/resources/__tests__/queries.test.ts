@@ -22,6 +22,10 @@ import { createTestContext } from '../../_test/setup.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
+  NOTE_YJS_FRAGMENT,
+  decodeNoteYjsUpdatesToBlocks,
+} from '@wizard-archive/editor/notes/document-yjs'
+import {
   storeCommittedTestUploadSession,
   storeUncommittedTestUploadSession,
 } from '../../_test/storage.helper'
@@ -39,6 +43,9 @@ type StoredResourceStructureCommand = FunctionArgs<
 >['command']
 type StoredResourceAccessCommand = FunctionArgs<
   typeof api.resources.mutations.executeResourceAccessCommand
+>['command']
+type StoredNoteBlockAccessCommand = FunctionArgs<
+  typeof api.resources.mutations.executeNoteBlockAccessCommand
 >['command']
 
 describe('authorized resource projection', () => {
@@ -430,9 +437,10 @@ describe('authorized resource projection', () => {
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const update = makeYjsUpdateWithBlocks([
       {
-        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        id: blockId,
         type: 'paragraph',
         content: [{ type: 'text', text: 'Ready' }],
       },
@@ -476,7 +484,20 @@ describe('authorized resource projection', () => {
         viewAsParticipantId: campaign.player.memberDomainId,
         resourceId,
       }),
-    ).resolves.toEqual({ status: 'ready', update, version: expect.any(Object) })
+    ).resolves.toEqual({ status: 'empty', reason: 'no_visible_blocks' })
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId: resourceId,
+      blockIds: [blockId],
+      shared: true,
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        viewAsParticipantId: campaign.player.memberDomainId,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready', version: expect.any(Object) })
 
     await t.run(async (ctx) => {
       const content = await ctx.db
@@ -491,6 +512,119 @@ describe('authorized resource projection', () => {
         resourceId,
       }),
     ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
+  })
+
+  it('projects canonical block visibility with note access as the outer gate', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const parentId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const childId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const siblingId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: noteId,
+        kind: 'note',
+        parentId: null,
+        title: 'Projected note',
+        icon: null,
+        color: null,
+      },
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: parentId,
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Parent' }],
+          children: [
+            {
+              id: childId,
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'Child' }],
+            },
+          ],
+        },
+        {
+          id: siblingId,
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Sibling' }],
+        },
+      ]),
+    })
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [noteId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId,
+      blockIds: [childId],
+      shared: true,
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toEqual({ status: 'empty', reason: 'no_visible_blocks' })
+
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockMemberAccess',
+      noteId,
+      blockIds: [parentId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+    const filtered = await asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    expect(filtered.status).toBe('ready')
+    if (filtered.status !== 'ready') throw new TypeError('Expected filtered note content')
+    const blocks = decodeNoteYjsUpdatesToBlocks([{ update: filtered.update }], NOTE_YJS_FRAGMENT)
+    expect(blocks.map((block) => block.id)).toEqual([parentId])
+    expect((blocks[0]?.children ?? []).map((block) => block.id)).toEqual([childId])
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteBlockAccess, {
+        campaignId: campaignUuid,
+        noteId,
+      }),
+    ).resolves.toMatchObject({
+      noteId,
+      blocks: [
+        {
+          blockId: parentId,
+          audienceVisibility: 'hidden',
+          memberAccess: [{ memberId: campaign.player.memberDomainId, visibility: 'visible' }],
+        },
+        { blockId: childId, audienceVisibility: 'visible' },
+        { blockId: siblingId, audienceVisibility: 'hidden' },
+      ],
+      participants: [{ id: campaign.player.memberDomainId, notePermission: 'view' }],
+    })
+
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [noteId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'edit',
+    })
+    const editable = await asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    expect(editable.status).toBe('ready')
+    if (editable.status !== 'ready') throw new TypeError('Expected editable note content')
+    expect(
+      decodeNoteYjsUpdatesToBlocks([{ update: editable.update }], NOTE_YJS_FRAGMENT).map(
+        (block) => block.id,
+      ),
+    ).toEqual([parentId, siblingId])
   })
 
   it('loads file, map, and canvas content through their owning queries', async () => {
@@ -1012,6 +1146,23 @@ describe('authorized resource projection', () => {
   ) {
     const result = await asDm(campaign).mutation(
       api.resources.mutations.executeResourceAccessCommand,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command,
+      },
+    )
+    expect(result.status).toBe('completed')
+    return result
+  }
+
+  async function executeBlockAccess(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaignUuid: string,
+    command: StoredNoteBlockAccessCommand,
+  ) {
+    const result = await asDm(campaign).mutation(
+      api.resources.mutations.executeNoteBlockAccessCommand,
       {
         campaignId: campaignUuid,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),

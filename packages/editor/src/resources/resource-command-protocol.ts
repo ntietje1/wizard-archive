@@ -14,6 +14,7 @@ import type {
   TrashResourcesCommand,
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
+import { MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS } from './note-block-access-policy'
 import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from './resource-command-contract'
 import { FOLDER_ACCESS_INHERITANCE, RESOURCE_PERMISSION } from './resource-access-policy'
 import type { FolderAccessInheritance, ResourcePermission } from './resource-access-policy'
@@ -31,6 +32,14 @@ export function resourceStructureInputRejection(error: unknown): ResourceStructu
   if (error.message.includes('UUIDv7')) return 'invalid_uuid'
   if (error.message.includes('title') || error.message.includes('Title')) return 'invalid_title'
   return 'invalid_command'
+}
+
+export function accessCommandInputRejection(
+  error: unknown,
+): 'invalid_command' | 'invalid_permission' {
+  return error instanceof Error && error.message.includes('permission')
+    ? 'invalid_permission'
+    : 'invalid_command'
 }
 
 function normalizeResourceId(value: ResourceId): ResourceId {
@@ -218,12 +227,16 @@ export function normalizeResourceBookmarkCommand(
 export function normalizeNoteBlockAccessCommand(
   command: NoteBlockAccessCommand,
 ): NoteBlockAccessCommand {
+  const blockIds = normalizeNoteBlockIdSet(command.blockIds)
+  if (blockIds.length > MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS) {
+    throw new TypeError('Note block access selection is too large')
+  }
   switch (command.type) {
     case 'setNoteBlockAudienceAccess':
       return {
         type: 'setNoteBlockAudienceAccess',
         noteId: normalizeResourceId(command.noteId),
-        blockIds: normalizeNoteBlockIdSet(command.blockIds),
+        blockIds,
         shared: normalizeBoolean(command.shared, 'note block audience state'),
       }
     case 'setNoteBlockMemberAccess': {
@@ -232,7 +245,7 @@ export function normalizeNoteBlockAccessCommand(
       return {
         type: 'setNoteBlockMemberAccess',
         noteId: normalizeResourceId(command.noteId),
-        blockIds: normalizeNoteBlockIdSet(command.blockIds),
+        blockIds,
         memberId: normalizeMemberId(command.memberId),
         permission,
       }
@@ -241,7 +254,7 @@ export function normalizeNoteBlockAccessCommand(
       return {
         type: 'clearNoteBlockMemberAccess',
         noteId: normalizeResourceId(command.noteId),
-        blockIds: normalizeNoteBlockIdSet(command.blockIds),
+        blockIds,
         memberId: normalizeMemberId(command.memberId),
       }
   }

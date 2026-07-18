@@ -1,4 +1,5 @@
 import {
+  accessCommandInputRejection,
   RESOURCE_COMMAND_PROTOCOL_VERSION,
   fingerprintResourceAccessCommand,
   normalizeResourceAccessCommand,
@@ -15,11 +16,13 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 import { loadResourceAccessPolicy } from './resourceAccess'
+import { isAcceptedCampaignPlayer } from './campaignPlayer'
+import { accessOperationWasReused, findAccessOperation } from './accessOperation'
 
 export async function executeResourceAccessCommand(
   ctx: CampaignMutationCtx,
@@ -36,24 +39,19 @@ export async function executeResourceAccessCommand(
   } catch (error) {
     return {
       status: 'rejected',
-      reason:
-        error instanceof Error && error.message.includes('permission')
-          ? 'invalid_permission'
-          : 'invalid_command',
+      reason: accessCommandInputRejection(error),
     }
   }
 
   const [fingerprint, stored] = await Promise.all([
     fingerprintResourceAccessCommand(command),
-    ctx.db
-      .query('resourceAccessOperations')
-      .withIndex('by_campaign_and_operation', (query) =>
-        query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('operationUuid', operationId),
-      )
-      .unique(),
+    findAccessOperation(ctx, 'resourceAccessOperations', operationId),
   ])
-  const replay = replayStoredOperation(ctx, stored, fingerprint)
-  if (replay) return replay
+  if (stored) {
+    return accessOperationWasReused(stored, ctx.resourceScope.actorId, fingerprint)
+      ? { status: 'rejected', reason: 'operation_id_reused' }
+      : { status: 'completed', receipt: receiptFromRow(stored.receipt) }
+  }
 
   const resourceIds = commandResourceIds(command)
   const resources = await Promise.all(
@@ -64,7 +62,7 @@ export async function executeResourceAccessCommand(
 
   if (
     (command.type === 'setMemberAccess' || command.type === 'clearMemberAccess') &&
-    !(await isAcceptedPlayer(ctx, command.memberId))
+    !(await isAcceptedCampaignPlayer(ctx, command.memberId))
   ) {
     return { status: 'rejected', reason: 'invalid_command' }
   }
@@ -108,21 +106,6 @@ function validateResources(
     return 'invalid_resource_kind'
   }
   return null
-}
-
-async function isAcceptedPlayer(
-  ctx: CampaignMutationCtx,
-  memberId: CampaignMemberId,
-): Promise<boolean> {
-  const member = await ctx.db
-    .query('campaignMembers')
-    .withIndex('by_campaignMemberUuid', (query) => query.eq('campaignMemberUuid', memberId))
-    .unique()
-  return (
-    member?.campaignId === ctx.campaign._id &&
-    member.role === CAMPAIGN_MEMBER_ROLE.Player &&
-    member.status === CAMPAIGN_MEMBER_STATUS.Accepted
-  )
 }
 
 async function applyAccessCommand(
@@ -204,18 +187,6 @@ async function requirePolicy(ctx: CampaignMutationCtx, resourceId: ResourceId) {
   const policy = await loadResourceAccessPolicy(ctx, ctx.resourceScope.campaignId, resourceId)
   if (!policy) throw new TypeError('Resource access policy is missing')
   return policy
-}
-
-function replayStoredOperation(
-  ctx: CampaignMutationCtx,
-  stored: Doc<'resourceAccessOperations'> | null,
-  fingerprint: string,
-): ResourceAccessCommandResult | null {
-  if (!stored) return null
-  if (stored.actorMemberUuid !== ctx.resourceScope.actorId || stored.fingerprint !== fingerprint) {
-    return { status: 'rejected', reason: 'operation_id_reused' }
-  }
-  return { status: 'completed', receipt: receiptFromRow(stored.receipt) }
 }
 
 function storedReceipt(receipt: ResourceAccessReceipt) {

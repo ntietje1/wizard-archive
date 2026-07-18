@@ -13,6 +13,7 @@ import {
   fileDownloadSnapshotValidator,
   mapContentSnapshotValidator,
   mapImageDownloadSnapshotValidator,
+  noteBlockAccessPresentationValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
   resourceAccessPresentationValidator,
@@ -33,8 +34,10 @@ import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 import { projectResourceAccess } from './functions/resourceAccess'
 import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
 import { CAMPAIGN_MEMBER_ROLE } from '../../shared/campaigns/types'
+import { projectNoteBlockAccess } from './functions/noteBlockAccess'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
+type StoredNoteBlockAccessPresentation = Infer<typeof noteBlockAccessPresentationValidator>
 
 const authorizedResourceCollectionPageValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
@@ -143,6 +146,42 @@ export const loadResourceAccess = dmQuery({
       ? {
           ...presentation,
           participants: [...presentation.participants],
+        }
+      : null
+  },
+})
+
+export const loadNoteBlockAccess = dmQuery({
+  args: { noteId: resourceIdValidator },
+  returns: v.nullable(noteBlockAccessPresentationValidator),
+  handler: async (ctx, args): Promise<StoredNoteBlockAccessPresentation | null> => {
+    const members = await getCampaignMembers(ctx)
+    const participants = members.flatMap((member) =>
+      member.role === CAMPAIGN_MEMBER_ROLE.Player
+        ? [
+            {
+              id: member.id,
+              displayName: member.userProfile.name?.trim() || member.userProfile.username,
+              username: member.userProfile.username,
+              imageUrl: member.userProfile.imageUrl,
+            },
+          ]
+        : [],
+    )
+    const presentation = await projectNoteBlockAccess(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.noteId),
+      participants,
+    )
+    return presentation
+      ? {
+          noteId: presentation.noteId,
+          blocks: presentation.blocks.map((block) => ({
+            blockId: block.blockId,
+            audienceVisibility: block.audienceVisibility,
+            memberAccess: block.memberAccess.map((access) => ({ ...access })),
+          })),
+          participants: presentation.participants.map((participant) => ({ ...participant })),
         }
       : null
   },

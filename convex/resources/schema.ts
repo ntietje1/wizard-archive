@@ -10,6 +10,7 @@ import {
   assetIdValidator,
   importJobIdValidator,
   mapPinIdValidator,
+  noteBlockIdValidator,
   operationIdValidator,
   resourceIdValidator,
 } from './validators'
@@ -21,6 +22,7 @@ import {
   FOLDER_ACCESS_INHERITANCE,
   RESOURCE_PERMISSION,
 } from '@wizard-archive/editor/resources/access-policy'
+import { NOTE_BLOCK_VISIBILITY } from '@wizard-archive/editor/resources/note-block-access-policy'
 
 export const versionStampValidator = v.object({
   scheme: v.literal(VERSION_SCHEME),
@@ -110,6 +112,84 @@ export const resourceAccessCommandResultValidator = v.union(
     reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
   }),
 )
+
+export const noteBlockVisibilityValidator = literals(...Object.values(NOTE_BLOCK_VISIBILITY))
+
+export const noteBlockAccessCommandValidator = v.union(
+  v.object({
+    type: v.literal('setNoteBlockAudienceAccess'),
+    noteId: resourceIdValidator,
+    blockIds: v.array(noteBlockIdValidator),
+    shared: v.boolean(),
+  }),
+  v.object({
+    type: v.literal('setNoteBlockMemberAccess'),
+    noteId: resourceIdValidator,
+    blockIds: v.array(noteBlockIdValidator),
+    memberId: campaignMemberIdValidator,
+    permission: literals(RESOURCE_PERMISSION.none, RESOURCE_PERMISSION.view),
+  }),
+  v.object({
+    type: v.literal('clearNoteBlockMemberAccess'),
+    noteId: resourceIdValidator,
+    blockIds: v.array(noteBlockIdValidator),
+    memberId: campaignMemberIdValidator,
+  }),
+)
+
+const noteBlockAccessReceiptValidator = v.object({
+  campaignId: campaignIdValidator,
+  operationId: operationIdValidator,
+  noteId: resourceIdValidator,
+  blockIds: v.array(noteBlockIdValidator),
+})
+
+export const noteBlockAccessCommandResultValidator = v.union(
+  v.object({ status: v.literal('completed'), receipt: noteBlockAccessReceiptValidator }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_command',
+      'ownership_mismatch',
+      'unauthorized',
+      'note_missing',
+      'block_missing',
+      'content_corrupt',
+      'invalid_permission',
+      'version_exhausted',
+      'operation_id_reused',
+    ),
+  }),
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
+  }),
+)
+
+export const noteBlockAccessPresentationValidator = v.object({
+  noteId: resourceIdValidator,
+  blocks: v.array(
+    v.object({
+      blockId: noteBlockIdValidator,
+      audienceVisibility: noteBlockVisibilityValidator,
+      memberAccess: v.array(
+        v.object({
+          memberId: campaignMemberIdValidator,
+          visibility: noteBlockVisibilityValidator,
+        }),
+      ),
+    }),
+  ),
+  participants: v.array(
+    v.object({
+      id: campaignMemberIdValidator,
+      displayName: v.string(),
+      username: v.string(),
+      imageUrl: v.nullable(v.string()),
+      notePermission: resourcePermissionValidator,
+    }),
+  ),
+})
 
 const resourceAccessPolicyValidator = v.union(
   v.object({
@@ -633,6 +713,7 @@ export const mapImageDownloadSnapshotValidator = v.union(
 
 export const noteContentSnapshotValidator = v.union(
   v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
+  v.object({ status: v.literal('empty'), reason: v.literal('no_visible_blocks') }),
   v.object({ status: v.literal('ready'), update: v.bytes(), version: versionStampValidator }),
   contentUnavailableSnapshotValidator,
   contentIntegritySnapshotValidator,
@@ -849,6 +930,39 @@ export const resourceTables = {
     protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
     fingerprint: v.string(),
     receipt: resourceBookmarkReceiptValidator,
+  })
+    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
+    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
+
+  noteBlockAudienceAccess: defineTable({
+    campaignUuid: campaignIdValidator,
+    noteUuid: resourceIdValidator,
+    blockUuid: noteBlockIdValidator,
+  })
+    .index('by_campaign', ['campaignUuid'])
+    .index('by_note', ['campaignUuid', 'noteUuid'])
+    .index('by_note_and_block', ['campaignUuid', 'noteUuid', 'blockUuid']),
+
+  noteBlockMemberAccess: defineTable({
+    campaignUuid: campaignIdValidator,
+    noteUuid: resourceIdValidator,
+    blockUuid: noteBlockIdValidator,
+    memberUuid: campaignMemberIdValidator,
+    visibility: noteBlockVisibilityValidator,
+  })
+    .index('by_campaign', ['campaignUuid'])
+    .index('by_note', ['campaignUuid', 'noteUuid'])
+    .index('by_note_and_block', ['campaignUuid', 'noteUuid', 'blockUuid'])
+    .index('by_block_and_member', ['campaignUuid', 'noteUuid', 'blockUuid', 'memberUuid'])
+    .index('by_member', ['campaignUuid', 'memberUuid']),
+
+  noteBlockAccessOperations: defineTable({
+    campaignUuid: campaignIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    operationUuid: operationIdValidator,
+    protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
+    fingerprint: v.string(),
+    receipt: noteBlockAccessReceiptValidator,
   })
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),

@@ -17,6 +17,8 @@ type ResourceDeletionPlan = {
   bookmarks: Array<Doc<'resourceBookmarks'>>
   accessPolicies: Array<Doc<'resourceAccessPolicies'>>
   memberAccess: Array<Doc<'resourceMemberAccess'>>
+  noteBlockAudienceAccess: Array<Doc<'noteBlockAudienceAccess'>>
+  noteBlockMemberAccess: Array<Doc<'noteBlockMemberAccess'>>
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
@@ -34,6 +36,8 @@ function createPlan(): ResourceDeletionPlan {
     bookmarks: [],
     accessPolicies: [],
     memberAccess: [],
+    noteBlockAudienceAccess: [],
+    noteBlockMemberAccess: [],
     aliases: [],
     assetsFolders: [],
     noteContents: [],
@@ -56,6 +60,8 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.bookmarks,
     plan.accessPolicies,
     plan.memberAccess,
+    plan.noteBlockAudienceAccess,
+    plan.noteBlockMemberAccess,
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
@@ -80,6 +86,22 @@ async function addContent(
     case 'note': {
       const content = await loadNoteContentDeletion(ctx, resourceId)
       if (content) plan.noteContents.push(content)
+      const [audienceRows, memberRows] = await Promise.all([
+        ctx.db
+          .query('noteBlockAudienceAccess')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', resource.campaignUuid).eq('noteUuid', resourceId),
+          )
+          .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1),
+        ctx.db
+          .query('noteBlockMemberAccess')
+          .withIndex('by_note', (query) =>
+            query.eq('campaignUuid', resource.campaignUuid).eq('noteUuid', resourceId),
+          )
+          .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1),
+      ])
+      plan.noteBlockAudienceAccess.push(...audienceRows)
+      plan.noteBlockMemberAccess.push(...memberRows)
       return
     }
     case 'file': {
@@ -188,6 +210,9 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'bookmarks',
   'accessPolicies',
   'memberAccess',
+  'noteBlockAudienceAccess',
+  'noteBlockMemberAccess',
+  'noteBlockAccessOperations',
   'accessOperations',
   'bookmarkOperations',
   'tombstones',
@@ -211,6 +236,9 @@ type CampaignResourceRow =
   | Doc<'resourceBookmarks'>
   | Doc<'resourceAccessPolicies'>
   | Doc<'resourceMemberAccess'>
+  | Doc<'noteBlockAudienceAccess'>
+  | Doc<'noteBlockMemberAccess'>
+  | Doc<'noteBlockAccessOperations'>
   | Doc<'resourceAccessOperations'>
   | Doc<'resourceBookmarkOperations'>
   | Doc<'resourceTombstones'>
@@ -273,6 +301,21 @@ async function loadCampaignResourceDeletionBatch(
       return await ctx.db
         .query('resourceMemberAccess')
         .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteBlockAudienceAccess':
+      return await ctx.db
+        .query('noteBlockAudienceAccess')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteBlockMemberAccess':
+      return await ctx.db
+        .query('noteBlockMemberAccess')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'noteBlockAccessOperations':
+      return await ctx.db
+        .query('noteBlockAccessOperations')
+        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'accessOperations':
       return await ctx.db

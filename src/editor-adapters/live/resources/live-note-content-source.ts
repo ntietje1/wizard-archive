@@ -86,6 +86,14 @@ function exportNoteDocument(document: Y.Doc): ContentExportResult {
 }
 
 function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
+  if (snapshot.status === 'empty') {
+    return {
+      status: 'ready',
+      bytes: new Uint8Array(),
+      extension: 'md',
+      mediaType: 'text/markdown',
+    }
+  }
   if (snapshot.status !== 'ready') return snapshot
   const document = new Y.Doc()
   try {
@@ -171,6 +179,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
     private readonly user: CollaborationUser,
     private readonly backend: LiveNoteContentBackend,
     private readonly beginCreateUndo: () => ResourceUndoRecording,
+    private readonly replaceRemoteSnapshots: boolean,
   ) {
     this.#store = createResourceWatchStore<NoteSnapshot, NoteSessionState>(
       backend.watch,
@@ -282,29 +291,44 @@ class LiveNoteSessionSource implements NoteSessionSource {
     switch (snapshot.status) {
       case 'unavailable':
       case 'integrity_error':
+      case 'empty':
         this.#clearSession(resourceId)
         this.#setState(resourceId, snapshot)
         return
-      case 'ready': {
-        const version = assertVersionStamp(snapshot.version)
-        const session = this.#sessions.get(resourceId)
-        if (session) {
-          session.apply(snapshot.update, version)
-          return
-        }
-        const doc = new Y.Doc()
-        try {
-          Y.applyUpdate(doc, new Uint8Array(snapshot.update))
-          this.#setReady(resourceId, doc, version)
-        } catch {
-          doc.destroy()
-          this.#clearSession(resourceId)
-          this.#setState(resourceId, {
-            status: 'integrity_error',
-            issue: 'content_corrupt',
-          })
-        }
-      }
+      case 'ready':
+        this.#applyReadySnapshot(resourceId, snapshot)
+    }
+  }
+
+  #applyReadySnapshot(
+    resourceId: ResourceId,
+    snapshot: Extract<NoteSnapshot, { status: 'ready' }>,
+  ) {
+    const version = assertVersionStamp(snapshot.version)
+    const session = this.#sessions.get(resourceId)
+    if (session && !this.replaceRemoteSnapshots) {
+      session.apply(snapshot.update, version)
+      return
+    }
+    if (session && version.revision < session.version.revision) return
+    if (
+      session &&
+      version.revision === session.version.revision &&
+      version.digest === session.version.digest
+    ) {
+      return
+    }
+    const doc = new Y.Doc()
+    try {
+      Y.applyUpdate(doc, new Uint8Array(snapshot.update))
+      this.#setReady(resourceId, doc, version)
+    } catch {
+      doc.destroy()
+      this.#clearSession(resourceId)
+      this.#setState(resourceId, {
+        status: 'integrity_error',
+        issue: 'content_corrupt',
+      })
     }
   }
 
@@ -408,6 +432,14 @@ export function createLiveNoteContentSource(
   user: CollaborationUser,
   backend: LiveNoteContentBackend,
   beginCreateUndo: () => ResourceUndoRecording,
+  replaceRemoteSnapshots = false,
 ) {
-  return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreateUndo)
+  return new LiveNoteSessionSource(
+    campaignId,
+    memberId,
+    user,
+    backend,
+    beginCreateUndo,
+    replaceRemoteSnapshots,
+  )
 }

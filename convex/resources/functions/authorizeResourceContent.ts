@@ -27,5 +27,9 @@ export async function authorizeResourceContentKinds(
   if (resource.kind === 'folder' || !kinds.includes(resource.kind)) {
     return { status: 'unavailable' as const, reason: 'capability_not_supported' as const }
   }
-  return { status: 'authorized' as const }
+  return {
+    status: 'authorized' as const,
+    resource,
+    permission: authorization.permission,
+  }
 }

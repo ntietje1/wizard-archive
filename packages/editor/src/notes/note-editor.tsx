@@ -20,9 +20,12 @@ import type { NoteScrollBehavior } from './note-scroll-persistence'
 import type { NoteHeadingNavigation, NoteHeadingNavigationRef } from './note-heading-navigation'
 import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
+import { NoteBlockAccessMenuProvider } from './sharing/note-block-access-menu'
+import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
+  blockAccess?: NoteBlockAccessMenuBinding
   collaboration?: ContentCollaboration
   document: Y.Doc
   formattingToolbar?: boolean
@@ -97,7 +100,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
   }, [editor, headingNavigationRef])
   useNoteScrollPersistence(props.scroll, viewport)
 
-  return (
+  const content = (
     <div
       className="resource-note-editor relative flex min-h-0 flex-1 flex-col"
       onBlurCapture={
@@ -148,6 +151,11 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         </div>
       </ScrollArea>
     </div>
+  )
+  return props.blockAccess ? (
+    <NoteBlockAccessMenuProvider {...props.blockAccess}>{content}</NoteBlockAccessMenuProvider>
+  ) : (
+    content
   )
 }
 

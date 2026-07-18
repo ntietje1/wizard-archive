@@ -6,15 +6,16 @@ import type {
   ResourceAccessCommandResult,
   ResourceAccessReceipt,
 } from '@wizard-archive/editor/resources/command-contract'
-import { normalizeResourceAccessCommand } from '@wizard-archive/editor/resources/command-protocol'
+import {
+  accessCommandInputRejection,
+  normalizeResourceAccessCommand,
+} from '@wizard-archive/editor/resources/command-protocol'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceAccessGateway } from '@wizard-archive/editor/resources/editor-runtime-contract'
-import type {
-  ResourceKnowledge,
-  WorkspaceResourceIndex,
-} from '@wizard-archive/editor/resources/index-contract'
+import type { WorkspaceResourceIndex } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceAccessPresentation } from '@wizard-archive/editor/resources/access-policy'
+import { createLivePresentationStore } from './live-presentation-store'
 
 type ExecuteArgs = FunctionArgs<typeof api.resources.mutations.executeResourceAccessCommand>
 type ExecuteResult = FunctionReturnType<typeof api.resources.mutations.executeResourceAccessCommand>
@@ -25,7 +26,6 @@ type WatchPresentation = (
 ) => () => void
 
 type LiveResourceAccessGateway = ResourceAccessGateway & Readonly<{ dispose(): void }>
-const UNKNOWN_PRESENTATION = { state: 'unknown' } as const
 
 export function createLiveResourceAccessGateway(
   campaignId: CampaignId,
@@ -33,12 +33,7 @@ export function createLiveResourceAccessGateway(
   executeMutation: ExecuteMutation | null,
   watchPresentation: WatchPresentation | null = null,
 ): LiveResourceAccessGateway {
-  const presentations = new Map<ResourceId, ResourceKnowledge<ResourceAccessPresentation>>()
-  const watches = new Map<ResourceId, () => void>()
-  const listeners = new Map<ResourceId, Set<() => void>>()
-  const publish = (resourceId: ResourceId) => {
-    for (const listener of listeners.get(resourceId) ?? []) listener()
-  }
+  const presentations = createLivePresentationStore(watchPresentation)
   return {
     get: (resourceId: ResourceId) => {
       const resource = index.getSnapshot().lookup(resourceId)
@@ -46,31 +41,14 @@ export function createLiveResourceAccessGateway(
         ? { state: 'known', value: resource.value.permission }
         : resource
     },
-    getPresentation: (resourceId) => {
-      return presentations.get(resourceId) ?? UNKNOWN_PRESENTATION
-    },
-    loadPresentation: (resourceId) => {
-      if (!watchPresentation || watches.has(resourceId)) return
-      watches.set(
-        resourceId,
-        watchPresentation(resourceId, (presentation) => {
-          presentations.set(
-            resourceId,
-            presentation === null ? { state: 'missing' } : { state: 'known', value: presentation },
-          )
-          publish(resourceId)
-        }),
-      )
-    },
+    getPresentation: presentations.get,
+    loadPresentation: presentations.load,
     subscribe: (resourceId, listener) => {
-      const resourceListeners = listeners.get(resourceId) ?? new Set()
-      resourceListeners.add(listener)
-      listeners.set(resourceId, resourceListeners)
       const unsubscribeIndex = index.subscribe(listener)
+      const unsubscribePresentation = presentations.subscribe(resourceId, listener)
       return () => {
         unsubscribeIndex()
-        resourceListeners.delete(listener)
-        if (resourceListeners.size === 0) listeners.delete(resourceId)
+        unsubscribePresentation()
       }
     },
     execute: async (envelope) => {
@@ -84,10 +62,7 @@ export function createLiveResourceAccessGateway(
           status: 'received',
           result: {
             status: 'rejected',
-            reason:
-              error instanceof Error && error.message.includes('permission')
-                ? 'invalid_permission'
-                : 'invalid_command',
+            reason: accessCommandInputRejection(error),
           },
         }
       }
@@ -110,12 +85,7 @@ export function createLiveResourceAccessGateway(
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
       }
     },
-    dispose: () => {
-      for (const dispose of watches.values()) dispose()
-      watches.clear()
-      listeners.clear()
-      presentations.clear()
-    },
+    dispose: presentations.dispose,
   }
 }
 

@@ -266,7 +266,9 @@ export type NoteBlockAccessRejection =
   | 'unauthorized'
   | 'note_missing'
   | 'block_missing'
+  | 'content_corrupt'
   | 'invalid_permission'
+  | 'version_exhausted'
   | 'operation_id_reused'
 
 export type ResourceAccessCommandResult = CommandResult<

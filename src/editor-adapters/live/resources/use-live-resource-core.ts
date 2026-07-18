@@ -24,6 +24,7 @@ import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
 import { useCommittedRuntime } from '../../committed-runtime'
 import { createLiveResourceAccessGateway } from './live-resource-access-gateway'
+import { createLiveNoteBlockAccessGateway } from './live-note-block-access-gateway'
 import { executeResourceWrite, resourceQueryScope } from './resource-query-scope'
 
 function subscribeToWatch<T>(
@@ -149,6 +150,7 @@ function createScopedLiveResourceRuntime(
       },
     },
     undo.beginRecording,
+    currentScope.projection !== 'dm',
   )
   const discardUpload = async (sessionId: Id<'fileStorage'>) => {
     await write(() => convex.mutation(api.storage.mutations.discardUpload, { sessionId }))
@@ -291,6 +293,22 @@ function createScopedLiveResourceRuntime(
         }
       : null,
   )
+  const noteBlockAccess = createLiveNoteBlockAccessGateway(
+    currentScope.campaignId,
+    currentScope.projection === 'dm'
+      ? (args) =>
+          write(() => convex.mutation(api.resources.mutations.executeNoteBlockAccessCommand, args))
+      : null,
+    currentScope.projection === 'dm'
+      ? (noteId, apply) => {
+          const watch = convex.watchQuery(api.resources.queries.loadNoteBlockAccess, {
+            campaignId: currentScope.campaignId,
+            noteId,
+          })
+          return subscribeToWatch(watch, apply)
+        }
+      : null,
+  )
 
   const unsupported = {
     status: 'unavailable',
@@ -308,6 +326,10 @@ function createScopedLiveResourceRuntime(
     status: 'available',
     value: access,
   }
+  const noteBlockAccessCapability: EditorRuntime['resources']['noteBlockAccess'] =
+    currentScope.projection === 'dm'
+      ? { status: 'available', value: noteBlockAccess }
+      : { status: 'unavailable', reason: 'unauthorized' }
   const content = { notes, files, maps, canvases }
   return {
     runtime: {
@@ -317,6 +339,7 @@ function createScopedLiveResourceRuntime(
         loader: base.loader,
         structure,
         access: accessCapability,
+        noteBlockAccess: noteBlockAccessCapability,
         bookmarks:
           currentScope.projection === 'dm'
             ? ({ status: 'available', value: bookmarks.gateway } as const)
@@ -342,6 +365,7 @@ function createScopedLiveResourceRuntime(
       preferences.dispose()
       bookmarks.dispose()
       access.dispose()
+      noteBlockAccess.dispose()
       optimistic.dispose()
     },
   }

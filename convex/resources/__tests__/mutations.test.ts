@@ -55,7 +55,6 @@ type StoredResourceStructureCommand = FunctionArgs<
 type StoredResourceAccessCommand = FunctionArgs<
   typeof api.resources.mutations.executeResourceAccessCommand
 >['command']
-
 function resourcePresenceUpdate(state: Record<string, unknown> = {}) {
   const document = new Y.Doc()
   const awareness = new Awareness(document)
@@ -2912,7 +2911,7 @@ describe('resource structure commands', () => {
         campaignId: campaignUuid,
         resourceId: noteId,
       }),
-    ).resolves.toMatchObject({ status: 'ready' })
+    ).resolves.toEqual({ status: 'empty', reason: 'no_visible_blocks' })
     const update = makeYjsUpdateWithBlocks([
       {
         id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
@@ -2971,6 +2970,61 @@ describe('resource structure commands', () => {
         command: { ...args.command, permission: 'edit' },
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+  })
+
+  it('replays one canonical block access command without advancing projection twice', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Blocks')
+    const snapshot = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    if (snapshot.status !== 'ready') throw new TypeError('Expected note content')
+    const [block] = decodeNoteYjsUpdatesToBlocks([{ update: snapshot.update }], NOTE_YJS_FRAGMENT)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const args = {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'setNoteBlockAudienceAccess' as const,
+        noteId,
+        blockIds: [block!.id],
+        shared: true,
+      },
+    }
+
+    const first = await asDm(campaign).mutation(
+      api.resources.mutations.executeNoteBlockAccessCommand,
+      args,
+    )
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeNoteBlockAccessCommand, args),
+    ).resolves.toEqual(first)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeNoteBlockAccessCommand, {
+        ...args,
+        command: { ...args.command, shared: false },
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', noteId))
+        .unique()
+      expect(content?.version.revision).toBe(snapshot.version.revision + 1)
+      await expect(
+        ctx.db
+          .query('noteBlockAudienceAccess')
+          .withIndex('by_note_and_block', (query) =>
+            query
+              .eq('campaignUuid', campaignUuid)
+              .eq('noteUuid', noteId)
+              .eq('blockUuid', block!.id),
+          )
+          .unique(),
+      ).resolves.not.toBeNull()
+    })
   })
 
   it('revokes a removed member immediately without deleting retained access rows', async () => {

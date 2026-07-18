@@ -4,6 +4,7 @@ import type {
   ResourceCompensationResult,
   ResourceCommandReceipt,
   ResourceAccessCommand,
+  NoteBlockAccessCommand,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
@@ -41,6 +42,8 @@ import {
   resourceBookmarkCommandValidator,
   resourceAccessCommandResultValidator,
   resourceAccessCommandValidator,
+  noteBlockAccessCommandResultValidator,
+  noteBlockAccessCommandValidator,
   contentProviderSaveResultValidator,
   resourcePresenceHeartbeatResultValidator,
   resourcePresenceReleaseResultValidator,
@@ -57,6 +60,7 @@ import {
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { executeResourceAccessCommand as executeResourceAccessCommandFn } from './functions/executeResourceAccessCommand'
+import { executeNoteBlockAccessCommand as executeNoteBlockAccessCommandFn } from './functions/executeNoteBlockAccessCommand'
 import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
 import { createMapContent } from './functions/mapContent'
 import { createCanvasContent } from './functions/canvasContent'
@@ -84,6 +88,7 @@ type StoredResourceCommandReceipt = Extract<
 >['receipt']
 type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValidator>
 type StoredResourceAccessCommand = Infer<typeof resourceAccessCommandValidator>
+type StoredNoteBlockAccessCommand = Infer<typeof noteBlockAccessCommandValidator>
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
 type StoredVersionStamp = Infer<typeof versionStampValidator>
 type StoredSourcePathAlias = Infer<typeof sourcePathAliasValidator>
@@ -305,6 +310,32 @@ function resourceAccessCommand(command: StoredResourceAccessCommand): ResourceAc
   }
 }
 
+function noteBlockAccessCommand(command: StoredNoteBlockAccessCommand): NoteBlockAccessCommand {
+  const noteId = assertDomainId(DOMAIN_ID_KIND.resource, command.noteId)
+  const blockIds = command.blockIds.map((blockId) =>
+    assertDomainId(DOMAIN_ID_KIND.noteBlock, blockId),
+  )
+  switch (command.type) {
+    case 'setNoteBlockAudienceAccess':
+      return { type: command.type, noteId, blockIds, shared: command.shared }
+    case 'setNoteBlockMemberAccess':
+      return {
+        type: command.type,
+        noteId,
+        blockIds,
+        memberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, command.memberId),
+        permission: command.permission,
+      }
+    case 'clearNoteBlockMemberAccess':
+      return {
+        type: command.type,
+        noteId,
+        blockIds,
+        memberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, command.memberId),
+      }
+  }
+}
+
 export const executeStructureCommand = campaignMutation({
   args: {
     operationId: operationIdValidator,
@@ -379,6 +410,27 @@ export const executeResourceAccessCommand = dmMutation({
       ? {
           status: 'completed' as const,
           receipt: { ...result.receipt, resourceIds: [...result.receipt.resourceIds] },
+        }
+      : result
+  },
+})
+
+export const executeNoteBlockAccessCommand = campaignMutation({
+  args: {
+    operationId: operationIdValidator,
+    command: noteBlockAccessCommandValidator,
+  },
+  returns: noteBlockAccessCommandResultValidator,
+  handler: async (ctx, args) => {
+    const result = await executeNoteBlockAccessCommandFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      noteBlockAccessCommand(args.command),
+    )
+    return result.status === 'completed'
+      ? {
+          status: 'completed' as const,
+          receipt: { ...result.receipt, blockIds: [...result.receipt.blockIds] },
         }
       : result
   },

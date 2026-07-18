@@ -728,8 +728,17 @@ function exportPendingState(
     NoteSessionState | FileContentState | MapSessionState | CanvasSessionState,
     { status: 'ready' }
   >,
-): Exclude<ContentExportResult, { status: 'ready' }> {
-  return state.status === 'initializing' ? { status: 'loading' } : state
+): ContentExportResult {
+  if (state.status === 'initializing') return { status: 'loading' }
+  if (state.status === 'empty') {
+    return {
+      status: 'ready',
+      bytes: new Uint8Array(),
+      extension: 'md',
+      mediaType: 'text/markdown',
+    }
+  }
+  return state
 }
 
 function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
@@ -886,6 +895,7 @@ export function createInMemoryEditorRuntime({
         loader: resources.loader,
         structure,
         access: unsupported,
+        noteBlockAccess: unsupported,
         bookmarks: { status: 'available', value: bookmarks },
         previews: unsupported,
         undo: canEdit

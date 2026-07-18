@@ -237,6 +237,17 @@ function NoteViewport({
       onContextMenu={(event) => onOpenContextMenu(resourceContextMenuRequest(event, resource))}
     >
       <NoteSessionEditor
+        blockAccess={
+          runtime.resources.noteBlockAccess.status === 'available' &&
+          runtime.resources.access.status === 'available'
+            ? {
+                campaignId: runtime.scope.campaignId,
+                gateway: runtime.resources.noteBlockAccess.value,
+                noteId: resource.id,
+                resourceAccess: runtime.resources.access.value,
+              }
+            : undefined
+        }
         canEdit={canEdit}
         headingNavigationRef={headingNavigationRef}
         label={`${resource.title} note editor`}
@@ -580,6 +591,14 @@ function ContentState({
       return <ViewportState icon={Icon} title="Loading content…" />
     case 'initializing':
       return <ViewportState icon={Icon} title="Preparing your note…" />
+    case 'empty':
+      return (
+        <ViewportState
+          icon={Icon}
+          title="No visible content"
+          description="No note blocks are visible in this view."
+        />
+      )
     case 'unavailable':
       return <ViewportState icon={Icon} title="Content unavailable" description={state.reason} />
     case 'integrity_error':

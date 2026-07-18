@@ -221,6 +221,7 @@ export interface MapPreview {
 
 export type NoteSessionState =
   | ContentUnavailableState
+  | { readonly status: 'empty'; readonly reason: 'no_visible_blocks' }
   | { readonly status: 'initializing'; readonly operationId: OperationId; readonly local: Y.Doc }
   | {
       readonly status: 'ready'

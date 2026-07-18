@@ -6,6 +6,7 @@ import {
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
+import { successorVersion } from '@wizard-archive/editor/resources/component-version'
 import {
   advanceNoteContentVersion,
   initialNoteContentVersion,
@@ -134,6 +135,57 @@ function backend() {
 }
 
 describe('LiveNoteContentSource', () => {
+  it('replaces readonly projections so hidden blocks cannot survive a Yjs merge', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+      true,
+    )
+    const firstId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const secondId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const firstDocument = noteBlocksToYDoc([{ id: firstId, type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    const secondDocument = noteBlocksToYDoc(
+      [{ id: secondId, type: 'paragraph' }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const firstUpdate = arrayBuffer(Y.encodeStateAsUpdate(firstDocument))
+    const secondUpdate = arrayBuffer(Y.encodeStateAsUpdate(secondDocument))
+    const firstVersion = await versionFor(firstUpdate)
+    const secondDigest = (await versionFor(secondUpdate)).digest
+    source.subscribe(resourceId, () => {})
+
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: firstUpdate,
+      version: firstVersion,
+    })
+    const first = source.get(resourceId)
+    if (first.status !== 'ready') throw new TypeError('Expected first projection')
+    provider.emit(resourceId, {
+      status: 'ready',
+      update: secondUpdate,
+      version: successorVersion(firstVersion, secondDigest),
+    })
+    const second = source.get(resourceId)
+    if (second.status !== 'ready') throw new TypeError('Expected replacement projection')
+
+    expect(second.session).not.toBe(first.session)
+    expect(
+      decodeNoteYjsUpdatesToBlocks(
+        [{ update: Y.encodeStateAsUpdate(second.session.document) }],
+        NOTE_YJS_FRAGMENT,
+      ).map((block) => block.id),
+    ).toEqual([secondId])
+    firstDocument.destroy()
+    secondDocument.destroy()
+    source.dispose()
+  })
+
   it('loads an unopened note once for Markdown export without starting a live session', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()

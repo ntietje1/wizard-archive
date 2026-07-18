@@ -9,8 +9,10 @@ import type {
   ResourceAccessCommandGateway,
   ResourceBookmarkCommandGateway,
   ResourceStructureCommandGateway,
+  NoteBlockAccessCommandGateway,
 } from './resource-command-contract'
 import type { ResourceAccessPresentation, ResourcePermission } from './resource-access-policy'
+import type { NoteBlockAccessPresentation } from './note-block-access-policy'
 import type {
   ResourceIndexLoader,
   ResourceKnowledge,
@@ -34,6 +36,12 @@ export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
   getPresentation(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
   loadPresentation(resourceId: ResourceId): void
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+}
+
+export interface NoteBlockAccessGateway extends NoteBlockAccessCommandGateway {
+  getPresentation(noteId: ResourceId): ResourceKnowledge<NoteBlockAccessPresentation>
+  loadPresentation(noteId: ResourceId): void
+  subscribe(noteId: ResourceId, listener: () => void): () => void
 }
 
 export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway {
@@ -92,6 +100,7 @@ export interface EditorRuntime {
     readonly loader: ResourceIndexLoader
     readonly structure: ResourceCapability<ResourceStructureCommandGateway>
     readonly access: ResourceCapability<ResourceAccessGateway>
+    readonly noteBlockAccess: ResourceCapability<NoteBlockAccessGateway>
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>
     readonly undo: ResourceCapability<ResourceUndoHistory>

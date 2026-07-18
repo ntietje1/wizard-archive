@@ -3,6 +3,7 @@ import { NoteEditor } from './note-editor'
 import type { NoteScrollBehavior } from './note-scroll-persistence'
 import type { NoteHeadingNavigationRef } from './note-heading-navigation'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
+import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
 
 type RenderableNoteSessionState = Extract<
   NoteSessionState,
@@ -12,6 +13,7 @@ type RenderableNoteSessionState = Extract<
 export function NoteSessionEditor({
   canEdit,
   activation,
+  blockAccess,
   formattingToolbar,
   headingNavigationRef,
   label,
@@ -20,6 +22,7 @@ export function NoteSessionEditor({
 }: {
   canEdit: boolean
   activation?: BlockNoteActivation
+  blockAccess?: NoteBlockAccessMenuBinding
   formattingToolbar?: boolean
   headingNavigationRef?: NoteHeadingNavigationRef
   label: string
@@ -31,6 +34,7 @@ export function NoteSessionEditor({
       <NoteEditor
         document={state.local}
         activation={activation}
+        blockAccess={blockAccess}
         formattingToolbar={formattingToolbar}
         headingNavigationRef={headingNavigationRef}
         label={label}
@@ -53,6 +57,7 @@ export function NoteSessionEditor({
     <NoteEditor
       collaboration={state.session.collaboration}
       activation={activation}
+      blockAccess={blockAccess}
       document={state.session.document}
       formattingToolbar={formattingToolbar}
       headingNavigationRef={headingNavigationRef}
