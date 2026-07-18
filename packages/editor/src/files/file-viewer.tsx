@@ -1,24 +1,14 @@
 import { Download, File as FileIcon } from 'lucide-react'
-import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { validateFileUploadSize } from '../../../../shared/storage/validation'
 import type { FileContentSource, FileResourceContent } from '../resources/content-session-contract'
 import type { VersionStamp } from '../resources/component-version'
 import type { ResourceId } from '../resources/domain-id'
-import { FILE_CLASSIFICATION } from '../resources/file-content-contract'
-import { ImageFileViewer } from './image-file-viewer'
-import { MediaFileViewer } from './media-file-viewer'
 import { useAssetReplacement } from '../resources/asset-replacement'
 import type { AssetReplacementController } from '../resources/asset-replacement'
 import { AssetReplacementButton } from '../resources/asset-replacement-button'
-import { beginContentObjectUrlLoad } from '../resources/content-object-url'
-import type { ContentObjectUrlState } from '../resources/content-object-url'
-
-const PdfFileViewer = lazy(() =>
-  import('./pdf-file-viewer').then(({ PdfFileViewer: Viewer }) => ({ default: Viewer })),
-)
-
-type FileBytesState = ContentObjectUrlState
+import { FileContentPreview } from './file-content-preview'
+import { useFileContentUrl } from './use-file-content-url'
 
 export function FileViewer({
   canEdit,
@@ -84,7 +74,7 @@ function AttachedFileViewer({
   title: string
   version: VersionStamp
 }) {
-  const { retry, state } = useFileBytes(source, resourceId, version)
+  const { retry, state } = useFileContentUrl(source, resourceId, version)
   if (state.status === 'loading') return <FileState title="Loading file…" />
   if (state.status === 'failed') {
     return (
@@ -138,7 +128,7 @@ function AttachedFileViewer({
         </div>
       )}
       <section aria-label="File preview" className="min-h-0 flex-1">
-        <FileContent content={content} fileName={fileName} url={state.url} />
+        <FileContentPreview content={content} fileName={fileName} url={state.url} />
       </section>
     </>
   )
@@ -231,38 +221,6 @@ function fileReplacementMessage(reason: string): string {
   }
 }
 
-function FileContent({
-  content,
-  fileName,
-  url,
-}: {
-  content: FileResourceContent
-  fileName: string
-  url: string
-}) {
-  switch (content.classification) {
-    case FILE_CLASSIFICATION.image:
-      return <ImageFileViewer alt={fileName} url={url} />
-    case FILE_CLASSIFICATION.pdf:
-      return (
-        <Suspense fallback={<FileState title="Loading PDF…" />}>
-          <PdfFileViewer url={url} />
-        </Suspense>
-      )
-    case FILE_CLASSIFICATION.audio:
-      return <MediaFileViewer kind="audio" url={url} />
-    case FILE_CLASSIFICATION.video:
-      return <MediaFileViewer kind="video" url={url} />
-    case FILE_CLASSIFICATION.inert:
-      return (
-        <FileState
-          title={fileName}
-          description={fileUnavailableDescription(content.viewerUnavailableReason)}
-        />
-      )
-  }
-}
-
 function FileState({
   action,
   description,
@@ -284,17 +242,6 @@ function FileState({
   )
 }
 
-function useFileBytes(source: FileContentSource, resourceId: ResourceId, version: VersionStamp) {
-  const [attempt, setAttempt] = useState(0)
-  const [state, setState] = useState<FileBytesState>({ status: 'loading' })
-
-  useEffect(() => {
-    return beginContentObjectUrlLoad(() => source.export(resourceId), setState)
-  }, [attempt, resourceId, source, version.digest, version.revision, version.scheme])
-
-  return { retry: () => setAttempt((current) => current + 1), state }
-}
-
 function fileDownloadName(title: string, extension: string | null): string {
   if (!extension || title.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) return title
   return `${title}.${extension}`
@@ -308,20 +255,4 @@ function fileMetadataLabel(mediaType: string, byteSize: number): string {
         ? `${(byteSize / 1024).toFixed(1)} KB`
         : `${(byteSize / (1024 * 1024)).toFixed(1)} MB`
   return `${mediaType} · ${size}`
-}
-
-function fileUnavailableDescription(
-  reason: FileResourceContent['viewerUnavailableReason'],
-): string {
-  switch (reason) {
-    case 'empty_file':
-      return 'This file is empty.'
-    case 'note_size_limit':
-      return 'This file is too large or complex to preview.'
-    case 'invalid_utf8':
-    case 'nul_byte':
-    case 'unsupported_format':
-    case null:
-      return 'This file type cannot be previewed.'
-  }
 }

@@ -6,16 +6,24 @@ import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headle
 import { CanvasResourceEmbed } from '../workspace/canvas-resource-embed'
 import { createInMemoryNoteSession } from '../in-memory-note-session'
 import type {
+  CanvasSessionSource,
   CanvasPreviewSource,
+  FileContentSource,
+  MapSessionSource,
   MapPreviewSource,
   NoteSessionSource,
 } from '../content-session-contract'
+import type { EditorRuntime } from '../editor-runtime-contract'
 import { assertSha256Digest, initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId, generateUuidV7 } from '../domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import type { ResourceIndexLoader, ResourceProjectionScope } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import { MutableWorkspaceResourceIndex, indexRevision } from '../workspace-resource-index'
+
+vi.mock('../../files/image-file-viewer', () => ({
+  ImageFileViewer: ({ alt, url }: { alt: string; url: string }) => <img alt={alt} src={url} />,
+}))
 
 describe('CanvasResourceEmbed', () => {
   it('keeps the complete canonical note surface mounted across canvas activation', async () => {
@@ -114,13 +122,10 @@ describe('CanvasResourceEmbed', () => {
       <CanvasResourceEmbed
         activation={null}
         canEdit
-        canvases={canvases}
         editing={false}
-        index={index}
-        loader={loader}
-        maps={maps}
         node={node}
-        notes={notes}
+        runtime={previewRuntime({ canvases, index, loader, maps, notes, scope })}
+        sourceResourceId={generateDomainId(DOMAIN_ID_KIND.resource)}
         zoom={2}
       />,
     )
@@ -142,13 +147,10 @@ describe('CanvasResourceEmbed', () => {
       <CanvasResourceEmbed
         activation={null}
         canEdit
-        canvases={canvases}
         editing
-        index={index}
-        loader={loader}
-        maps={maps}
         node={node}
-        notes={notes}
+        runtime={previewRuntime({ canvases, index, loader, maps, notes, scope })}
+        sourceResourceId={generateDomainId(DOMAIN_ID_KIND.resource)}
       />,
     )
 
@@ -161,6 +163,176 @@ describe('CanvasResourceEmbed', () => {
     createEditor.mockRestore()
     view.unmount()
     session.dispose()
+  })
+
+  it('renders verified native file content through the shared cross-kind surface', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const scope = {
+      campaignId,
+      actorId,
+      projection: 'dm',
+      schema: RESOURCE_INDEX_SCHEMA,
+    } satisfies ResourceProjectionScope
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+    const version = initialVersion(await sha256Digest(bytes))
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('file-embed'))
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('known-file'),
+      resources: [
+        {
+          id: resourceId,
+          campaignId,
+          displayParentId: null,
+          kind: 'file',
+          title: canonicalizeResourceTitle('Harbor.png'),
+          icon: null,
+          color: null,
+          lifecycle: 'active',
+          permission: 'edit',
+          metadataVersion: version,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      missingResourceIds: [],
+      collections: [],
+    })
+    const loader = {
+      ensureResource: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
+      ensureCollection: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
+    } satisfies ResourceIndexLoader
+    const exportFile = vi.fn(() => ({
+      status: 'ready' as const,
+      bytes,
+      extension: 'png',
+      mediaType: 'image/png',
+    }))
+    const fileState = {
+      status: 'ready' as const,
+      content: {
+        attachment: 'attached' as const,
+        byteSize: bytes.byteLength,
+        classification: 'viewable_image' as const,
+        detectedFormat: 'png',
+        extension: 'png',
+        mediaType: 'image/png',
+        viewerUnavailableReason: null,
+      },
+      version,
+    }
+    const files = {
+      get: () => fileState,
+      subscribe: () => () => {},
+      export: exportFile,
+      executeTransfer: () => Promise.reject(new Error('Not used')),
+      replace: () => Promise.reject(new Error('Not used')),
+      dispose: () => {},
+    } satisfies FileContentSource
+    const unavailable = {
+      get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+      subscribe: () => () => {},
+    }
+    class TestURL extends URL {}
+    const revokeObjectURL = vi.fn()
+    TestURL.createObjectURL = vi.fn(() => 'blob:harbor-image')
+    TestURL.revokeObjectURL = revokeObjectURL
+    vi.stubGlobal('URL', TestURL)
+    const view = render(
+      <CanvasResourceEmbed
+        activation={null}
+        canEdit
+        editing={false}
+        node={{
+          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          data: {
+            destination: {
+              kind: 'internal',
+              target: { kind: 'resource', resourceId },
+            },
+          },
+        }}
+        runtime={previewRuntime({
+          canvases: unavailable,
+          files,
+          index,
+          loader,
+          maps: unavailable,
+          notes: unavailableNoteSource(),
+          scope,
+        })}
+        sourceResourceId={generateDomainId(DOMAIN_ID_KIND.resource)}
+      />,
+    )
+
+    expect(await screen.findByRole('img', { name: 'Harbor.png' })).toHaveAttribute(
+      'src',
+      'blob:harbor-image',
+    )
+    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent('Harbor.png')
+    expect(exportFile).toHaveBeenCalledOnce()
+
+    view.unmount()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:harbor-image')
+    vi.unstubAllGlobals()
+  })
+
+  it('rejects a recursive canvas embed before loading content', () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const scope = {
+      campaignId,
+      actorId,
+      projection: 'dm',
+      schema: RESOURCE_INDEX_SCHEMA,
+    } satisfies ResourceProjectionScope
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('recursive-embed'))
+    const ensureResource = vi.fn(() => Promise.resolve({ status: 'completed' as const }))
+    const loader = {
+      ensureResource,
+      ensureCollection: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
+    } satisfies ResourceIndexLoader
+    const unavailable = {
+      get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+      subscribe: () => () => {},
+    }
+    render(
+      <CanvasResourceEmbed
+        activation={null}
+        canEdit
+        editing={false}
+        node={{
+          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          data: {
+            destination: {
+              kind: 'internal',
+              target: { kind: 'resource', resourceId },
+            },
+          },
+        }}
+        runtime={previewRuntime({
+          canvases: unavailable,
+          index,
+          loader,
+          maps: unavailable,
+          notes: unavailableNoteSource(),
+          scope,
+        })}
+        sourceResourceId={resourceId}
+      />,
+    )
+
+    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent(
+      'Warning: resource embed',
+    )
+    expect(ensureResource).not.toHaveBeenCalled()
   })
 
   it('renders a complete canonical folder collection instead of a placeholder', () => {
@@ -339,11 +511,7 @@ function renderFolderEmbed(
     <CanvasResourceEmbed
       activation={null}
       canEdit
-      canvases={unavailable}
       editing={false}
-      index={index}
-      loader={loader}
-      maps={unavailable}
       node={{
         id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
         type: 'embed',
@@ -355,8 +523,106 @@ function renderFolderEmbed(
           },
         },
       }}
-      notes={notes}
+      runtime={previewRuntime({
+        canvases: unavailable,
+        index,
+        loader,
+        maps: unavailable,
+        notes,
+        scope,
+      })}
+      sourceResourceId={generateDomainId(DOMAIN_ID_KIND.resource)}
     />,
   )
   return { publish }
+}
+
+function previewRuntime({
+  canvases,
+  files: suppliedFiles,
+  index,
+  loader,
+  maps,
+  notes,
+  scope,
+}: {
+  canvases: CanvasPreviewSource
+  files?: FileContentSource
+  index: EditorRuntime['resources']['index']
+  loader: EditorRuntime['resources']['loader']
+  maps: MapPreviewSource
+  notes: NoteSessionSource
+  scope: ResourceProjectionScope
+}): EditorRuntime {
+  const unsupported = {
+    status: 'unavailable',
+    reason: 'capability_not_supported',
+  } as const
+  const unavailable = {
+    get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+    subscribe: () => () => {},
+  }
+  const files =
+    suppliedFiles ??
+    ({
+      ...unavailable,
+      export: () => ({
+        status: 'unavailable' as const,
+        reason: 'capability_not_supported' as const,
+      }),
+      executeTransfer: () => Promise.reject(new Error('Not used')),
+      replace: () => Promise.reject(new Error('Not used')),
+      dispose: () => {},
+    } satisfies FileContentSource)
+  const mapSessions = {
+    ...unavailable,
+    previews: maps,
+    export: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+    create: () => Promise.reject(new Error('Not used')),
+    dispose: () => {},
+  } satisfies MapSessionSource
+  const canvasSessions = {
+    ...unavailable,
+    previews: canvases,
+    export: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+    create: () => Promise.reject(new Error('Not used')),
+    dispose: () => {},
+  } satisfies CanvasSessionSource
+  return {
+    scope,
+    resources: {
+      index,
+      loader,
+      structure: unsupported,
+      access: unsupported,
+      noteBlockAccess: unsupported,
+      bookmarks: unsupported,
+      previews: unsupported,
+      undo: unsupported,
+    },
+    content: { notes, files, maps: mapSessions, canvases: canvasSessions },
+    navigation: {
+      current: () => null,
+      open: () => {},
+      subscribe: () => () => {},
+    },
+    preferences: {
+      get: () => ({ status: 'unavailable', reason: 'scope_unavailable' }),
+      subscribe: () => () => {},
+      change: () => Promise.resolve({ status: 'failed', retryable: false }),
+    },
+    search: unsupported,
+    history: unsupported,
+    viewAs: unsupported,
+  }
+}
+
+function unavailableNoteSource(): NoteSessionSource {
+  return {
+    get: () => ({ status: 'unavailable', reason: 'capability_not_supported' }),
+    subscribe: () => () => {},
+    export: () => ({ status: 'unavailable', reason: 'capability_not_supported' }),
+    create: () => Promise.reject(new Error('Not used')),
+    dispose: () => {},
+  }
 }

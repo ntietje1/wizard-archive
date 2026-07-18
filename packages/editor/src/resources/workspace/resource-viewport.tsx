@@ -1,5 +1,5 @@
 import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useCallback, useRef, useSyncExternalStore } from 'react'
+import { useRef } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -39,6 +39,7 @@ import { createWorkspaceCanvasDropResolver } from './workspace-canvas-drop'
 import { FileViewer } from '../../files/file-viewer'
 import { MapViewer } from '../../maps/map-viewer'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
+import { useResourceStoreSnapshot } from './resource-store-snapshot'
 
 export function ResourceViewport({
   actions,
@@ -130,7 +131,7 @@ function MapViewport({
   runtime: EditorRuntime
   snapshot: WorkspaceResourceIndexSnapshot
 }) {
-  const state = useContentSnapshot(runtime.content.maps, resource.id)
+  const state = useResourceStoreSnapshot(runtime.content.maps, resource.id)
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
   return (
     <MapViewer
@@ -157,7 +158,7 @@ function FileViewport({
   runtime: EditorRuntime
 }) {
   const source = runtime.content.files
-  const state = useContentSnapshot(source, resource.id)
+  const state = useResourceStoreSnapshot(source, resource.id)
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
   return (
     <FileViewer
@@ -182,7 +183,7 @@ function CanvasViewport({
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  const state = useContentSnapshot(runtime.content.canvases, resource.id)
+  const state = useResourceStoreSnapshot(runtime.content.canvases, resource.id)
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
   return (
     <CanvasEditor
@@ -196,13 +197,10 @@ function CanvasViewport({
         <CanvasResourceEmbed
           activation={activation}
           canEdit={canEdit}
-          canvases={runtime.content.canvases.previews}
           editing={editing}
-          index={runtime.resources.index}
-          loader={runtime.resources.loader}
-          maps={runtime.content.maps.previews}
           node={node}
-          notes={runtime.content.notes}
+          runtime={runtime}
+          sourceResourceId={resource.id}
           zoom={zoom}
         />
       )}
@@ -227,7 +225,7 @@ function NoteViewport({
   runtime: EditorRuntime
 }) {
   const source = runtime.content.notes
-  const state = useContentSnapshot(source, resource.id)
+  const state = useResourceStoreSnapshot(source, resource.id)
   if (state.status !== 'initializing' && state.status !== 'ready') {
     return <ContentState resource={resource} state={state} />
   }
@@ -260,21 +258,6 @@ function NoteViewport({
       />
     </div>
   )
-}
-
-function useContentSnapshot<TState>(
-  source: Readonly<{
-    get(resourceId: AuthorizedResourceSummary['id']): TState
-    subscribe(resourceId: AuthorizedResourceSummary['id'], listener: () => void): () => void
-  }>,
-  resourceId: AuthorizedResourceSummary['id'],
-): TState {
-  const subscribe = useCallback(
-    (listener: () => void) => source.subscribe(resourceId, listener),
-    [resourceId, source],
-  )
-  const getSnapshot = useCallback(() => source.get(resourceId), [resourceId, source])
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
 function FolderViewport({
@@ -516,7 +499,7 @@ function CanvasCardPreview({
   previews: CanvasPreviewSource
   resourceId: AuthorizedResourceSummary['id']
 }) {
-  const state = useContentSnapshot(previews, resourceId)
+  const state = useResourceStoreSnapshot(previews, resourceId)
   if (state.status !== 'ready') return null
   return (
     <div className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60">
