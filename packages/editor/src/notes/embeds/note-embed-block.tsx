@@ -1,8 +1,14 @@
 import { File as FileIcon, Link, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import type { DragEvent, ReactNode } from 'react'
+import type { DragEvent, KeyboardEvent, ReactNode, RefObject } from 'react'
 import type { ReactCustomBlockRenderProps } from '@blocknote/react'
 import type { embedBlockConfig } from '../document/schema-factory'
+import {
+  RESIZE_HANDLES,
+  resizeHandleCursor,
+  resizeHandleZoneStyle,
+} from '../../interaction/resize-handle'
+import type { ResizeHandle } from '../../interaction/resize-handle'
 import {
   parseSerializedAuthoredDestination,
   serializeAuthoredDestination,
@@ -22,6 +28,11 @@ import { ResourcePreviewSurface } from '../../resources/workspace/resource-previ
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
 import { useNoteResourceRuntime } from '../use-note-resource-runtime'
 import { settleNoteEmbedResourceCreation } from './note-embed-insertion'
+import {
+  keyboardResizeNoteEmbed,
+  noteEmbedResizeLabel,
+  startNoteEmbedResize,
+} from './note-embed-resize'
 
 type NoteEmbedRenderProps = ReactCustomBlockRenderProps<
   'embed',
@@ -34,6 +45,9 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
   const destination = parseSerializedAuthoredDestination(block.props.destination)
   const empty = destination?.kind === 'unresolved' && destination.rawTarget.length === 0
   const [linking, setLinking] = useState(false)
+  const root = useRef<HTMLElement>(null)
+  const [selected, setSelected] = useState(false)
+  const resizable = surface.editable && destination !== null && !empty
   const setDestination = (next: AuthoredDestination) => {
     editor.updateBlock(block, {
       props: { destination: serializeAuthoredDestination(next) },
@@ -45,10 +59,23 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
     setDestination,
     surface,
   })
+  useEffect(() => {
+    if (!selected) return
+    const clear = (event: globalThis.PointerEvent) => {
+      if (event.target instanceof Node && root.current?.contains(event.target)) return
+      setSelected(false)
+    }
+    window.addEventListener('pointerdown', clear, true)
+    return () => window.removeEventListener('pointerdown', clear, true)
+  }, [selected])
+  const commitSize = ({ height, width }: { height: number; width: number }) => {
+    editor.updateBlock(block, { props: { previewHeight: height, previewWidth: width } })
+  }
 
   return (
     <section
-      className="note-embed-block my-3 w-full select-none overflow-hidden rounded-md border border-border bg-card"
+      ref={root}
+      className="note-embed-block relative my-3 w-full select-none overflow-visible"
       contentEditable={false}
       data-blocknote-external-drop-blocked={empty ? undefined : 'true'}
       data-blocknote-external-drop-target={drop.enabled ? 'true' : undefined}
@@ -57,21 +84,39 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
       onDragOver={drop.onDragOver}
       onDragLeave={drop.onDragLeave}
       onDrop={drop.onDrop}
+      onPointerDownCapture={(event) => {
+        if (!surface.editable || event.button !== 0) return
+        setSelected(true)
+        editor.setTextCursorPosition(block, 'start')
+      }}
       style={{
         maxWidth: '100%',
         width: block.props.previewWidth ? `${block.props.previewWidth}px` : undefined,
       }}
     >
-      <NoteEmbedContent
-        destination={destination}
-        empty={empty}
-        linking={linking}
-        pending={drop.pending}
-        setDestination={setDestination}
-        setLinking={setLinking}
-        surface={surface}
-        uploadFile={drop.uploadFile}
-      />
+      <div className="size-full overflow-hidden rounded-md border border-border bg-card">
+        <NoteEmbedContent
+          destination={destination}
+          empty={empty}
+          height={block.props.previewHeight}
+          linking={linking}
+          pending={drop.pending}
+          setDestination={setDestination}
+          setLinking={setLinking}
+          surface={surface}
+          uploadFile={drop.uploadFile}
+        />
+      </div>
+      {selected && (
+        <NoteEmbedSelectionControls
+          editorElement={editor.domElement ?? null}
+          height={block.props.previewHeight}
+          onCommit={commitSize}
+          resizable={resizable}
+          root={root}
+          width={block.props.previewWidth}
+        />
+      )}
     </section>
   )
 }
@@ -92,6 +137,7 @@ export function ExternalNoteEmbedHtml({ block }: NoteEmbedRenderProps) {
 function NoteEmbedContent({
   destination,
   empty,
+  height,
   linking,
   pending,
   setDestination,
@@ -101,6 +147,7 @@ function NoteEmbedContent({
 }: {
   destination: AuthoredDestination | null
   empty: boolean
+  height?: number
   linking: boolean
   pending: 'drop' | 'upload' | null
   setDestination: (destination: AuthoredDestination) => void
@@ -126,10 +173,13 @@ function NoteEmbedContent({
         report={surface.report}
         renderNote={surface.renderNote}
         runtime={surface.runtime}
+        height={height}
       />
     )
   }
-  if (destination.kind === 'externalUrl') return <ExternalNoteEmbed url={destination.url} />
+  if (destination.kind === 'externalUrl') {
+    return <ExternalNoteEmbed height={height} url={destination.url} />
+  }
   if (empty) {
     return (
       <EmptyNoteEmbed
@@ -143,10 +193,12 @@ function NoteEmbedContent({
     )
   }
   return (
-    <EmbedState>
-      <span className="font-medium">Unresolved embedded resource</span>
-      <span className="text-muted-foreground">{destination.rawTarget}</span>
-    </EmbedState>
+    <NoteEmbedBody height={height}>
+      <EmbedState>
+        <span className="font-medium">Unresolved embedded resource</span>
+        <span className="text-muted-foreground">{destination.rawTarget}</span>
+      </EmbedState>
+    </NoteEmbedBody>
   )
 }
 
@@ -257,6 +309,7 @@ function InternalNoteEmbed({
   report,
   renderNote,
   runtime,
+  height,
 }: {
   ancestry: ReadonlySet<ResourceId>
   destination: Extract<AuthoredDestination, { kind: 'internal' }>
@@ -264,10 +317,21 @@ function InternalNoteEmbed({
   report: ReturnType<typeof useNoteResourceRuntime>['report']
   renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime | null
+  height?: number
 }) {
-  if (!runtime) return <EmbedState>Embedded resources are unavailable here</EmbedState>
+  if (!runtime) {
+    return (
+      <NoteEmbedBody height={height}>
+        <EmbedState>Embedded resources are unavailable here</EmbedState>
+      </NoteEmbedBody>
+    )
+  }
   if (ancestry.has(destination.target.resourceId)) {
-    return <EmbedState>Recursive embedded resource</EmbedState>
+    return (
+      <NoteEmbedBody height={height}>
+        <EmbedState>Recursive embedded resource</EmbedState>
+      </NoteEmbedBody>
+    )
   }
   return (
     <InternalResourceEmbed
@@ -277,6 +341,7 @@ function InternalNoteEmbed({
       renderNote={renderNote}
       runtime={runtime}
       target={destination.target}
+      height={height}
     />
   )
 }
@@ -288,6 +353,7 @@ function InternalResourceEmbed({
   renderNote,
   runtime,
   target,
+  height,
 }: {
   ancestry: ReadonlySet<ResourceId>
   drop: ReturnType<typeof useNoteResourceRuntime>['drop']
@@ -295,6 +361,7 @@ function InternalResourceEmbed({
   renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime
   target: Extract<AuthoredDestination, { kind: 'internal' }>['target']
+  height?: number
 }) {
   const resourceId = target.resourceId
   const snapshot = useWorkspaceIndexSnapshot(runtime.resources.index)
@@ -306,15 +373,17 @@ function InternalResourceEmbed({
 
   if (resource.state !== 'known') {
     return (
-      <EmbedState>
-        {resource.state === 'unknown' ? 'Loading resource' : 'Resource unavailable'}
-      </EmbedState>
+      <NoteEmbedBody height={height}>
+        <EmbedState>
+          {resource.state === 'unknown' ? 'Loading resource' : 'Resource unavailable'}
+        </EmbedState>
+      </NoteEmbedBody>
     )
   }
   return (
     <>
       <InternalResourceHeader resource={resource.value} runtime={runtime} target={target} />
-      <div className="h-72 min-h-36 overflow-hidden" data-note-embed-body="true">
+      <NoteEmbedBody height={height}>
         <ResourcePreviewSurface
           renderNote={({ resource: note, state }) =>
             renderNote ? (
@@ -327,7 +396,7 @@ function InternalResourceEmbed({
           runtime={runtime}
           target={target}
         />
-      </div>
+      </NoteEmbedBody>
     </>
   )
 }
@@ -440,7 +509,7 @@ function EmptyNoteEmbed({
   )
 }
 
-function ExternalNoteEmbed({ url }: { url: SafeHttpsUrl }) {
+function ExternalNoteEmbed({ height, url }: { height?: number; url: SafeHttpsUrl }) {
   const { href, mediaKind, title } = presentExternalUrl(url)
   return (
     <>
@@ -453,7 +522,7 @@ function ExternalNoteEmbed({ url }: { url: SafeHttpsUrl }) {
         <Link className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="min-w-0 truncate text-sm font-medium">{title}</span>
       </a>
-      <div className="flex h-72 min-h-36 items-center justify-center overflow-hidden">
+      <NoteEmbedBody height={height}>
         {mediaKind === 'image' ? (
           <img alt={title} className="size-full object-contain" draggable={false} src={href} />
         ) : mediaKind === 'audio' ? (
@@ -469,7 +538,7 @@ function ExternalNoteEmbed({ url }: { url: SafeHttpsUrl }) {
             </a>
           </EmbedState>
         )}
-      </div>
+      </NoteEmbedBody>
     </>
   )
 }
@@ -480,6 +549,125 @@ function EmbedState({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
+}
+
+function NoteEmbedBody({ children, height }: { children: ReactNode; height?: number }) {
+  return (
+    <div
+      className="flex h-72 min-h-36 items-center justify-center overflow-hidden"
+      data-note-embed-body="true"
+      style={height ? { height } : undefined}
+    >
+      {children}
+    </div>
+  )
+}
+
+function NoteEmbedSelectionControls({
+  editorElement,
+  height,
+  onCommit,
+  resizable,
+  root,
+  width,
+}: {
+  editorElement: HTMLElement | null
+  height?: number
+  onCommit: (size: { height: number; width: number }) => void
+  resizable: boolean
+  root: RefObject<HTMLElement | null>
+  width?: number
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-30"
+      contentEditable={false}
+      data-testid="note-embed-resize-wrapper"
+    >
+      <div
+        className="absolute inset-0 bg-canvas-selection-fill"
+        data-testid="note-embed-resize-fill"
+      />
+      <div
+        className="absolute border-[1.5px]"
+        data-testid="note-embed-resize-outline"
+        style={{ borderColor: 'var(--canvas-selection-stroke)', inset: -3 }}
+      />
+      {resizable &&
+        RESIZE_HANDLES.map((handle) => (
+          <button
+            key={handle}
+            type="button"
+            aria-label={noteEmbedResizeLabel(handle)}
+            className="pointer-events-auto absolute z-20 touch-none border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-canvas-selection-focus-ring"
+            data-note-embed-resize-zone="true"
+            data-testid={`note-embed-resize-zone-${handle}`}
+            draggable={false}
+            onKeyDown={(event) =>
+              resizeFromKeyboard(event, {
+                editorElement,
+                handle,
+                height,
+                onCommit,
+                root: root.current,
+                width,
+              })
+            }
+            onPointerDown={(event) =>
+              startNoteEmbedResize({
+                editorElement,
+                event,
+                handle,
+                onCommit,
+                root: root.current,
+              })
+            }
+            style={{
+              ...resizeHandleZoneStyle(handle, 18),
+              cursor: resizeHandleCursor(handle),
+            }}
+          />
+        ))}
+    </div>
+  )
+}
+
+function resizeFromKeyboard(
+  event: KeyboardEvent<HTMLButtonElement>,
+  {
+    editorElement,
+    handle,
+    height,
+    onCommit,
+    root,
+    width,
+  }: {
+    editorElement: HTMLElement | null
+    handle: ResizeHandle
+    height?: number
+    onCommit: (size: { height: number; width: number }) => void
+    root: HTMLElement | null
+    width?: number
+  },
+) {
+  const body = root?.querySelector<HTMLElement>('[data-note-embed-body="true"]')
+  const rootBounds = root?.getBoundingClientRect()
+  const bodyBounds = body?.getBoundingClientRect()
+  const next = keyboardResizeNoteEmbed({
+    editorWidth: editorElement?.firstElementChild?.clientWidth,
+    handle,
+    height: positiveSize(height) ?? positiveSize(bodyBounds?.height) ?? 144,
+    key: event.key,
+    width: positiveSize(width) ?? positiveSize(rootBounds?.width) ?? 64,
+  })
+  if (!next) return
+  event.preventDefault()
+  event.stopPropagation()
+  onCommit(next)
+}
+
+function positiveSize(value: number | undefined): number | null {
+  return value !== undefined && Number.isFinite(value) && value > 0 ? value : null
 }
 
 function recursiveDestination(destination: AuthoredDestination, ancestry: ReadonlySet<ResourceId>) {

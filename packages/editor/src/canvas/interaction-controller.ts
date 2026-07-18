@@ -3,12 +3,12 @@ import type {
   CanvasConnectionAnchor,
   CanvasDrawPoint,
   CanvasPoint,
-  CanvasResizeHandle,
   CanvasSelection,
   CanvasTool,
   CanvasToolSettings,
   CanvasViewport,
 } from './interaction-types'
+import type { ResizeHandle } from '../interaction/resize-handle'
 import { DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport'
 import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
@@ -113,7 +113,7 @@ type CanvasInteraction =
   | Readonly<{
       type: 'resizing'
       pointerId: number
-      handle: CanvasResizeHandle
+      handle: ResizeHandle
       initialBounds: CanvasBounds
       bounds: CanvasBounds
       initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
@@ -728,7 +728,7 @@ class CanvasInteractionControllerState {
 
   beginResize(
     pointerId: number,
-    handle: CanvasResizeHandle,
+    handle: ResizeHandle,
     bounds: CanvasBounds,
     nodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
   ): void {

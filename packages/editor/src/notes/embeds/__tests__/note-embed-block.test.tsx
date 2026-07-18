@@ -60,6 +60,80 @@ describe('NoteEmbedBlock', () => {
     expect(screen.getByRole('img', { name: 'truncated%E0%A4%A.png' })).toHaveAttribute('src', url)
   })
 
+  it('selects resolved embeds and restores keyboard-accessible resize handles', () => {
+    const url = parseSafeHttpsUrl('https://example.com/maps/harbor.png')
+    if (!url) throw new Error('Expected a safe URL')
+    const editor = {
+      domElement: null,
+      setTextCursorPosition: vi.fn(),
+      updateBlock: vi.fn(),
+    }
+    renderNoteEmbed(editor, serializeAuthoredDestination({ kind: 'externalUrl', url }), true)
+
+    fireEvent.pointerDown(screen.getByTestId('note-embed-block'), { button: 0 })
+
+    expect(editor.setTextCursorPosition).toHaveBeenCalledOnce()
+    expect(screen.getAllByTestId(/note-embed-resize-zone-/)).toHaveLength(8)
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize embedded resource right' }), {
+      key: 'ArrowRight',
+    })
+
+    expect(editor.updateBlock).toHaveBeenLastCalledWith(expect.anything(), {
+      props: { previewHeight: 144, previewWidth: 496 },
+    })
+  })
+
+  it('does not expose resize controls in a readonly note', () => {
+    const url = parseSafeHttpsUrl('https://example.com/maps/harbor.png')
+    if (!url) throw new Error('Expected a safe URL')
+    renderNoteEmbed(
+      {
+        domElement: null,
+        setTextCursorPosition: vi.fn(),
+        updateBlock: vi.fn(),
+      },
+      serializeAuthoredDestination({ kind: 'externalUrl', url }),
+      false,
+    )
+
+    fireEvent.pointerDown(screen.getByTestId('note-embed-block'), { button: 0 })
+
+    expect(screen.queryByTestId('note-embed-resize-wrapper')).not.toBeInTheDocument()
+  })
+
+  it('commits pointer resize geometry to the canonical embed props', () => {
+    const url = parseSafeHttpsUrl('https://example.com/maps/harbor.png')
+    if (!url) throw new Error('Expected a safe URL')
+    const editor = {
+      domElement: null,
+      setTextCursorPosition: vi.fn(),
+      updateBlock: vi.fn(),
+    }
+    renderNoteEmbed(editor, serializeAuthoredDestination({ kind: 'externalUrl', url }), true)
+    const root = screen.getByTestId('note-embed-block')
+    const body = root.querySelector<HTMLElement>('[data-note-embed-body="true"]')
+    if (!body) throw new Error('Expected an embed body')
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(rect(480, 328))
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue(rect(480, 288))
+    fireEvent.pointerDown(root, { button: 0 })
+
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'Resize embedded resource bottom right' }),
+      {
+        clientX: 480,
+        clientY: 288,
+        pointerId: 1,
+      },
+    )
+    fireEvent.pointerMove(window, { clientX: 520, clientY: 312, pointerId: 1 })
+    fireEvent.pointerUp(window, { pointerId: 1 })
+
+    expect(editor.updateBlock).toHaveBeenLastCalledWith(expect.anything(), {
+      props: { previewHeight: 312, previewWidth: 520 },
+    })
+  })
+
   it('uses the shared drop resolver and rejects recursive resource destinations', async () => {
     const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const editor = { updateBlock: vi.fn() }
@@ -379,7 +453,11 @@ describe('createEmbedItem', () => {
 })
 
 function renderNoteEmbed(
-  editor: { updateBlock: ReturnType<typeof vi.fn> },
+  editor: {
+    domElement?: HTMLElement | null
+    setTextCursorPosition?: ReturnType<typeof vi.fn>
+    updateBlock: ReturnType<typeof vi.fn>
+  },
   destination: string,
   editable = true,
 ) {
@@ -416,4 +494,18 @@ function removeNoteBlock(document: Y.Doc, blockId: string) {
     .findIndex((child) => child instanceof Y.XmlElement && child.getAttribute('id') === blockId)
   if (index < 0) throw new Error('Expected the note block')
   document.transact(() => root.delete(index, 1))
+}
+
+function rect(width: number, height: number): DOMRect {
+  return {
+    bottom: height,
+    height,
+    left: 0,
+    right: width,
+    top: 0,
+    width,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  }
 }

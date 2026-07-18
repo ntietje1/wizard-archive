@@ -1,5 +1,5 @@
 import type { CanvasBounds } from './canvas-bounds'
-import type { CanvasResizeHandle } from './interaction-types'
+import type { ResizeHandle } from '../interaction/resize-handle'
 import { bestSnapCandidate, canvasSnapThreshold, snapGuide } from './canvas-snap-geometry'
 import type { CanvasSnapCandidate, CanvasSnapGuide } from './canvas-snap-geometry'
 import type { CanvasNodeId } from '../resources/domain-id'
@@ -16,7 +16,7 @@ export function resolveCanvasResize({
   snap,
   zoom,
 }: {
-  handle: CanvasResizeHandle
+  handle: ResizeHandle
   initialBounds: CanvasBounds
   point: Readonly<{ x: number; y: number }>
   initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
@@ -63,7 +63,7 @@ export function resolveCanvasResize({
 }
 
 function resolveCanvasResizeBounds(
-  handle: CanvasResizeHandle,
+  handle: ResizeHandle,
   initialBounds: CanvasBounds,
   point: Readonly<{ x: number; y: number }>,
   initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
@@ -147,7 +147,7 @@ function resolveSideResize(
   }
 }
 
-function oppositeCorner(bounds: CanvasBounds, handle: CanvasResizeHandle) {
+function oppositeCorner(bounds: CanvasBounds, handle: ResizeHandle) {
   switch (handle) {
     case 'top-left':
       return { x: bounds.x + bounds.width, y: bounds.y + bounds.height }
@@ -165,7 +165,7 @@ function oppositeCorner(bounds: CanvasBounds, handle: CanvasResizeHandle) {
   }
 }
 
-function resizeDirection(handle: CanvasResizeHandle) {
+function resizeDirection(handle: ResizeHandle) {
   return {
     x: handle === 'top-left' || handle === 'bottom-left' ? -1 : 1,
     y: handle === 'top-left' || handle === 'top-right' ? -1 : 1,
@@ -191,7 +191,7 @@ function* resizeSnapCandidatesForTargets(
   axis: 'x' | 'y',
   bounds: CanvasBounds,
   targets: ReadonlyArray<CanvasBounds>,
-  handle: CanvasResizeHandle,
+  handle: ResizeHandle,
 ): Generator<CanvasResizeSnapCandidate> {
   for (const target of targets) yield* resizeSnapCandidates(axis, bounds, target, handle)
 }
@@ -208,7 +208,7 @@ function* resizeSnapCandidates(
   axis: 'x' | 'y',
   bounds: CanvasBounds,
   target: CanvasBounds,
-  handle: CanvasResizeHandle,
+  handle: ResizeHandle,
 ): Generator<CanvasResizeSnapCandidate> {
   const size = axis === 'x' ? bounds.width : bounds.height
   const leading = isLeadingResizeHandle(handle, axis)
@@ -249,7 +249,7 @@ function* resizeSnapCandidates(
 
 function resizeCandidatePreserved(
   bounds: CanvasBounds,
-  handle: CanvasResizeHandle,
+  handle: ResizeHandle,
   candidate: CanvasResizeSnapCandidate,
 ): boolean {
   const size = candidate.axis === 'x' ? bounds.width : bounds.height
@@ -259,12 +259,12 @@ function resizeCandidatePreserved(
   return value === candidate.target
 }
 
-function affectsResizeAxis(handle: CanvasResizeHandle, axis: 'x' | 'y'): boolean {
+function affectsResizeAxis(handle: ResizeHandle, axis: 'x' | 'y'): boolean {
   return axis === 'x'
     ? handle !== 'top' && handle !== 'bottom'
     : handle !== 'left' && handle !== 'right'
 }
 
-function isLeadingResizeHandle(handle: CanvasResizeHandle, axis: 'x' | 'y'): boolean {
+function isLeadingResizeHandle(handle: ResizeHandle, axis: 'x' | 'y'): boolean {
   return axis === 'x' ? handle.includes('left') : handle.includes('top')
 }

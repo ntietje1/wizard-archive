@@ -1,4 +1,10 @@
-import type { CSSProperties, ReactNode, RefObject } from 'react'
+import type { ReactNode, RefObject } from 'react'
+import {
+  RESIZE_HANDLES,
+  resizeHandleCursor,
+  resizeHandleZoneStyle,
+} from '../interaction/resize-handle'
+import type { ResizeHandle } from '../interaction/resize-handle'
 import { canvasBoundsUnion, canvasNodeBounds } from './canvas-bounds'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentNode } from './document-contract'
@@ -6,18 +12,7 @@ import type {
   CanvasInteractionController,
   CanvasInteractionSnapshot,
 } from './interaction-controller'
-import type { CanvasResizeHandle, CanvasSelection } from './interaction-types'
-
-const CANVAS_RESIZE_HANDLES: ReadonlyArray<CanvasResizeHandle> = [
-  'top-left',
-  'top',
-  'top-right',
-  'right',
-  'bottom-right',
-  'bottom',
-  'bottom-left',
-  'left',
-]
+import type { CanvasSelection } from './interaction-types'
 const CANVAS_SELECTION_OUTSET_PX = 3
 const CANVAS_SELECTION_STROKE_WIDTH_PX = 1.5
 const CANVAS_SELECTION_Z_INDEX = 30
@@ -76,15 +71,18 @@ export function CanvasSelectionBounds({
       testIdPrefix="canvas-selection-resize"
     >
       {canEdit &&
-        CANVAS_RESIZE_HANDLES.map((handle) => (
+        RESIZE_HANDLES.map((handle) => (
           <button
             key={handle}
             type="button"
             aria-label={resizeHandleLabel(handle)}
-            className={`canvas-selection-resize-zone pointer-events-auto absolute z-[2] touch-none border-none bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-canvas-selection-focus-ring focus-visible:ring-offset-0 ${resizeCursor(handle)}`}
+            className="canvas-selection-resize-zone pointer-events-auto absolute z-[2] touch-none border-none bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-canvas-selection-focus-ring focus-visible:ring-offset-0"
             data-resize-zone-position={handle}
             data-testid={`canvas-selection-resize-zone-${handle}`}
-            style={resizeZoneStyle(handle, hitSize)}
+            style={{
+              ...resizeHandleZoneStyle(handle, hitSize),
+              cursor: resizeHandleCursor(handle),
+            }}
             onPointerDown={(event) => {
               if (event.button !== 0) return
               event.preventDefault()
@@ -184,28 +182,6 @@ function canvasBoundsToScreenBounds(
   }
 }
 
-function resizeZoneStyle(handle: CanvasResizeHandle, hitSize: number): CSSProperties {
-  const halfSize = hitSize / 2
-  switch (handle) {
-    case 'top-left':
-      return { height: hitSize, left: -halfSize, top: -halfSize, width: hitSize }
-    case 'top':
-      return { height: hitSize, left: halfSize, right: halfSize, top: -halfSize }
-    case 'top-right':
-      return { height: hitSize, right: -halfSize, top: -halfSize, width: hitSize }
-    case 'right':
-      return { bottom: halfSize, right: -halfSize, top: halfSize, width: hitSize }
-    case 'bottom-right':
-      return { bottom: -halfSize, height: hitSize, right: -halfSize, width: hitSize }
-    case 'bottom':
-      return { bottom: -halfSize, height: hitSize, left: halfSize, right: halfSize }
-    case 'bottom-left':
-      return { bottom: -halfSize, height: hitSize, left: -halfSize, width: hitSize }
-    case 'left':
-      return { bottom: halfSize, left: -halfSize, top: halfSize, width: hitSize }
-  }
-}
-
 function resizeHitSize(): number {
   const coarsePointer =
     typeof window !== 'undefined' &&
@@ -218,13 +194,6 @@ function resizeHitSize(): number {
   return coarsePointer || touchDevice ? TOUCH_RESIZE_HIT_SIZE_PX : MOUSE_RESIZE_HIT_SIZE_PX
 }
 
-function resizeHandleLabel(handle: CanvasResizeHandle): string {
+function resizeHandleLabel(handle: ResizeHandle): string {
   return `Resize ${handle} selection ${handle.includes('-') ? 'corner' : 'edge'}`
-}
-
-function resizeCursor(handle: CanvasResizeHandle): string {
-  if (handle === 'top' || handle === 'bottom') return 'cursor-ns-resize'
-  if (handle === 'left' || handle === 'right') return 'cursor-ew-resize'
-  if (handle === 'top-left' || handle === 'bottom-right') return 'cursor-nwse-resize'
-  return 'cursor-nesw-resize'
 }

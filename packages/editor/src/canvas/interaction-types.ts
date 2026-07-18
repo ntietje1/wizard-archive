@@ -26,13 +26,3 @@ export type CanvasConnectionAnchor = Readonly<{
   nodeId: CanvasNodeId
   handle: CanvasConnectionHandle
 }>
-
-export type CanvasResizeHandle =
-  | 'top-left'
-  | 'top'
-  | 'top-right'
-  | 'right'
-  | 'bottom-right'
-  | 'bottom'
-  | 'bottom-left'
-  | 'left'
