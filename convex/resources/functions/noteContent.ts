@@ -8,6 +8,7 @@ import type {
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import {
+  noteAuthoredDestinationOccurrences,
   noteAuthoredDestinations,
   remapNoteAuthoredDestinations,
 } from '@wizard-archive/editor/notes/authored-destinations'
@@ -23,8 +24,8 @@ import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
-import type { AuthoredDestination } from '@wizard-archive/editor/resources/authored-destination-contract'
-import { projectReferenceGraph } from '@wizard-archive/editor/resources/authored-destination'
+import type { AuthoredDestinationOccurrence } from '@wizard-archive/editor/resources/authored-destination'
+import { projectReferenceOccurrences } from '@wizard-archive/editor/resources/authored-destination'
 import { replaceResourceReferenceProjection } from './resourceReferences'
 
 export async function findNoteContent(
@@ -44,7 +45,7 @@ export async function createNoteContent(
   operationId: OperationId,
   update: ArrayBuffer,
   version: VersionStamp,
-  destinations: ReadonlyArray<AuthoredDestination>,
+  occurrences: ReadonlyArray<AuthoredDestinationOccurrence>,
 ): Promise<'completed' | 'operation_id_reused'> {
   const existing = await findNoteContent(ctx.db, resourceId)
   if (existing) {
@@ -70,7 +71,7 @@ export async function createNoteContent(
         campaignId,
         sourceResourceId: resourceId,
         sourceVersion: version,
-        destinations,
+        occurrences,
       })
     ).status !== 'completed'
   ) {
@@ -84,14 +85,14 @@ export async function prepareNoteContentCreation(
   resourceId: ResourceId,
 ): Promise<Readonly<{
   version: VersionStamp
-  destinations: ReadonlyArray<AuthoredDestination>
+  occurrences: ReadonlyArray<AuthoredDestinationOccurrence>
 }> | null> {
   try {
     const blocks = decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
     const version = await initialNoteContentVersion(new Uint8Array(update))
-    const destinations = noteAuthoredDestinations(blocks)
-    projectReferenceGraph(resourceId, version, destinations)
-    return { version, destinations }
+    const occurrences = noteAuthoredDestinationOccurrences(blocks)
+    projectReferenceOccurrences(resourceId, version, occurrences)
+    return { version, occurrences }
   } catch {
     return null
   }
@@ -189,7 +190,7 @@ export async function prepareNoteContentCopy(
                 campaignId,
                 sourceResourceId: destinationResourceId,
                 sourceVersion: version,
-                destinations: noteAuthoredDestinations(finalized),
+                occurrences: noteAuthoredDestinationOccurrences(finalized),
               })
             ).status !== 'completed'
           ) {

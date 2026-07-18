@@ -1,5 +1,5 @@
-import { isUuidV7 } from './domain-id'
-import type { CampaignId, ResourceId } from './domain-id'
+import { DOMAIN_ID_KIND, assertDomainId, isUuidV7 } from './domain-id'
+import type { CampaignId, NoteBlockId, ResourceId } from './domain-id'
 import type {
   AuthoredDestination,
   CanonicalTarget,
@@ -49,7 +49,21 @@ export type ReferenceGraphEdge = Readonly<{
   target: CanonicalTarget
 }>
 
-export const MAX_RESOURCE_REFERENCE_TARGETS = 500
+export type ReferenceSourceOccurrence =
+  | Readonly<{ kind: 'resource' }>
+  | Readonly<{ kind: 'noteBlock'; blockId: NoteBlockId }>
+
+export type AuthoredDestinationOccurrence = Readonly<{
+  source: ReferenceSourceOccurrence
+  destination: AuthoredDestination
+}>
+
+export type ReferenceGraphOccurrence = ReferenceGraphEdge &
+  Readonly<{
+    source: ReferenceSourceOccurrence
+  }>
+
+export const MAX_RESOURCE_REFERENCE_OCCURRENCES = 500
 
 export const EMPTY_AUTHORED_DESTINATION_SERIALIZED = serializeAuthoredDestination({
   kind: 'unresolved',
@@ -225,18 +239,94 @@ export function projectReferenceGraph(
   sourceVersion: VersionStamp,
   destinations: ReadonlyArray<AuthoredDestination>,
 ): ReadonlyArray<ReferenceGraphEdge> {
+  const occurrences = projectReferenceOccurrences(
+    sourceResourceId,
+    sourceVersion,
+    resourceAuthoredDestinationOccurrences(destinations),
+  )
   const targets = new Map<string, CanonicalTarget>()
-  for (const destination of destinations) {
-    if (destination.kind === 'internal') {
-      targets.set(canonicalTargetKey(destination.target), destination.target)
-    }
-  }
-  if (targets.size > MAX_RESOURCE_REFERENCE_TARGETS) {
-    throw new RangeError('Resource reference projection exceeds its bound')
+  for (const occurrence of occurrences) {
+    targets.set(canonicalTargetKey(occurrence.target), occurrence.target)
   }
   return Array.from(targets.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([, target]) => ({ sourceResourceId, sourceVersion, target }))
+}
+
+export function resourceAuthoredDestinationOccurrences(
+  destinations: ReadonlyArray<AuthoredDestination>,
+): ReadonlyArray<AuthoredDestinationOccurrence> {
+  return destinations.map((destination) => ({ source: { kind: 'resource' }, destination }))
+}
+
+export function projectReferenceOccurrences(
+  sourceResourceId: ResourceId,
+  sourceVersion: VersionStamp,
+  occurrences: ReadonlyArray<AuthoredDestinationOccurrence>,
+): ReadonlyArray<ReferenceGraphOccurrence> {
+  const projected = new Map<string, ReferenceGraphOccurrence>()
+  for (const occurrence of occurrences) {
+    if (occurrence.destination.kind !== 'internal') continue
+    const key = referenceOccurrenceKey(occurrence.source, occurrence.destination.target)
+    projected.set(key, {
+      sourceResourceId,
+      sourceVersion,
+      source: occurrence.source,
+      target: occurrence.destination.target,
+    })
+  }
+  if (projected.size > MAX_RESOURCE_REFERENCE_OCCURRENCES) {
+    throw new RangeError('Resource reference projection exceeds its bound')
+  }
+  return Array.from(projected.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, occurrence]) => occurrence)
+}
+
+export function projectReferenceEdges(
+  occurrences: ReadonlyArray<ReferenceGraphOccurrence>,
+  direction: 'outgoing' | 'backlinks',
+): ReadonlyArray<ReferenceGraphEdge> {
+  const edges = new Map<string, ReferenceGraphEdge>()
+  for (const occurrence of occurrences) {
+    const key =
+      direction === 'outgoing'
+        ? canonicalTargetKey(occurrence.target)
+        : `${occurrence.sourceResourceId}:${canonicalTargetKey(occurrence.target)}`
+    edges.set(key, {
+      sourceResourceId: occurrence.sourceResourceId,
+      sourceVersion: occurrence.sourceVersion,
+      target: occurrence.target,
+    })
+  }
+  return Array.from(edges.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, edge]) => edge)
+}
+
+export function referenceOccurrenceKey(
+  source: ReferenceSourceOccurrence,
+  target: CanonicalTarget,
+): string {
+  const sourceKey = source.kind === 'resource' ? 'resource' : `noteBlock:${source.blockId}`
+  return `${sourceKey}:${canonicalTargetKey(target)}`
+}
+
+export function parseReferenceSourceOccurrence(value: unknown): ReferenceSourceOccurrence | null {
+  if (!isRecord(value) || typeof value.kind !== 'string') return null
+  if (value.kind === 'resource' && hasOnlyKeys(value, ['kind'])) return { kind: 'resource' }
+  if (
+    value.kind === 'noteBlock' &&
+    hasOnlyKeys(value, ['kind', 'blockId']) &&
+    typeof value.blockId === 'string' &&
+    isUuidV7(value.blockId)
+  ) {
+    return {
+      kind: 'noteBlock',
+      blockId: assertDomainId(DOMAIN_ID_KIND.noteBlock, value.blockId),
+    }
+  }
+  return null
 }
 
 export function parseAuthoredDestination(value: unknown): AuthoredDestination | null {

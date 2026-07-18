@@ -5,7 +5,10 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
-import { remapAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
+import {
+  remapAuthoredDestination,
+  resourceAuthoredDestinationOccurrences,
+} from '@wizard-archive/editor/resources/authored-destination'
 import {
   createCanvasDocumentDoc,
   canvasAuthoredDestinations,
@@ -132,7 +135,9 @@ export async function prepareCanvasContentCopy(
                 campaignId,
                 sourceResourceId: destinationResourceId,
                 sourceVersion: version,
-                destinations: canvasAuthoredDestinations(nodes),
+                occurrences: resourceAuthoredDestinationOccurrences(
+                  canvasAuthoredDestinations(nodes),
+                ),
               })
             ).status !== 'completed'
           ) {

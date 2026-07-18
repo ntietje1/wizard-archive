@@ -4,6 +4,7 @@ import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headle
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
+import { serializeAuthoredDestination } from '../authored-destination'
 import {
   RESOURCE_INDEX_SCHEMA,
   authorizedResourceSummaryFromRecord,
@@ -11,7 +12,7 @@ import {
 import { canonicalizeResourceTitle } from '../resource-record'
 import { ResourceRightSidebar } from '../workspace/resource-right-sidebar'
 import { createWorkspaceActions } from '../workspace/resource-operations'
-import type { EditorRuntime, ResourceNavigation } from '../editor-runtime-contract'
+import type { ResourceNavigation } from '../editor-runtime-contract'
 import type { ResourceRecord } from '../resource-record'
 
 describe('ResourceRightSidebar note outline', () => {
@@ -102,6 +103,7 @@ describe('ResourceRightSidebar references', () => {
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const targetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const sourceBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const version = initialVersion(await sha256Digest(new Uint8Array([9])))
     const records: Array<ResourceRecord> = [
@@ -138,6 +140,12 @@ describe('ResourceRightSidebar references', () => {
       open: openTarget,
       subscribe: () => () => {},
     }
+    const target = {
+      kind: 'noteBlock' as const,
+      resourceId: targetId,
+      blockId,
+      presentation: 'heading' as const,
+    }
     const core = createInMemoryEditorRuntime({
       canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
@@ -148,41 +156,62 @@ describe('ResourceRightSidebar references', () => {
         aliases: [],
         assetsFolderId: null,
       },
+      content: {
+        notes: [
+          {
+            resourceId,
+            version,
+            content: noteBlocksToYDoc(
+              [
+                {
+                  id: sourceBlockId,
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'resourceLink',
+                      props: {
+                        destination: serializeAuthoredDestination({
+                          kind: 'internal',
+                          target,
+                        }),
+                        label: 'Hidden vault',
+                      },
+                    },
+                  ],
+                },
+              ],
+              NOTE_YJS_FRAGMENT,
+            ),
+          },
+          {
+            resourceId: targetId,
+            version,
+            content: noteBlocksToYDoc(
+              [
+                {
+                  id: blockId,
+                  type: 'heading',
+                  props: { level: 1 },
+                  content: [{ type: 'text', text: 'Hidden vault' }],
+                },
+              ],
+              NOTE_YJS_FRAGMENT,
+            ),
+          },
+        ],
+      },
       navigation,
     })
+    await core.runtime.resources.loader.ensureResource(resourceId)
     await core.runtime.resources.loader.ensureResource(targetId)
-    const target = {
-      kind: 'noteBlock' as const,
-      resourceId: targetId,
-      blockId,
-      presentation: 'heading' as const,
-    }
-    const references = {
-      status: 'ready' as const,
-      outgoing: [{ sourceResourceId: resourceId, sourceVersion: version, target }],
-      backlinks: [],
-    }
-    const runtime: EditorRuntime = {
-      ...core.runtime,
-      resources: {
-        ...core.runtime.resources,
-        references: {
-          status: 'available',
-          value: {
-            get: () => references,
-            subscribe: () => () => {},
-          },
-        },
-      },
-    }
 
     render(
       <ResourceRightSidebar
-        actions={createWorkspaceActions(runtime, vi.fn())}
+        actions={createWorkspaceActions(core.runtime, vi.fn())}
         activePanel="outgoing"
         noteHeadingNavigation={{ current: null }}
         resource={authorizedResourceSummaryFromRecord(records[0]!, 'edit')}
-        runtime={runtime}
+        runtime={core.runtime}
         onActivePanelChange={vi.fn()}
         onClose={vi.fn()}
       />,

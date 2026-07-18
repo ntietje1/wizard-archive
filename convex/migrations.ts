@@ -7,7 +7,8 @@ import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
-import { noteAuthoredDestinations } from '@wizard-archive/editor/notes/authored-destinations'
+import { noteAuthoredDestinationOccurrences } from '@wizard-archive/editor/notes/authored-destinations'
+import { resourceAuthoredDestinationOccurrences } from '@wizard-archive/editor/resources/authored-destination'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { assertDomainId, DOMAIN_ID_KIND } from '@wizard-archive/editor/resources/domain-id'
 import * as Y from 'yjs'
@@ -31,7 +32,7 @@ export const projectNoteReferences = migrations.define({
           campaignId,
           sourceResourceId: resourceId,
           sourceVersion: assertVersionStamp(content.version),
-          destinations: noteAuthoredDestinations(blocks),
+          occurrences: noteAuthoredDestinationOccurrences(blocks),
         })
       ).status !== 'completed'
     ) {
@@ -55,7 +56,9 @@ export const projectCanvasReferences = migrations.define({
             campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, content.campaignUuid),
             sourceResourceId: assertDomainId(DOMAIN_ID_KIND.resource, content.resourceUuid),
             sourceVersion: assertVersionStamp(content.version),
-            destinations: canvasAuthoredDestinations(parsed.nodes),
+            occurrences: resourceAuthoredDestinationOccurrences(
+              canvasAuthoredDestinations(parsed.nodes),
+            ),
           })
         ).status !== 'completed'
       ) {
@@ -81,7 +84,9 @@ export const projectMapReferences = migrations.define({
           campaignId,
           sourceResourceId: resourceId,
           sourceVersion: assertVersionStamp(content.version),
-          destinations: rows.projected.pins.map((pin) => pin.destination),
+          occurrences: resourceAuthoredDestinationOccurrences(
+            rows.projected.pins.map((pin) => pin.destination),
+          ),
         })
       ).status !== 'completed'
     ) {

@@ -279,6 +279,19 @@ export const referenceGraphEdgeValidator = v.object({
   target: canonicalTargetValidator,
 })
 
+const referenceSourceOccurrenceValidator = v.union(
+  v.object({ kind: v.literal('resource') }),
+  v.object({ kind: v.literal('noteBlock'), blockId: noteBlockIdValidator }),
+)
+
+const resourceReferenceDirectionValidator = v.union(
+  v.object({
+    status: v.literal('ready'),
+    edges: v.array(referenceGraphEdgeValidator),
+  }),
+  v.object({ status: v.literal('capacity_exceeded') }),
+)
+
 export const fileClassificationValidator = literals(...Object.values(FILE_CLASSIFICATION))
 export const fileViewerUnavailableReasonValidator = literals(
   ...Object.values(FILE_VIEWER_UNAVAILABLE_REASON),
@@ -502,8 +515,8 @@ export const authorizedResourceSnapshotValidator = v.object({
 export const resourceReferenceSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
-    outgoing: v.array(referenceGraphEdgeValidator),
-    backlinks: v.array(referenceGraphEdgeValidator),
+    outgoing: resourceReferenceDirectionValidator,
+    backlinks: resourceReferenceDirectionValidator,
     snapshot: authorizedResourceSnapshotValidator,
   }),
   v.object({ status: v.literal('unavailable') }),
@@ -1083,6 +1096,7 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     sourceResourceUuid: resourceIdValidator,
     sourceVersion: versionStampValidator,
+    source: referenceSourceOccurrenceValidator,
     targetResourceUuid: resourceIdValidator,
     target: canonicalTargetValidator,
   })

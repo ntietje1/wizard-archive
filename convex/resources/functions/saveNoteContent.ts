@@ -17,7 +17,7 @@ import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
 import { findNoteContent } from './noteContent'
 import { syncNoteSearchProjection } from './resourceSearchProjection'
 import { flattenNoteBlockIds, loadNoteBlockAccessRows } from './noteBlockAccess'
-import { noteAuthoredDestinations } from '@wizard-archive/editor/notes/authored-destinations'
+import { noteAuthoredDestinationOccurrences } from '@wizard-archive/editor/notes/authored-destinations'
 import { replaceResourceReferenceProjection } from './resourceReferences'
 import type { ResourceReferenceProjection } from './resourceReferences'
 
@@ -117,7 +117,7 @@ async function mergeNoteUpdate(
         campaignId,
         sourceResourceId: resourceId,
         sourceVersion: version,
-        destinations: noteAuthoredDestinations(blocks),
+        occurrences: noteAuthoredDestinationOccurrences(blocks),
       },
     }
   } catch (error) {

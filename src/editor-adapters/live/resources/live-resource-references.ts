@@ -67,12 +67,22 @@ function readSnapshot(
     }
     return {
       status: 'ready',
-      outgoing: snapshot.outgoing.map(readEdge),
-      backlinks: snapshot.backlinks.map(readEdge),
+      outgoing: readDirection(snapshot.outgoing),
+      backlinks: readDirection(snapshot.backlinks),
     }
   } catch {
     return { status: 'error' }
   }
+}
+
+function readDirection(
+  value:
+    | Readonly<{ status: 'ready'; edges: ReadonlyArray<Parameters<typeof readEdge>[0]> }>
+    | Readonly<{ status: 'capacity_exceeded' }>,
+) {
+  return value.status === 'capacity_exceeded'
+    ? value
+    : { status: 'ready' as const, edges: value.edges.map(readEdge) }
 }
 
 function readEdge(value: {

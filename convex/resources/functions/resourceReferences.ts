@@ -1,14 +1,16 @@
 import {
-  MAX_RESOURCE_REFERENCE_TARGETS,
-  canonicalTargetKey,
+  MAX_RESOURCE_REFERENCE_OCCURRENCES,
   parseAuthoredDestination,
-  projectReferenceGraph,
+  parseReferenceSourceOccurrence,
+  projectReferenceOccurrences,
+  referenceOccurrenceKey,
 } from '@wizard-archive/editor/resources/authored-destination'
-import type { ReferenceGraphEdge } from '@wizard-archive/editor/resources/authored-destination'
 import type {
-  AuthoredDestination,
-  CanonicalTarget,
-} from '@wizard-archive/editor/resources/authored-destination-contract'
+  AuthoredDestinationOccurrence,
+  ReferenceGraphOccurrence,
+  ReferenceSourceOccurrence,
+} from '@wizard-archive/editor/resources/authored-destination'
+import type { CanonicalTarget } from '@wizard-archive/editor/resources/authored-destination-contract'
 import {
   assertVersionStamp,
   versionStampEquals,
@@ -22,7 +24,7 @@ export type ResourceReferenceProjection = Readonly<{
   campaignId: CampaignId
   sourceResourceId: ResourceId
   sourceVersion: VersionStamp
-  destinations: ReadonlyArray<AuthoredDestination>
+  occurrences: ReadonlyArray<AuthoredDestinationOccurrence>
 }>
 
 export async function replaceResourceReferenceProjection(
@@ -32,10 +34,10 @@ export async function replaceResourceReferenceProjection(
   | Readonly<{ status: 'completed' }>
   | Readonly<{ status: 'rejected'; reason: 'content_limit_exceeded' }>
 > {
-  const { campaignId, sourceResourceId, sourceVersion, destinations } = projection
-  let edges: ReadonlyArray<ReferenceGraphEdge>
+  const { campaignId, sourceResourceId, sourceVersion, occurrences } = projection
+  let nextOccurrences: ReadonlyArray<ReferenceGraphOccurrence>
   try {
-    edges = projectReferenceGraph(sourceResourceId, sourceVersion, destinations)
+    nextOccurrences = projectReferenceOccurrences(sourceResourceId, sourceVersion, occurrences)
   } catch (error) {
     if (error instanceof RangeError) {
       return { status: 'rejected', reason: 'content_limit_exceeded' }
@@ -47,37 +49,43 @@ export async function replaceResourceReferenceProjection(
     .withIndex('by_campaign_and_source', (query) =>
       query.eq('campaignUuid', campaignId).eq('sourceResourceUuid', sourceResourceId),
     )
-    .take(MAX_RESOURCE_REFERENCE_TARGETS + 1)
-  if (existing.length > MAX_RESOURCE_REFERENCE_TARGETS) {
+    .take(MAX_RESOURCE_REFERENCE_OCCURRENCES + 1)
+  if (existing.length > MAX_RESOURCE_REFERENCE_OCCURRENCES) {
     throw new TypeError('Resource reference projection is corrupt')
   }
-  const nextByTarget = new Map(edges.map((edge) => [canonicalTargetKey(edge.target), edge]))
-  const retainedTargets = new Set<string>()
+  const nextByOccurrence = new Map(
+    nextOccurrences.map((occurrence) => [
+      referenceOccurrenceKey(occurrence.source, occurrence.target),
+      occurrence,
+    ]),
+  )
+  const retainedOccurrences = new Set<string>()
   await Promise.all(
-    existing.map((edge) => {
-      const current = readReferenceEdge(edge)
-      const key = canonicalTargetKey(current.target)
-      if (!nextByTarget.has(key)) return ctx.db.delete(edge._id)
-      if (retainedTargets.has(key)) {
-        throw new TypeError('Resource reference projection contains duplicate targets')
+    existing.map((row) => {
+      const current = readReferenceOccurrence(row)
+      const key = referenceOccurrenceKey(current.source, current.target)
+      if (!nextByOccurrence.has(key)) return ctx.db.delete(row._id)
+      if (retainedOccurrences.has(key)) {
+        throw new TypeError('Resource reference projection contains duplicate occurrences')
       }
-      retainedTargets.add(key)
+      retainedOccurrences.add(key)
       return versionStampEquals(current.sourceVersion, sourceVersion)
         ? Promise.resolve()
-        : ctx.db.patch(edge._id, { sourceVersion })
+        : ctx.db.patch(row._id, { sourceVersion })
     }),
   )
   await Promise.all(
-    edges.flatMap((edge) =>
-      retainedTargets.has(canonicalTargetKey(edge.target))
+    nextOccurrences.flatMap((occurrence) =>
+      retainedOccurrences.has(referenceOccurrenceKey(occurrence.source, occurrence.target))
         ? []
         : [
             ctx.db.insert('resourceReferenceEdges', {
               campaignUuid: campaignId,
               sourceResourceUuid: sourceResourceId,
-              sourceVersion: edge.sourceVersion,
-              targetResourceUuid: edge.target.resourceId,
-              target: edge.target,
+              sourceVersion: occurrence.sourceVersion,
+              source: occurrence.source,
+              targetResourceUuid: occurrence.target.resourceId,
+              target: occurrence.target,
             }),
           ],
     ),
@@ -91,16 +99,8 @@ export async function loadResourceReferenceRows(
 ): Promise<
   | Readonly<{
       status: 'ready'
-      outgoing: ReadonlyArray<{
-        sourceResourceId: ResourceId
-        sourceVersion: VersionStamp
-        target: CanonicalTarget
-      }>
-      backlinks: ReadonlyArray<{
-        sourceResourceId: ResourceId
-        sourceVersion: VersionStamp
-        target: CanonicalTarget
-      }>
+      outgoing: ResourceReferenceRows
+      backlinks: ResourceReferenceRows
     }>
   | Readonly<{ status: 'integrity_error' }>
 > {
@@ -110,30 +110,51 @@ export async function loadResourceReferenceRows(
       .withIndex('by_campaign_and_source', (query) =>
         query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('sourceResourceUuid', resourceId),
       )
-      .take(MAX_RESOURCE_REFERENCE_TARGETS + 1),
+      .take(MAX_RESOURCE_REFERENCE_OCCURRENCES + 1),
     ctx.db
       .query('resourceReferenceEdges')
       .withIndex('by_campaign_and_target', (query) =>
         query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('targetResourceUuid', resourceId),
       )
-      .take(MAX_RESOURCE_REFERENCE_TARGETS),
+      .take(MAX_RESOURCE_REFERENCE_OCCURRENCES + 1),
   ])
-  if (outgoingRows.length > MAX_RESOURCE_REFERENCE_TARGETS) {
+  try {
+    return {
+      status: 'ready',
+      outgoing: readBoundedRows(outgoingRows),
+      backlinks: readBoundedRows(backlinkRows),
+    }
+  } catch {
     return { status: 'integrity_error' }
-  }
-  return {
-    status: 'ready',
-    outgoing: outgoingRows.map(readReferenceEdge),
-    backlinks: backlinkRows.map(readReferenceEdge),
   }
 }
 
-function readReferenceEdge(row: {
+export type ResourceReferenceRow = Readonly<{
+  sourceResourceId: ResourceId
+  sourceVersion: VersionStamp
+  source: ReferenceSourceOccurrence
+  target: CanonicalTarget
+}>
+
+export type ResourceReferenceRows =
+  | Readonly<{ status: 'ready'; rows: ReadonlyArray<ResourceReferenceRow> }>
+  | Readonly<{ status: 'capacity_exceeded' }>
+
+function readBoundedRows(
+  rows: ReadonlyArray<Parameters<typeof readReferenceOccurrence>[0]>,
+): ResourceReferenceRows {
+  return rows.length > MAX_RESOURCE_REFERENCE_OCCURRENCES
+    ? { status: 'capacity_exceeded' }
+    : { status: 'ready', rows: rows.map(readReferenceOccurrence) }
+}
+
+function readReferenceOccurrence(row: {
   sourceResourceUuid: string
   sourceVersion: unknown
+  source: unknown
   target: unknown
   targetResourceUuid?: string
-}) {
+}): ResourceReferenceRow {
   const destination = parseAuthoredDestination({ kind: 'internal', target: row.target })
   if (destination?.kind !== 'internal') throw new TypeError('Invalid resource reference edge')
   if (
@@ -142,9 +163,12 @@ function readReferenceEdge(row: {
   ) {
     throw new TypeError('Resource reference edge target index is corrupt')
   }
+  const source = parseReferenceSourceOccurrence(row.source)
+  if (!source) throw new TypeError('Invalid resource reference source')
   return {
     sourceResourceId: assertDomainId(DOMAIN_ID_KIND.resource, row.sourceResourceUuid),
     sourceVersion: assertVersionStamp(row.sourceVersion),
+    source,
     target: destination.target,
   }
 }

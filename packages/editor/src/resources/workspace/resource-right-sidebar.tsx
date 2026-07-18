@@ -166,7 +166,11 @@ function ResourceReferencesPanel({
   if (state.status === 'unavailable') {
     return <p className="p-3 text-sm text-muted-foreground">Links are unavailable.</p>
   }
-  const edges = state[kind]
+  const direction = state[kind]
+  if (direction.status === 'capacity_exceeded') {
+    return <p className="p-3 text-sm text-muted-foreground">Too many {label} to display safely.</p>
+  }
+  const edges = direction.edges
   if (edges.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-4 text-center">

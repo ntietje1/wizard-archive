@@ -16,6 +16,7 @@ import { initialMapContentVersion } from '@wizard-archive/editor/resources/map-s
 import {
   parseAuthoredDestination,
   remapAuthoredDestination,
+  resourceAuthoredDestinationOccurrences,
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
@@ -246,7 +247,9 @@ export async function prepareMapContentCopy(
                 campaignId,
                 sourceResourceId: destinationResourceId,
                 sourceVersion: version,
-                destinations: copiedPins.map((pin) => pin.destination),
+                occurrences: resourceAuthoredDestinationOccurrences(
+                  copiedPins.map((pin) => pin.destination),
+                ),
               })
             ).status !== 'completed'
           ) {

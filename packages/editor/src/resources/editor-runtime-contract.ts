@@ -71,12 +71,16 @@ export interface ResourcePreviewSource {
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
+export type ResourceReferenceDirection =
+  | Readonly<{ status: 'ready'; edges: ReadonlyArray<ReferenceGraphEdge> }>
+  | Readonly<{ status: 'capacity_exceeded' }>
+
 export type ResourceReferenceState =
   | Readonly<{ status: 'loading' }>
   | Readonly<{
       status: 'ready'
-      outgoing: ReadonlyArray<ReferenceGraphEdge>
-      backlinks: ReadonlyArray<ReferenceGraphEdge>
+      outgoing: ResourceReferenceDirection
+      backlinks: ResourceReferenceDirection
     }>
   | Readonly<{ status: 'unavailable' }>
   | Readonly<{ status: 'error' }>

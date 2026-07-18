@@ -4,7 +4,7 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { NoteBlockId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import { MAX_RESOURCE_BOOKMARKS_PER_ACTOR } from '@wizard-archive/editor/resources/command-contract'
@@ -39,6 +39,10 @@ import {
   searchResourceDocuments,
 } from '@wizard-archive/editor/resources/search-policy'
 import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
+import {
+  MAX_RESOURCE_REFERENCE_OCCURRENCES,
+  serializeAuthoredDestination,
+} from '@wizard-archive/editor/resources/authored-destination'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -718,6 +722,241 @@ describe('authorized resource projection', () => {
     ).toEqual([parentId, siblingId])
   })
 
+  it('projects references only from actor-visible occurrences before deduplication', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const targetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const targetBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const inaccessibleTargetId = await createResource(
+      campaign,
+      campaignUuid,
+      'note',
+      null,
+      'DM vault',
+    )
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: targetId,
+        kind: 'note',
+        parentId: null,
+        title: 'Shared target',
+        icon: null,
+        color: null,
+      },
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: targetBlockId,
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Initially hidden section' }],
+        },
+      ]),
+    })
+    const sourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const visibleBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const hiddenBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const nestedParentId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const nestedChildId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const targetSectionLinkId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const inaccessibleLinkId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const resourceLink = serializeAuthoredDestination({
+      kind: 'internal',
+      target: { kind: 'resource', resourceId: targetId },
+    })
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: sourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Reference source',
+        icon: null,
+        color: null,
+      },
+      update: makeYjsUpdateWithBlocks([
+        referenceBlock(visibleBlockId, resourceLink, 'Visible occurrence'),
+        referenceBlock(hiddenBlockId, resourceLink, 'Hidden duplicate'),
+        {
+          id: nestedParentId,
+          type: 'paragraph',
+          children: [referenceBlock(nestedChildId, resourceLink, 'Hidden by parent')],
+        },
+        referenceBlock(
+          targetSectionLinkId,
+          serializeAuthoredDestination({
+            kind: 'internal',
+            target: {
+              kind: 'noteBlock',
+              resourceId: targetId,
+              blockId: targetBlockId,
+              presentation: 'heading',
+            },
+          }),
+          'Hidden target section',
+        ),
+        referenceBlock(
+          inaccessibleLinkId,
+          serializeAuthoredDestination({
+            kind: 'internal',
+            target: { kind: 'resource', resourceId: inaccessibleTargetId },
+          }),
+          'Inaccessible target',
+        ),
+      ]),
+    })
+    for (const resourceId of [sourceId, targetId]) {
+      await executeAccess(campaign, campaignUuid, {
+        type: 'setMemberAccess',
+        resourceIds: [resourceId],
+        memberId: campaign.player.memberDomainId,
+        permission: 'view',
+      })
+    }
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId: sourceId,
+      blockIds: [visibleBlockId, nestedChildId, targetSectionLinkId, inaccessibleLinkId],
+      shared: true,
+    })
+
+    const projected = await asPlayer(campaign).query(api.resources.queries.loadResourceReferences, {
+      campaignId: campaignUuid,
+      resourceId: sourceId,
+    })
+    expect(projected).toMatchObject({
+      status: 'ready',
+      outgoing: {
+        status: 'ready',
+        edges: [
+          {
+            sourceResourceId: sourceId,
+            target: { kind: 'resource', resourceId: targetId },
+          },
+        ],
+      },
+    })
+    if (projected.status !== 'ready') throw new TypeError('Expected projected references')
+    expect(projected.snapshot.missingResourceIds).toEqual([])
+    expect(
+      projected.snapshot.resources.some((resource) => resource.id === inaccessibleTargetId),
+    ).toBe(false)
+    const viewAs = await asDm(campaign).query(api.resources.queries.loadResourceReferences, {
+      campaignId: campaignUuid,
+      viewAsParticipantId: campaign.player.memberDomainId,
+      resourceId: sourceId,
+    })
+    expect(viewAs.status === 'ready' ? viewAs.outgoing : viewAs).toEqual(projected.outgoing)
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourceReferences, {
+        campaignId: campaignUuid,
+        resourceId: targetId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      backlinks: {
+        status: 'ready',
+        edges: [
+          {
+            sourceResourceId: sourceId,
+            target: { kind: 'resource', resourceId: targetId },
+          },
+        ],
+      },
+    })
+
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId: sourceId,
+      blockIds: [nestedParentId],
+      shared: true,
+    })
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId: targetId,
+      blockIds: [targetBlockId],
+      shared: true,
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourceReferences, {
+        campaignId: campaignUuid,
+        resourceId: sourceId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      outgoing: {
+        status: 'ready',
+        edges: [
+          {
+            sourceResourceId: sourceId,
+            target: {
+              kind: 'noteBlock',
+              resourceId: targetId,
+              blockId: targetBlockId,
+              presentation: 'heading',
+            },
+          },
+          {
+            sourceResourceId: sourceId,
+            target: { kind: 'resource', resourceId: targetId },
+          },
+        ],
+      },
+    })
+  })
+
+  it('reports explicit capacity in both reference directions without truncation', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Capacity')
+    const sourceVersion = {
+      scheme: VERSION_SCHEME,
+      revision: 1,
+      digest: '0'.repeat(64),
+    }
+    await t.run(async (ctx) => {
+      for (let index = 0; index <= MAX_RESOURCE_REFERENCE_OCCURRENCES; index += 1) {
+        const targetResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
+        await ctx.db.insert('resourceReferenceEdges', {
+          campaignUuid,
+          sourceResourceUuid: resourceId,
+          sourceVersion,
+          source: { kind: 'resource' },
+          targetResourceUuid,
+          target: { kind: 'resource', resourceId: targetResourceUuid },
+        })
+      }
+    })
+    await t.run(async (ctx) => {
+      for (let index = 0; index <= MAX_RESOURCE_REFERENCE_OCCURRENCES; index += 1) {
+        const sourceResourceUuid = generateDomainId(DOMAIN_ID_KIND.resource)
+        await ctx.db.insert('resourceReferenceEdges', {
+          campaignUuid,
+          sourceResourceUuid,
+          sourceVersion,
+          source: { kind: 'resource' },
+          targetResourceUuid: resourceId,
+          target: { kind: 'resource', resourceId },
+        })
+      }
+    })
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourceReferences, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      outgoing: { status: 'capacity_exceeded' },
+      backlinks: { status: 'capacity_exceeded' },
+    })
+  })
+
   it('pages players for only the requested note block selection without gaps or duplicates', async () => {
     const campaign = await setupMultiPlayerContext(t, 9)
     const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -1315,6 +1554,19 @@ describe('authorized resource projection', () => {
     )
     expect(result.status).toBe('completed')
     return result
+  }
+
+  function referenceBlock(blockId: NoteBlockId, destination: string, label: string) {
+    return {
+      id: blockId,
+      type: 'paragraph' as const,
+      content: [
+        {
+          type: 'resourceLink' as const,
+          props: { destination, label },
+        },
+      ],
+    }
   }
 
   async function createEmptyFile(

@@ -16,6 +16,7 @@ import { loadCanvasContentDeletion } from './canvasContent'
 import { applyYjsContentDelta, contentMergeRejection } from './contentVersion'
 import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
+import { resourceAuthoredDestinationOccurrences } from '@wizard-archive/editor/resources/authored-destination'
 import { replaceResourceReferenceProjection } from './resourceReferences'
 import type { ResourceReferenceProjection } from './resourceReferences'
 
@@ -115,7 +116,9 @@ async function mergeCanvasUpdate(
         campaignId,
         sourceResourceId: resourceId,
         sourceVersion: version,
-        destinations: canvasAuthoredDestinations(content.nodes),
+        occurrences: resourceAuthoredDestinationOccurrences(
+          canvasAuthoredDestinations(content.nodes),
+        ),
       },
     }
   } catch (error) {

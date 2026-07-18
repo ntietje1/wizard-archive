@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vite-plus/test'
 import type { AuthoredDestination, CanonicalTarget } from '../authored-destination-contract'
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import {
-  MAX_RESOURCE_REFERENCE_TARGETS,
-  projectReferenceGraph,
+  MAX_RESOURCE_REFERENCE_OCCURRENCES,
+  parseReferenceSourceOccurrence,
   parseSerializedAuthoredDestination,
+  projectReferenceGraph,
+  projectReferenceOccurrences,
+  resourceAuthoredDestinationOccurrences,
   remapAuthoredDestination,
   resolveAuthoredDestination,
   resolveSourceAuthoredDestination,
@@ -243,17 +246,62 @@ describe('authored destinations', () => {
   })
 
   it('rejects reference projections that exceed the synchronous graph bound', () => {
-    const destinations = Array.from({ length: MAX_RESOURCE_REFERENCE_TARGETS + 1 }, (_, index) =>
-      internalResource(
-        asResourceId(
-          `01890f47-${(index + 1).toString(16).padStart(4, '0')}-7a5b-8c9d-${index
-            .toString(16)
-            .padStart(12, '0')}`,
+    const destinations = Array.from(
+      { length: MAX_RESOURCE_REFERENCE_OCCURRENCES + 1 },
+      (_, index) =>
+        internalResource(
+          asResourceId(
+            `01890f47-${(index + 1).toString(16).padStart(4, '0')}-7a5b-8c9d-${index
+              .toString(16)
+              .padStart(12, '0')}`,
+          ),
         ),
-      ),
     )
 
     expect(() => projectReferenceGraph(sourceId, version, destinations)).toThrow(RangeError)
+  })
+
+  it('retains separate authored occurrences until actor projection deduplicates them', () => {
+    const firstBlockId = assertDomainId(
+      DOMAIN_ID_KIND.noteBlock,
+      '01890f48-f6c8-7a5b-8c9d-0123456789ab',
+    )
+    const secondBlockId = assertDomainId(
+      DOMAIN_ID_KIND.noteBlock,
+      '01890f49-f6c8-7a5b-8c9d-0123456789ab',
+    )
+    const destination = internalResource(targetId)
+
+    expect(
+      projectReferenceOccurrences(sourceId, version, [
+        { source: { kind: 'noteBlock', blockId: firstBlockId }, destination },
+        { source: { kind: 'noteBlock', blockId: secondBlockId }, destination },
+        { source: { kind: 'noteBlock', blockId: secondBlockId }, destination },
+      ]),
+    ).toEqual([
+      {
+        sourceResourceId: sourceId,
+        sourceVersion: version,
+        source: { kind: 'noteBlock', blockId: firstBlockId },
+        target: destination.target,
+      },
+      {
+        sourceResourceId: sourceId,
+        sourceVersion: version,
+        source: { kind: 'noteBlock', blockId: secondBlockId },
+        target: destination.target,
+      },
+    ])
+    expect(resourceAuthoredDestinationOccurrences([destination])).toEqual([
+      { source: { kind: 'resource' }, destination },
+    ])
+    expect(parseReferenceSourceOccurrence({ kind: 'noteBlock', blockId: firstBlockId })).toEqual({
+      kind: 'noteBlock',
+      blockId: firstBlockId,
+    })
+    expect(
+      parseReferenceSourceOccurrence({ kind: 'noteBlock', blockId: firstBlockId, extra: true }),
+    ).toBeNull()
   })
 })
 

@@ -12,6 +12,10 @@ import type {
   NoteBlockAccessParticipant,
   NoteBlockVisibility,
 } from '@wizard-archive/editor/resources/note-block-access-policy'
+import {
+  RESOURCE_PERMISSION,
+  resourcePermissionAllows,
+} from '@wizard-archive/editor/resources/access-policy'
 import type { ResourcePermission } from '@wizard-archive/editor/resources/access-policy'
 import type {
   CampaignMemberId,
@@ -70,33 +74,12 @@ async function loadSelectedNoteBlockPolicies(
   const knownBlockIds = new Set(flattenNoteBlockIds(note.blocks))
   if (blockIds.some((blockId) => !knownBlockIds.has(blockId))) return null
   const [audienceRows, memberRows] = await Promise.all([
-    Promise.all(
-      blockIds.map((blockId) =>
-        ctx.db
-          .query('noteBlockAudienceAccess')
-          .withIndex('by_note_and_block', (query) =>
-            query
-              .eq('campaignUuid', ctx.resourceScope.campaignId)
-              .eq('noteUuid', noteId)
-              .eq('blockUuid', blockId),
-          )
-          .unique(),
-      ),
-    ),
-    Promise.all(
+    loadExactNoteBlockAudienceAccess(ctx, noteId, blockIds),
+    loadExactNoteBlockMemberAccess(
+      ctx,
+      noteId,
       blockIds.flatMap((blockId) =>
-        participants.map((participant) =>
-          ctx.db
-            .query('noteBlockMemberAccess')
-            .withIndex('by_block_and_member', (query) =>
-              query
-                .eq('campaignUuid', ctx.resourceScope.campaignId)
-                .eq('noteUuid', noteId)
-                .eq('blockUuid', blockId)
-                .eq('memberUuid', participant.id),
-            )
-            .unique(),
-        ),
+        participants.map((participant) => ({ blockId, memberId: participant.id })),
       ),
     ),
   ])
@@ -166,8 +149,124 @@ export async function filterNoteContentForMember(
   }
 }
 
+export async function projectVisibleNoteBlockIds(
+  ctx: CampaignQueryCtx,
+  noteId: ResourceId,
+  memberId: CampaignMemberId,
+  notePermission: ResourcePermission,
+  selectedBlockIds: ReadonlyArray<NoteBlockId>,
+  maxPolicyBlocks: number,
+): Promise<
+  | Readonly<{
+      status: 'ready'
+      visibleBlockIds: ReadonlySet<NoteBlockId>
+      policyBlockCount: number
+    }>
+  | Readonly<{ status: 'capacity_exceeded' }>
+  | Readonly<{ status: 'integrity_error' }>
+> {
+  const note = await loadCanonicalNoteBlocks(ctx, noteId)
+  if (!note) return { status: 'integrity_error' }
+  const selected = new Set(selectedBlockIds)
+  const paths = new Map<NoteBlockId, ReadonlyArray<NoteBlockId>>()
+  collectSelectedBlockPaths(note.blocks, selected, [], paths)
+  if (paths.size !== selected.size) return { status: 'integrity_error' }
+  if (resourcePermissionAllows(notePermission, RESOURCE_PERMISSION.edit)) {
+    return {
+      status: 'ready',
+      visibleBlockIds: selected,
+      policyBlockCount: 0,
+    }
+  }
+  const policyBlockIds = new Set(Array.from(paths.values()).flat())
+  if (policyBlockIds.size > maxPolicyBlocks) return { status: 'capacity_exceeded' }
+  const policyIds = Array.from(policyBlockIds)
+  const [audienceRows, memberRows] = await Promise.all([
+    loadExactNoteBlockAudienceAccess(ctx, noteId, policyIds),
+    loadExactNoteBlockMemberAccess(
+      ctx,
+      noteId,
+      policyIds.map((blockId) => ({ blockId, memberId })),
+    ),
+  ])
+  const audienceVisibility = new Set(audienceRows.flatMap((row) => (row ? [row.blockUuid] : [])))
+  const memberVisibility = new Map(
+    memberRows.flatMap((row) => (row ? [[row.blockUuid, row.visibility] as const] : [])),
+  )
+  const visibleBlockIds = new Set(
+    Array.from(paths.entries()).flatMap(([blockId, path]) =>
+      path.every((pathBlockId) =>
+        noteBlockIsVisible(
+          notePermission,
+          audienceVisibility.has(pathBlockId)
+            ? NOTE_BLOCK_VISIBILITY.visible
+            : NOTE_BLOCK_VISIBILITY.hidden,
+          memberVisibility.get(pathBlockId),
+        ),
+      )
+        ? [blockId]
+        : [],
+    ),
+  )
+  return { status: 'ready', visibleBlockIds, policyBlockCount: policyBlockIds.size }
+}
+
 export function flattenNoteBlockIds(blocks: ReadonlyArray<NoteBlock>): Array<NoteBlockId> {
   return blocks.flatMap((block) => [block.id, ...flattenNoteBlockIds(block.children ?? [])])
+}
+
+function collectSelectedBlockPaths(
+  blocks: ReadonlyArray<NoteBlock>,
+  selected: ReadonlySet<NoteBlockId>,
+  ancestors: ReadonlyArray<NoteBlockId>,
+  paths: Map<NoteBlockId, ReadonlyArray<NoteBlockId>>,
+): void {
+  for (const block of blocks) {
+    const path = [...ancestors, block.id]
+    if (selected.has(block.id)) paths.set(block.id, path)
+    collectSelectedBlockPaths(block.children ?? [], selected, path, paths)
+  }
+}
+
+async function loadExactNoteBlockAudienceAccess(
+  ctx: CampaignQueryCtx,
+  noteId: ResourceId,
+  blockIds: ReadonlyArray<NoteBlockId>,
+) {
+  return await Promise.all(
+    blockIds.map((blockId) =>
+      ctx.db
+        .query('noteBlockAudienceAccess')
+        .withIndex('by_note_and_block', (query) =>
+          query
+            .eq('campaignUuid', ctx.resourceScope.campaignId)
+            .eq('noteUuid', noteId)
+            .eq('blockUuid', blockId),
+        )
+        .unique(),
+    ),
+  )
+}
+
+async function loadExactNoteBlockMemberAccess(
+  ctx: CampaignQueryCtx,
+  noteId: ResourceId,
+  selections: ReadonlyArray<Readonly<{ blockId: NoteBlockId; memberId: CampaignMemberId }>>,
+) {
+  return await Promise.all(
+    selections.map(({ blockId, memberId }) =>
+      ctx.db
+        .query('noteBlockMemberAccess')
+        .withIndex('by_block_and_member', (query) =>
+          query
+            .eq('campaignUuid', ctx.resourceScope.campaignId)
+            .eq('noteUuid', noteId)
+            .eq('blockUuid', blockId)
+            .eq('memberUuid', memberId),
+        )
+        .unique(),
+    ),
+  )
 }
 
 async function loadNoteBlockPolicies(ctx: CampaignQueryCtx, noteId: ResourceId) {

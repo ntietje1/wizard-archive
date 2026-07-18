@@ -3,6 +3,7 @@ import {
   remapAuthoredDestination,
   serializeAuthoredDestination,
 } from '../../resources/authored-destination'
+import type { AuthoredDestinationOccurrence } from '../../resources/authored-destination'
 import type {
   AuthoredDestination,
   CanonicalTarget,
@@ -22,9 +23,15 @@ export type NoteAuthoredDestinationRemapResult =
 export function noteAuthoredDestinations(
   blocks: ReadonlyArray<NoteBlock>,
 ): ReadonlyArray<AuthoredDestination> {
-  const destinations: Array<AuthoredDestination> = []
-  for (const block of blocks) collectBlockDestinations(block, destinations)
-  return destinations
+  return noteAuthoredDestinationOccurrences(blocks).map((occurrence) => occurrence.destination)
+}
+
+export function noteAuthoredDestinationOccurrences(
+  blocks: ReadonlyArray<NoteBlock>,
+): ReadonlyArray<AuthoredDestinationOccurrence> {
+  const occurrences: Array<AuthoredDestinationOccurrence> = []
+  for (const block of blocks) collectBlockDestinations(block, occurrences)
+  return occurrences
 }
 
 export function remapNoteAuthoredDestinations(
@@ -43,14 +50,18 @@ export function remapNoteAuthoredDestinations(
 
 function collectBlockDestinations(
   block: NoteBlock,
-  destinations: Array<AuthoredDestination>,
+  occurrences: Array<AuthoredDestinationOccurrence>,
 ): void {
+  const destinations: Array<AuthoredDestination> = []
   if (block.type === 'embed') {
     destinations.push(parseDestination(block.props.destination))
   } else {
     collectInlineDestinations(block.content, destinations)
   }
-  for (const child of block.children ?? []) collectBlockDestinations(child, destinations)
+  for (const destination of destinations) {
+    occurrences.push({ source: { kind: 'noteBlock', blockId: block.id }, destination })
+  }
+  for (const child of block.children ?? []) collectBlockDestinations(child, occurrences)
 }
 
 function collectInlineDestinations(

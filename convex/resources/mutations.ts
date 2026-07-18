@@ -491,7 +491,7 @@ export const createNoteResource = campaignMutation({
       assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
       args.update,
       prepared.version,
-      prepared.destinations,
+      prepared.occurrences,
     )
     if (contentResult === 'operation_id_reused') {
       return { status: 'rejected', reason: 'operation_id_reused' }

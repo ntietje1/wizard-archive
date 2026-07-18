@@ -21,6 +21,7 @@ import {
 import type { ResourceUploadClaim } from './assetContent'
 import { loadValidMapContentRows, projectMapContent } from './mapContent'
 import { replaceResourceReferenceProjection } from './resourceReferences'
+import { resourceAuthoredDestinationOccurrences } from '@wizard-archive/editor/resources/authored-destination'
 
 type MapContentMutationResult = Infer<typeof mapContentMutationResultValidator>
 type ValidMapContentRows = Extract<
@@ -209,7 +210,9 @@ async function commitMapImageReplacement(
         campaignId: ctx.resourceScope.campaignId,
         sourceResourceId: prepared.resourceId,
         sourceVersion: prepared.version,
-        destinations: prepared.projected.pins.map((pin) => pin.destination),
+        occurrences: resourceAuthoredDestinationOccurrences(
+          prepared.projected.pins.map((pin) => pin.destination),
+        ),
       })
     ).status !== 'completed'
   ) {

@@ -80,6 +80,7 @@ import type {
   TransferSourceDescriptor,
 } from './transfer-job-contract'
 import { createInMemoryResourceAssetsFolderGateway } from './in-memory-resource-assets-folder'
+import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -914,6 +915,11 @@ export function createInMemoryEditorRuntime({
   })
   preferences.hydrate(preferencesSnapshot)
   const catalogResources = () => resources.catalogSnapshot().resources
+  const references = createInMemoryResourceReferenceSource(
+    resources.index,
+    catalogResources,
+    contentSources,
+  )
   const bookmarks = createInMemoryBookmarks(scope.campaignId, (resourceId) =>
     catalogResources().some((resource) => resource.id === resourceId),
   )
@@ -939,7 +945,7 @@ export function createInMemoryEditorRuntime({
           ? { status: 'available', value: assetsFolder }
           : { status: 'unavailable', reason: 'unauthorized' },
         previews: unsupported,
-        references: unsupported,
+        references: { status: 'available', value: references.source },
         undo: canEdit
           ? { status: 'available', value: undo.history }
           : { status: 'unavailable', reason: 'unauthorized' },
@@ -952,6 +958,7 @@ export function createInMemoryEditorRuntime({
       viewAs: unsupported,
     },
     dispose: () => {
+      references.dispose()
       search.dispose()
       for (const source of Object.values(contentSources)) source.dispose()
       resources.dispose()

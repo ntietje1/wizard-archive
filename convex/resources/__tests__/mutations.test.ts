@@ -48,6 +48,7 @@ import presenceTest from '@convex-dev/presence/test'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import { projectMapContent } from '../functions/mapContent'
+import { replaceResourceReferenceProjection } from '../functions/resourceReferences'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -1586,6 +1587,7 @@ describe('resource structure commands', () => {
         expect.objectContaining({
           sourceResourceUuid: sourceId,
           sourceVersion: content!.version,
+          source: { kind: 'noteBlock', blockId: expect.any(String) },
           targetResourceUuid: targetId,
           target: { kind: 'resource', resourceId: targetId },
         }),
@@ -1598,12 +1600,15 @@ describe('resource structure commands', () => {
       }),
     ).resolves.toMatchObject({
       status: 'ready',
-      outgoing: [
-        {
-          sourceResourceId: sourceId,
-          target: { kind: 'resource', resourceId: targetId },
-        },
-      ],
+      outgoing: {
+        status: 'ready',
+        edges: [
+          {
+            sourceResourceId: sourceId,
+            target: { kind: 'resource', resourceId: targetId },
+          },
+        ],
+      },
     })
     await expect(
       asDm(campaign).query(api.resources.queries.loadResourceReferences, {
@@ -1612,12 +1617,15 @@ describe('resource structure commands', () => {
       }),
     ).resolves.toMatchObject({
       status: 'ready',
-      backlinks: [
-        {
-          sourceResourceId: sourceId,
-          target: { kind: 'resource', resourceId: targetId },
-        },
-      ],
+      backlinks: {
+        status: 'ready',
+        edges: [
+          {
+            sourceResourceId: sourceId,
+            target: { kind: 'resource', resourceId: targetId },
+          },
+        ],
+      },
     })
 
     const document = new Y.Doc()
@@ -1643,6 +1651,92 @@ describe('resource structure commands', () => {
           )
           .collect(),
       ).toEqual([])
+    })
+  })
+
+  it('replays reference backfill projection without duplicate or stale rows', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const sourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const targetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const destination = {
+      kind: 'internal' as const,
+      target: { kind: 'resource' as const, resourceId: targetId },
+    }
+    const initialVersion = assertVersionStamp({
+      scheme: 'authoritative-revision-v1',
+      revision: 1,
+      digest: '1'.repeat(64),
+    })
+    const advancedVersion = assertVersionStamp({
+      scheme: 'authoritative-revision-v1',
+      revision: 2,
+      digest: '2'.repeat(64),
+    })
+    const projection = {
+      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
+      sourceResourceId: sourceId,
+      sourceVersion: initialVersion,
+      occurrences: [{ source: { kind: 'noteBlock' as const, blockId }, destination }],
+    }
+
+    await t.run(async (ctx) => {
+      await expect(replaceResourceReferenceProjection(ctx, projection)).resolves.toEqual({
+        status: 'completed',
+      })
+      await expect(replaceResourceReferenceProjection(ctx, projection)).resolves.toEqual({
+        status: 'completed',
+      })
+      await expect(
+        replaceResourceReferenceProjection(ctx, {
+          ...projection,
+          sourceVersion: advancedVersion,
+        }),
+      ).resolves.toEqual({ status: 'completed' })
+      await expect(
+        replaceResourceReferenceProjection(ctx, {
+          ...projection,
+          sourceVersion: advancedVersion,
+        }),
+      ).resolves.toEqual({ status: 'completed' })
+      const rows = await ctx.db
+        .query('resourceReferenceEdges')
+        .withIndex('by_campaign_and_source', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', sourceId),
+        )
+        .collect()
+      expect(rows).toEqual([
+        expect.objectContaining({
+          sourceResourceUuid: sourceId,
+          sourceVersion: advancedVersion,
+          source: { kind: 'noteBlock', blockId },
+          targetResourceUuid: targetId,
+          target: destination.target,
+        }),
+      ])
+      await expect(
+        replaceResourceReferenceProjection(ctx, {
+          ...projection,
+          sourceVersion: advancedVersion,
+          occurrences: [],
+        }),
+      ).resolves.toEqual({ status: 'completed' })
+      await expect(
+        replaceResourceReferenceProjection(ctx, {
+          ...projection,
+          sourceVersion: advancedVersion,
+          occurrences: [],
+        }),
+      ).resolves.toEqual({ status: 'completed' })
+      await expect(
+        ctx.db
+          .query('resourceReferenceEdges')
+          .withIndex('by_campaign_and_source', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', sourceId),
+          )
+          .collect(),
+      ).resolves.toEqual([])
     })
   })
 

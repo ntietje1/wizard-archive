@@ -5,7 +5,10 @@ import type {
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
+import {
+  parseAuthoredDestination,
+  resourceAuthoredDestinationOccurrences,
+} from '@wizard-archive/editor/resources/authored-destination'
 import type {
   MapContentCommand,
   MapResourceContent,
@@ -107,7 +110,9 @@ export async function executeMapContentCommand(
         campaignId: ctx.resourceScope.campaignId,
         sourceResourceId: resourceId,
         sourceVersion: advanced.version,
-        destinations: transition.content.pins.map((pin) => pin.destination),
+        occurrences: resourceAuthoredDestinationOccurrences(
+          transition.content.pins.map((pin) => pin.destination),
+        ),
       })
     ).status !== 'completed'
   ) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import {
+  noteAuthoredDestinationOccurrences,
   noteAuthoredDestinations,
   remapNoteAuthoredDestinations,
 } from '../document/authored-destinations'
@@ -48,6 +49,16 @@ describe('note authored destinations', () => {
     expect(noteAuthoredDestinations(blocks)).toEqual([
       { kind: 'internal', target: { kind: 'resource', resourceId } },
       external,
+    ])
+    expect(noteAuthoredDestinationOccurrences(blocks)).toEqual([
+      {
+        source: { kind: 'noteBlock', blockId: blocks[0]!.id },
+        destination: { kind: 'internal', target: { kind: 'resource', resourceId } },
+      },
+      {
+        source: { kind: 'noteBlock', blockId: blocks[1]!.children![0]!.id },
+        destination: external,
+      },
     ])
   })
 
