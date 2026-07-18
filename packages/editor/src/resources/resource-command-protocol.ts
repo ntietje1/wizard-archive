@@ -16,7 +16,11 @@ import type {
 } from './resource-command-contract'
 import { MAX_NOTE_BLOCK_ACCESS_COMMAND_BLOCKS } from './note-block-access-policy'
 import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from './resource-command-contract'
-import { FOLDER_ACCESS_INHERITANCE, RESOURCE_PERMISSION } from './resource-access-policy'
+import {
+  FOLDER_ACCESS_INHERITANCE,
+  MAX_RESOURCE_ACCESS_COMMAND_RESOURCES,
+  RESOURCE_PERMISSION,
+} from './resource-access-policy'
 import type { FolderAccessInheritance, ResourcePermission } from './resource-access-policy'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
 import type { ResourceKind } from './resource-record'
@@ -176,29 +180,36 @@ export function normalizeResourceStructureCommand(
 export function normalizeResourceAccessCommand(
   command: ResourceAccessCommand,
 ): ResourceAccessCommand {
+  const resourceIds =
+    command.type === 'setFolderAccessInheritance'
+      ? null
+      : normalizeResourceIdSet(command.resourceIds)
+  if (resourceIds && resourceIds.length > MAX_RESOURCE_ACCESS_COMMAND_RESOURCES) {
+    throw new TypeError('Resource access selection is too large')
+  }
   switch (command.type) {
     case 'setAudienceAccess':
       return {
         type: 'setAudienceAccess',
-        resourceIds: normalizeResourceIdSet(command.resourceIds),
+        resourceIds: resourceIds!,
         permission: normalizePermission(command.permission),
       }
     case 'clearAudienceAccess':
       return {
         type: 'clearAudienceAccess',
-        resourceIds: normalizeResourceIdSet(command.resourceIds),
+        resourceIds: resourceIds!,
       }
     case 'setMemberAccess':
       return {
         type: 'setMemberAccess',
-        resourceIds: normalizeResourceIdSet(command.resourceIds),
+        resourceIds: resourceIds!,
         memberId: normalizeMemberId(command.memberId),
         permission: normalizePermission(command.permission),
       }
     case 'clearMemberAccess':
       return {
         type: 'clearMemberAccess',
-        resourceIds: normalizeResourceIdSet(command.resourceIds),
+        resourceIds: resourceIds!,
         memberId: normalizeMemberId(command.memberId),
       }
     case 'setFolderAccessInheritance':

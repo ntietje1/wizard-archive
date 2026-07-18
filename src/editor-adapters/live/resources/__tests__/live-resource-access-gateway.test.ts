@@ -109,6 +109,8 @@ describe('createLiveResourceAccessGateway', () => {
     const unknown = gateway.getPresentation(resourceId)
     expect(unknown).toEqual({ state: 'unknown' })
     expect(gateway.getPresentation(resourceId)).toBe(unknown)
+    const unsubscribeFirst = gateway.subscribe(resourceId, vi.fn())
+    const unsubscribeSecond = gateway.subscribe(resourceId, vi.fn())
     gateway.loadPresentation(resourceId)
     gateway.loadPresentation(resourceId)
     apply?.({
@@ -127,6 +129,11 @@ describe('createLiveResourceAccessGateway', () => {
       value: { policy: { resourceId } },
     })
     expect(gateway.getPresentation(resourceId)).toBe(gateway.getPresentation(resourceId))
+    unsubscribeFirst()
+    expect(dispose).not.toHaveBeenCalled()
+    unsubscribeSecond()
+    expect(dispose).toHaveBeenCalledOnce()
+    expect(gateway.getPresentation(resourceId)).toEqual({ state: 'unknown' })
     gateway.dispose()
     expect(dispose).toHaveBeenCalledOnce()
   })

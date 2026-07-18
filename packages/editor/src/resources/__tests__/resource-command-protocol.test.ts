@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from '../domain-id'
 import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from '../resource-command-contract'
+import { MAX_RESOURCE_ACCESS_COMMAND_RESOURCES } from '../resource-access-policy'
 import type {
   NoteBlockAccessCommand,
   ResourceAccessCommand,
@@ -198,6 +199,24 @@ describe('separate command families', () => {
           generateDomainId(DOMAIN_ID_KIND.resource),
         ),
         bookmarked: true,
+      }),
+    ).toThrow(/too large/)
+  })
+
+  it('bounds access selections after deduplication', () => {
+    const resourceIds = Array.from({ length: MAX_RESOURCE_ACCESS_COMMAND_RESOURCES }, () =>
+      generateDomainId(DOMAIN_ID_KIND.resource),
+    )
+    const normalized = normalizeResourceAccessCommand({
+      type: 'clearAudienceAccess',
+      resourceIds: [...resourceIds, resourceIds[0]!],
+    })
+    if (normalized.type !== 'clearAudienceAccess') throw new TypeError('Unexpected command')
+    expect(normalized.resourceIds).toHaveLength(MAX_RESOURCE_ACCESS_COMMAND_RESOURCES)
+    expect(() =>
+      normalizeResourceAccessCommand({
+        type: 'clearAudienceAccess',
+        resourceIds: [...resourceIds, generateDomainId(DOMAIN_ID_KIND.resource)],
       }),
     ).toThrow(/too large/)
   })

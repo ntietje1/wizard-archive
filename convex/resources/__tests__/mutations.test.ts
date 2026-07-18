@@ -3018,6 +3018,32 @@ describe('resource structure commands', () => {
     ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
   })
 
+  it('rejects oversized access selections before operation or policy writes', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeResourceAccessCommand, {
+        campaignId: campaignUuid,
+        operationId,
+        command: {
+          type: 'clearAudienceAccess',
+          resourceIds: Array.from({ length: 65 }, () => generateDomainId(DOMAIN_ID_KIND.resource)),
+        },
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceAccessOperations')
+          .withIndex('by_campaign_and_operation', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('operationUuid', operationId),
+          )
+          .unique(),
+      ).resolves.toBeNull()
+    })
+  })
+
   it('replays one canonical block access command without advancing projection twice', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

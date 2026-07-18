@@ -80,7 +80,7 @@ describe('createLiveNoteBlockAccessGateway', () => {
     })
     const gateway = createLiveNoteBlockAccessGateway(campaignId, vi.fn(), watch)
     const listener = vi.fn()
-    gateway.subscribe(noteId, listener)
+    const unsubscribe = gateway.subscribe(noteId, listener)
 
     gateway.loadPresentation(noteId)
     gateway.loadPresentation(noteId)
@@ -104,6 +104,9 @@ describe('createLiveNoteBlockAccessGateway', () => {
       state: 'known',
       value: { noteId, blocks: [{ blockId }] },
     })
+    unsubscribe()
+    expect(dispose).toHaveBeenCalledOnce()
+    expect(gateway.getPresentation(noteId)).toEqual({ state: 'unknown' })
     gateway.dispose()
     expect(dispose).toHaveBeenCalledOnce()
   })

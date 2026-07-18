@@ -9,6 +9,8 @@ export const RESOURCE_PERMISSION = {
 export type ResourcePermission = (typeof RESOURCE_PERMISSION)[keyof typeof RESOURCE_PERMISSION]
 export type GrantedResourcePermission = Exclude<ResourcePermission, 'none'>
 
+export const MAX_RESOURCE_ACCESS_COMMAND_RESOURCES = 64
+
 export const FOLDER_ACCESS_INHERITANCE = {
   disabled: 'disabled',
   enabled: 'enabled',

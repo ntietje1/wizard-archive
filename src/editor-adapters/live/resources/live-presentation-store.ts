@@ -8,30 +8,38 @@ export function createLivePresentationStore<TId, TPresentation>(
   const presentations = new Map<TId, ResourceKnowledge<TPresentation>>()
   const watches = new Map<TId, () => void>()
   const listeners = new Map<TId, Set<() => void>>()
+  const start = (id: TId) => {
+    if (!watch || watches.has(id) || !listeners.has(id)) return
+    watches.set(
+      id,
+      watch(id, (presentation) => {
+        presentations.set(
+          id,
+          presentation === null ? { state: 'missing' } : { state: 'known', value: presentation },
+        )
+        for (const listener of listeners.get(id) ?? []) listener()
+      }),
+    )
+  }
   return {
     get: (id: TId): ResourceKnowledge<TPresentation> => {
       return presentations.get(id) ?? UNKNOWN_PRESENTATION
     },
     load: (id: TId) => {
-      if (!watch || watches.has(id)) return
-      watches.set(
-        id,
-        watch(id, (presentation) => {
-          presentations.set(
-            id,
-            presentation === null ? { state: 'missing' } : { state: 'known', value: presentation },
-          )
-          for (const listener of listeners.get(id) ?? []) listener()
-        }),
-      )
+      start(id)
     },
     subscribe: (id: TId, listener: () => void) => {
       const idListeners = listeners.get(id) ?? new Set()
       idListeners.add(listener)
       listeners.set(id, idListeners)
+      start(id)
       return () => {
         idListeners.delete(listener)
-        if (idListeners.size === 0) listeners.delete(id)
+        if (idListeners.size > 0) return
+        listeners.delete(id)
+        watches.get(id)?.()
+        watches.delete(id)
+        presentations.delete(id)
       }
     },
     dispose: () => {
