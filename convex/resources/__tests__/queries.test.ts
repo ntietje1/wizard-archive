@@ -6,11 +6,7 @@ import {
 } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
-import {
-  MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
-  canonicalizeResourceTitle,
-} from '@wizard-archive/editor/resources/resource-record'
-import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
+import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import { MAX_RESOURCE_BOOKMARKS_PER_ACTOR } from '@wizard-archive/editor/resources/command-contract'
 import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-version'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
@@ -1127,7 +1123,7 @@ describe('authorized resource projection', () => {
     kind: ResourceKind,
     parentId: ResourceId | null,
     title: string,
-  ) {
+  ): Promise<ResourceId> {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const command: StoredResourceStructureCommand = {
       type: 'create',
@@ -1139,6 +1135,14 @@ describe('authorized resource projection', () => {
       color: null,
     }
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    if (kind === 'file') {
+      const result = await createEmptyFile(campaign, campaignUuid, operationId, parentId)
+      expect(result.status).toBe('completed')
+      if (result.status !== 'completed' || result.receipt.result.type !== 'created') {
+        throw new TypeError('Expected completed file transfer')
+      }
+      return assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId)
+    }
     const result =
       kind === 'folder'
         ? await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
@@ -1159,13 +1163,11 @@ describe('authorized resource projection', () => {
                 operationId,
                 command,
               })
-            : kind === 'canvas'
-              ? await asDm(campaign).mutation(api.resources.mutations.createCanvasResource, {
-                  campaignId: campaignUuid,
-                  operationId,
-                  command,
-                })
-              : await createEmptyFile(campaign, campaignUuid, operationId, command)
+            : await asDm(campaign).mutation(api.resources.mutations.createCanvasResource, {
+                campaignId: campaignUuid,
+                operationId,
+                command,
+              })
     expect(result.status).toBe('completed')
     return resourceId
   }
@@ -1208,7 +1210,7 @@ describe('authorized resource projection', () => {
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     campaignUuid: string,
     operationId: string,
-    command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
+    parentId: ResourceId | null,
   ) {
     const bytes = new TextEncoder().encode('x')
     const upload = await storeUncommittedTestUploadSession(
@@ -1217,29 +1219,11 @@ describe('authorized resource projection', () => {
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).action(api.resources.actions.createFileResource, {
+    return await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
       campaignId: campaignUuid,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId,
-      alias: {
-        campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
-        resourceId: command.resourceId,
-        importJobId: '01890f47-65f2-7cc0-8a3b-000000000001',
-        sourceRootId: 'test-upload',
-        rawPath: `${command.resourceId}.bin`,
-        normalizedPath: `${command.resourceId}.bin`,
-      },
-      command,
-      metadataVersion: await initialResourceMetadataVersion({
-        parentId:
-          command.parentId === null
-            ? null
-            : assertDomainId(DOMAIN_ID_KIND.resource, command.parentId),
-        kind: command.kind,
-        title: canonicalizeResourceTitle(command.title),
-        icon: command.icon,
-        color: command.color,
-        lifecycle: 'active',
-      }),
+      destinationParentId: parentId,
       uploadSessionId: upload.sessionId,
     })
   }

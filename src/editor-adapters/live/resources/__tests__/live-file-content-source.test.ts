@@ -223,31 +223,14 @@ describe('LiveFileContentSource', () => {
     const operationId = testDomainId('operation', 'create-file')
     const importJobId = testDomainId('importJob', 'create-file')
     const sessionId = 'create-file-session' as Id<'fileStorage'>
-    const command = {
-      type: 'create' as const,
-      resourceId,
-      kind: 'file' as const,
+    const metadataVersion = await initialResourceMetadataVersion({
       parentId: null,
+      kind: 'file',
       title: canonicalizeResourceTitle('Session.md'),
       icon: null,
       color: null,
-    }
-    const metadataVersion = await initialResourceMetadataVersion({
-      parentId: command.parentId,
-      kind: command.kind,
-      title: command.title,
-      icon: command.icon,
-      color: command.color,
       lifecycle: 'active',
     })
-    const alias = {
-      campaignId,
-      resourceId,
-      importJobId,
-      sourceRootId: 'selected-file',
-      rawPath: 'Session.md',
-      normalizedPath: 'Session.md',
-    }
     const create = vi.fn(() =>
       Promise.resolve({
         status: 'completed' as const,
@@ -279,22 +262,22 @@ describe('LiveFileContentSource', () => {
     const fileSource = {
       bytes: new TextEncoder().encode('# Kept as a file'),
       fileName: 'Session.md',
-      alias,
-      metadataVersion,
     }
 
     await expect(
-      source.create({ campaignId, operationId, command }, fileSource),
+      source.create(
+        { campaignId, jobId: importJobId, operationId, destinationParentId: null },
+        fileSource,
+      ),
     ).resolves.toMatchObject({
       status: 'received',
       result: { status: 'completed' },
     })
     expect(create).toHaveBeenCalledWith({
       campaignId,
+      jobId: importJobId,
       operationId,
-      command,
-      alias,
-      metadataVersion,
+      destinationParentId: null,
       uploadSessionId: sessionId,
     })
     expect(refresh).toHaveBeenCalledWith(resourceId, null)
@@ -304,23 +287,14 @@ describe('LiveFileContentSource', () => {
     source.dispose()
   })
 
-  it('rejects and cleans up a create receipt that does not match its planned metadata', async () => {
+  it('rejects and cleans up a create receipt that is not a single created resource', async () => {
     const campaignId = testDomainId('campaign', 'invalid-create-file-campaign')
     const resourceId = testDomainId('resource', 'invalid-create-file')
     const operationId = testDomainId('operation', 'invalid-create-file')
-    const command = {
-      type: 'create' as const,
-      resourceId,
-      kind: 'file' as const,
-      parentId: null,
-      title: canonicalizeResourceTitle('Evidence'),
-      icon: null,
-      color: null,
-    }
     const metadataVersion = await initialResourceMetadataVersion({
       parentId: null,
       kind: 'file',
-      title: command.title,
+      title: canonicalizeResourceTitle('Evidence'),
       icon: null,
       color: null,
       lifecycle: 'active',
@@ -343,8 +317,8 @@ describe('LiveFileContentSource', () => {
               postconditions: [
                 {
                   state: 'present' as const,
-                  resourceId,
-                  metadataVersion: { ...metadataVersion, digest: 'f'.repeat(64) },
+                  resourceId: testDomainId('resource', 'unexpected-created-file'),
+                  metadataVersion,
                 },
               ],
             },
@@ -361,19 +335,15 @@ describe('LiveFileContentSource', () => {
 
     await expect(
       source.create(
-        { campaignId, operationId, command },
+        {
+          campaignId,
+          jobId: testDomainId('importJob', 'invalid-create-file'),
+          operationId,
+          destinationParentId: null,
+        },
         {
           bytes: new TextEncoder().encode('evidence'),
           fileName: 'Evidence',
-          alias: {
-            campaignId,
-            resourceId,
-            importJobId: testDomainId('importJob', 'invalid-create-file'),
-            sourceRootId: 'selected-file',
-            rawPath: 'Evidence',
-            normalizedPath: 'Evidence',
-          },
-          metadataVersion,
         },
       ),
     ).resolves.toEqual({

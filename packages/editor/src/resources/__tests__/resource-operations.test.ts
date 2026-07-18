@@ -77,7 +77,7 @@ describe('resource application workflows', () => {
     core.dispose()
   })
 
-  it('plans explicit uploads through the canonical transfer inventory before file creation', async () => {
+  it('submits explicit uploads to the canonical transfer owner without authoring a resource', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const core = createInMemoryEditorRuntime({
@@ -118,32 +118,19 @@ describe('resource application workflows', () => {
 
     expect(result).toMatchObject({ status: 'completed' })
     expect(create).toHaveBeenCalledOnce()
-    const [envelope, source] = create.mock.calls[0]!
-    expect(envelope.command).toMatchObject({
-      kind: 'file',
-      parentId: null,
-      title: 'Session.md',
+    const [intent, source] = create.mock.calls[0]!
+    expect(intent).toMatchObject({
+      campaignId,
+      destinationParentId: null,
     })
     expect(source).toMatchObject({
       fileName: 'Session.md',
-      alias: {
-        campaignId,
-        resourceId: envelope.command.resourceId,
-        sourceRootId: 'selected-file',
-        rawPath: 'Session.md',
-        normalizedPath: 'Session.md',
-      },
-      metadataVersion: expect.objectContaining({
-        scheme: 'authoritative-revision-v1',
-        revision: 1,
-      }),
     })
-    expect(runtime.resources.index.getSnapshot().lookup(envelope.command.resourceId)).toMatchObject(
-      {
-        state: 'known',
-        value: { kind: 'file', title: 'Session.md' },
-      },
-    )
+    if (result.status !== 'completed') throw new TypeError('Expected completed transfer')
+    expect(runtime.resources.index.getSnapshot().lookup(result.resourceId)).toMatchObject({
+      state: 'known',
+      value: { kind: 'file', title: 'Session.md' },
+    })
     expect(report).toHaveBeenLastCalledWith('File uploaded')
     core.dispose()
   })

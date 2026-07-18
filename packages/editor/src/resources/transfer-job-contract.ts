@@ -41,6 +41,13 @@ export type PlainTransferJobRequest = TransferJobRequestBase &
       }>
   )
 
+export type PlainFileTransferIntent = Readonly<{
+  campaignId: CampaignId
+  jobId: ImportJobId
+  operationId: OperationId
+  destinationParentId: ResourceId | null
+}>
+
 export type WizardArchiveTransferJobRequest = TransferJobRequestBase &
   (
     | Readonly<{

@@ -212,7 +212,8 @@ function createScopedLiveResourceRuntime(
         })
         return subscribeToWatch(watch, apply)
       },
-      create: (args) => write(() => convex.action(api.resources.actions.createFileResource, args)),
+      create: (args) =>
+        write(() => convex.action(api.resources.actions.executePlainFileTransfer, args)),
       download: (resourceId) =>
         convex.query(api.resources.queries.loadFileDownload, {
           ...queryScope,

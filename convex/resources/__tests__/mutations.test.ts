@@ -271,7 +271,7 @@ describe('resource structure commands', () => {
   it('classifies live file bytes independently of generic metadata', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
-    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const metadata = {
@@ -288,58 +288,26 @@ describe('resource structure commands', () => {
       new Blob([bytes], { type: 'application/octet-stream' }),
       'payload.bin',
     )
-    const command = fileCreateCommand(resourceId, 'evidence.png')
-    const metadataVersion = await fileCreateMetadataVersion(command)
-    await expect(
-      asDm(campaign).action(api.resources.actions.createFileResource, {
-        campaignId: campaignUuid,
-        operationId,
-        alias: fileCreateAlias(campaignUuid, resourceId),
-        metadataVersion: await fileCreateMetadataVersion(
-          fileCreateCommand(resourceId, 'different title'),
-        ),
-        command,
-        uploadSessionId: upload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
-
-    const result = await asDm(campaign).action(api.resources.actions.createFileResource, {
+    const args = {
       campaignId: campaignUuid,
+      jobId,
       operationId,
-      alias: fileCreateAlias(campaignUuid, resourceId),
-      metadataVersion,
-      command,
+      destinationParentId: null,
       uploadSessionId: upload.sessionId,
-    })
+    }
+    const result = await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, args)
 
     expect(result).toMatchObject({
       status: 'completed',
-      receipt: { result: { type: 'created', resourceId } },
+      receipt: { result: { type: 'created' } },
     })
+    if (result.status !== 'completed' || result.receipt.result.type !== 'created') {
+      throw new TypeError('Expected completed file transfer')
+    }
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId)
     await expect(
-      asDm(campaign).action(api.resources.actions.createFileResource, {
-        campaignId: campaignUuid,
-        operationId,
-        alias: fileCreateAlias(campaignUuid, resourceId),
-        metadataVersion,
-        command,
-        uploadSessionId: upload.sessionId,
-      }),
+      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, args),
     ).resolves.toMatchObject({ status: 'completed' })
-    await expect(
-      asDm(campaign).action(api.resources.actions.createFileResource, {
-        campaignId: campaignUuid,
-        operationId,
-        alias: {
-          ...fileCreateAlias(campaignUuid, resourceId),
-          rawPath: 'changed.bin',
-          normalizedPath: 'changed.bin',
-        },
-        metadataVersion,
-        command,
-        uploadSessionId: upload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
     const conflictingUpload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
@@ -347,15 +315,20 @@ describe('resource structure commands', () => {
       'payload.bin',
     )
     await expect(
-      asDm(campaign).action(api.resources.actions.createFileResource, {
-        campaignId: campaignUuid,
-        operationId,
-        alias: fileCreateAlias(campaignUuid, resourceId),
-        metadataVersion,
-        command,
+      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
+        ...args,
         uploadSessionId: conflictingUpload.sessionId,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+    await expect(
+      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
+        campaignId: campaignUuid,
+        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        destinationParentId: null,
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
     await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
@@ -380,13 +353,13 @@ describe('resource structure commands', () => {
             query
               .eq('campaignUuid', campaignUuid)
               .eq('resourceUuid', resourceId)
-              .eq('importJobUuid', fileCreateAlias(campaignUuid, resourceId).importJobId)
-              .eq('sourceRootId', 'test-upload')
-              .eq('normalizedPath', `${resourceId}.bin`),
+              .eq('importJobUuid', jobId)
+              .eq('sourceRootId', 'selected-file')
+              .eq('normalizedPath', 'payload.bin'),
           )
           .unique(),
       ).resolves.toMatchObject({
-        rawPath: `${resourceId}.bin`,
+        rawPath: 'payload.bin',
       })
     })
   })
@@ -394,7 +367,6 @@ describe('resource structure commands', () => {
   it('replaces file content once, advances its version, and retires the previous asset', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
-    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const original = await storeUncommittedTestUploadSession(
       t,
@@ -402,22 +374,17 @@ describe('resource structure commands', () => {
       new Blob(['original'], { type: 'text/plain' }),
       'evidence.txt',
     )
-    await asDm(campaign).action(api.resources.actions.createFileResource, {
+    const created = await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
       campaignId: campaignUuid,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId,
-      alias: fileCreateAlias(campaignUuid, resourceId),
-      metadataVersion: await fileCreateMetadataVersion(fileCreateCommand(resourceId, 'Evidence')),
-      command: {
-        type: 'create',
-        resourceId,
-        kind: 'file',
-        parentId: null,
-        title: 'Evidence',
-        icon: null,
-        color: null,
-      },
+      destinationParentId: null,
       uploadSessionId: original.sessionId,
     })
+    if (created.status !== 'completed' || created.receipt.result.type !== 'created') {
+      throw new TypeError('Expected completed file transfer')
+    }
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, created.receipt.result.resourceId)
     const expectedVersion = await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
@@ -493,53 +460,47 @@ describe('resource structure commands', () => {
       new Blob(['exclusive'], { type: 'text/plain' }),
       'exclusive.txt',
     )
-    const ownerResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const ownerJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     const ownerOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    const ownerCommand = fileCreateCommand(ownerResourceId, 'Owner')
-    const created = await asDm(campaign).action(api.resources.actions.createFileResource, {
+    const ownerArgs = {
       campaignId: campaignUuid,
+      jobId: ownerJobId,
       operationId: ownerOperationId,
-      alias: fileCreateAlias(campaignUuid, ownerResourceId),
-      metadataVersion: await fileCreateMetadataVersion(ownerCommand),
-      command: ownerCommand,
+      destinationParentId: null,
       uploadSessionId: upload.sessionId,
-    })
+    }
+    const created = await asDm(campaign).action(
+      api.resources.actions.executePlainFileTransfer,
+      ownerArgs,
+    )
     expect(created).toMatchObject({ status: 'completed' })
+    if (created.status !== 'completed' || created.receipt.result.type !== 'created') {
+      throw new TypeError('Expected completed file transfer')
+    }
+    const ownerResourceId = assertDomainId(
+      DOMAIN_ID_KIND.resource,
+      created.receipt.result.resourceId,
+    )
     await expect(
-      asDm(campaign).action(api.resources.actions.createFileResource, {
-        campaignId: campaignUuid,
-        operationId: ownerOperationId,
-        alias: fileCreateAlias(campaignUuid, ownerResourceId),
-        metadataVersion: await fileCreateMetadataVersion(ownerCommand),
-        command: ownerCommand,
-        uploadSessionId: upload.sessionId,
-      }),
+      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, ownerArgs),
     ).resolves.toEqual(created)
 
-    const secondResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     await expect(
-      asDm(campaign).action(api.resources.actions.createFileResource, {
+      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
         campaignId: campaignUuid,
+        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        alias: fileCreateAlias(campaignUuid, secondResourceId),
-        metadataVersion: await fileCreateMetadataVersion(
-          fileCreateCommand(secondResourceId, 'Second'),
-        ),
-        command: fileCreateCommand(secondResourceId, 'Second'),
+        destinationParentId: null,
         uploadSessionId: upload.sessionId,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
 
-    const crossCampaignResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     await expect(
-      campaign.dm.authed.action(api.resources.actions.createFileResource, {
+      campaign.dm.authed.action(api.resources.actions.executePlainFileTransfer, {
         campaignId: otherCampaign.campaignDomainId,
+        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        alias: fileCreateAlias(otherCampaign.campaignDomainId, crossCampaignResourceId),
-        metadataVersion: await fileCreateMetadataVersion(
-          fileCreateCommand(crossCampaignResourceId, 'Cross campaign'),
-        ),
-        command: fileCreateCommand(crossCampaignResourceId, 'Cross campaign'),
+        destinationParentId: null,
         uploadSessionId: upload.sessionId,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
@@ -576,17 +537,26 @@ describe('resource structure commands', () => {
       new Blob(['other'], { type: 'text/plain' }),
       'other.txt',
     )
-    const crossCampaignTargetId = generateDomainId(DOMAIN_ID_KIND.resource)
-    await campaign.dm.authed.action(api.resources.actions.createFileResource, {
-      campaignId: otherCampaign.campaignDomainId,
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-      alias: fileCreateAlias(otherCampaign.campaignDomainId, crossCampaignTargetId),
-      metadataVersion: await fileCreateMetadataVersion(
-        fileCreateCommand(crossCampaignTargetId, 'Other file'),
-      ),
-      command: fileCreateCommand(crossCampaignTargetId, 'Other file'),
-      uploadSessionId: crossCampaignUpload.sessionId,
-    })
+    const crossCampaignCreated = await campaign.dm.authed.action(
+      api.resources.actions.executePlainFileTransfer,
+      {
+        campaignId: otherCampaign.campaignDomainId,
+        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        destinationParentId: null,
+        uploadSessionId: crossCampaignUpload.sessionId,
+      },
+    )
+    if (
+      crossCampaignCreated.status !== 'completed' ||
+      crossCampaignCreated.receipt.result.type !== 'created'
+    ) {
+      throw new TypeError('Expected completed cross-campaign file transfer')
+    }
+    const crossCampaignTargetId = assertDomainId(
+      DOMAIN_ID_KIND.resource,
+      crossCampaignCreated.receipt.result.resourceId,
+    )
     await expect(
       campaign.dm.authed.action(api.resources.actions.replaceFileContent, {
         campaignId: otherCampaign.campaignDomainId,
@@ -604,14 +574,6 @@ describe('resource structure commands', () => {
       expect(owners).toEqual([
         expect.objectContaining({ campaignUuid, resourceUuid: ownerResourceId }),
       ])
-      for (const resourceId of [secondResourceId, crossCampaignResourceId]) {
-        await expect(
-          ctx.db
-            .query('resources')
-            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-            .unique(),
-        ).resolves.toBeNull()
-      }
     })
     const integrity = await t.query(internal.resources.integrity.diagnose, {
       diagnostic: { type: 'dangling_domain_asset', source: 'owner' },
@@ -659,21 +621,18 @@ describe('resource structure commands', () => {
       new Blob(['concurrent create'], { type: 'text/plain' }),
       'concurrent.txt',
     )
-    const resourceIds = [
-      generateDomainId(DOMAIN_ID_KIND.resource),
-      generateDomainId(DOMAIN_ID_KIND.resource),
+    const jobs = [
+      generateDomainId(DOMAIN_ID_KIND.importJob),
+      generateDomainId(DOMAIN_ID_KIND.importJob),
     ] as const
     const results = await Promise.all(
-      resourceIds.map(
-        async (resourceId, index) =>
-          await asDm(campaign).action(api.resources.actions.createFileResource, {
+      jobs.map(
+        async (jobId) =>
+          await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
             campaignId: campaignUuid,
+            jobId,
             operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-            alias: fileCreateAlias(campaignUuid, resourceId),
-            metadataVersion: await fileCreateMetadataVersion(
-              fileCreateCommand(resourceId, `Concurrent ${index}`),
-            ),
-            command: fileCreateCommand(resourceId, `Concurrent ${index}`),
+            destinationParentId: null,
             uploadSessionId: upload.sessionId,
           }),
       ),
@@ -687,16 +646,14 @@ describe('resource structure commands', () => {
         .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetId))
         .take(2)
       expect(owners).toHaveLength(1)
-      const contents = await Promise.all(
-        resourceIds.map((resourceId) =>
-          ctx.db
-            .query('resourceFileContents')
-            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-            .unique(),
-        ),
-      )
-      expect(contents.filter((content) => content?.assetUuid === upload.assetId)).toHaveLength(1)
-      expect(contents.filter(Boolean)).toHaveLength(1)
+      await expect(
+        ctx.db
+          .query('resourceFileContents')
+          .withIndex('by_resourceUuid', (query) =>
+            query.eq('resourceUuid', owners[0]!.resourceUuid),
+          )
+          .unique(),
+      ).resolves.toMatchObject({ assetUuid: upload.assetId })
     })
   })
 
@@ -3108,52 +3065,13 @@ describe('resource structure commands', () => {
     })
   }
 
-  function fileCreateCommand(resourceId: ResourceId, title: string) {
-    return {
-      type: 'create' as const,
-      resourceId,
-      kind: 'file' as const,
-      parentId: null,
-      title,
-      icon: null,
-      color: null,
-    }
-  }
-
-  function fileCreateAlias(campaignId: string, resourceId: string) {
-    return {
-      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignId),
-      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
-      importJobId: '01890f47-65f2-7cc0-8a3b-000000000001',
-      sourceRootId: 'test-upload',
-      rawPath: `${resourceId}.bin`,
-      normalizedPath: `${resourceId}.bin`,
-    }
-  }
-
-  async function fileCreateMetadataVersion(
-    command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
-  ) {
-    return await initialResourceMetadataVersion({
-      parentId:
-        command.parentId === null
-          ? null
-          : assertDomainId(DOMAIN_ID_KIND.resource, command.parentId),
-      kind: command.kind,
-      title: canonicalizeResourceTitle(command.title),
-      icon: command.icon,
-      color: command.color,
-      lifecycle: 'active',
-    })
-  }
-
   async function createResource(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     campaignUuid: string,
     kind: 'canvas' | 'file' | 'folder' | 'map' | 'note',
     parentId: ResourceId | null,
     title: string,
-  ) {
+  ): Promise<ResourceId> {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const command = {
@@ -3165,6 +3083,14 @@ describe('resource structure commands', () => {
       icon: null,
       color: null,
     } as const
+    if (kind === 'file') {
+      const result = await createEmptyFile(campaign, campaignUuid, operationId, parentId)
+      expect(result.status).toBe('completed')
+      if (result.status !== 'completed' || result.receipt.result.type !== 'created') {
+        throw new TypeError('Expected completed file transfer')
+      }
+      return assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId)
+    }
     const result =
       kind === 'folder'
         ? await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
@@ -3185,13 +3111,11 @@ describe('resource structure commands', () => {
                 operationId,
                 command,
               })
-            : kind === 'canvas'
-              ? await asDm(campaign).mutation(api.resources.mutations.createCanvasResource, {
-                  campaignId: campaignUuid,
-                  operationId,
-                  command,
-                })
-              : await createEmptyFile(campaign, campaignUuid, operationId, command)
+            : await asDm(campaign).mutation(api.resources.mutations.createCanvasResource, {
+                campaignId: campaignUuid,
+                operationId,
+                command,
+              })
     expect(result.status).toBe('completed')
     return resourceId
   }
@@ -3200,7 +3124,7 @@ describe('resource structure commands', () => {
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     campaignUuid: string,
     operationId: string,
-    command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
+    parentId: ResourceId | null,
   ) {
     const bytes = new TextEncoder().encode('x')
     const upload = await storeUncommittedTestUploadSession(
@@ -3209,12 +3133,11 @@ describe('resource structure commands', () => {
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).action(api.resources.actions.createFileResource, {
+    return await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
       campaignId: campaignUuid,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId,
-      alias: fileCreateAlias(campaignUuid, command.resourceId),
-      metadataVersion: await fileCreateMetadataVersion(command),
-      command,
+      destinationParentId: parentId,
       uploadSessionId: upload.sessionId,
     })
   }

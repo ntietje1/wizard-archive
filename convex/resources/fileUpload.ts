@@ -11,6 +11,8 @@ export const prepareFileUpload = internalQuery({
   },
   returns: v.object({
     campaignId: v.id('campaigns'),
+    campaignUuid: v.string(),
+    actorId: v.string(),
     originalFileName: v.string(),
     storageId: v.id('_storage'),
   }),
@@ -19,7 +21,7 @@ export const prepareFileUpload = internalQuery({
     const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId)
     const campaign = await findCampaignRow(ctx, campaignId)
     if (!campaign) throw new TypeError('Campaign is unavailable')
-    await checkDmMembership({ ...ctx, user }, campaign._id)
+    const { membership } = await checkDmMembership({ ...ctx, user }, campaign._id)
     const upload = await ctx.db.get('fileStorage', args.uploadSessionId)
     if (
       !upload ||
@@ -31,6 +33,8 @@ export const prepareFileUpload = internalQuery({
     }
     return {
       campaignId: campaign._id,
+      campaignUuid: campaign.campaignUuid,
+      actorId: membership.campaignMemberUuid,
       originalFileName: upload.originalFileName,
       storageId: upload.storageId,
     }

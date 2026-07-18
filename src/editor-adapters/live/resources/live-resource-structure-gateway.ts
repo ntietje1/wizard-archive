@@ -129,6 +129,24 @@ export function deliverExpectedCreateResult(
     : { status: 'not_committed', retryable: false, reason: 'invalid_response' }
 }
 
+export function deliverExpectedPlainTransferResult(
+  result: ResourceStructureCommandResult,
+  campaignId: CampaignId,
+  operationId: OperationId,
+): CommandDelivery<ResourceStructureCommandResult> {
+  if (result.status !== 'completed') return { status: 'received', result }
+  const created = result.receipt.result
+  const createdPostcondition = result.receipt.postconditions[0]
+  return result.receipt.campaignId === campaignId &&
+    result.receipt.operationId === operationId &&
+    created.type === 'created' &&
+    result.receipt.postconditions.length === 1 &&
+    createdPostcondition?.state === 'present' &&
+    createdPostcondition.resourceId === created.resourceId
+    ? { status: 'received', result }
+    : { status: 'not_committed', retryable: false, reason: 'invalid_response' }
+}
+
 function scopeUnavailable(): CommandDelivery<ResourceStructureCommandResult> {
   return {
     status: 'received',

@@ -16,13 +16,11 @@ import type {
   CanvasPreviewState,
   ContentExportResult,
   CreateCanvasResourceCommand,
-  CreateFileResourceCommand,
   CreateMapResourceCommand,
   CreateNoteResourceCommand,
   FileContentSource,
   FileContentState,
   FileContentReplaceResult,
-  FileResourceCreationSource,
   FileResourceSource,
   FileResourceContent,
   MapResourceContent,
@@ -42,7 +40,7 @@ import type {
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type { ResourceNavigation, EditorRuntime } from './editor-runtime-contract'
-import type { CampaignId, OperationId, ResourceId } from './domain-id'
+import type { CampaignId, CampaignMemberId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
@@ -73,8 +71,14 @@ import {
   transitionMapContent,
 } from './map-session-policy'
 import type { MapImageBytes } from './map-session-policy'
-import { initialResourceMetadataVersion } from './resource-metadata-version'
-import { assertSourcePathAlias } from './source-path-alias'
+import { buildPlainTransferInventory, digestPlainTransferSources } from './plain-transfer-inventory'
+import type { PlainTransferSourceEntry } from './plain-transfer-inventory'
+import { TRANSFER_JOB_REQUEST_VERSION } from './transfer-job-contract'
+import type {
+  PlainFileTransferIntent,
+  PlainTransferJobRequest,
+  TransferSourceDescriptor,
+} from './transfer-job-contract'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -236,6 +240,7 @@ class InMemoryFileContentSource
   constructor(
     ready: ReadonlyArray<ReadyFileContent>,
     private readonly campaignId: CampaignId,
+    private readonly actorId: CampaignMemberId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
     private readonly appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>,
   ) {
@@ -261,48 +266,66 @@ class InMemoryFileContentSource
   }
 
   async create(
-    envelope: CommandEnvelope<CreateFileResourceCommand>,
-    source: FileResourceCreationSource,
+    intent: PlainFileTransferIntent,
+    source: FileResourceSource,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
-    try {
-      assertSourcePathAlias(source.alias)
-    } catch {
-      return invalidCreateDelivery()
+    if (intent.campaignId !== this.campaignId) return invalidCreateDelivery()
+    const sources: ReadonlyArray<TransferSourceDescriptor> = [
+      { id: 'selected-file', kind: 'file', name: source.fileName },
+    ]
+    const entries: ReadonlyArray<PlainTransferSourceEntry> = [
+      { sourceId: 'selected-file', path: source.fileName, type: 'file', bytes: source.bytes },
+    ]
+    const request: PlainTransferJobRequest = {
+      version: TRANSFER_JOB_REQUEST_VERSION,
+      jobId: intent.jobId,
+      operationId: intent.operationId,
+      actorId: this.actorId,
+      destinationCampaignId: this.campaignId,
+      destinationParentId: intent.destinationParentId,
+      manifestHandling: 'reject',
+      mode: 'plain_resources',
+      sourceDigest: await digestPlainTransferSources(sources, entries),
+      sources,
     }
+    const planned = await buildPlainTransferInventory({ request, entries })
+    if (planned.status === 'rejected') return invalidCreateDelivery()
+    const resource = planned.inventory.resources[0]
     if (
-      envelope.campaignId !== this.campaignId ||
-      source.alias.campaignId !== envelope.campaignId ||
-      source.alias.resourceId !== envelope.command.resourceId
+      planned.inventory.resources.length !== 1 ||
+      !resource ||
+      resource.kind !== 'file' ||
+      resource.content?.kind !== 'file'
     ) {
       return invalidCreateDelivery()
     }
-    const metadataVersion = await initialResourceMetadataVersion({
-      parentId: envelope.command.parentId,
-      kind: envelope.command.kind,
-      title: envelope.command.title,
-      icon: envelope.command.icon,
-      color: envelope.command.color,
-      lifecycle: 'active',
-    })
-    if (!versionStampEquals(metadataVersion, source.metadataVersion)) {
-      return invalidCreateDelivery()
+    const envelope = {
+      campaignId: this.campaignId,
+      operationId: intent.operationId,
+      command: {
+        type: 'create' as const,
+        resourceId: resource.id,
+        kind: 'file' as const,
+        parentId: resource.parentId,
+        title: resource.title,
+        icon: null,
+        color: null,
+      },
     }
-    const metadata = classifyFileResourceSource(source)
-    if (metadata.classification === 'rejected') return invalidCreateDelivery()
     const delivery = await this.executeStructure(envelope)
     if (
       delivery.status !== 'received' ||
       delivery.result.status !== 'completed' ||
       delivery.result.receipt.result.type !== 'created' ||
-      delivery.result.receipt.result.resourceId !== envelope.command.resourceId
+      delivery.result.receipt.result.resourceId !== resource.id
     ) {
       return delivery
     }
-    await this.appendAlias(source.alias)
+    await this.appendAlias(resource.alias)
     this.setReady(
-      envelope.command.resourceId,
-      { ...metadata, attachment: 'attached' },
-      await initialFileContentVersion(source.bytes, metadata),
+      resource.id,
+      { ...resource.content.source.metadata, attachment: 'attached' },
+      await initialFileContentVersion(source.bytes, resource.content.source.metadata),
       source.bytes,
     )
     return delivery
@@ -801,6 +824,7 @@ export function createInMemoryEditorRuntime({
   const files = new InMemoryFileContentSource(
     content.files ?? [],
     scope.campaignId,
+    scope.actorId,
     (envelope) => executeStructure(envelope),
     (alias) => appendAlias(alias),
   )

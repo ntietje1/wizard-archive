@@ -14,13 +14,6 @@ import type { ResourceUndoHistory } from '../resource-undo-history'
 import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 import { validateFileUploadSize } from '../../../../../shared/storage/validation'
-import {
-  buildPlainTransferInventory,
-  digestPlainTransferSources,
-} from '../plain-transfer-inventory'
-import type { PlainTransferSourceEntry } from '../plain-transfer-inventory'
-import { TRANSFER_JOB_REQUEST_VERSION } from '../transfer-job-contract'
-import type { PlainTransferJobRequest, TransferSourceDescriptor } from '../transfer-job-contract'
 
 export type WorkspaceReport = (message: string, retry?: () => void) => void
 
@@ -142,7 +135,7 @@ async function createWorkspaceResource(
     }
   }
   return await completeWorkspaceCreation(
-    resourceId,
+    { state: 'expected', resourceId },
     deliver,
     `${resourceKindLabel(kind)} created`,
     report,
@@ -175,61 +168,15 @@ async function createWorkspaceFile(
     return { status: 'rejected', reason: 'file_read_failed' } as const
   }
   if (signal?.aborted) return { status: 'cancelled' } as const
-  const sources: ReadonlyArray<TransferSourceDescriptor> = [
-    { id: 'selected-file', kind: 'file', name: file.name },
-  ]
-  const entries: ReadonlyArray<PlainTransferSourceEntry> = [
-    { sourceId: sources[0]!.id, path: file.name, type: 'file', bytes },
-  ]
-  const request: PlainTransferJobRequest = {
-    version: TRANSFER_JOB_REQUEST_VERSION,
+  const intent = {
+    campaignId: runtime.scope.campaignId,
     jobId,
     operationId,
-    actorId: runtime.scope.actorId,
-    destinationCampaignId: runtime.scope.campaignId,
     destinationParentId: parentId,
-    manifestHandling: 'reject',
-    mode: 'plain_resources',
-    sourceDigest: await digestPlainTransferSources(sources, entries),
-    sources,
-  }
-  if (signal?.aborted) return { status: 'cancelled' } as const
-  const planned = await buildPlainTransferInventory({ request, entries })
-  if (signal?.aborted) return { status: 'cancelled' } as const
-  if (planned.status === 'rejected') {
-    return { status: 'rejected', reason: planned.reason } as const
-  }
-  const resource = planned.inventory.resources[0]
-  if (
-    planned.inventory.resources.length !== 1 ||
-    !resource ||
-    resource.kind !== 'file' ||
-    resource.content?.kind !== 'file'
-  ) {
-    return { status: 'rejected', reason: 'invalid_source' } as const
-  }
-  const source = {
-    bytes,
-    fileName: file.name,
-    alias: resource.alias,
-    metadataVersion: resource.metadataVersion,
-  }
-  const envelope = {
-    campaignId: runtime.scope.campaignId,
-    operationId,
-    command: {
-      type: 'create' as const,
-      resourceId: resource.id,
-      kind: 'file' as const,
-      parentId,
-      title: resource.title,
-      icon: null,
-      color: null,
-    },
   }
   return await completeWorkspaceCreation(
-    resource.id,
-    () => runtime.content.files.create(envelope, source),
+    { state: 'authoritative' },
+    () => runtime.content.files.create(intent, { bytes, fileName: file.name }),
     'File uploaded',
     report,
     signal,
@@ -299,7 +246,9 @@ function resourceDownloadFileName(title: string, extension: string): string {
 }
 
 async function completeWorkspaceCreation(
-  resourceId: ResourceId,
+  expectation:
+    | Readonly<{ state: 'authoritative' }>
+    | Readonly<{ state: 'expected'; resourceId: ResourceId }>,
   deliver: () => Promise<CommandDelivery<ResourceStructureCommandResult>>,
   successMessage: string,
   report: WorkspaceReport,
@@ -312,28 +261,31 @@ async function completeWorkspaceCreation(
   } catch {
     if (signal?.aborted) return { status: 'cancelled' }
     const retry = () =>
-      completeWorkspaceCreation(resourceId, deliver, successMessage, report, signal)
+      completeWorkspaceCreation(expectation, deliver, successMessage, report, signal)
     return { status: 'failed', reason: 'provider_failure', retry }
   }
   if (signal?.aborted) return { status: 'cancelled' }
   if (delivery.status === 'indeterminate') {
     const retry = () =>
-      completeWorkspaceCreation(resourceId, deliver, successMessage, report, signal)
+      completeWorkspaceCreation(expectation, deliver, successMessage, report, signal)
     return { status: 'indeterminate', reason: delivery.reason, retry }
   }
   if (delivery.status === 'not_committed') {
     const retry = delivery.retryable
-      ? () => completeWorkspaceCreation(resourceId, deliver, successMessage, report, signal)
+      ? () => completeWorkspaceCreation(expectation, deliver, successMessage, report, signal)
       : null
     return { status: 'failed', reason: delivery.reason, retry }
   }
   if (delivery.result.status === 'completed') {
     const result = delivery.result.receipt.result
-    if (result.type !== 'created' || result.resourceId !== resourceId) {
+    if (
+      result.type !== 'created' ||
+      (expectation.state === 'expected' && result.resourceId !== expectation.resourceId)
+    ) {
       return { status: 'failed', reason: 'invalid_response', retry: null }
     }
     report(successMessage)
-    return { status: 'completed', resourceId }
+    return { status: 'completed', resourceId: result.resourceId }
   }
   report(deliveryMessage(delivery))
   return { status: 'rejected', reason: delivery.result.reason }

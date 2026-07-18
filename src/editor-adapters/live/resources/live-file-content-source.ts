@@ -9,32 +9,31 @@ import {
 import type {
   FileContentSource,
   FileContentState,
-  FileResourceCreationSource,
   FileResourceSource,
 } from '@wizard-archive/editor/resources/content-session-contract'
+import type { PlainFileTransferIntent } from '@wizard-archive/editor/resources/transfer-job-contract'
 import type {
   CommandDelivery,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
 import type {
   CampaignId,
+  ImportJobId,
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
-import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import { finalizeLiveContentCreate } from './live-fixed-content-create'
 import {
-  deliverExpectedCreateResult,
+  deliverExpectedPlainTransferResult,
   readLiveStructureResult,
-  toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 
-type CreateFileArgs = FunctionArgs<typeof api.resources.actions.createFileResource>
-type CreateFileResult = FunctionReturnType<typeof api.resources.actions.createFileResource>
+type CreateFileArgs = FunctionArgs<typeof api.resources.actions.executePlainFileTransfer>
+type CreateFileResult = FunctionReturnType<typeof api.resources.actions.executePlainFileTransfer>
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 type ReplaceFileArgs = FunctionArgs<typeof api.resources.actions.replaceFileContent>
 type ReplaceFileResult = FunctionReturnType<typeof api.resources.actions.replaceFileContent>
@@ -99,6 +98,7 @@ class LiveFileContentStateSource {
 }
 
 type PendingFileCreate = Readonly<{
+  intent: PlainFileTransferIntent
   operationId: OperationId
   sessionId: Id<'fileStorage'>
   source: FileResourceSource
@@ -108,10 +108,6 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
   return { status: 'received', result: { status: 'rejected', reason: 'invalid_command' } }
 }
 
-function invalidCreateResponse(): CommandDelivery<ResourceStructureCommandResult> {
-  return { status: 'not_committed', retryable: false, reason: 'invalid_response' }
-}
-
 export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
@@ -119,7 +115,7 @@ export function createLiveFileContentSource(
   authority: LiveResourceContentAuthority,
 ): FileContentSource {
   const content = new LiveFileContentStateSource(backend)
-  const pending = new Map<ResourceId, PendingFileCreate>()
+  const pending = new Map<ImportJobId, PendingFileCreate>()
   return {
     get: (resourceId) => content.get(resourceId),
     subscribe: (resourceId, listener) => content.subscribe(resourceId, listener),
@@ -152,18 +148,14 @@ export function createLiveFileContentSource(
         mediaType: state.content.mediaType,
       }
     },
-    create: async (envelope, source) => {
-      if (
-        envelope.campaignId !== campaignId ||
-        source.alias.campaignId !== campaignId ||
-        source.alias.resourceId !== envelope.command.resourceId
-      ) {
-        return invalidCreateDelivery()
-      }
-      const existing = pending.get(envelope.command.resourceId)
+    create: async (intent, source) => {
+      if (intent.campaignId !== campaignId) return invalidCreateDelivery()
+      const existing = pending.get(intent.jobId)
       if (
         existing &&
-        (existing.operationId !== envelope.operationId || existing.source !== source)
+        (existing.operationId !== intent.operationId ||
+          existing.intent.destinationParentId !== intent.destinationParentId ||
+          existing.source !== source)
       ) {
         return invalidCreateDelivery()
       }
@@ -172,43 +164,41 @@ export function createLiveFileContentSource(
       try {
         if (!current) {
           current = {
-            operationId: envelope.operationId,
+            intent,
+            operationId: intent.operationId,
             sessionId: await backend.upload(source),
             source,
           }
-          pending.set(envelope.command.resourceId, current)
+          pending.set(intent.jobId, current)
         }
-        const delivery = deliverExpectedCreateResult(
+        const delivery = deliverExpectedPlainTransferResult(
           readLiveStructureResult(
             await backend.create({
               campaignId,
-              operationId: envelope.operationId,
-              command: toLiveStructureMutationCommand(
-                normalizeResourceStructureCommand(envelope.command),
-              ),
-              alias: source.alias,
-              metadataVersion: source.metadataVersion,
+              jobId: intent.jobId,
+              operationId: intent.operationId,
+              destinationParentId: intent.destinationParentId,
               uploadSessionId: current.sessionId,
             }),
           ),
           campaignId,
-          envelope.operationId,
-          envelope.command.resourceId,
+          intent.operationId,
         )
-        const verifiedDelivery = fileCreateMetadataMatches(delivery, source)
-          ? delivery
-          : invalidCreateResponse()
-        pending.delete(envelope.command.resourceId)
-        if (
-          verifiedDelivery.status !== 'received' ||
-          verifiedDelivery.result.status !== 'completed'
-        ) {
+        pending.delete(intent.jobId)
+        if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
           await backend.discard(current.sessionId)
+          undoRecording.abandon()
+          return delivery
+        }
+        const created = delivery.result.receipt.result
+        if (created.type !== 'created') {
+          undoRecording.abandon()
+          return { status: 'not_committed', retryable: false, reason: 'invalid_response' }
         }
         return await finalizeLiveContentCreate(
-          verifiedDelivery,
-          envelope.command.resourceId,
-          envelope.command.parentId,
+          delivery,
+          created.resourceId,
+          intent.destinationParentId,
           backend,
           undoRecording,
         )
@@ -258,20 +248,6 @@ export function createLiveFileContentSource(
       pending.clear()
     },
   }
-}
-
-function fileCreateMetadataMatches(
-  delivery: CommandDelivery<ResourceStructureCommandResult>,
-  source: FileResourceCreationSource,
-): boolean {
-  if (delivery.status !== 'received' || delivery.result.status !== 'completed') return true
-  const postcondition = delivery.result.receipt.postconditions.find(
-    (candidate) => candidate.resourceId === source.alias.resourceId,
-  )
-  return (
-    postcondition?.state === 'present' &&
-    versionStampEquals(postcondition.metadataVersion, source.metadataVersion)
-  )
 }
 
 async function fetchFile(url: string): Promise<Response> {
