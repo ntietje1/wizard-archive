@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import {
@@ -232,6 +233,63 @@ describe('NoteEmbedBlock', () => {
 
     await waitFor(() => expect(resolver.resolve).toHaveBeenCalledOnce())
     expect(editor.updateBlock).not.toHaveBeenCalled()
+  })
+
+  it('commits a resolved drop and leaves pending mode under Strict Mode', async () => {
+    const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const targetResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const editor = { updateBlock: vi.fn() }
+    const destination = {
+      kind: 'internal' as const,
+      target: { kind: 'resource' as const, resourceId: targetResourceId },
+    }
+    const resolver = {
+      canResolve: vi.fn(() => true),
+      resolveFiles: vi.fn(() =>
+        Promise.resolve({ kind: 'destinations' as const, destinations: [] }),
+      ),
+      resolve: vi.fn(() =>
+        Promise.resolve({
+          kind: 'destinations' as const,
+          destinations: [destination],
+        }),
+      ),
+    }
+    render(
+      <StrictMode>
+        <NoteResourceRuntimeProvider
+          binding={{
+            drop: resolver,
+            renderNote: () => null,
+            runtime: {} as never,
+            sourceResourceId,
+          }}
+          editable
+        >
+          <NoteEmbedBlock
+            block={embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED) as never}
+            contentRef={() => {}}
+            editor={editor as never}
+          />
+        </NoteResourceRuntimeProvider>
+      </StrictMode>,
+    )
+    const dataTransfer = { types: ['application/x-test'] }
+
+    fireEvent.drop(screen.getByTestId('note-embed-block'), { dataTransfer })
+
+    await waitFor(() =>
+      expect(editor.updateBlock).toHaveBeenCalledWith(expect.anything(), {
+        props: {
+          destination: serializeAuthoredDestination(destination),
+          previewAspectRatio: undefined,
+          previewHeight: undefined,
+        },
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByText('Adding embedded resource')).not.toBeInTheDocument(),
+    )
   })
 
   it('keeps the upload button pending until canonical file creation settles', async () => {

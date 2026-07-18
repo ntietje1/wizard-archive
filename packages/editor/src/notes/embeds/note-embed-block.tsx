@@ -280,13 +280,12 @@ function useNoteEmbedBlockDrop({
 }) {
   const [pending, setPending] = useState<'drop' | 'upload' | null>(null)
   const operation = useRef<AbortController | null>(null)
-  const mounted = useRef(true)
   const enabled = Boolean(empty && surface.editable && surface.drop && pending === null)
 
   useEffect(
     () => () => {
-      mounted.current = false
       operation.current?.abort()
+      operation.current = null
     },
     [],
   )
@@ -315,7 +314,7 @@ function useNoteEmbedBlockDrop({
         if (!creation) return
         settleNoteEmbedResourceCreation(creation, {
           blockId,
-          canReplaceTarget: () => mounted.current && !controller.signal.aborted,
+          canReplaceTarget: () => !controller.signal.aborted,
           currentDocument: () => currentSourceDocument(surface),
           document: surface.document,
           report: surface.report,
@@ -324,7 +323,7 @@ function useNoteEmbedBlockDrop({
     } finally {
       if (operation.current === controller) {
         operation.current = null
-        if (mounted.current) setPending(null)
+        setPending(null)
       }
     }
   }
