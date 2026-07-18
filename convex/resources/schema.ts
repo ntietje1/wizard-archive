@@ -237,6 +237,11 @@ export const resourceAccessPresentationValidator = v.object({
   ),
 })
 
+export const resourceAccessPresentationPageValidator = v.object({
+  presentation: v.nullable(resourceAccessPresentationValidator),
+  cursor: v.nullable(v.string()),
+})
+
 const canonicalTargetValidator = v.union(
   v.object({ kind: v.literal('resource'), resourceId: resourceIdValidator }),
   v.object({

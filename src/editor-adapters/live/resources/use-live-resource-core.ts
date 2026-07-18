@@ -314,10 +314,11 @@ function createScopedLiveResourceRuntime(
           write(() => convex.mutation(api.resources.mutations.executeResourceAccessCommand, args))
       : null,
     currentScope.projection === 'dm'
-      ? (resourceId, apply) => {
+      ? (resourceId, cursor, apply) => {
           const watch = convex.watchQuery(api.resources.queries.loadResourceAccess, {
             campaignId: currentScope.campaignId,
             resourceId,
+            cursor,
           })
           return subscribeToWatch(watch, apply)
         }

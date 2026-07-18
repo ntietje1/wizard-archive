@@ -1,7 +1,11 @@
 import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { logger } from '../../common/logger'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
-import { getCampaignMemberRows, loadProfilesByMemberUserId } from './campaignMemberProfiles'
+import {
+  getAcceptedPlayerPage,
+  getCampaignMemberRows,
+  loadProfilesByMemberUserId,
+} from './campaignMemberProfiles'
 import type { CampaignQueryCtx } from '../../functions'
 import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
@@ -24,4 +28,37 @@ export async function getCampaignMembers(
       toCampaignMemberProjection(member, campaignId, profile.id, toUserProfileSummary(profile)),
     ]
   })
+}
+
+export async function getAcceptedPlayerPresentationPage(
+  ctx: CampaignQueryCtx,
+  cursor: string | null,
+) {
+  const page = await getAcceptedPlayerPage(ctx, cursor)
+  const profilesByUserId = await loadProfilesByMemberUserId(ctx, page.members)
+  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
+  return {
+    cursor: page.cursor,
+    participants: page.members.flatMap((member) => {
+      const profile = profilesByUserId.get(member.userId)
+      if (!profile) {
+        logger.warn(`User profile not found for userId: ${member.userId}`)
+        return []
+      }
+      const projection = toCampaignMemberProjection(
+        member,
+        campaignId,
+        profile.id,
+        toUserProfileSummary(profile),
+      )
+      return [
+        {
+          id: projection.id,
+          displayName: projection.userProfile.name?.trim() || projection.userProfile.username,
+          username: projection.userProfile.username,
+          imageUrl: projection.userProfile.imageUrl,
+        },
+      ]
+    }),
+  }
 }

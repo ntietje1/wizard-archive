@@ -9,7 +9,6 @@ import type {
   ResourceAccessNode,
   ResourceAccessParticipant,
   ResourceAccessPolicy,
-  ResourceAccessPresentation,
   ResourcePermission,
 } from '@wizard-archive/editor/resources/access-policy'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
@@ -228,10 +227,14 @@ export async function projectResourceAccess(
   ctx: CampaignQueryCtx,
   resourceId: ResourceId,
   participants: ReadonlyArray<AccessParticipantIdentity>,
-): Promise<ResourceAccessPresentation | null> {
+) {
   const spine = await loadResourceAccessSpine(ctx, resourceId)
   if (!spine) return null
-  const { defaultNodes, memberPermissions } = await loadResourceAccessProjection(ctx, spine)
+  const { defaultNodes, memberPermissions } = await loadResourceAccessProjection(
+    ctx,
+    spine,
+    participants,
+  )
   return {
     policy: defaultNodes.get(resourceId)!.policy,
     defaultAccess: resolveResourceAccess(resourceId, defaultNodes),
@@ -275,22 +278,28 @@ async function loadResourceAccessSpine(
 async function loadResourceAccessProjection(
   ctx: CampaignQueryCtx,
   spine: ReadonlyArray<ResourceRecord>,
+  participants: ReadonlyArray<AccessParticipantIdentity>,
 ) {
   const policies = await Promise.all(
     spine.map((record) => loadResourceAccessPolicy(ctx, ctx.resourceScope.campaignId, record.id)),
   )
   const memberRows = (
     await Promise.all(
-      spine.map((record) =>
-        ctx.db
-          .query('resourceMemberAccess')
-          .withIndex('by_resource', (query) =>
-            query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('resourceUuid', record.id),
-          )
-          .collect(),
+      participants.flatMap((participant) =>
+        spine.map((record) =>
+          ctx.db
+            .query('resourceMemberAccess')
+            .withIndex('by_resource_and_member', (query) =>
+              query
+                .eq('campaignUuid', ctx.resourceScope.campaignId)
+                .eq('resourceUuid', record.id)
+                .eq('memberUuid', participant.id),
+            )
+            .unique(),
+        ),
       ),
     )
-  ).flat()
+  ).filter((row) => row !== null)
   const memberPermissions = new Map(
     memberRows.map((row) => [memberAccessKey(row.resourceUuid, row.memberUuid), row.permission]),
   )

@@ -131,6 +131,7 @@ function AvailableResourceSharingControl({
             disabled={pending}
             error={error}
             execute={execute}
+            loadMoreParticipants={() => access.loadMorePresentation(resource.id)}
             pending={pending}
             presentation={knowledge.value}
             resource={resource}
@@ -146,6 +147,7 @@ function SharingPanel({
   disabled,
   error,
   execute,
+  loadMoreParticipants,
   pending,
   presentation,
   resource,
@@ -154,6 +156,7 @@ function SharingPanel({
   disabled: boolean
   error: boolean
   execute: (command: ResourceAccessCommand) => Promise<void>
+  loadMoreParticipants: () => void
   pending: boolean
   presentation: ResourceAccessPresentation
   resource: AuthorizedResourceSummary
@@ -211,6 +214,8 @@ function SharingPanel({
           participants={defaultParticipants}
           resource={resource}
           runtime={runtime}
+          participantsComplete={presentation.participantsComplete}
+          onLoadMore={loadMoreParticipants}
         />
       )}
       {presentation.policy.subject === 'folder' && (
@@ -324,6 +329,8 @@ function ExpandedParticipantList({
   disabled,
   execute,
   participants,
+  participantsComplete,
+  onLoadMore,
   resource,
   runtime,
 }: {
@@ -331,10 +338,12 @@ function ExpandedParticipantList({
   disabled: boolean
   execute: (command: ResourceAccessCommand) => Promise<void>
   participants: ReadonlyArray<ResourceAccessParticipant>
+  participantsComplete: boolean
+  onLoadMore: () => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  if (participants.length === 0) {
+  if (participants.length === 0 && participantsComplete) {
     return (
       <div className="ml-4">
         <TreeItem isLast>
@@ -348,7 +357,10 @@ function ExpandedParticipantList({
   return (
     <div className="ml-4">
       {participants.map((participant, index) => (
-        <TreeItem key={participant.id} isLast={index === participants.length - 1}>
+        <TreeItem
+          key={participant.id}
+          isLast={participantsComplete && index === participants.length - 1}
+        >
           <ParticipantPermissionRow
             defaultPermission={defaultPermission}
             disabled={disabled}
@@ -359,6 +371,13 @@ function ExpandedParticipantList({
           />
         </TreeItem>
       ))}
+      {!participantsComplete && (
+        <TreeItem isLast>
+          <Button type="button" variant="ghost" size="sm" onClick={onLoadMore}>
+            Load more players
+          </Button>
+        </TreeItem>
+      )}
     </div>
   )
 }

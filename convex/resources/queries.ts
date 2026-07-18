@@ -16,7 +16,7 @@ import {
   noteBlockAccessPresentationValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
-  resourceAccessPresentationValidator,
+  resourceAccessPresentationPageValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
 } from './schema'
@@ -33,7 +33,10 @@ import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDown
 import { loadPlainFileTransfer as loadPlainFileTransferFn } from './functions/plainFileTransfer'
 import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 import { projectResourceAccess } from './functions/resourceAccess'
-import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
+import {
+  getAcceptedPlayerPresentationPage,
+  getCampaignMembers,
+} from '../campaigns/functions/getCampaignMembers'
 import { projectNoteBlockAccess } from './functions/noteBlockAccess'
 import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
 import {
@@ -207,31 +210,21 @@ export const loadPlainFileTransfer = dmQuery({
 })
 
 export const loadResourceAccess = dmQuery({
-  args: { resourceId: resourceIdValidator },
-  returns: v.nullable(resourceAccessPresentationValidator),
+  args: { resourceId: resourceIdValidator, cursor: v.nullable(v.string()) },
+  returns: resourceAccessPresentationPageValidator,
   handler: async (ctx, args) => {
-    const members = await getCampaignMembers(ctx)
-    const participants = []
-    for (const member of members) {
-      if (member.role !== CAMPAIGN_MEMBER_ROLE.Player) continue
-      participants.push({
-        id: member.id,
-        displayName: member.userProfile.name?.trim() || member.userProfile.username,
-        username: member.userProfile.username,
-        imageUrl: member.userProfile.imageUrl,
-      })
-    }
+    const page = await getAcceptedPlayerPresentationPage(ctx, args.cursor)
     const presentation = await projectResourceAccess(
       ctx,
       assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
-      participants,
+      page.participants,
     )
-    return presentation
-      ? {
-          ...presentation,
-          participants: [...presentation.participants],
-        }
-      : null
+    return {
+      presentation: presentation
+        ? { ...presentation, participants: [...presentation.participants] }
+        : null,
+      cursor: presentation ? page.cursor : null,
+    }
   },
 })
 

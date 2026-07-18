@@ -15,15 +15,19 @@ import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/do
 import type { ResourceAccessGateway } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { WorkspaceResourceIndex } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceAccessPresentation } from '@wizard-archive/editor/resources/access-policy'
-import { createLivePresentationStore } from './live-presentation-store'
+import { createLivePaginatedPresentationStore } from './live-paginated-presentation-store'
 
 type ExecuteArgs = FunctionArgs<typeof api.resources.mutations.executeResourceAccessCommand>
 type ExecuteResult = FunctionReturnType<typeof api.resources.mutations.executeResourceAccessCommand>
 type ExecuteMutation = (args: ExecuteArgs) => Promise<ExecuteResult>
 type WatchPresentation = (
   resourceId: ResourceId,
-  apply: (value: ResourceAccessPresentation | null) => void,
+  cursor: string | null,
+  apply: (value: FunctionReturnType<typeof api.resources.queries.loadResourceAccess>) => void,
 ) => () => void
+type ResourceAccessPresentationPage = NonNullable<
+  FunctionReturnType<typeof api.resources.queries.loadResourceAccess>['presentation']
+>
 
 type LiveResourceAccessGateway = ResourceAccessGateway & Readonly<{ dispose(): void }>
 
@@ -33,7 +37,19 @@ export function createLiveResourceAccessGateway(
   executeMutation: ExecuteMutation | null,
   watchPresentation: WatchPresentation | null = null,
 ): LiveResourceAccessGateway {
-  const presentations = createLivePresentationStore(watchPresentation)
+  const presentations = createLivePaginatedPresentationStore<
+    ResourceId,
+    ResourceAccessPresentationPage,
+    ResourceAccessPresentation
+  >(watchPresentation, (pages, participantsComplete): ResourceAccessPresentation => {
+    const first = pages[0]
+    if (!first) throw new TypeError('Resource access page is unavailable')
+    return {
+      ...first,
+      participants: pages.flatMap((page) => page.participants),
+      participantsComplete,
+    }
+  })
   return {
     get: (resourceId: ResourceId) => {
       const resource = index.getSnapshot().lookup(resourceId)
@@ -43,6 +59,7 @@ export function createLiveResourceAccessGateway(
     },
     getPresentation: presentations.get,
     loadPresentation: presentations.load,
+    loadMorePresentation: presentations.loadMore,
     subscribe: (resourceId, listener) => {
       const unsubscribeIndex = index.subscribe(listener)
       const unsubscribePresentation = presentations.subscribe(resourceId, listener)

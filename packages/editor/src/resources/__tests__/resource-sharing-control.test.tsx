@@ -72,6 +72,7 @@ const presentation: ResourceAccessPresentation = {
       },
     },
   ],
+  participantsComplete: true,
 }
 
 describe('ResourceSharingControl', () => {
@@ -103,6 +104,7 @@ describe('ResourceSharingControl', () => {
       get: () => ({ state: 'known', value: 'edit' }),
       getPresentation: () => presentationKnowledge,
       loadPresentation: vi.fn(),
+      loadMorePresentation: vi.fn(),
       subscribe: () => () => undefined,
     }
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('sharing-menu'))
@@ -172,5 +174,46 @@ describe('ResourceSharingControl', () => {
       },
     })
     finish()
+  })
+
+  it('loads another participant page only when the expanded player list requests it', async () => {
+    const user = userEvent.setup()
+    const loadMorePresentation = vi.fn()
+    const pagedKnowledge = {
+      state: 'known',
+      value: { ...presentation, participantsComplete: false },
+    } as const
+    const access: ResourceAccessGateway = {
+      execute: vi.fn(),
+      get: () => ({ state: 'known', value: 'edit' }),
+      getPresentation: () => pagedKnowledge,
+      loadPresentation: vi.fn(),
+      loadMorePresentation,
+      subscribe: () => () => undefined,
+    }
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('sharing-pages'))
+    index.replaceSnapshot({
+      scope,
+      revision: indexRevision('sharing-pages-ready'),
+      resources: [folder],
+      missingResourceIds: [],
+      collections: [],
+    })
+    const runtime = {
+      scope,
+      resources: {
+        index,
+        access: { status: 'available', value: access },
+      },
+    } as unknown as EditorRuntime
+
+    render(<ResourceSharingControl resource={folder} runtime={runtime} />)
+
+    await user.click(screen.getByRole('button', { name: 'Shared' }))
+    expect(screen.queryByRole('button', { name: 'Load more players' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Other Players/ }))
+    await user.click(screen.getByRole('button', { name: 'Load more players' }))
+
+    expect(loadMorePresentation).toHaveBeenCalledOnce()
   })
 })

@@ -13,7 +13,12 @@ import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-co
 import type { FunctionArgs } from 'convex/server'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
-import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import {
+  asDm,
+  asPlayer,
+  setupCampaignContext,
+  setupMultiPlayerContext,
+} from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
@@ -44,6 +49,9 @@ type StoredResourceAccessCommand = FunctionArgs<
 type StoredNoteBlockAccessCommand = FunctionArgs<
   typeof api.resources.mutations.executeNoteBlockAccessCommand
 >['command']
+type DmCampaignContext =
+  | Awaited<ReturnType<typeof setupCampaignContext>>
+  | Awaited<ReturnType<typeof setupMultiPlayerContext>>
 
 describe('authorized resource projection', () => {
   const t = createTestContext()
@@ -332,27 +340,31 @@ describe('authorized resource projection', () => {
       asDm(campaign).query(api.resources.queries.loadResourceAccess, {
         campaignId: campaignUuid,
         resourceId: noteId,
+        cursor: null,
       }),
     ).resolves.toMatchObject({
-      policy: {
-        resourceId: noteId,
-        subject: 'resource',
-        audienceAccess: { state: 'default' },
-      },
-      defaultAccess: {
-        permission: 'view',
-        source: { type: 'audience', resourceId: folderId },
-      },
-      participants: [
-        {
-          id: campaign.player.memberDomainId,
-          access: { state: 'default' },
-          effectiveAccess: {
-            permission: 'view',
-            source: { type: 'audience', resourceId: folderId },
-          },
+      cursor: null,
+      presentation: {
+        policy: {
+          resourceId: noteId,
+          subject: 'resource',
+          audienceAccess: { state: 'default' },
         },
-      ],
+        defaultAccess: {
+          permission: 'view',
+          source: { type: 'audience', resourceId: folderId },
+        },
+        participants: [
+          {
+            id: campaign.player.memberDomainId,
+            access: { state: 'default' },
+            effectiveAccess: {
+              permission: 'view',
+              source: { type: 'audience', resourceId: folderId },
+            },
+          },
+        ],
+      },
     })
 
     await executeAccess(campaign, campaignUuid, {
@@ -365,20 +377,53 @@ describe('authorized resource projection', () => {
       asDm(campaign).query(api.resources.queries.loadResourceAccess, {
         campaignId: campaignUuid,
         resourceId: noteId,
+        cursor: null,
       }),
     ).resolves.toMatchObject({
-      participants: [
-        {
-          id: campaign.player.memberDomainId,
-          access: { state: 'explicit', permission: 'none' },
-          effectiveAccess: {
-            permission: 'none',
-            source: { type: 'member', resourceId: noteId },
+      presentation: {
+        participants: [
+          {
+            id: campaign.player.memberDomainId,
+            access: { state: 'explicit', permission: 'none' },
+            effectiveAccess: {
+              permission: 'none',
+              source: { type: 'member', resourceId: noteId },
+            },
           },
-        },
-      ],
+        ],
+      },
     })
   })
+
+  it('pages sharing participants without gaps or duplicates', async () => {
+    const campaign = await setupMultiPlayerContext(t, 17)
+    const resourceId = await createResource(
+      campaign,
+      campaign.campaignDomainId,
+      'note',
+      null,
+      'Paged sharing',
+    )
+    const first = await asDm(campaign).query(api.resources.queries.loadResourceAccess, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+      cursor: null,
+    })
+    expect(first.presentation?.participants).toHaveLength(16)
+    expect(first.cursor).not.toBeNull()
+    const second = await asDm(campaign).query(api.resources.queries.loadResourceAccess, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+      cursor: first.cursor,
+    })
+    expect(second.presentation?.participants).toHaveLength(1)
+    expect(second.cursor).toBeNull()
+    const ids = [
+      ...(first.presentation?.participants ?? []),
+      ...(second.presentation?.participants ?? []),
+    ].map((participant) => participant.id)
+    expect(new Set(ids).size).toBe(17)
+  }, 20_000)
 
   it('loads normalized authorized collections without exposing unrelated resource kinds', async () => {
     const campaign = await setupCampaignContext(t)
@@ -1118,7 +1163,7 @@ describe('authorized resource projection', () => {
   }
 
   async function createResource(
-    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaign: DmCampaignContext,
     campaignUuid: string,
     kind: ResourceKind,
     parentId: ResourceId | null,
@@ -1207,7 +1252,7 @@ describe('authorized resource projection', () => {
   }
 
   async function createEmptyFile(
-    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaign: DmCampaignContext,
     campaignUuid: string,
     operationId: string,
     parentId: ResourceId | null,

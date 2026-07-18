@@ -35,6 +35,7 @@ export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
   get(resourceId: ResourceId): ResourceKnowledge<ResourcePermission>
   getPresentation(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
   loadPresentation(resourceId: ResourceId): void
+  loadMorePresentation(resourceId: ResourceId): void
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 

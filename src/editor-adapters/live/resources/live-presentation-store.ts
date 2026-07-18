@@ -1,4 +1,5 @@
 import type { ResourceKnowledge } from '@wizard-archive/editor/resources/index-contract'
+import { createLivePresentationSubscriptions } from './live-presentation-subscriptions'
 
 const UNKNOWN_PRESENTATION = { state: 'unknown' } as const
 
@@ -7,9 +8,8 @@ export function createLivePresentationStore<TId, TPresentation>(
 ) {
   const presentations = new Map<TId, ResourceKnowledge<TPresentation>>()
   const watches = new Map<TId, () => void>()
-  const listeners = new Map<TId, Set<() => void>>()
   const start = (id: TId) => {
-    if (!watch || watches.has(id) || !listeners.has(id)) return
+    if (!watch || watches.has(id) || !subscriptions.has(id)) return
     watches.set(
       id,
       watch(id, (presentation) => {
@@ -17,10 +17,16 @@ export function createLivePresentationStore<TId, TPresentation>(
           id,
           presentation === null ? { state: 'missing' } : { state: 'known', value: presentation },
         )
-        for (const listener of listeners.get(id) ?? []) listener()
+        subscriptions.publish(id)
       }),
     )
   }
+  const release = (id: TId) => {
+    watches.get(id)?.()
+    watches.delete(id)
+    presentations.delete(id)
+  }
+  const subscriptions = createLivePresentationSubscriptions(start, release)
   return {
     get: (id: TId): ResourceKnowledge<TPresentation> => {
       return presentations.get(id) ?? UNKNOWN_PRESENTATION
@@ -28,24 +34,11 @@ export function createLivePresentationStore<TId, TPresentation>(
     load: (id: TId) => {
       start(id)
     },
-    subscribe: (id: TId, listener: () => void) => {
-      const idListeners = listeners.get(id) ?? new Set()
-      idListeners.add(listener)
-      listeners.set(id, idListeners)
-      start(id)
-      return () => {
-        idListeners.delete(listener)
-        if (idListeners.size > 0) return
-        listeners.delete(id)
-        watches.get(id)?.()
-        watches.delete(id)
-        presentations.delete(id)
-      }
-    },
+    subscribe: subscriptions.subscribe,
     dispose: () => {
       for (const dispose of watches.values()) dispose()
       watches.clear()
-      listeners.clear()
+      subscriptions.clear()
       presentations.clear()
     },
   }

@@ -81,6 +81,7 @@ export type ResourceAccessPresentation = Readonly<{
   policy: ResourceAccessPolicy
   defaultAccess: ResourceAccessResolution
   participants: ReadonlyArray<ResourceAccessParticipant>
+  participantsComplete: boolean
 }>
 
 const PERMISSION_RANK: Readonly<Record<ResourcePermission, number>> = {

@@ -60,6 +60,7 @@ export const campaignTables = {
   })
     .index('by_campaignMemberUuid', ['campaignMemberUuid'])
     .index('by_campaign_user', ['campaignId', 'userId'])
+    .index('by_campaign_status_role_member', ['campaignId', 'status', 'role', 'campaignMemberUuid'])
     .index('by_user', ['userId'])
     .index('by_user_status', ['userId', 'status']),
 }

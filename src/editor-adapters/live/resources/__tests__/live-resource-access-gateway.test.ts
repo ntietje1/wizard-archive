@@ -94,8 +94,10 @@ describe('createLiveResourceAccessGateway', () => {
 
   it('starts one live sharing projection and disposes its source subscription', () => {
     const dispose = vi.fn()
-    let apply: ((value: ResourceAccessPresentation | null) => void) | undefined
-    const watch = vi.fn((_resourceId, publish) => {
+    let apply:
+      | ((value: { presentation: PagePresentation | null; cursor: string | null }) => void)
+      | undefined
+    const watch = vi.fn((_resourceId, _cursor, publish) => {
       apply = publish
       return dispose
     })
@@ -114,13 +116,16 @@ describe('createLiveResourceAccessGateway', () => {
     gateway.loadPresentation(resourceId)
     gateway.loadPresentation(resourceId)
     apply?.({
-      policy: {
-        resourceId,
-        subject: 'resource',
-        audienceAccess: { state: 'default' },
+      cursor: null,
+      presentation: {
+        policy: {
+          resourceId,
+          subject: 'resource',
+          audienceAccess: { state: 'default' },
+        },
+        defaultAccess: { permission: 'none', source: { type: 'none' } },
+        participants: [],
       },
-      defaultAccess: { permission: 'none', source: { type: 'none' } },
-      participants: [],
     })
 
     expect(watch).toHaveBeenCalledTimes(1)
@@ -137,7 +142,116 @@ describe('createLiveResourceAccessGateway', () => {
     gateway.dispose()
     expect(dispose).toHaveBeenCalledOnce()
   })
+
+  it('assembles live participant pages and releases the entire page chain', () => {
+    const publishes: Array<
+      (value: { presentation: PagePresentation | null; cursor: string | null }) => void
+    > = []
+    const disposes = [vi.fn(), vi.fn()]
+    const watch = vi.fn((_resourceId, _cursor, publish) => {
+      const index = publishes.push(publish) - 1
+      return disposes[index]!
+    })
+    const gateway = createLiveResourceAccessGateway(
+      campaignId,
+      resourceIndex('edit'),
+      vi.fn(),
+      watch,
+    )
+    const unsubscribe = gateway.subscribe(resourceId, vi.fn())
+    publishes[0]!({
+      cursor: 'next',
+      presentation: presentation([memberId]),
+    })
+    expect(gateway.getPresentation(resourceId)).toMatchObject({
+      state: 'known',
+      value: { participants: [{ id: memberId }], participantsComplete: false },
+    })
+
+    gateway.loadMorePresentation(resourceId)
+    const secondMember = testDomainId('campaignMember', 'live-access-second-target')
+    publishes[1]!({
+      cursor: null,
+      presentation: presentation([secondMember]),
+    })
+    expect(gateway.getPresentation(resourceId)).toMatchObject({
+      state: 'known',
+      value: {
+        participants: [{ id: memberId }, { id: secondMember }],
+        participantsComplete: true,
+      },
+    })
+
+    unsubscribe()
+    expect(disposes[0]).toHaveBeenCalledOnce()
+    expect(disposes[1]).toHaveBeenCalledOnce()
+  })
+
+  it('drops descendant pages when an earlier live cursor changes', () => {
+    const publishes: Array<
+      (value: { presentation: PagePresentation | null; cursor: string | null }) => void
+    > = []
+    const disposes = [vi.fn(), vi.fn(), vi.fn()]
+    const watch = vi.fn((_resourceId, _cursor, publish) => {
+      const index = publishes.push(publish) - 1
+      return disposes[index]!
+    })
+    const gateway = createLiveResourceAccessGateway(
+      campaignId,
+      resourceIndex('edit'),
+      vi.fn(),
+      watch,
+    )
+    const unsubscribe = gateway.subscribe(resourceId, vi.fn())
+    publishes[0]!({ cursor: 'old-next', presentation: presentation([memberId]) })
+    gateway.loadMorePresentation(resourceId)
+    const oldSecondMember = testDomainId('campaignMember', 'old-second')
+    publishes[1]!({ cursor: null, presentation: presentation([oldSecondMember]) })
+
+    publishes[0]!({ cursor: 'new-next', presentation: presentation([memberId]) })
+
+    expect(disposes[1]).toHaveBeenCalledOnce()
+    expect(gateway.getPresentation(resourceId)).toMatchObject({
+      state: 'known',
+      value: { participants: [{ id: memberId }], participantsComplete: false },
+    })
+    gateway.loadMorePresentation(resourceId)
+    const newSecondMember = testDomainId('campaignMember', 'new-second')
+    publishes[2]!({ cursor: null, presentation: presentation([newSecondMember]) })
+    expect(gateway.getPresentation(resourceId)).toMatchObject({
+      state: 'known',
+      value: {
+        participants: [{ id: memberId }, { id: newSecondMember }],
+        participantsComplete: true,
+      },
+    })
+
+    unsubscribe()
+    expect(disposes[0]).toHaveBeenCalledOnce()
+    expect(disposes[2]).toHaveBeenCalledOnce()
+  })
 })
+
+function presentation(participantIds: ReadonlyArray<typeof memberId>): PagePresentation {
+  return {
+    policy: {
+      resourceId,
+      subject: 'resource',
+      audienceAccess: { state: 'default' },
+    },
+    defaultAccess: { permission: 'none', source: { type: 'none' } },
+    participants: participantIds.map((id) => ({
+      id,
+      displayName: id,
+      username: id,
+      imageUrl: null,
+      access: { state: 'default' },
+      effectiveAccess: { permission: 'none', source: { type: 'none' } },
+    })),
+  }
+}
+
+type PagePresentation = Omit<ResourceAccessPresentation, 'participantsComplete'>
 
 function resourceIndex(permission: 'view' | 'edit') {
   const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
