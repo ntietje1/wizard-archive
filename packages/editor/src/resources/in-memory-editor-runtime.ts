@@ -26,6 +26,7 @@ import type {
   FileResourceContent,
   MapResourceContent,
   MapContentCommand,
+  MapPreviewState,
   MapSession,
   MapSessionSource,
   MapSessionState,
@@ -405,6 +406,15 @@ class InMemoryMapSessionSource
   implements MapSessionSource
 {
   readonly #sessions = new Map<ResourceId, InMemoryMapSession>()
+  readonly #previewStates = new Map<
+    ResourceId,
+    Readonly<{ source: MapSessionState; state: MapPreviewState }>
+  >()
+  readonly previews = {
+    get: (resourceId: ResourceId) => this.#previewState(resourceId),
+    subscribe: (resourceId: ResourceId, listener: () => void) =>
+      this.subscribe(resourceId, listener),
+  }
 
   constructor(
     initialState: MapSessionState,
@@ -472,7 +482,29 @@ class InMemoryMapSessionSource
   override dispose(): void {
     for (const session of this.#sessions.values()) session.dispose()
     this.#sessions.clear()
+    this.#previewStates.clear()
     super.dispose()
+  }
+
+  #previewState(resourceId: ResourceId): MapPreviewState {
+    const source = this.get(resourceId)
+    const cached = this.#previewStates.get(resourceId)
+    if (cached?.source === source) return cached.state
+    const state: MapPreviewState =
+      source.status === 'ready'
+        ? {
+            status: 'ready',
+            preview: {
+              content: source.session.content,
+              version: source.session.version,
+              loadImage: (layerId) => source.session.loadImage(layerId),
+            },
+          }
+        : source.status === 'initializing'
+          ? { status: 'loading' }
+          : source
+    this.#previewStates.set(resourceId, { source, state })
+    return state
   }
 }
 

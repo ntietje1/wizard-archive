@@ -8,6 +8,7 @@ export function createResourceWatchStore<TSnapshot, TState>(
 ) {
   const source = new ResourceSessionStore(initialState)
   const watches = new Map<ResourceId, () => void>()
+  const subscribers = new Map<ResourceId, number>()
 
   const ensure = (resourceId: ResourceId) => {
     if (watches.has(resourceId)) return
@@ -29,7 +30,22 @@ export function createResourceWatchStore<TSnapshot, TState>(
     },
     subscribe: (resourceId: ResourceId, listener: () => void) => {
       ensure(resourceId)
-      return source.subscribe(resourceId, listener)
+      subscribers.set(resourceId, (subscribers.get(resourceId) ?? 0) + 1)
+      const unsubscribe = source.subscribe(resourceId, listener)
+      let active = true
+      return () => {
+        if (!active) return
+        active = false
+        unsubscribe()
+        const remaining = (subscribers.get(resourceId) ?? 1) - 1
+        if (remaining > 0) {
+          subscribers.set(resourceId, remaining)
+          return
+        }
+        subscribers.delete(resourceId)
+        watches.get(resourceId)?.()
+        watches.delete(resourceId)
+      }
     },
   }
 }

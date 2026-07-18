@@ -7,7 +7,7 @@ import { CanvasResourceEmbed } from '../workspace/canvas-resource-embed'
 import { createInMemoryNoteSession } from '../in-memory-note-session'
 import type {
   CanvasPreviewSource,
-  MapSessionSource,
+  MapPreviewSource,
   NoteSessionSource,
 } from '../content-session-contract'
 import { assertSha256Digest, initialVersion, sha256Digest } from '../component-version'
@@ -70,10 +70,7 @@ describe('CanvasResourceEmbed', () => {
     const maps = {
       get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
       subscribe: () => () => {},
-      export: () => ({ status: 'loading' as const }),
-      create: () => Promise.reject(new Error('Not used')),
-      dispose: () => {},
-    } satisfies MapSessionSource
+    } satisfies MapPreviewSource
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
     index.replaceSnapshot({
       scope,
@@ -234,10 +231,7 @@ describe('CanvasResourceEmbed', () => {
     } satisfies NoteSessionSource
     const maps = {
       ...unavailable,
-      export: () => ({ status: 'loading' as const }),
-      create: () => Promise.reject(new Error('Not used')),
-      dispose: () => {},
-    } satisfies MapSessionSource
+    } satisfies MapPreviewSource
     render(
       <CanvasResourceEmbed
         activation={null}

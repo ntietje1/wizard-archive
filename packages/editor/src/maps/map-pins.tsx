@@ -12,6 +12,7 @@ import {
   hasWorkspaceResourceDrag,
   readWorkspaceResourceDrag,
 } from '../resources/workspace-resource-drag'
+import { MapImagePinLayout } from './map-image-pin-layout'
 import { planMapResourcePins } from './map-pin-placement'
 
 type MapPin = MapResourceContent['pins'][number]
@@ -81,10 +82,72 @@ export function MapPinSurface({
   }
 
   return (
-    <div
+    <MapImagePinLayout
+      alt={`${title} map`}
       aria-label="Map canvas"
-      className="relative"
+      imageRef={imageRef}
+      pins={pins.map((pin) => {
+        const targetId = pinTargetResourceId(pin)
+        const target = targetId ? resolveResource(targetId) : null
+        const label = pinLabel(pin, target)
+        return (
+          <button
+            key={pin.id}
+            type="button"
+            aria-label={pin.visible ? label : `${label} (hidden)`}
+            className="pointer-events-auto absolute -translate-x-1/2 -translate-y-full rounded-full border-2 border-background p-1 text-white shadow-md outline-none hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring data-[hidden=true]:opacity-50 data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
+            data-hidden={!pin.visible}
+            data-selected={selectedPinId === pin.id}
+            style={{
+              left: `${pin.x}%`,
+              top: `${pin.y}%`,
+              backgroundColor: target?.color ?? '#7c3aed',
+            }}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              setSelectedPinId(pin.id)
+              setMenu(null)
+            }}
+            onDoubleClick={() => {
+              if (targetId) openResource(targetId)
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              setSelectedPinId(pin.id)
+              setMenu({ pin, x: event.clientX, y: event.clientY })
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && targetId) openResource(targetId)
+            }}
+            onPointerDown={(event) => {
+              if (!canEdit || event.button !== 0) return
+              pendingDrag.current = {
+                pinId: pin.id,
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+              }
+              event.currentTarget.setPointerCapture?.(event.pointerId)
+            }}
+            onPointerUp={(event) => {
+              const pending = pendingDrag.current
+              pendingDrag.current = null
+              if (!pending || pending.pointerId !== event.pointerId) return
+              if (Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY) >= 4) {
+                event.preventDefault()
+                event.stopPropagation()
+                movePin(pending.pinId, event)
+              }
+            }}
+          >
+            <MapPinIcon className="size-4" aria-hidden="true" />
+          </button>
+        )
+      })}
       role="region"
+      src={src}
       onClick={(event) => {
         setMenu(null)
         if (movingPinId) movePin(movingPinId, event)
@@ -138,77 +201,6 @@ export function MapPinSurface({
         )
       }}
     >
-      <img
-        ref={imageRef}
-        alt={`${title} map`}
-        className="block max-h-full max-w-full select-none"
-        draggable={false}
-        src={src}
-      />
-      <div className="pointer-events-none absolute inset-0">
-        {pins.map((pin) => {
-          const targetId = pinTargetResourceId(pin)
-          const target = targetId ? resolveResource(targetId) : null
-          const label = pinLabel(pin, target)
-          return (
-            <button
-              key={pin.id}
-              type="button"
-              aria-label={pin.visible ? label : `${label} (hidden)`}
-              className="pointer-events-auto absolute -translate-x-1/2 -translate-y-full rounded-full border-2 border-background p-1 text-white shadow-md outline-none hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring data-[hidden=true]:opacity-50 data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
-              data-hidden={!pin.visible}
-              data-selected={selectedPinId === pin.id}
-              style={{
-                left: `${pin.x}%`,
-                top: `${pin.y}%`,
-                backgroundColor: target?.color ?? '#7c3aed',
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                setSelectedPinId(pin.id)
-                setMenu(null)
-              }}
-              onDoubleClick={() => {
-                if (targetId) openResource(targetId)
-              }}
-              onContextMenu={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                setSelectedPinId(pin.id)
-                setMenu({ pin, x: event.clientX, y: event.clientY })
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && targetId) openResource(targetId)
-              }}
-              onPointerDown={(event) => {
-                if (!canEdit || event.button !== 0) return
-                pendingDrag.current = {
-                  pinId: pin.id,
-                  pointerId: event.pointerId,
-                  startX: event.clientX,
-                  startY: event.clientY,
-                }
-                event.currentTarget.setPointerCapture?.(event.pointerId)
-              }}
-              onPointerUp={(event) => {
-                const pending = pendingDrag.current
-                pendingDrag.current = null
-                if (!pending || pending.pointerId !== event.pointerId) return
-                if (
-                  Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY) >= 4
-                ) {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  movePin(pending.pinId, event)
-                }
-              }}
-            >
-              <MapPinIcon className="size-4" aria-hidden="true" />
-            </button>
-          )
-        })}
-      </div>
       {resourceDragActive && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/70 text-sm font-medium">
           Drop resources to create pins
@@ -258,7 +250,7 @@ export function MapPinSurface({
           }}
         />
       )}
-    </div>
+    </MapImagePinLayout>
   )
 }
 

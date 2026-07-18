@@ -8,7 +8,7 @@ import { MapEmbedPreview } from '../../maps/map-embed-preview'
 import { EPHEMERAL_NOTE_SCROLL } from '../../notes/note-scroll-persistence'
 import type {
   CanvasPreviewSource,
-  MapSessionSource,
+  MapPreviewSource,
   NoteSessionSource,
 } from '../content-session-contract'
 import type {
@@ -42,7 +42,7 @@ export function CanvasResourceEmbed({
   editing: boolean
   index: WorkspaceResourceIndex
   loader: ResourceIndexLoader
-  maps: MapSessionSource
+  maps: MapPreviewSource
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
   notes: NoteSessionSource
   zoom?: number
@@ -162,13 +162,13 @@ function CanvasMapResourceEmbed({
   resourceId,
   title,
 }: {
-  maps: MapSessionSource
+  maps: MapPreviewSource
   resourceId: ResourceId
   title: string
 }) {
   const state = useContentSnapshot(maps, resourceId)
   return state.status === 'ready' ? (
-    <MapEmbedPreview session={state.session} title={title} />
+    <MapEmbedPreview preview={state.preview} title={title} />
   ) : (
     <span className="flex size-full items-center justify-center p-3">Map unavailable</span>
   )

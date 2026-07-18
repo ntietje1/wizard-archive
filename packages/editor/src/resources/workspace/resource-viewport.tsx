@@ -200,7 +200,7 @@ function CanvasViewport({
           editing={editing}
           index={runtime.resources.index}
           loader={runtime.resources.loader}
-          maps={runtime.content.maps}
+          maps={runtime.content.maps.previews}
           node={node}
           notes={runtime.content.notes}
           zoom={zoom}

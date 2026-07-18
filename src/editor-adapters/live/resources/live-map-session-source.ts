@@ -20,6 +20,7 @@ import type {
   MapContentMutationResult,
   MapContentCommand,
   MapImageAttachment,
+  MapPreviewState,
   MapResourceContent,
   MapSession,
   MapSessionSource,
@@ -74,6 +75,7 @@ type LiveMapBackend = LiveFixedContentCreateBackend &
   }>
 
 type MapStore = ReturnType<typeof createResourceWatchStore<MapSnapshot, MapSessionState>>
+type MapPreviewStore = ReturnType<typeof createResourceWatchStore<MapSnapshot, MapPreviewState>>
 
 export function createLiveMapSessionSource(
   campaignId: CampaignId,
@@ -82,6 +84,7 @@ export function createLiveMapSessionSource(
 ): MapSessionSource {
   const sessions = new Map<ResourceId, LiveMapSession>()
   let store: MapStore
+  let previewStore: MapPreviewStore
   const apply = (resourceId: ResourceId, snapshot: MapSnapshot) => {
     if (snapshot.status !== 'ready') {
       sessions.get(resourceId)?.dispose()
@@ -112,12 +115,41 @@ export function createLiveMapSessionSource(
   store = createResourceWatchStore<MapSnapshot, MapSessionState>(backend.watch, apply, {
     status: 'loading',
   })
+  previewStore = createResourceWatchStore<MapSnapshot, MapPreviewState>(
+    backend.watch,
+    (resourceId, snapshot) => {
+      if (snapshot.status !== 'ready') {
+        const pending = liveContentPendingState(snapshot)
+        previewStore.set(
+          resourceId,
+          pending.status === 'initializing' ? { status: 'loading' } : pending,
+        )
+        return
+      }
+      try {
+        const content = readMapContent(snapshot.content)
+        previewStore.set(resourceId, {
+          status: 'ready',
+          preview: {
+            content,
+            version: assertVersionStamp(snapshot.version),
+            loadImage: (layerId) =>
+              loadMapImage(resourceId, layerId, mapImageAttachment(content, layerId), backend),
+          },
+        })
+      } catch {
+        previewStore.set(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
+      }
+    },
+    { status: 'loading' },
+  )
 
   return {
     create: async (envelope) =>
       await createLiveFixedContentResource(campaignId, envelope, backend, beginCreateUndo),
     dispose: () => {
       store.dispose()
+      previewStore.dispose()
       for (const session of sessions.values()) session.dispose()
       sessions.clear()
     },
@@ -134,6 +166,10 @@ export function createLiveMapSessionSource(
       }
     },
     get: (resourceId) => store.get(resourceId),
+    previews: {
+      get: (resourceId) => previewStore.get(resourceId),
+      subscribe: (resourceId, listener) => previewStore.subscribe(resourceId, listener),
+    },
     subscribe: (resourceId, listener) => store.subscribe(resourceId, listener),
   }
 }
@@ -198,28 +234,7 @@ class LiveMapSession implements MapSession {
   async loadImage(layerId: string | null): Promise<ContentExportResult> {
     if (this.#disposed) return { status: 'unavailable', reason: 'scope_unavailable' }
     const expected = mapImageAttachment(this.currentContent, layerId)
-    if (!expected || expected.status !== 'attached') {
-      return { status: 'integrity_error', issue: 'content_missing' }
-    }
-    const download = await this.backend.download(this.resourceId, layerId)
-    if (download.status !== 'ready') return download
-    assertVersionStamp(download.version)
-    const image = readMapImage(download.image)
-    if (image.status !== 'attached' || !sameMapImage(expected, image)) {
-      return { status: 'integrity_error', issue: 'version_mismatch' }
-    }
-    const response = await fetch(download.url)
-    if (!response.ok) return { status: 'integrity_error', issue: 'content_missing' }
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    if (bytes.byteLength !== image.byteSize || (await sha256Digest(bytes)) !== image.digest) {
-      return { status: 'integrity_error', issue: 'content_corrupt' }
-    }
-    return {
-      status: 'ready',
-      bytes,
-      extension: image.mediaType.split('/')[1] ?? 'bin',
-      mediaType: image.mediaType,
-    }
+    return await loadMapImage(this.resourceId, layerId, expected, this.backend)
   }
 
   async replaceImage(
@@ -264,6 +279,36 @@ class LiveMapSession implements MapSession {
 
   dispose(): void {
     this.#disposed = true
+  }
+}
+
+async function loadMapImage(
+  resourceId: ResourceId,
+  layerId: string | null,
+  expected: MapImageAttachment | undefined,
+  backend: Pick<LiveMapBackend, 'download'>,
+): Promise<ContentExportResult> {
+  if (!expected || expected.status !== 'attached') {
+    return { status: 'integrity_error', issue: 'content_missing' }
+  }
+  const download = await backend.download(resourceId, layerId)
+  if (download.status !== 'ready') return download
+  assertVersionStamp(download.version)
+  const image = readMapImage(download.image)
+  if (image.status !== 'attached' || !sameMapImage(expected, image)) {
+    return { status: 'integrity_error', issue: 'version_mismatch' }
+  }
+  const response = await fetch(download.url)
+  if (!response.ok) return { status: 'integrity_error', issue: 'content_missing' }
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  if (bytes.byteLength !== image.byteSize || (await sha256Digest(bytes)) !== image.digest) {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  }
+  return {
+    status: 'ready',
+    bytes,
+    extension: image.mediaType.split('/')[1] ?? 'bin',
+    mediaType: image.mediaType,
   }
 }
 

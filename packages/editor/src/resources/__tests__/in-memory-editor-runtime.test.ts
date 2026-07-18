@@ -359,6 +359,14 @@ describe('createInMemoryEditorRuntime', () => {
       bytes,
       mediaType: 'application/octet-stream',
     })
+    const preview = core.runtime.content.maps.previews.get(mapId)
+    if (preview.status !== 'ready') throw new TypeError('Expected a ready map preview')
+    expect('execute' in preview.preview).toBe(false)
+    await expect(preview.preview.loadImage(null)).resolves.toMatchObject({
+      status: 'ready',
+      bytes,
+      mediaType: 'application/octet-stream',
+    })
     core.dispose()
   })
 

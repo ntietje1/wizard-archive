@@ -212,6 +212,12 @@ export interface MapSession {
   dispose(): void
 }
 
+export interface MapPreview {
+  readonly content: MapResourceContent
+  readonly version: VersionStamp
+  loadImage(layerId: string | null): Promise<ContentExportResult>
+}
+
 export type NoteSessionState =
   | ContentUnavailableState
   | { readonly status: 'initializing'; readonly operationId: OperationId; readonly local: Y.Doc }
@@ -233,6 +239,13 @@ export type MapSessionState =
   | {
       readonly status: 'ready'
       readonly session: MapSession
+    }
+
+export type MapPreviewState =
+  | ContentUnavailableState
+  | {
+      readonly status: 'ready'
+      readonly preview: MapPreview
     }
 
 export type CanvasSessionState =
@@ -304,6 +317,7 @@ export interface FileContentSource {
 }
 
 export interface MapSessionSource {
+  readonly previews: MapPreviewSource
   get(resourceId: ResourceId): MapSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
@@ -311,6 +325,11 @@ export interface MapSessionSource {
     envelope: CommandEnvelope<CreateMapResourceCommand>,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   dispose(): void
+}
+
+export interface MapPreviewSource {
+  get(resourceId: ResourceId): MapPreviewState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
 export interface CanvasSessionSource {

@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { MapEmbedPreview } from '../map-embed-preview'
-import type { MapSession } from '../../resources/content-session-contract'
+import type { MapPreview } from '../../resources/content-session-contract'
 import { assertSha256Digest, initialVersion } from '../../resources/component-version'
+import { generateDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -20,13 +21,13 @@ describe('MapEmbedPreview', () => {
         mediaType: 'image/png',
       }),
     )
-    const session = mapSession(loadImage)
-    const view = render(<MapEmbedPreview session={session} title="Harbor map" />)
+    const preview = mapPreview(loadImage)
+    const view = render(<MapEmbedPreview preview={preview} title="Harbor map" />)
 
-    expect(await screen.findByRole('img', { name: 'Harbor map' })).toHaveAttribute(
-      'src',
-      'blob:map-preview',
-    )
+    const image = await screen.findByRole('img', { name: 'Harbor map' })
+    expect(image).toHaveAttribute('src', 'blob:map-preview')
+    expect(image.parentElement).toHaveAttribute('data-slot', 'map-image-pin-layout')
+    expect(image.nextElementSibling).toHaveAttribute('data-slot', 'map-pin-layer')
     expect(loadImage).toHaveBeenCalledWith(null)
     expect(createObjectUrl).toHaveBeenCalledOnce()
 
@@ -35,7 +36,7 @@ describe('MapEmbedPreview', () => {
   })
 })
 
-function mapSession(loadImage: MapSession['loadImage']): MapSession {
+function mapPreview(loadImage: MapPreview['loadImage']): MapPreview {
   return {
     content: {
       image: {
@@ -45,17 +46,18 @@ function mapSession(loadImage: MapSession['loadImage']): MapSession {
         mediaType: 'image/png',
       },
       layers: [],
-      pins: [],
+      pins: [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.mapPin),
+          destination: { kind: 'unresolved', rawTarget: 'Harbor' },
+          layerId: null,
+          visible: true,
+          x: 25,
+          y: 75,
+        },
+      ],
     },
     version: initialVersion(assertSha256Digest('b'.repeat(64))),
-    awareness: { status: 'unavailable' },
-    execute: vi.fn(() =>
-      Promise.resolve({ status: 'rejected' as const, reason: 'unauthorized' as const }),
-    ),
     loadImage,
-    replaceImage: vi.fn(() =>
-      Promise.resolve({ status: 'rejected' as const, reason: 'unauthorized' as const }),
-    ),
-    dispose: vi.fn(),
   }
 }

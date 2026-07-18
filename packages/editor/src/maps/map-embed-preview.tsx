@@ -1,10 +1,11 @@
 import { Image as ImageIcon, MapPin } from 'lucide-react'
-import type { MapSession } from '../resources/content-session-contract'
+import type { MapPreview } from '../resources/content-session-contract'
+import { MapImagePinLayout } from './map-image-pin-layout'
 import { useMapImageUrl } from './use-map-image-url'
 
-export function MapEmbedPreview({ session, title }: { session: MapSession; title: string }) {
-  const image = session.content.image
-  const { state } = useMapImageUrl(session, null, image)
+export function MapEmbedPreview({ preview, title }: { preview: MapPreview; title: string }) {
+  const image = preview.content.image
+  const { state } = useMapImageUrl(preview, null, image)
 
   if (state.status !== 'ready') {
     return (
@@ -19,14 +20,9 @@ export function MapEmbedPreview({ session, title }: { session: MapSession; title
 
   return (
     <div className="relative flex size-full items-center justify-center overflow-hidden bg-muted/20">
-      <img
+      <MapImagePinLayout
         alt={title}
-        className="block max-h-full max-w-full object-contain"
-        draggable={false}
-        src={state.url}
-      />
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        {session.content.pins.map((pin) =>
+        pins={preview.content.pins.map((pin) =>
           pin.visible && pin.layerId === null ? (
             <MapPin
               key={pin.id}
@@ -39,7 +35,8 @@ export function MapEmbedPreview({ session, title }: { session: MapSession; title
             />
           ) : null,
         )}
-      </div>
+        src={state.url}
+      />
     </div>
   )
 }

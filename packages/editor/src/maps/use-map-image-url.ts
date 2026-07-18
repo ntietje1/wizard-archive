@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import type { MapImageAttachment, MapSession } from '../resources/content-session-contract'
+import type { ContentExportResult, MapImageAttachment } from '../resources/content-session-contract'
 import { beginContentObjectUrlLoad } from '../resources/content-object-url'
 import type { ContentObjectUrlState } from '../resources/content-object-url'
 
 type MapImageState = Readonly<{ status: 'empty' }> | ContentObjectUrlState
 
 export function useMapImageUrl(
-  session: MapSession,
+  source: Readonly<{
+    loadImage(layerId: string | null): Promise<ContentExportResult>
+  }>,
   layerId: string | null,
   image: MapImageAttachment,
 ) {
@@ -24,10 +26,10 @@ export function useMapImageUrl(
   useEffect(() => {
     if (image.status === 'unattached') return
     return beginContentObjectUrlLoad(
-      () => session.loadImage(layerId),
+      () => source.loadImage(layerId),
       (nextState) => setLoaded({ key: requestKey, state: nextState }),
     )
-  }, [image.status, layerId, requestKey, session])
+  }, [image.status, layerId, requestKey, source])
 
   return { retry: () => setAttempt((current) => current + 1), state }
 }

@@ -97,6 +97,61 @@ describe('LiveMapSessionSource', () => {
     source.dispose()
   })
 
+  it('shares a read-only preview watch and releases it with the last subscriber', () => {
+    const resourceId = testDomainId('resource', 'map-preview')
+    const campaignId = testDomainId('campaign', 'map-preview-campaign')
+    const stopWatch = vi.fn()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const watch = vi.fn((_resourceId: typeof resourceId, update: typeof apply) => {
+      apply = update
+      return stopWatch
+    })
+    const source = createLiveMapSessionSource(
+      campaignId,
+      {
+        load: vi.fn(),
+        watch,
+        create: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        execute: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload: vi.fn(),
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    const releaseFirst = source.previews.subscribe(resourceId, () => undefined)
+    const releaseSecond = source.previews.subscribe(resourceId, () => undefined)
+    expect(watch).toHaveBeenCalledOnce()
+
+    apply({
+      status: 'ready',
+      content: { image: { status: 'unattached' }, layers: [], pins: [] },
+      version: {
+        scheme: 'authoritative-revision-v1',
+        revision: 1,
+        digest: 'a'.repeat(64),
+      },
+    })
+    const state = source.previews.get(resourceId)
+    expect(state.status).toBe('ready')
+    expect(state.status === 'ready' && 'execute' in state.preview).toBe(false)
+    expect(source.get(resourceId)).toEqual({ status: 'loading' })
+
+    releaseFirst()
+    expect(stopWatch).not.toHaveBeenCalled()
+    releaseSecond()
+    expect(stopWatch).toHaveBeenCalledOnce()
+
+    const releaseThird = source.previews.subscribe(resourceId, () => undefined)
+    expect(watch).toHaveBeenCalledTimes(2)
+    releaseThird()
+    expect(stopWatch).toHaveBeenCalledTimes(2)
+    source.dispose()
+  })
+
   it('rejects a completed create with the wrong receipt identity', async () => {
     const campaignId = testDomainId('campaign', 'map-create-campaign')
     const resourceId = testDomainId('resource', 'map-create-resource')
