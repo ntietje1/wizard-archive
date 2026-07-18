@@ -72,16 +72,20 @@ export function createInMemoryBookmarks(
 export function createInMemoryWorkspaceSearch(
   resources: () => ReadonlyArray<ResourceRecord>,
   notes: NoteSessionSource,
+  project: (resourceIds: ReadonlyArray<ResourceId>) => Promise<void>,
 ): Readonly<{ gateway: WorkspaceSearch; dispose(): void }> {
   let recent: ReadonlyArray<ResourceId> = []
   const listeners = new Set<() => void>()
 
   const gateway: WorkspaceSearch = {
-    search: (query) =>
-      executeResourceSearchPlan(
+    search: async (query) => {
+      const outcome = await executeResourceSearchPlan(
         query,
         createSnapshotSearchProvider(activeResources(resources()), notes),
-      ),
+      )
+      await project(outcome.results.map((result) => result.resourceId))
+      return outcome
+    },
     recent: () => recent,
     subscribeRecent: (listener) => {
       listeners.add(listener)

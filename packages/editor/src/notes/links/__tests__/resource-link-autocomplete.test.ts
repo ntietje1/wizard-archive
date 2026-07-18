@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { initialVersion, sha256Digest } from '../../../resources/component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import type { ResourceNavigation } from '../../../resources/editor-runtime-contract'
@@ -36,6 +36,8 @@ describe('resource link autocomplete', () => {
 
   it('authors headings as exact note-block targets, including the current note shorthand', async () => {
     const fixture = await runtimeFixture()
+    const getNoteSession = vi.spyOn(fixture.core.runtime.content.notes, 'get')
+    const subscribeToNoteSession = vi.spyOn(fixture.core.runtime.content.notes, 'subscribe')
 
     const suggestions = await resourceLinkSuggestions(
       fixture.core.runtime,
@@ -54,6 +56,8 @@ describe('resource link autocomplete', () => {
         },
       },
     ])
+    expect(getNoteSession).not.toHaveBeenCalled()
+    expect(subscribeToNoteSession).not.toHaveBeenCalled()
     fixture.core.dispose()
   })
 

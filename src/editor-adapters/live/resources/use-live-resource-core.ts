@@ -30,6 +30,7 @@ import type { LiveResourceContentAuthority } from './live-resource-content-autho
 import { createLiveResourceAssetsFolderGateway } from './live-resource-assets-folder'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createLiveResourceReferenceSource } from './live-resource-references'
+import { createLiveResourcePreviewSource } from './live-resource-preview-source'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -373,6 +374,13 @@ function createScopedLiveResourceRuntime(
     status: 'available',
     value: references.source,
   }
+  const previews = createLiveResourcePreviewSource((resourceId, apply) => {
+    const watch = convex.watchQuery(api.resources.queries.loadResourcePreview, {
+      ...queryScope,
+      resourceId,
+    })
+    return subscribeToWatch(watch, apply)
+  })
 
   const unsupported = {
     status: 'unavailable',
@@ -413,7 +421,7 @@ function createScopedLiveResourceRuntime(
             ? ({ status: 'available', value: bookmarks.gateway } as const)
             : unsupported,
         assets: assetsCapability,
-        previews: unsupported,
+        previews: { status: 'available', value: previews.source },
         references: referencesCapability,
         undo: undoCapability,
       },
@@ -425,7 +433,7 @@ function createScopedLiveResourceRuntime(
           ? ({ status: 'available', value: search } as const)
           : unsupported,
       history: unsupported,
-    },
+    } satisfies Omit<EditorRuntime, 'viewAs'>,
     start: () => {
       base.start()
       preferences.start()
@@ -438,6 +446,7 @@ function createScopedLiveResourceRuntime(
       access.dispose()
       noteBlockAccess.dispose()
       references.dispose()
+      previews.dispose()
       optimistic.dispose()
       base.dispose()
     },

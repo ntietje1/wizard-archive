@@ -41,6 +41,24 @@ export const sourcePathAliasValidator = v.object({
 
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
 export const resourcePermissionValidator = literals(...Object.values(RESOURCE_PERMISSION))
+export const resourcePreviewValidator = v.object({
+  kind: resourceKindValidator,
+  excerpt: v.string(),
+  outline: v.array(
+    v.object({
+      blockId: noteBlockIdValidator,
+      level: literals(1, 2, 3, 4, 5, 6),
+      text: v.string(),
+    }),
+  ),
+})
+export const resourcePreviewStateValidator = v.union(
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('scope_unavailable', 'unauthorized', 'integrity_error'),
+  }),
+  v.object({ status: v.literal('ready'), preview: resourcePreviewValidator }),
+)
 const grantedResourcePermissionValidator = literals(
   RESOURCE_PERMISSION.view,
   RESOURCE_PERMISSION.edit,
@@ -1090,6 +1108,7 @@ export const resourceTables = {
     title: v.string(),
     normalizedTitle: v.string(),
     body: v.string(),
+    preview: resourcePreviewValidator,
   })
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])

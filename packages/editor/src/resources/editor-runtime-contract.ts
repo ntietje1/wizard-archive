@@ -4,13 +4,7 @@ import type {
   MapSessionSource,
   NoteSessionSource,
 } from './content-session-contract'
-import type {
-  AssetId,
-  CampaignMemberId,
-  HistoryEntryId,
-  NoteBlockId,
-  ResourceId,
-} from './domain-id'
+import type { CampaignMemberId, HistoryEntryId, NoteBlockId, ResourceId } from './domain-id'
 import type { CanonicalTarget } from './authored-destination-contract'
 import type {
   CapabilityUnavailableReason,
@@ -33,6 +27,7 @@ import type { WorkspacePreferencesSource } from './workspace-preferences'
 import type { ResourceUndoHistory } from './resource-undo-history'
 import type { WorkspaceSearchOutcome } from './resource-search-policy'
 import type { ReferenceGraphEdge } from './authored-destination'
+import type { ResourceKind } from './resource-record'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -66,8 +61,28 @@ export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway 
   subscribe(listener: () => void): () => void
 }
 
+export type ResourcePreviewOutlineEntry = Readonly<{
+  blockId: NoteBlockId
+  level: 1 | 2 | 3 | 4 | 5 | 6
+  text: string
+}>
+
+export type ResourcePreview = Readonly<{
+  kind: ResourceKind
+  excerpt: string
+  outline: ReadonlyArray<ResourcePreviewOutlineEntry>
+}>
+
+export type ResourcePreviewState =
+  | Readonly<{ status: 'loading' }>
+  | Readonly<{
+      status: 'unavailable'
+      reason: 'scope_unavailable' | 'unauthorized' | 'integrity_error'
+    }>
+  | Readonly<{ status: 'ready'; preview: ResourcePreview }>
+
 export interface ResourcePreviewSource {
-  get(resourceId: ResourceId): ResourceKnowledge<AssetId | null>
+  get(resourceId: ResourceId): ResourcePreviewState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 

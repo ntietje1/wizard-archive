@@ -45,6 +45,7 @@ export function createResourceWatchStore<TSnapshot, TState>(
         subscribers.delete(resourceId)
         watches.get(resourceId)?.()
         watches.delete(resourceId)
+        source.set(resourceId, initialState)
       }
     },
   }

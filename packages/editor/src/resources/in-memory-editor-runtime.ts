@@ -81,6 +81,7 @@ import type {
 } from './transfer-job-contract'
 import { createInMemoryResourceAssetsFolderGateway } from './in-memory-resource-assets-folder'
 import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
+import { createInMemoryResourcePreviewSource } from './in-memory-resource-preview'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -923,13 +924,16 @@ export function createInMemoryEditorRuntime({
   const bookmarks = createInMemoryBookmarks(scope.campaignId, (resourceId) =>
     catalogResources().some((resource) => resource.id === resourceId),
   )
-  const search = createInMemoryWorkspaceSearch(catalogResources, notes)
+  const search = createInMemoryWorkspaceSearch(catalogResources, notes, async (resourceIds) => {
+    await Promise.all(resourceIds.map((resourceId) => resources.loader.ensureResource(resourceId)))
+  })
   const assetsFolder = createInMemoryResourceAssetsFolderGateway({
     campaignId: scope.campaignId,
     readSnapshot: resources.catalogSnapshot,
     execute: (envelope) => structureWithKindIndex.execute(envelope),
     assign: (resourceId) => resources.assignAssetsFolder(resourceId),
   })
+  const previews = createInMemoryResourcePreviewSource(snapshot.resources, content.notes ?? [])
 
   return {
     runtime: {
@@ -944,7 +948,7 @@ export function createInMemoryEditorRuntime({
         assets: canEdit
           ? { status: 'available', value: assetsFolder }
           : { status: 'unavailable', reason: 'unauthorized' },
-        previews: unsupported,
+        previews: { status: 'available', value: previews.source },
         references: { status: 'available', value: references.source },
         undo: canEdit
           ? { status: 'available', value: undo.history }
@@ -959,6 +963,7 @@ export function createInMemoryEditorRuntime({
     },
     dispose: () => {
       references.dispose()
+      previews.dispose()
       search.dispose()
       for (const source of Object.values(contentSources)) source.dispose()
       resources.dispose()

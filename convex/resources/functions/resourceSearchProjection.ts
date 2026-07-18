@@ -3,8 +3,11 @@ import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
+import { noteDocumentOutline } from '@wizard-archive/editor/notes/outline'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
+import { createResourcePreview } from '@wizard-archive/editor/resources/preview'
+import type { ResourcePreview } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import {
   createResourceSearchDocument,
   normalizeResourceSearchText,
@@ -16,17 +19,21 @@ import { resourceRecordFromRow } from './resourceRecordRow'
 export async function syncResourceSearchProjection(
   ctx: CampaignMutationCtx,
   resource: ResourceRecord,
-  body?: string,
+  noteProjection?: Readonly<{ body: string; preview: ResourcePreview }>,
 ): Promise<void> {
   const existing = await findResourceSearchDocument(ctx, resource.id)
   if (resource.lifecycle.state !== 'active') {
     if (existing) await ctx.db.delete(existing._id)
     return
   }
-  const projectedBody =
-    body ??
-    existing?.body ??
-    (resource.kind === 'note' ? await loadNoteSearchBody(ctx, resource.id) : '')
+  const projectedNote =
+    resource.kind === 'note'
+      ? (noteProjection ??
+        (existing
+          ? { body: existing.body, preview: existing.preview }
+          : await loadNoteSearchProjection(ctx, resource.id)))
+      : null
+  const projectedBody = projectedNote?.body ?? ''
   const document = createResourceSearchDocument(resource.id, resource.title, projectedBody)
   const value = {
     campaignUuid: resource.campaignId,
@@ -34,9 +41,17 @@ export async function syncResourceSearchProjection(
     title: document.title,
     normalizedTitle: normalizeResourceSearchText(document.title),
     body: document.body,
+    preview: storedPreview(projectedNote?.preview ?? createResourcePreview(resource.kind, '', [])),
   }
   if (existing) await ctx.db.replace('resourceSearchDocuments', existing._id, value)
   else await ctx.db.insert('resourceSearchDocuments', value)
+}
+
+function storedPreview(preview: ResourcePreview) {
+  return {
+    ...preview,
+    outline: preview.outline.map((heading) => ({ ...heading })),
+  }
 }
 
 export async function deleteResourceSearchProjection(
@@ -53,11 +68,19 @@ export async function copyResourceSearchBody(
   destination: ResourceRecord,
 ): Promise<void> {
   const source = await findResourceSearchDocument(ctx, sourceResourceId)
-  await syncResourceSearchProjection(ctx, destination, source?.body ?? '')
+  await syncResourceSearchProjection(
+    ctx,
+    destination,
+    source
+      ? { body: source.body, preview: source.preview }
+      : { body: '', preview: createResourcePreview('note', '', []) },
+  )
 }
 
-export function noteSearchBody(update: ArrayBuffer): string {
-  return noteBlocksPlainText(decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT))
+function noteSearchProjection(update: ArrayBuffer) {
+  const blocks = decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
+  const body = noteBlocksPlainText(blocks)
+  return { body, preview: createResourcePreview('note', body, noteDocumentOutline(blocks)) }
 }
 
 export async function syncNoteSearchProjection(
@@ -69,7 +92,11 @@ export async function syncNoteSearchProjection(
   if (!resource || resource.campaignUuid !== ctx.resourceScope.campaignId) {
     throw new TypeError('Note search projection resource is missing')
   }
-  await syncResourceSearchProjection(ctx, resourceRecordFromRow(resource), noteSearchBody(update))
+  await syncResourceSearchProjection(
+    ctx,
+    resourceRecordFromRow(resource),
+    noteSearchProjection(update),
+  )
 }
 
 async function findResourceSearchDocument(ctx: CampaignMutationCtx, resourceId: ResourceId) {
@@ -79,10 +106,12 @@ async function findResourceSearchDocument(ctx: CampaignMutationCtx, resourceId: 
     .unique()
 }
 
-async function loadNoteSearchBody(ctx: CampaignMutationCtx, resourceId: ResourceId) {
+async function loadNoteSearchProjection(ctx: CampaignMutationCtx, resourceId: ResourceId) {
   const content = await ctx.db
     .query('resourceNoteContents')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
-  return content ? noteSearchBody(content.update) : ''
+  return content
+    ? noteSearchProjection(content.update)
+    : { body: '', preview: createResourcePreview('note', '', []) }
 }

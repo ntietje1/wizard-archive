@@ -16,6 +16,7 @@ import {
   noteBlockAccessPresentationPageValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
+  resourcePreviewStateValidator,
   resourceReferenceSnapshotValidator,
   resourceAccessPresentationPageValidator,
   resourceCollectionQueryValidator,
@@ -139,6 +140,27 @@ export const loadResource = resourceQuery({
     return storedSnapshot(
       await loadAuthorizedResource(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)),
     )
+  },
+})
+
+export const loadResourcePreview = resourceQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: resourcePreviewStateValidator,
+  handler: async (ctx, args) => {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+    const snapshot = await loadAuthorizedResource(ctx, resourceId)
+    const resource = snapshot.resources.find((candidate) => candidate.id === resourceId)
+    if (!resource) return { status: 'unavailable' as const, reason: 'unauthorized' as const }
+    const searchDocument = await ctx.db
+      .query('resourceSearchDocuments')
+      .withIndex('by_campaign_and_resource', (query) =>
+        query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('resourceUuid', resourceId),
+      )
+      .unique()
+    if (!searchDocument || searchDocument.preview.kind !== resource.kind) {
+      return { status: 'unavailable' as const, reason: 'integrity_error' as const }
+    }
+    return { status: 'ready' as const, preview: searchDocument.preview }
   },
 })
 

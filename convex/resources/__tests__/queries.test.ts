@@ -43,6 +43,12 @@ import {
   MAX_RESOURCE_REFERENCE_OCCURRENCES,
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
+import {
+  createResourcePreview,
+  RESOURCE_PREVIEW_EXCERPT_CODE_POINT_LIMIT,
+  RESOURCE_PREVIEW_OUTLINE_LIMIT,
+  RESOURCE_PREVIEW_OUTLINE_TEXT_CODE_POINT_LIMIT,
+} from '@wizard-archive/editor/resources/preview'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -588,6 +594,63 @@ describe('authorized resource projection', () => {
         resourceId,
       }),
     ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
+  })
+
+  it('projects bounded authorized note previews without opening content sessions', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const longText = '🧭'.repeat(RESOURCE_PREVIEW_EXCERPT_CODE_POINT_LIMIT + 50)
+    const update = makeYjsUpdateWithBlocks([
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: longText }],
+      },
+      ...Array.from({ length: RESOURCE_PREVIEW_OUTLINE_LIMIT + 6 }, (_, index) => ({
+        type: 'heading' as const,
+        props: { level: 2 as const },
+        content: [
+          {
+            type: 'text' as const,
+            text: `${index}:${'H'.repeat(RESOURCE_PREVIEW_OUTLINE_TEXT_CODE_POINT_LIMIT + 20)}`,
+          },
+        ],
+      })),
+    ])
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Preview note',
+        icon: null,
+        color: null,
+      },
+      update,
+    })
+
+    const preview = await asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+      campaignId: campaignUuid,
+      resourceId,
+    })
+    expect(preview.status).toBe('ready')
+    if (preview.status !== 'ready') throw new TypeError('Expected a ready preview')
+    expect(Array.from(preview.preview.excerpt)).toHaveLength(
+      RESOURCE_PREVIEW_EXCERPT_CODE_POINT_LIMIT,
+    )
+    expect(preview.preview.outline).toHaveLength(RESOURCE_PREVIEW_OUTLINE_LIMIT)
+    expect(Array.from(preview.preview.outline[0]!.text)).toHaveLength(
+      RESOURCE_PREVIEW_OUTLINE_TEXT_CODE_POINT_LIMIT,
+    )
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
   })
 
   it('projects canonical block visibility with note access as the outer gate', async () => {
@@ -1285,6 +1348,7 @@ describe('authorized resource projection', () => {
           title: document.title,
           normalizedTitle: normalizeResourceSearchText(document.title),
           body: document.body,
+          preview: { ...createResourcePreview('note', document.body, []), outline: [] },
         })
       }
     })
@@ -1353,6 +1417,7 @@ describe('authorized resource projection', () => {
         title: 'Common',
         normalizedTitle: 'common',
         body: '',
+        preview: { ...createResourcePreview('note', '', []), outline: [] },
       })
       for (let index = 0; index < 1_025; index += 1) {
         const title = `Overflow ${index.toString().padStart(4, '0')}`
@@ -1362,6 +1427,10 @@ describe('authorized resource projection', () => {
           title,
           normalizedTitle: normalizeResourceSearchText(title),
           body: 'Common overflow body',
+          preview: {
+            ...createResourcePreview('note', 'Common overflow body', []),
+            outline: [],
+          },
         })
       }
     })

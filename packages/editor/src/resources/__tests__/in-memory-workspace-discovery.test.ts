@@ -48,7 +48,11 @@ describe('in-memory workspace search', () => {
         updated: { at: 1, by: actorId },
       },
     ]
-    const search = createInMemoryWorkspaceSearch(() => resources, notes)
+    const search = createInMemoryWorkspaceSearch(
+      () => resources,
+      notes,
+      () => Promise.resolve(),
+    )
 
     expect(getCount).toBe(0)
     await expect(search.gateway.search('citadel')).resolves.toMatchObject({
@@ -142,7 +146,11 @@ describe('in-memory workspace search', () => {
         Promise.resolve({ status: 'not_committed', retryable: false, reason: 'invalid_response' }),
       dispose: () => undefined,
     }
-    const search = createInMemoryWorkspaceSearch(() => resources, notes)
+    const search = createInMemoryWorkspaceSearch(
+      () => resources,
+      notes,
+      () => Promise.resolve(),
+    )
 
     const startedAt = performance.now()
     const broad = await search.gateway.search('archive')
@@ -190,7 +198,11 @@ describe('in-memory workspace search', () => {
         Promise.resolve({ status: 'not_committed', retryable: false, reason: 'invalid_response' }),
       dispose: () => undefined,
     }
-    const search = createInMemoryWorkspaceSearch(() => resources, notes)
+    const search = createInMemoryWorkspaceSearch(
+      () => resources,
+      notes,
+      () => Promise.resolve(),
+    )
 
     await expect(search.gateway.search('archive')).resolves.toEqual({
       status: 'incomplete',

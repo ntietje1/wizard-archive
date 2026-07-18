@@ -38,6 +38,10 @@
       "types": "./dist/notes/document/plain-text.d.mts",
       "default": "./dist/notes/document/plain-text.mjs"
     },
+    "./notes/outline": {
+      "types": "./dist/notes/document/outline.d.mts",
+      "default": "./dist/notes/document/outline.mjs"
+    },
     "./notes/document-markdown": {
       "types": "./dist/notes/document/markdown.d.mts",
       "default": "./dist/notes/document/markdown.mjs"
@@ -137,6 +141,10 @@
     "./resources/editor-runtime-contract": {
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
+    },
+    "./resources/preview": {
+      "types": "./dist/resources/resource-preview.d.mts",
+      "default": "./dist/resources/resource-preview.mjs"
     },
     "./resources/search-policy": {
       "types": "./dist/resources/resource-search-policy.d.mts",

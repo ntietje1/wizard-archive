@@ -1,8 +1,8 @@
 import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { AuthoredDestination, CanonicalTarget } from '../authored-destination-contract'
-import type { EditorRuntime } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourcePreviewSource } from '../editor-runtime-contract'
 import type {
   AuthorizedResourceSummary,
   ResourceLoadResult,
@@ -40,7 +40,6 @@ import { MapViewer } from '../../maps/map-viewer'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
-import { ResourcePreviewSurface } from './resource-preview-surface'
 
 export function ResourceViewport({
   actions,
@@ -515,19 +514,76 @@ function ResourceCard({
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{resource.title}</span>
       </span>
-      <div
-        inert
-        aria-hidden="true"
-        className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60 bg-background"
-      >
-        <ResourcePreviewSurface resource={resource} runtime={runtime} />
-      </div>
+      <ResourceCardPreview resource={resource} runtime={runtime} />
       <span className="mt-auto text-xs text-muted-foreground">
         {ambiguous
           ? `${resourceKindLabel(resource.kind)} · ${resource.id.slice(-6)}`
           : resourceKindLabel(resource.kind)}
       </span>
     </article>
+  )
+}
+
+function ResourceCardPreview({
+  resource,
+  runtime,
+}: {
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  const [element, setElement] = useState<HTMLDivElement | null>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!element) return
+    if (typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry?.isIntersecting === true),
+      { rootMargin: '140px' },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+  return (
+    <div
+      ref={setElement}
+      inert
+      aria-hidden="true"
+      className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60 bg-background"
+    >
+      {visible && runtime.resources.previews.status === 'available' ? (
+        <LoadedResourceCardPreview resource={resource} source={runtime.resources.previews.value} />
+      ) : (
+        <ResourceCardPreviewFallback resource={resource} />
+      )}
+    </div>
+  )
+}
+
+function LoadedResourceCardPreview({
+  resource,
+  source,
+}: {
+  resource: AuthorizedResourceSummary
+  source: ResourcePreviewSource
+}) {
+  const state = useResourceStoreSnapshot(source, resource.id)
+  return state.status === 'ready' &&
+    state.preview.kind === 'note' &&
+    state.preview.excerpt.length > 0 ? (
+    <p className="size-full overflow-hidden whitespace-pre-wrap p-2 text-xs leading-relaxed text-muted-foreground">
+      {state.preview.excerpt}
+    </p>
+  ) : (
+    <ResourceCardPreviewFallback resource={resource} />
+  )
+}
+
+function ResourceCardPreviewFallback({ resource }: { resource: AuthorizedResourceSummary }) {
+  const Icon = resourceKindIcon(resource.kind)
+  return (
+    <span className="flex size-full items-center justify-center bg-muted/20">
+      <Icon className="size-8 text-muted-foreground" aria-hidden="true" />
+    </span>
   )
 }
 

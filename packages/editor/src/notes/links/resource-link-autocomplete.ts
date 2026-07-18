@@ -1,12 +1,14 @@
-import type { NoteSessionSource, NoteSessionState } from '../../resources/content-session-contract'
 import type { ResourceId } from '../../resources/domain-id'
-import type { EditorRuntime } from '../../resources/editor-runtime-contract'
+import type {
+  EditorRuntime,
+  ResourcePreviewOutlineEntry,
+  ResourcePreviewSource,
+  ResourcePreviewState,
+} from '../../resources/editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import type { WorkspaceSearchResult } from '../../resources/resource-search-policy'
 import type { CanonicalTarget } from '../../resources/authored-destination-contract'
 import { serializeAuthoredDestination } from '../../resources/authored-destination'
-import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../document/headless-yjs'
-import { noteDocumentOutline } from '../document/outline'
 
 const RESOURCE_SUGGESTION_LIMIT = 10
 const HEADING_NOTE_LIMIT = 10
@@ -51,10 +53,12 @@ export async function resourceLinkSuggestions(
   const results = query.resourceQuery
     ? (await search.search(query.resourceQuery)).results
     : await emptyQueryResults(runtime, search.recent(), sourceResourceId, query.mode)
-  const resources = await loadKnownResources(runtime, results)
+  const resources = loadKnownResources(runtime, results)
   return query.mode === 'resource'
     ? resources.slice(0, RESOURCE_SUGGESTION_LIMIT).map(resourceSuggestion)
-    : headingSuggestions(runtime.content.notes, resources, query.headingQuery)
+    : runtime.resources.previews.status === 'available'
+      ? headingSuggestions(runtime.resources.previews.value, resources, query.headingQuery)
+      : []
 }
 
 export function resourceLinkInlineContent(suggestion: ResourceLinkSuggestion) {
@@ -77,6 +81,7 @@ async function emptyQueryResults(
   mode: ResourceLinkAutocompleteQuery['mode'],
 ): Promise<ReadonlyArray<WorkspaceSearchResult>> {
   if (mode === 'heading') {
+    await runtime.resources.loader.ensureResource(sourceResourceId)
     return [{ resourceId: sourceResourceId, match: { type: 'title' } }]
   }
   await runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
@@ -86,14 +91,8 @@ async function emptyQueryResults(
   return ids.map((resourceId) => ({ resourceId, match: { type: 'title' } }))
 }
 
-async function loadKnownResources(
-  runtime: EditorRuntime,
-  results: ReadonlyArray<WorkspaceSearchResult>,
-) {
+function loadKnownResources(runtime: EditorRuntime, results: ReadonlyArray<WorkspaceSearchResult>) {
   const limited = results.slice(0, RESOURCE_SUGGESTION_LIMIT)
-  await Promise.all(
-    limited.map((result) => runtime.resources.loader.ensureResource(result.resourceId)),
-  )
   const snapshot = runtime.resources.index.getSnapshot()
   return limited.flatMap((result) => {
     const knowledge = snapshot.lookup(result.resourceId)
@@ -121,7 +120,7 @@ function resourceSuggestion({
 }
 
 async function headingSuggestions(
-  source: NoteSessionSource,
+  source: ResourcePreviewSource,
   resources: ReadonlyArray<{
     resource: AuthorizedResourceSummary
     result: WorkspaceSearchResult
@@ -134,7 +133,7 @@ async function headingSuggestions(
   const loaded = await Promise.all(
     candidates.map(async ({ resource }) => ({
       resource,
-      headings: await loadNoteHeadings(source, resource.id),
+      headings: await loadResourcePreview(source, resource.id),
     })),
   )
   const normalizedQuery = headingQuery.toLocaleLowerCase()
@@ -159,7 +158,7 @@ async function headingSuggestions(
     .slice(0, HEADING_SUGGESTION_LIMIT)
 }
 
-function headingPaths(headings: ReturnType<typeof noteDocumentOutline>) {
+function headingPaths(headings: ReadonlyArray<ResourcePreviewOutlineEntry>) {
   const parents: Array<{ level: number; text: string }> = []
   return headings.map((heading) => {
     while (parents.length > 0 && parents.at(-1)!.level >= heading.level) parents.pop()
@@ -169,10 +168,13 @@ function headingPaths(headings: ReturnType<typeof noteDocumentOutline>) {
   })
 }
 
-function loadNoteHeadings(source: NoteSessionSource, resourceId: ResourceId) {
+function loadResourcePreview(
+  source: ResourcePreviewSource,
+  resourceId: ResourceId,
+): Promise<ReadonlyArray<ResourcePreviewOutlineEntry>> {
   const current = source.get(resourceId)
   if (current.status !== 'loading') return Promise.resolve(headingsFromState(current))
-  return new Promise<ReturnType<typeof noteDocumentOutline>>((resolve) => {
+  return new Promise((resolve) => {
     let unsubscribe: () => void = () => undefined
     const settle = () => {
       const state = source.get(resourceId)
@@ -185,19 +187,8 @@ function loadNoteHeadings(source: NoteSessionSource, resourceId: ResourceId) {
   })
 }
 
-function headingsFromState(state: NoteSessionState) {
-  const document =
-    state.status === 'ready'
-      ? state.session.document
-      : state.status === 'initializing'
-        ? state.local
-        : null
-  if (!document) return []
-  try {
-    return noteDocumentOutline(noteYDocToBlocks(document, NOTE_YJS_FRAGMENT))
-  } catch {
-    return []
-  }
+function headingsFromState(state: ResourcePreviewState) {
+  return state.status === 'ready' && state.preview.kind === 'note' ? state.preview.outline : []
 }
 
 function resourceContext(resource: AuthorizedResourceSummary) {
