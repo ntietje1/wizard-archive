@@ -71,8 +71,21 @@ function createScopedLiveResourceRuntime(
   const queryScope = resourceQueryScope(currentScope)
   const write = <T>(operation: () => Promise<T>) => executeResourceWrite(currentScope, operation)
   const base = createLiveResourceIndexRuntime(currentScope, {
-    loadResource: (args) => convex.query(api.resources.queries.loadResource, args),
-    loadCollection: (args) => convex.query(api.resources.queries.loadCollection, args),
+    watchAvailability: (args, apply) => {
+      const watch = convex.watchQuery(
+        api.resources.queries.loadResourceProjectionAvailability,
+        args,
+      )
+      return subscribeToWatch(watch, apply)
+    },
+    watchResource: (args, apply) => {
+      const watch = convex.watchQuery(api.resources.queries.loadResource, args)
+      return subscribeToWatch(watch, apply)
+    },
+    watchCollection: (args, apply) => {
+      const watch = convex.watchQuery(api.resources.queries.loadCollection, args)
+      return subscribeToWatch(watch, apply)
+    },
   })
   const authoritativeStructure = createLiveResourceStructureGateway(
     currentScope.campaignId,
@@ -358,6 +371,7 @@ function createScopedLiveResourceRuntime(
       history: unsupported,
     },
     start: () => {
+      base.start()
       preferences.start()
       if (currentScope.projection === 'dm') bookmarks.start()
     },
@@ -368,6 +382,7 @@ function createScopedLiveResourceRuntime(
       access.dispose()
       noteBlockAccess.dispose()
       optimistic.dispose()
+      base.dispose()
     },
   }
 }

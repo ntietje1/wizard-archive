@@ -1,6 +1,6 @@
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
-import { dmQuery, resourceQuery } from '../functions'
+import { authQuery, dmQuery, resourceQuery } from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
@@ -33,8 +33,13 @@ import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDown
 import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 import { projectResourceAccess } from './functions/resourceAccess'
 import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
-import { CAMPAIGN_MEMBER_ROLE } from '../../shared/campaigns/types'
 import { projectNoteBlockAccess } from './functions/noteBlockAccess'
+import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
+  CAMPAIGN_STATUS,
+} from '../../shared/campaigns/types'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 type StoredNoteBlockAccessPresentation = Infer<typeof noteBlockAccessPresentationValidator>
@@ -119,6 +124,46 @@ export const loadCollection = resourceQuery({
       cursor: args.cursor ?? null,
     })
     return { snapshot: storedSnapshot(page.snapshot), cursor: page.cursor }
+  },
+})
+
+export const loadResourceProjectionAvailability = authQuery({
+  args: {
+    campaignId: campaignIdValidator,
+    actorId: campaignMemberIdValidator,
+    projection: v.union(v.literal('dm'), v.literal('player'), v.literal('view_as_player')),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query('campaigns')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', args.campaignId))
+      .unique()
+    if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted) return false
+    const requester = await ctx.db
+      .query('campaignMembers')
+      .withIndex('by_campaign_user', (query) =>
+        query.eq('campaignId', campaign._id).eq('userId', ctx.user.profile._id),
+      )
+      .unique()
+    if (!requester || requester.status !== CAMPAIGN_MEMBER_STATUS.Accepted) return false
+    if (args.projection !== 'view_as_player') {
+      return (
+        requester.campaignMemberUuid === args.actorId &&
+        requester.role ===
+          (args.projection === 'dm' ? CAMPAIGN_MEMBER_ROLE.DM : CAMPAIGN_MEMBER_ROLE.Player)
+      )
+    }
+    if (requester.role !== CAMPAIGN_MEMBER_ROLE.DM) return false
+    const participant = await ctx.db
+      .query('campaignMembers')
+      .withIndex('by_campaignMemberUuid', (query) => query.eq('campaignMemberUuid', args.actorId))
+      .unique()
+    return (
+      participant?.campaignId === campaign._id &&
+      participant.role === CAMPAIGN_MEMBER_ROLE.Player &&
+      participant.status === CAMPAIGN_MEMBER_STATUS.Accepted
+    )
   },
 })
 

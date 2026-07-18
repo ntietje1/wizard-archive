@@ -121,6 +121,12 @@ test.describe('canonical sharing and view-as', () => {
     await page.keyboard.press('Escape')
 
     await expectPlayerSidebarResource(accessNoteTitle, true)
+    await navigatePlayerToCampaign(playerPage, accessNoteId)
+    const playerSidebarResource = playerPage
+      .getByRole('navigation', { name: 'Sidebar' })
+      .getByRole('button', { name: accessNoteTitle, exact: true })
+    const playerEmptyContent = playerPage.getByText('No visible content', { exact: true })
+    await expect(playerEmptyContent).toBeVisible()
 
     dialog = await openResourceSharing(page)
     await setPermission(
@@ -129,8 +135,27 @@ test.describe('canonical sharing and view-as', () => {
       'None',
     )
     await page.keyboard.press('Escape')
+    await expect(playerSidebarResource).not.toBeVisible({ timeout: 10_000 })
+    await expect(playerEmptyContent).not.toBeVisible({ timeout: 10_000 })
 
-    await expectPlayerSidebarResource(accessNoteTitle, false)
+    dialog = await openResourceSharing(page)
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: 'All Players permission' }),
+      'View',
+    )
+    await page.keyboard.press('Escape')
+    await expect(playerSidebarResource).toBeVisible({ timeout: 10_000 })
+    await expect(playerEmptyContent).toBeVisible({ timeout: 10_000 })
+
+    dialog = await openResourceSharing(page)
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: 'All Players permission' }),
+      'None',
+    )
+    await page.keyboard.press('Escape')
+    await expect(playerSidebarResource).not.toBeVisible({ timeout: 10_000 })
   })
 
   test('keeps block visibility subordinate to note access and projects only visible blocks', async ({

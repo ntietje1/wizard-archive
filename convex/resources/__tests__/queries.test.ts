@@ -37,6 +37,7 @@ import {
   normalizeResourceSearchText,
   searchResourceDocuments,
 } from '@wizard-archive/editor/resources/search-policy'
+import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -104,6 +105,36 @@ describe('authorized resource projection', () => {
         complete: true,
       },
     ])
+  })
+
+  it('projects membership availability reactively without requiring accepted campaign access', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const args = {
+      campaignId: campaignUuid,
+      actorId: campaign.player.memberDomainId,
+      projection: 'player' as const,
+    }
+
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourceProjectionAvailability, args),
+    ).resolves.toBe(true)
+    await asDm(campaign).mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId: campaignUuid,
+      memberId: campaign.player.memberDomainId,
+      status: CAMPAIGN_MEMBER_STATUS.Removed,
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourceProjectionAvailability, args),
+    ).resolves.toBe(false)
+    await asDm(campaign).mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId: campaignUuid,
+      memberId: campaign.player.memberDomainId,
+      status: CAMPAIGN_MEMBER_STATUS.Accepted,
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourceProjectionAvailability, args),
+    ).resolves.toBe(true)
   })
 
   it('lets only a DM request the exact readonly projection of an accepted player', async () => {

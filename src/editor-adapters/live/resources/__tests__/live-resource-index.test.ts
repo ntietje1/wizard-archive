@@ -17,7 +17,11 @@ const version = {
   digest: '0'.repeat(64),
 }
 
-function resource(id: ResourceId, parentId: ResourceId | null = null) {
+function resource(
+  id: ResourceId,
+  parentId: ResourceId | null = null,
+  permission: 'edit' | 'view' = 'edit',
+) {
   return {
     id,
     campaignId: scope.campaignId,
@@ -27,7 +31,7 @@ function resource(id: ResourceId, parentId: ResourceId | null = null) {
     icon: null,
     color: null,
     lifecycle: 'active' as const,
-    permission: 'edit' as const,
+    permission,
     metadataVersion: version,
     createdAt: 1,
     updatedAt: 1,
@@ -58,6 +62,44 @@ function snapshot(
   }
 }
 
+function subscribedQueries(
+  loadResource: (args: {
+    campaignId: string
+    resourceId: string
+    viewAsParticipantId?: string
+  }) => Promise<ReturnType<typeof snapshot>>,
+  loadCollection: (args: {
+    campaignId: string
+    query: { parentId: string | null; lifecycle: 'active' | 'trashed' }
+    cursor?: string | null
+    viewAsParticipantId?: string
+  }) => Promise<{
+    snapshot: ReturnType<typeof snapshot>
+    cursor: string | null
+  }>,
+) {
+  return {
+    watchAvailability: (_args: unknown, apply: (value: boolean) => void) => {
+      apply(true)
+      return vi.fn()
+    },
+    watchResource: (
+      args: Parameters<typeof loadResource>[0],
+      apply: (value: ReturnType<typeof snapshot>) => void,
+    ) => {
+      void loadResource(args).then(apply)
+      return vi.fn()
+    },
+    watchCollection: (
+      args: Parameters<typeof loadCollection>[0],
+      apply: (value: Awaited<ReturnType<typeof loadCollection>>) => void,
+    ) => {
+      void loadCollection(args).then(apply)
+      return vi.fn()
+    },
+  }
+}
+
 describe('createLiveResourceIndexRuntime', () => {
   it('loads exact resource knowledge with its ancestor spine', async () => {
     const folderId = testDomainId('resource', 'folder')
@@ -65,10 +107,7 @@ describe('createLiveResourceIndexRuntime', () => {
     const loadResource = vi.fn(() =>
       Promise.resolve(snapshot([resource(folderId), resource(noteId, folderId)])),
     )
-    const runtime = createLiveResourceIndexRuntime(scope, {
-      loadResource,
-      loadCollection: vi.fn(),
-    })
+    const runtime = createLiveResourceIndexRuntime(scope, subscribedQueries(loadResource, vi.fn()))
 
     await expect(runtime.loader.ensureResource(noteId)).resolves.toEqual({ status: 'completed' })
     expect(runtime.index.getSnapshot().lookup(noteId)).toMatchObject({
@@ -97,10 +136,10 @@ describe('createLiveResourceIndexRuntime', () => {
         }),
       ),
     )
-    const runtime = createLiveResourceIndexRuntime(viewAsScope, {
-      loadResource,
-      loadCollection: vi.fn(),
-    })
+    const runtime = createLiveResourceIndexRuntime(
+      viewAsScope,
+      subscribedQueries(loadResource, vi.fn()),
+    )
 
     await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
       status: 'completed',
@@ -116,17 +155,20 @@ describe('createLiveResourceIndexRuntime', () => {
     const knownId = testDomainId('resource', 'known')
     const rootId = testDomainId('resource', 'root')
     const query = { parentId: null, lifecycle: 'active' as const }
-    const runtime = createLiveResourceIndexRuntime(scope, {
-      loadResource: vi.fn(() => Promise.resolve(snapshot([resource(knownId)]))),
-      loadCollection: vi.fn(() =>
-        Promise.resolve({
-          snapshot: snapshot([resource(rootId)], {
-            collections: [{ query, resourceIds: [rootId], complete: true }],
+    const runtime = createLiveResourceIndexRuntime(
+      scope,
+      subscribedQueries(
+        vi.fn(() => Promise.resolve(snapshot([resource(knownId)]))),
+        vi.fn(() =>
+          Promise.resolve({
+            snapshot: snapshot([resource(rootId)], {
+              collections: [{ query, resourceIds: [rootId], complete: true }],
+            }),
+            cursor: null,
           }),
-          cursor: null,
-        }),
+        ),
       ),
-    })
+    )
 
     await runtime.loader.ensureResource(knownId)
     await expect(runtime.loader.ensureCollection(query)).resolves.toEqual({ status: 'completed' })
@@ -146,17 +188,20 @@ describe('createLiveResourceIndexRuntime', () => {
     const resourceId = testDomainId('resource', 'deleted')
     const query = { parentId: null, lifecycle: 'active' as const }
     const loadResource = vi.fn().mockResolvedValue(snapshot([resource(resourceId)]))
-    const runtime = createLiveResourceIndexRuntime(scope, {
-      loadResource,
-      loadCollection: vi.fn(() =>
-        Promise.resolve({
-          snapshot: snapshot([resource(resourceId)], {
-            collections: [{ query, resourceIds: [resourceId], complete: true }],
+    const runtime = createLiveResourceIndexRuntime(
+      scope,
+      subscribedQueries(
+        loadResource,
+        vi.fn(() =>
+          Promise.resolve({
+            snapshot: snapshot([resource(resourceId)], {
+              collections: [{ query, resourceIds: [resourceId], complete: true }],
+            }),
+            cursor: null,
           }),
-          cursor: null,
-        }),
+        ),
       ),
-    })
+    )
 
     await runtime.loader.ensureResource(resourceId)
     await runtime.loader.ensureCollection(query)
@@ -195,10 +240,10 @@ describe('createLiveResourceIndexRuntime', () => {
         }),
         cursor: null,
       })
-    const runtime = createLiveResourceIndexRuntime(scope, {
-      loadResource: vi.fn(),
-      loadCollection,
-    })
+    const runtime = createLiveResourceIndexRuntime(
+      scope,
+      subscribedQueries(vi.fn(), loadCollection),
+    )
 
     const firstLoads = await Promise.all([
       runtime.loader.ensureCollection(query),
@@ -238,16 +283,160 @@ describe('createLiveResourceIndexRuntime', () => {
     expect(loadCollection).toHaveBeenCalledTimes(2)
   })
 
+  it('reacts to permission changes, revocation, regrant, and runtime disposal', async () => {
+    const resourceId = testDomainId('resource', 'reactive-resource')
+    const dispose = vi.fn()
+    let applyResource: ((value: ReturnType<typeof snapshot>) => void) | undefined
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      watchAvailability: vi.fn(),
+      watchResource: (_args, apply) => {
+        applyResource = apply
+        apply(snapshot([resource(resourceId)]))
+        return dispose
+      },
+      watchCollection: vi.fn(),
+    })
+
+    await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
+      status: 'completed',
+    })
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { permission: 'edit' },
+    })
+
+    applyResource?.(snapshot([{ ...resource(resourceId, null, 'view'), title: 'Renamed' }]))
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { permission: 'view', title: 'Renamed' },
+    })
+
+    applyResource?.(snapshot([], { missingResourceIds: [resourceId] }))
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({ state: 'missing' })
+
+    applyResource?.(snapshot([resource(resourceId)]))
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { permission: 'edit' },
+    })
+
+    runtime.dispose()
+    expect(dispose).toHaveBeenCalledOnce()
+  })
+
+  it('clears membership-scoped knowledge and requires a fresh projection after reacceptance', async () => {
+    const resourceId = testDomainId('resource', 'membership-resource')
+    const disposeAvailability = vi.fn()
+    let applyAvailability: ((value: boolean) => void) | undefined
+    let applyResource: ((value: ReturnType<typeof snapshot>) => void) | undefined
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      watchAvailability: (_args, apply) => {
+        applyAvailability = apply
+        apply(true)
+        return disposeAvailability
+      },
+      watchResource: (_args, apply) => {
+        applyResource = apply
+        apply(snapshot([resource(resourceId)]))
+        return vi.fn()
+      },
+      watchCollection: vi.fn(),
+    })
+
+    runtime.start()
+    await runtime.loader.ensureResource(resourceId)
+    expect(runtime.index.getSnapshot().lookup(resourceId).state).toBe('known')
+
+    applyAvailability?.(false)
+    expect(runtime.index.getSnapshot().lookup(resourceId).state).toBe('unknown')
+
+    applyAvailability?.(true)
+    expect(runtime.index.getSnapshot().lookup(resourceId).state).toBe('unknown')
+
+    applyResource?.(snapshot([resource(resourceId)]))
+    expect(runtime.index.getSnapshot().lookup(resourceId).state).toBe('known')
+
+    runtime.dispose()
+    expect(disposeAvailability).toHaveBeenCalledOnce()
+  })
+
+  it('retracts later collection pages when an earlier reactive cursor changes', async () => {
+    const firstId = testDomainId('resource', 'reactive-page-one')
+    const secondId = testDomainId('resource', 'reactive-page-two')
+    const query = { parentId: null, lifecycle: 'active' as const }
+    const updates: Array<
+      (value: { snapshot: ReturnType<typeof snapshot>; cursor: string | null }) => void
+    > = []
+    const disposes = [vi.fn(), vi.fn(), vi.fn()]
+    const watchCollection = vi.fn((_args, apply) => {
+      const page = updates.length
+      updates.push(apply)
+      apply(
+        page === 0
+          ? {
+              snapshot: snapshot([resource(firstId)], {
+                collections: [{ query, resourceIds: [firstId], complete: false }],
+              }),
+              cursor: 'cursor-1',
+            }
+          : {
+              snapshot: snapshot([resource(secondId)], {
+                collections: [{ query, resourceIds: [secondId], complete: true }],
+              }),
+              cursor: null,
+            },
+      )
+      return disposes[page]!
+    })
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      watchAvailability: vi.fn(),
+      watchResource: vi.fn(),
+      watchCollection,
+    })
+
+    await runtime.loader.ensureCollection(query)
+    await runtime.loader.ensureCollection(query)
+    expect(runtime.index.getSnapshot().lookup(secondId).state).toBe('known')
+
+    updates[0]?.({
+      snapshot: snapshot([resource(firstId)], {
+        collections: [{ query, resourceIds: [firstId], complete: false }],
+      }),
+      cursor: 'cursor-2',
+    })
+
+    expect(disposes[1]).toHaveBeenCalledOnce()
+    expect(runtime.index.getSnapshot().lookup(secondId).state).not.toBe('known')
+    expect(runtime.index.getSnapshot().list(query)).toMatchObject({
+      state: 'known',
+      complete: false,
+      items: [expect.objectContaining({ id: firstId })],
+    })
+
+    await runtime.loader.ensureCollection(query)
+    expect(watchCollection).toHaveBeenLastCalledWith(
+      {
+        campaignId: scope.campaignId,
+        query,
+        cursor: 'cursor-2',
+      },
+      expect.any(Function),
+    )
+  })
+
   it('rejects a provider response from another projection without publishing it', async () => {
     const resourceId = testDomainId('resource', 'foreign')
-    const runtime = createLiveResourceIndexRuntime(scope, {
-      loadResource: vi.fn(() =>
-        Promise.resolve(
-          snapshot([resource(resourceId)], { scopeOverride: { projection: 'player' } }),
+    const runtime = createLiveResourceIndexRuntime(
+      scope,
+      subscribedQueries(
+        vi.fn(() =>
+          Promise.resolve(
+            snapshot([resource(resourceId)], { scopeOverride: { projection: 'player' } }),
+          ),
         ),
+        vi.fn(),
       ),
-      loadCollection: vi.fn(),
-    })
+    )
 
     await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
       status: 'failed',
@@ -260,8 +449,11 @@ describe('createLiveResourceIndexRuntime', () => {
   it('normalizes provider failures as retryable load failures', async () => {
     const resourceId = testDomainId('resource', 'offline')
     const runtime = createLiveResourceIndexRuntime(scope, {
-      loadResource: vi.fn(() => Promise.reject(new Error('offline'))),
-      loadCollection: vi.fn(),
+      watchAvailability: vi.fn(),
+      watchResource: () => {
+        throw new Error('offline')
+      },
+      watchCollection: vi.fn(),
     })
 
     await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
