@@ -24,6 +24,7 @@ import { NoteBlockAccessMenuProvider } from './sharing/note-block-access-menu'
 import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
 import { NoteResourceRuntimeProvider } from './note-resource-runtime'
 import type { NoteResourceBinding } from './note-resource-runtime-context'
+import { NoteResourceLinkMenu } from './links/resource-link-menu'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -152,6 +153,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
                       <>
                         <SideMenuController sideMenu={NoteSideMenu} />
                         <NoteSlashMenu editor={editor} />
+                        <NoteResourceLinkMenu editor={editor} />
                       </>
                     )}
                   </BlockNoteView>

@@ -33,6 +33,7 @@ type NoteResourceRuntime = Readonly<{
   drop: AuthoredDestinationDropResolver | null
   renderNote: EmbeddedNoteResourceRenderer | null
   runtime: EditorRuntime | null
+  sourceResourceId: ResourceId | null
 }>
 
 export const NoteResourceRuntimeContext = createContext<NoteResourceRuntime | null>(null)

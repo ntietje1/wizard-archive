@@ -21,6 +21,7 @@ export function NoteResourceRuntimeProvider({
         drop: binding?.drop ?? null,
         renderNote: binding?.renderNote ?? null,
         runtime: binding?.runtime ?? null,
+        sourceResourceId: binding?.sourceResourceId ?? null,
       }}
     >
       {children}
