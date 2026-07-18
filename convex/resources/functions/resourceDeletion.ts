@@ -28,6 +28,7 @@ type ResourceDeletionPlan = {
   mapPins: Array<Doc<'resourceMapPins'>>
   canvasContents: Array<Doc<'resourceCanvasContents'>>
   assetCopyIntents: Array<Doc<'resourceAssetCopyIntents'>>
+  previewPublications: Array<Doc<'resourcePreviewPublications'>>
   assetOwners: Array<Doc<'resourceAssetOwners'>>
   referenceEdges: Array<Doc<'resourceReferenceEdges'>>
   retirementAssetUuids: Set<AssetId>
@@ -49,6 +50,7 @@ function createPlan(): ResourceDeletionPlan {
     mapPins: [],
     canvasContents: [],
     assetCopyIntents: [],
+    previewPublications: [],
     assetOwners: [],
     referenceEdges: [],
     retirementAssetUuids: new Set(),
@@ -75,6 +77,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.mapPins,
     plan.canvasContents,
     plan.assetCopyIntents,
+    plan.previewPublications,
     plan.assetOwners,
     plan.referenceEdges,
   ]
@@ -198,6 +201,20 @@ export async function planResourceDeletion(
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resource.resourceUuid))
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    const previewPublication = await ctx.db
+      .query('resourcePreviewPublications')
+      .withIndex('by_campaignUuid_and_resourceUuid', (query) =>
+        query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
+      )
+      .unique()
+    if (previewPublication) {
+      plan.previewPublications.push(previewPublication)
+      if (previewPublication.publication) {
+        plan.retirementAssetUuids.add(
+          assertDomainId(DOMAIN_ID_KIND.asset, previewPublication.publication.assetUuid),
+        )
+      }
+    }
     plan.assetOwners.push(
       ...(await ctx.db
         .query('resourceAssetOwners')
@@ -248,6 +265,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'canvasContents',
   'referenceEdges',
   'assetCopyIntents',
+  'previewPublications',
   'assetOwners',
 ] as const
 
@@ -278,6 +296,7 @@ type CampaignResourceRow =
   | Doc<'resourceCanvasContents'>
   | Doc<'resourceReferenceEdges'>
   | Doc<'resourceAssetCopyIntents'>
+  | Doc<'resourcePreviewPublications'>
 
 export async function deleteCampaignResourceBatch(
   ctx: ResourceDeletionCtx,
@@ -387,6 +406,11 @@ async function loadCampaignResourceDeletionBatch(
     case 'assetCopyIntents':
       return await ctx.db
         .query('resourceAssetCopyIntents')
+        .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'previewPublications':
+      return await ctx.db
+        .query('resourcePreviewPublications')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
   }

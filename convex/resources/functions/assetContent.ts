@@ -90,7 +90,7 @@ export async function commitResourceUploadClaim(
 }
 
 export async function loadResourceAssetOwnership(
-  ctx: Pick<CampaignInternalMutationCtx, 'db'>,
+  ctx: Pick<CampaignMutationCtx, 'db'>,
   campaignId: CampaignId,
   resourceId: ResourceId,
   assetUuid: string | null,

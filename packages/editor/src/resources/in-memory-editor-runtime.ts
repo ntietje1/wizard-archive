@@ -949,6 +949,7 @@ export function createInMemoryEditorRuntime({
           ? { status: 'available', value: assetsFolder }
           : { status: 'unavailable', reason: 'unauthorized' },
         previews: { status: 'available', value: previews.source },
+        previewPublication: unsupported,
         references: { status: 'available', value: references.source },
         undo: canEdit
           ? { status: 'available', value: undo.history }

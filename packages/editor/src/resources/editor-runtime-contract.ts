@@ -5,7 +5,7 @@ import type {
   NoteSessionSource,
 } from './content-session-contract'
 import type { CampaignMemberId, HistoryEntryId, NoteBlockId, ResourceId } from './domain-id'
-import type { CanonicalTarget } from './authored-destination-contract'
+import type { CanonicalTarget, SafeHttpsUrl } from './authored-destination-contract'
 import type {
   CapabilityUnavailableReason,
   ResourceAccessCommandGateway,
@@ -79,11 +79,24 @@ export type ResourcePreviewState =
       status: 'unavailable'
       reason: 'scope_unavailable' | 'unauthorized' | 'integrity_error'
     }>
-  | Readonly<{ status: 'ready'; preview: ResourcePreview }>
+  | Readonly<{ status: 'ready'; preview: ResourcePreview; imageUrl: SafeHttpsUrl | null }>
 
 export interface ResourcePreviewSource {
   get(resourceId: ResourceId): ResourcePreviewState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
+}
+
+export type ResourcePreviewPublicationResult =
+  | Readonly<{ status: 'published' | 'current' | 'in_progress' | 'stale' | 'unsupported' }>
+  | Readonly<{ status: 'rejected'; reason: 'integrity_error' | 'unauthorized' }>
+  | Readonly<{ status: 'failed'; error: unknown }>
+
+export interface ResourcePreviewPublicationGateway {
+  publish(
+    resourceId: ResourceId,
+    generate: () => Promise<Blob>,
+    signal?: AbortSignal,
+  ): Promise<ResourcePreviewPublicationResult>
 }
 
 export type ResourceReferenceDirection =
@@ -166,6 +179,7 @@ export interface EditorRuntime {
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly assets: ResourceCapability<ResourceAssetsFolderGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>
+    readonly previewPublication: ResourceCapability<ResourcePreviewPublicationGateway>
     readonly references: ResourceCapability<ResourceReferenceSource>
     readonly undo: ResourceCapability<ResourceUndoHistory>
   }

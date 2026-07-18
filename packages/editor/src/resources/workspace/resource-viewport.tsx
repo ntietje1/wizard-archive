@@ -568,6 +568,20 @@ function LoadedResourceCardPreview({
   source: ResourcePreviewSource
 }) {
   const state = useResourceStoreSnapshot(source, resource.id)
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null)
+  if (state.status === 'ready' && state.imageUrl !== null && state.imageUrl !== failedImageUrl) {
+    return (
+      <img
+        alt={`Preview of ${resource.title}`}
+        className="size-full object-cover"
+        draggable={false}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        src={state.imageUrl}
+        onError={() => setFailedImageUrl(state.imageUrl)}
+      />
+    )
+  }
   return state.status === 'ready' &&
     state.preview.kind === 'note' &&
     state.preview.excerpt.length > 0 ? (

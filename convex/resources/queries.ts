@@ -46,6 +46,7 @@ import {
 import { normalizeNoteBlockAccessSelection } from '@wizard-archive/editor/resources/note-block-access-policy'
 import { loadResourceReferenceRows } from './functions/resourceReferences'
 import { projectResourceReferenceDirection } from './functions/projectResourceReferences'
+import { loadResourcePreviewImageUrl } from './functions/resourcePreviewPublication'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 type StoredResourceReferenceSnapshot = Infer<typeof resourceReferenceSnapshotValidator>
@@ -160,7 +161,11 @@ export const loadResourcePreview = resourceQuery({
     if (!searchDocument || searchDocument.preview.kind !== resource.kind) {
       return { status: 'unavailable' as const, reason: 'integrity_error' as const }
     }
-    return { status: 'ready' as const, preview: searchDocument.preview }
+    return {
+      status: 'ready' as const,
+      preview: searchDocument.preview,
+      imageUrl: await loadResourcePreviewImageUrl(ctx, resource),
+    }
   },
 })
 

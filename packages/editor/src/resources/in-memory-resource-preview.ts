@@ -65,7 +65,11 @@ function previewState(
     return { status: 'unavailable', reason: 'unauthorized' }
   }
   if (resource.kind !== 'note') {
-    return { status: 'ready', preview: createResourcePreview(resource.kind, '', []) }
+    return {
+      status: 'ready',
+      preview: createResourcePreview(resource.kind, '', []),
+      imageUrl: null,
+    }
   }
   if (!note) return { status: 'unavailable', reason: 'integrity_error' }
   try {
@@ -77,6 +81,7 @@ function previewState(
         noteBlocksPlainText(blocks),
         noteDocumentOutline(blocks),
       ),
+      imageUrl: null,
     }
   } catch {
     return { status: 'unavailable', reason: 'integrity_error' }

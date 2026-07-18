@@ -7,6 +7,7 @@ import type {
   ResourcePreviewState,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { createResourcePreview } from '@wizard-archive/editor/resources/preview'
+import { parseSafeHttpsUrl } from '@wizard-archive/editor/resources/authored-destination-contract'
 import { createResourceWatchStore } from './resource-watch-store'
 
 type StoredPreviewState = FunctionReturnType<typeof api.resources.queries.loadResourcePreview>
@@ -33,6 +34,10 @@ export function createLiveResourcePreviewSource(
 function readPreviewState(state: StoredPreviewState): ResourcePreviewState {
   if (state.status === 'unavailable') return state
   try {
+    const imageUrl = state.imageUrl === null ? null : parseSafeHttpsUrl(state.imageUrl)
+    if (state.imageUrl !== null && imageUrl === null) {
+      throw new TypeError('Resource preview image URL is not safe')
+    }
     return {
       status: 'ready',
       preview: createResourcePreview(
@@ -43,6 +48,7 @@ function readPreviewState(state: StoredPreviewState): ResourcePreviewState {
           blockId: assertDomainId(DOMAIN_ID_KIND.noteBlock, heading.blockId),
         })),
       ),
+      imageUrl,
     }
   } catch {
     return { status: 'unavailable', reason: 'integrity_error' }

@@ -88,6 +88,7 @@ import type * as resources_functions_resourceCatalogMetadata from "../resources/
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
 import type * as resources_functions_resourcePresence from "../resources/functions/resourcePresence.js";
+import type * as resources_functions_resourcePreviewPublication from "../resources/functions/resourcePreviewPublication.js";
 import type * as resources_functions_resourceRecordRow from "../resources/functions/resourceRecordRow.js";
 import type * as resources_functions_resourceReferences from "../resources/functions/resourceReferences.js";
 import type * as resources_functions_resourceSearchProjection from "../resources/functions/resourceSearchProjection.js";
@@ -224,6 +225,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
   "resources/functions/resourcePresence": typeof resources_functions_resourcePresence;
+  "resources/functions/resourcePreviewPublication": typeof resources_functions_resourcePreviewPublication;
   "resources/functions/resourceRecordRow": typeof resources_functions_resourceRecordRow;
   "resources/functions/resourceReferences": typeof resources_functions_resourceReferences;
   "resources/functions/resourceSearchProjection": typeof resources_functions_resourceSearchProjection;

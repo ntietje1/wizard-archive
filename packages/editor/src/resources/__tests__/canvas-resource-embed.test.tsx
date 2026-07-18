@@ -655,6 +655,7 @@ function previewRuntime({
       bookmarks: unsupported,
       assets: unsupported,
       previews: unsupported,
+      previewPublication: unsupported,
       references: unsupported,
       undo: unsupported,
     },

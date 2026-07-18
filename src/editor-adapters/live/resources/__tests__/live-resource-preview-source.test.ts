@@ -10,6 +10,7 @@ describe('createLiveResourcePreviewSource', () => {
     let apply:
       | ((state: {
           status: 'ready'
+          imageUrl: string | null
           preview: {
             kind: 'note'
             excerpt: string
@@ -31,6 +32,7 @@ describe('createLiveResourcePreviewSource', () => {
 
     apply?.({
       status: 'ready',
+      imageUrl: null,
       preview: {
         kind: 'note',
         excerpt: 'Bounded preview',

@@ -31,6 +31,7 @@ import { createLiveResourceAssetsFolderGateway } from './live-resource-assets-fo
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createLiveResourceReferenceSource } from './live-resource-references'
 import { createLiveResourcePreviewSource } from './live-resource-preview-source'
+import { createLiveResourcePreviewPublicationGateway } from './live-resource-preview-publication'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -181,25 +182,34 @@ function createScopedLiveResourceRuntime(
   const discardUpload = async (sessionId: Id<'fileStorage'>) => {
     await write(() => convex.mutation(api.storage.mutations.discardUpload, { sessionId }))
   }
-  const uploadFile = async (source: { bytes: Uint8Array; fileName: string }) => {
+  const uploadFile = async (source: {
+    bytes: Uint8Array
+    fileName: string
+    mediaType?: string
+  }) => {
     const { sessionId, uploadUrl } = await write(() =>
       convex.mutation(api.storage.mutations.createUploadSession, {}),
     )
-    const response = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: new Blob([Uint8Array.from(source.bytes).buffer]),
-    })
-    if (!response.ok) throw new Error('File upload failed')
-    const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
-    await write(() =>
-      convex.mutation(api.storage.mutations.bindUpload, {
-        sessionId,
-        storageId,
-        originalFileName: source.fileName,
-      }),
-    )
-    return sessionId
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': source.mediaType ?? 'application/octet-stream' },
+        body: new Blob([Uint8Array.from(source.bytes).buffer]),
+      })
+      if (!response.ok) throw new Error('File upload failed')
+      const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+      await write(() =>
+        convex.mutation(api.storage.mutations.bindUpload, {
+          sessionId,
+          storageId,
+          originalFileName: source.fileName,
+        }),
+      )
+      return sessionId
+    } catch (error) {
+      await discardUpload(sessionId).catch(() => undefined)
+      throw error
+    }
   }
   const files = createLiveFileContentSource(
     currentScope.campaignId,
@@ -381,6 +391,24 @@ function createScopedLiveResourceRuntime(
     })
     return subscribeToWatch(watch, apply)
   })
+  const previewPublication = createLiveResourcePreviewPublicationGateway({
+    claim: (resourceId) =>
+      write(() =>
+        convex.mutation(api.resources.mutations.claimResourcePreviewGeneration, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        }),
+      ),
+    discard: discardUpload,
+    publish: (args) =>
+      write(() =>
+        convex.mutation(api.resources.mutations.publishResourcePreview, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
+      ),
+    upload: uploadFile,
+  })
 
   const unsupported = {
     status: 'unavailable',
@@ -422,6 +450,10 @@ function createScopedLiveResourceRuntime(
             : unsupported,
         assets: assetsCapability,
         previews: { status: 'available', value: previews.source },
+        previewPublication:
+          currentScope.projection === 'view_as_player'
+            ? { status: 'unavailable', reason: 'unauthorized' }
+            : { status: 'available', value: previewPublication },
         references: referencesCapability,
         undo: undoCapability,
       },

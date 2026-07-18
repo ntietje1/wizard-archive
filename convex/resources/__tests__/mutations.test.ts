@@ -480,6 +480,12 @@ describe('resource structure commands', () => {
         rawPath: 'payload.bin',
       })
     })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready', imageUrl: expect.any(String) })
   })
 
   it('replaces file content once, advances its version, and retires the previous asset', async () => {
@@ -1079,6 +1085,18 @@ describe('resource structure commands', () => {
       version: { revision: 3 },
       url: expect.any(String),
     })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready', imageUrl: expect.any(String) })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.claimResourcePreviewGeneration, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unsupported' })
   })
 
   it('retains a shared map asset until concurrent replacement removes its final reference', async () => {
@@ -3735,6 +3753,171 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('publishes one versioned resource preview and retires the replaced derivative', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Preview')
+    const firstClaim = await asDm(campaign).mutation(
+      api.resources.mutations.claimResourcePreviewGeneration,
+      { campaignId: campaignUuid, resourceId },
+    )
+    expect(firstClaim).toMatchObject({ status: 'claimed' })
+    if (firstClaim.status !== 'claimed') throw new TypeError('Expected preview claim')
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.claimResourcePreviewGeneration, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'in_progress' })
+    const firstBytes = new Blob(['first preview'], { type: 'image/webp' })
+    const firstUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      firstBytes,
+      'preview.webp',
+    )
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.publishResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+        claimToken: firstClaim.claimToken,
+        uploadSessionId: firstUpload.sessionId,
+        byteSize: firstBytes.size,
+      }),
+    ).resolves.toEqual({ status: 'published' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready', imageUrl: expect.any(String) })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.claimResourcePreviewGeneration, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'current' })
+
+    await advanceStoredNoteVersion(resourceId)
+    const replacementClaim = await asDm(campaign).mutation(
+      api.resources.mutations.claimResourcePreviewGeneration,
+      { campaignId: campaignUuid, resourceId },
+    )
+    if (replacementClaim.status !== 'claimed') {
+      throw new TypeError('Expected replacement preview claim')
+    }
+    const replacementBytes = new Blob(['replacement preview'], { type: 'image/webp' })
+    const replacementUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      replacementBytes,
+      'replacement.webp',
+    )
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.publishResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+        claimToken: replacementClaim.claimToken,
+        uploadSessionId: replacementUpload.sessionId,
+        byteSize: replacementBytes.size,
+      }),
+    ).resolves.toEqual({ status: 'published' })
+
+    await t.run(async (ctx) => {
+      const publication = await ctx.db
+        .query('resourcePreviewPublications')
+        .withIndex('by_campaignUuid_and_resourceUuid', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('resourceUuid', resourceId),
+        )
+        .unique()
+      expect(publication).toMatchObject({
+        publication: { assetUuid: replacementUpload.assetId },
+        claim: null,
+      })
+      const owners = await ctx.db
+        .query('resourceAssetOwners')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .collect()
+      expect(owners).toEqual([expect.objectContaining({ assetUuid: replacementUpload.assetId })])
+      await expect(
+        ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', firstUpload.assetId))
+          .unique(),
+      ).resolves.toMatchObject({ status: 'pending' })
+    })
+
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [resourceId] })
+    await execute(campaign, campaignUuid, {
+      type: 'permanentlyDelete',
+      resourceIds: [resourceId],
+    })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourcePreviewPublications')
+          .withIndex('by_campaignUuid_and_resourceUuid', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', resourceId),
+          )
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(
+        ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', replacementUpload.assetId))
+          .unique(),
+      ).resolves.toMatchObject({ status: 'pending' })
+    })
+  })
+
+  it('rejects unauthorized and stale preview publication without retaining empty state', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Stale preview')
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.claimResourcePreviewGeneration, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
+    const claim = await asDm(campaign).mutation(
+      api.resources.mutations.claimResourcePreviewGeneration,
+      { campaignId: campaignUuid, resourceId },
+    )
+    if (claim.status !== 'claimed') throw new TypeError('Expected preview claim')
+    await advanceStoredNoteVersion(resourceId)
+    const bytes = new Blob(['stale preview'], { type: 'image/webp' })
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      bytes,
+      'stale.webp',
+    )
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.publishResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+        claimToken: claim.claimToken,
+        uploadSessionId: upload.sessionId,
+        byteSize: bytes.size,
+      }),
+    ).resolves.toEqual({ status: 'stale' })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourcePreviewPublications')
+          .withIndex('by_campaignUuid_and_resourceUuid', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', resourceId),
+          )
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(ctx.db.get('fileStorage', upload.sessionId)).resolves.toMatchObject({
+        status: 'uncommitted',
+      })
+    })
+  })
+
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {
     return await t.run(async (ctx) => {
       return (await ctx.db.get('campaigns', campaignId))!.campaignUuid
@@ -3748,6 +3931,23 @@ describe('resource structure commands', () => {
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
         .unique()
       return resource!.metadataVersion
+    })
+  }
+
+  async function advanceStoredNoteVersion(resourceId: ResourceId) {
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected note content')
+      await ctx.db.patch('resourceNoteContents', content._id, {
+        version: {
+          ...content.version,
+          revision: content.version.revision + 1,
+          digest: 'f'.repeat(64),
+        },
+      })
     })
   }
 

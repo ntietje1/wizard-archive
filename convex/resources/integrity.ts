@@ -172,7 +172,7 @@ async function assetHasOwner(
 }
 
 async function ownerIsCurrent(ctx: QueryCtx, owner: Doc<'resourceAssetOwners'>): Promise<boolean> {
-  const [file, map, storage] = await Promise.all([
+  const [file, map, preview, storage] = await Promise.all([
     ctx.db
       .query('resourceFileContents')
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', owner.resourceUuid))
@@ -182,16 +182,27 @@ async function ownerIsCurrent(ctx: QueryCtx, owner: Doc<'resourceAssetOwners'>):
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', owner.resourceUuid))
       .unique(),
     ctx.db
+      .query('resourcePreviewPublications')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', owner.resourceUuid))
+      .unique(),
+    ctx.db
       .query('fileStorage')
       .withIndex('by_assetUuid', (query) => query.eq('assetUuid', owner.assetUuid))
       .unique(),
   ])
-  const referenced =
-    file?.assetUuid === owner.assetUuid ||
+  if (preview?.publication?.assetUuid === owner.assetUuid) {
+    return storage?.status === 'committed'
+  }
+  if (file?.assetUuid === owner.assetUuid) {
+    return file.state !== 'ready' || storage?.status === 'committed'
+  }
+  if (
     map?.image?.assetUuid === owner.assetUuid ||
     map?.layers.some((layer) => layer.image?.assetUuid === owner.assetUuid)
-  const ready = file?.state === 'ready' || map?.state === 'ready'
-  return Boolean(referenced && (!ready || storage?.status === 'committed'))
+  ) {
+    return map.state !== 'ready' || storage?.status === 'committed'
+  }
+  return false
 }
 
 function isFailedOrStale(
