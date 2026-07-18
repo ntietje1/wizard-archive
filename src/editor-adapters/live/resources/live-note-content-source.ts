@@ -1,5 +1,9 @@
 import * as Y from 'yjs'
 import { noteDocumentToMarkdown } from '@wizard-archive/editor/notes/document-markdown'
+import {
+  NOTE_YJS_FRAGMENT,
+  replaceNoteYjsDocument,
+} from '@wizard-archive/editor/notes/document-yjs'
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
@@ -43,6 +47,7 @@ import {
 import type { RejectedYjsSave, YjsVersionDecision } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
 import type { YjsUpdateOutbox } from './yjs-update-outbox'
+import { createReadonlyYjsSession, isReadonlyYjsSession } from './readonly-yjs-session'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
@@ -171,7 +176,7 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 class LiveNoteSessionSource implements NoteSessionSource {
   readonly #store: NoteStore
   readonly #creates = new Map<ResourceId, LocalCreate>()
-  readonly #sessions = new Map<ResourceId, LiveNoteSession>()
+  readonly #sessions = new Map<ResourceId, NoteSession>()
 
   constructor(
     private readonly campaignId: CampaignId,
@@ -179,7 +184,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
     private readonly user: CollaborationUser,
     private readonly backend: LiveNoteContentBackend,
     private readonly beginCreateUndo: () => ResourceUndoRecording,
-    private readonly replaceRemoteSnapshots: boolean,
+    private readonly readonlyProjection: boolean,
   ) {
     this.#store = createResourceWatchStore<NoteSnapshot, NoteSessionState>(
       backend.watch,
@@ -306,16 +311,15 @@ class LiveNoteSessionSource implements NoteSessionSource {
   ) {
     const version = assertVersionStamp(snapshot.version)
     const session = this.#sessions.get(resourceId)
-    if (session && !this.replaceRemoteSnapshots) {
-      session.apply(snapshot.update, version)
+    if (session && this.readonlyProjection) {
+      this.#applyReadonlyProjection(resourceId, snapshot, version, session)
       return
     }
-    if (session && version.revision < session.version.revision) return
-    if (
-      session &&
-      version.revision === session.version.revision &&
-      version.digest === session.version.digest
-    ) {
+    if (session && !this.readonlyProjection) {
+      if (!(session instanceof LiveNoteSession)) {
+        throw new TypeError('Editable note source owns a readonly session')
+      }
+      session.apply(snapshot.update, version)
       return
     }
     const doc = new Y.Doc()
@@ -329,6 +333,40 @@ class LiveNoteSessionSource implements NoteSessionSource {
         status: 'integrity_error',
         issue: 'content_corrupt',
       })
+    }
+  }
+
+  #applyReadonlyProjection(
+    resourceId: ResourceId,
+    snapshot: Extract<NoteSnapshot, { status: 'ready' }>,
+    version: NoteSession['version'],
+    session: NoteSession,
+  ): void {
+    if (!isReadonlyYjsSession(session)) {
+      throw new TypeError('Readonly note source owns an editable session')
+    }
+    if (version.revision < session.version.revision) return
+    if (
+      version.revision === session.version.revision &&
+      version.digest === session.version.digest
+    ) {
+      return
+    }
+    const projection = new Y.Doc()
+    try {
+      Y.applyUpdate(projection, new Uint8Array(snapshot.update))
+      session.applyProjection(version, () =>
+        replaceNoteYjsDocument(session.document, projection, NOTE_YJS_FRAGMENT, session),
+      )
+      this.#setState(resourceId, { status: 'ready', session })
+    } catch {
+      this.#clearSession(resourceId)
+      this.#setState(resourceId, {
+        status: 'integrity_error',
+        issue: 'content_corrupt',
+      })
+    } finally {
+      projection.destroy()
     }
   }
 
@@ -348,6 +386,12 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
   #setReady(resourceId: ResourceId, document: Y.Doc, version: NoteSession['version']): void {
     this.#clearSession(resourceId)
+    if (this.readonlyProjection) {
+      const session = createReadonlyYjsSession(document, version, this.user)
+      this.#sessions.set(resourceId, session)
+      this.#setState(resourceId, { status: 'ready', session })
+      return
+    }
     let session: LiveNoteSession
     try {
       session = new LiveNoteSession(
@@ -432,7 +476,7 @@ export function createLiveNoteContentSource(
   user: CollaborationUser,
   backend: LiveNoteContentBackend,
   beginCreateUndo: () => ResourceUndoRecording,
-  replaceRemoteSnapshots = false,
+  readonlyProjection = false,
 ) {
   return new LiveNoteSessionSource(
     campaignId,
@@ -440,6 +484,6 @@ export function createLiveNoteContentSource(
     user,
     backend,
     beginCreateUndo,
-    replaceRemoteSnapshots,
+    readonlyProjection,
   )
 }

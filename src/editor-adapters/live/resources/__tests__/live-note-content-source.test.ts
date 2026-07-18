@@ -174,7 +174,8 @@ describe('LiveNoteContentSource', () => {
     const second = source.get(resourceId)
     if (second.status !== 'ready') throw new TypeError('Expected replacement projection')
 
-    expect(second.session).not.toBe(first.session)
+    expect(second.session).toBe(first.session)
+    expect(second.session.document).toBe(first.session.document)
     expect(
       decodeNoteYjsUpdatesToBlocks(
         [{ update: Y.encodeStateAsUpdate(second.session.document) }],
@@ -183,6 +184,35 @@ describe('LiveNoteContentSource', () => {
     ).toEqual([secondId])
     firstDocument.destroy()
     secondDocument.destroy()
+    source.dispose()
+  })
+
+  it('does not expose persistence or presence paths from a readonly projection', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+      true,
+    )
+    const document = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    const update = arrayBuffer(Y.encodeStateAsUpdate(document))
+    const version = await versionFor(update)
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected readonly projection')
+
+    ready.session.document.getMap('readonly-normalization').set('local', true)
+
+    await expect(ready.session.flush()).resolves.toEqual({ status: 'completed', version })
+    expect(provider.save).not.toHaveBeenCalled()
+    expect(provider.heartbeatPresence).not.toHaveBeenCalled()
+    expect(provider.watchPresence).not.toHaveBeenCalled()
+    document.destroy()
     source.dispose()
   })
 

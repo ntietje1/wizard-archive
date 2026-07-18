@@ -259,6 +259,7 @@ function createScopedLiveResourceRuntime(
       refresh,
     },
     undo.beginRecording,
+    currentScope.projection !== 'dm',
   )
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
   const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, base.applyProjection, {

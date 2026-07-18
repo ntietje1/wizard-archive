@@ -2,6 +2,8 @@ import * as Y from 'yjs'
 import {
   canonicalizeCanvasDocumentContent,
   parseCanvasDocumentContent,
+  readCanvasDocumentContent,
+  replaceCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
@@ -35,6 +37,7 @@ import { liveContentPendingState } from './live-content-pending-state'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
+import { createReadonlyYjsSession, isReadonlyYjsSession } from './readonly-yjs-session'
 
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
 type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
@@ -115,7 +118,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   readonly #store: CanvasStore
   readonly #previewStore: CanvasPreviewStore
   readonly #previewDocuments = new Map<ResourceId, Y.Doc>()
-  readonly #sessions = new Map<ResourceId, LiveCanvasSession>()
+  readonly #sessions = new Map<ResourceId, CanvasSession>()
   readonly previews = {
     get: (resourceId: ResourceId) => this.#previewStore.get(resourceId),
     subscribe: (resourceId: ResourceId, listener: () => void) =>
@@ -128,6 +131,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     private readonly user: CollaborationUser,
     private readonly backend: LiveCanvasBackend,
     private readonly beginCreateUndo: () => ResourceUndoRecording,
+    private readonly readonlyProjection: boolean,
   ) {
     this.#store = createResourceWatchStore<CanvasSnapshot, CanvasSessionState>(
       backend.watch,
@@ -183,8 +187,50 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     }
     const { document, version } = decoded
 
+    if (this.readonlyProjection) {
+      this.#applyReadonly(resourceId, document, version)
+      return
+    }
+    this.#applyEditable(resourceId, document, version)
+  }
+
+  #applyReadonly(resourceId: ResourceId, document: Y.Doc, version: CanvasSession['version']): void {
+    const existing = this.#sessions.get(resourceId)
+    if (!existing) {
+      const session = createReadonlyYjsSession(document, version, this.user)
+      this.#sessions.set(resourceId, session)
+      this.#store.set(resourceId, { status: 'ready', session })
+      return
+    }
+    if (!isReadonlyYjsSession(existing)) {
+      document.destroy()
+      throw new TypeError('Readonly canvas source owns an editable session')
+    }
+    if (version.revision < existing.version.revision) {
+      document.destroy()
+      return
+    }
+    if (
+      version.revision === existing.version.revision &&
+      version.digest === existing.version.digest
+    ) {
+      document.destroy()
+      return
+    }
+    const content = readCanvasDocumentContent(document)
+    existing.applyProjection(version, () =>
+      replaceCanvasDocumentContent(existing.document, content, existing),
+    )
+    document.destroy()
+    this.#store.set(resourceId, { status: 'ready', session: existing })
+  }
+
+  #applyEditable(resourceId: ResourceId, document: Y.Doc, version: CanvasSession['version']): void {
     const existing = this.#sessions.get(resourceId)
     if (existing) {
+      if (!(existing instanceof LiveCanvasSession)) {
+        throw new TypeError('Editable canvas source owns a readonly session')
+      }
       const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
       document.destroy()
       existing.apply(update, version)
@@ -268,6 +314,14 @@ export function createLiveCanvasSessionSource(
   user: CollaborationUser,
   backend: LiveCanvasBackend,
   beginCreateUndo: () => ResourceUndoRecording,
+  readonlyProjection = false,
 ): CanvasSessionSource {
-  return new LiveCanvasSessionSource(campaignId, memberId, user, backend, beginCreateUndo)
+  return new LiveCanvasSessionSource(
+    campaignId,
+    memberId,
+    user,
+    backend,
+    beginCreateUndo,
+    readonlyProjection,
+  )
 }

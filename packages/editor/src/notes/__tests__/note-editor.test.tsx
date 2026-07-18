@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { BlockNoteEditor } from '@blocknote/core'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import {
@@ -7,7 +7,12 @@ import {
   generateUuidV7,
   isUuidV7,
 } from '../../resources/domain-id'
-import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../document/headless-yjs'
+import {
+  NOTE_YJS_FRAGMENT,
+  noteBlocksToYDoc,
+  noteYDocToBlocks,
+  replaceNoteYjsDocument,
+} from '../document/headless-yjs'
 import { NoteEditor } from '../note-editor'
 import { EPHEMERAL_NOTE_SCROLL } from '../note-scroll-persistence'
 import { insertNoteValueFromSlashMenu } from '../slash-menu/value-slash-menu'
@@ -76,6 +81,35 @@ describe('NoteEditor', () => {
 
     expect(await screen.findByRole('textbox', { name: 'Live viewer' })).toHaveTextContent('Value0')
     createEditor.mockRestore()
+  })
+
+  it('replaces a mounted readonly projection without recreating its document', async () => {
+    const document = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Visible before' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const projection = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Visible after' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const view = render(
+      <NoteEditor
+        document={document}
+        label="Projected note"
+        mode="view"
+        scroll={EPHEMERAL_NOTE_SCROLL}
+      />,
+    )
+    const editor = await screen.findByRole('textbox', { name: 'Projected note' })
+    expect(editor).toHaveTextContent('Visible before')
+
+    act(() => replaceNoteYjsDocument(document, projection, NOTE_YJS_FRAGMENT))
+
+    await waitFor(() => expect(editor).toHaveTextContent('Visible after'))
+    expect(editor).not.toHaveTextContent('Visible before')
+    view.unmount()
+    projection.destroy()
+    document.destroy()
   })
 
   it('switches presentation mode without recreating the editor or document', async () => {

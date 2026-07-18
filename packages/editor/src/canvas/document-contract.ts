@@ -310,6 +310,23 @@ export function createCanvasDocumentDoc(content: CanvasDocumentContent): Y.Doc {
   return doc
 }
 
+export function replaceCanvasDocumentContent(
+  doc: Y.Doc,
+  content: CanvasDocumentContent,
+  origin?: unknown,
+): void {
+  if (!canvasContentWithinWorkload(content)) {
+    throw new TypeError('Canvas document exceeds the workload contract')
+  }
+  const { edgesMap, nodesMap } = getCanvasDocumentMaps(doc)
+  doc.transact(() => {
+    nodesMap.clear()
+    edgesMap.clear()
+    content.nodes.forEach((node) => nodesMap.set(node.id, createCanvasNodeMap(node)))
+    content.edges.forEach((edge) => edgesMap.set(edge.id, createCanvasEdgeMap(edge)))
+  }, origin)
+}
+
 export function readCanvasDocumentContent(doc: Y.Doc): {
   edges: Array<CanvasDocumentEdge>
   nodes: Array<CanvasDocumentNode>

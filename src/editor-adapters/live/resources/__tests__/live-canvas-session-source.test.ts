@@ -47,6 +47,80 @@ function applyCanvasContentUpdate(document: Y.Doc, content: CanvasDocumentConten
 }
 
 describe('LiveCanvasSessionSource', () => {
+  it('does not expose persistence or presence paths from a readonly projection', async () => {
+    const campaignId = testDomainId('campaign', 'readonly-canvas-campaign')
+    const memberId = testDomainId('campaignMember', 'readonly-canvas-member')
+    const resourceId = testDomainId('resource', 'readonly-canvas-resource')
+    const firstNodeId = testDomainId('canvasNode', 'readonly-canvas-first-node')
+    const secondNodeId = testDomainId('canvasNode', 'readonly-canvas-second-node')
+    const document = createCanvasDocumentDoc({
+      nodes: [{ id: firstNodeId, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+    })
+    const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    document.destroy()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const save = vi.fn()
+    const heartbeatPresence = vi.fn()
+    const watchPresence = vi.fn(() => () => undefined)
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      memberId,
+      collaborationUser,
+      {
+        ...presenceBackend(),
+        heartbeatPresence,
+        watchPresence,
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, updateSnapshot) => {
+          apply = updateSnapshot
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+      true,
+    )
+    source.subscribe(resourceId, () => {})
+    apply({ status: 'ready', update, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected readonly projection')
+
+    applyCanvasContentUpdate(ready.session.document, {
+      nodes: [{ id: firstNodeId, type: 'text', position: { x: 10, y: 10 }, data: {} }],
+      edges: [],
+    })
+    const replacement = createCanvasDocumentDoc({
+      nodes: [{ id: secondNodeId, type: 'text', position: { x: 20, y: 20 }, data: {} }],
+      edges: [],
+    })
+    const replacementUpdate = Uint8Array.from(Y.encodeStateAsUpdate(replacement)).buffer
+    replacement.destroy()
+    const replacementVersion = {
+      ...version,
+      revision: 2,
+      digest: 'b'.repeat(64),
+    }
+    apply({ status: 'ready', update: replacementUpdate, version: replacementVersion })
+    const replaced = source.get(resourceId)
+    if (replaced.status !== 'ready') throw new TypeError('Expected replacement projection')
+
+    expect(replaced.session).toBe(ready.session)
+    expect(readCanvasDocumentContent(replaced.session.document).nodes).toEqual([
+      expect.objectContaining({ id: secondNodeId }),
+    ])
+    await expect(ready.session.flush()).resolves.toEqual({
+      status: 'completed',
+      version: replacementVersion,
+    })
+    expect(save).not.toHaveBeenCalled()
+    expect(heartbeatPresence).not.toHaveBeenCalled()
+    expect(watchPresence).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
   it('loads an unopened canvas once for native export without a subscription', async () => {
     sessionStorage.clear()
     const campaignId = testDomainId('campaign', 'canvas-export-campaign')

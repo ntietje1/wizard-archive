@@ -60,6 +60,16 @@ export function noteYDocToBlocks(doc: Y.Doc, fragment: string): Array<NoteBlock>
   }
 }
 
+export function replaceNoteYjsDocument(
+  target: Y.Doc,
+  source: Y.Doc,
+  fragment: string,
+  origin?: unknown,
+): void {
+  noteYDocToBlocks(source, fragment)
+  replaceNoteFragment(target, source, fragment, origin)
+}
+
 export function canonicalizeNoteYjsDocument(
   doc: Y.Doc,
   fragment: string,
@@ -86,26 +96,37 @@ export function canonicalizeNoteYjsDocument(
 
   const canonical = noteBlocksToYDoc(blocks, fragment)
   try {
-    const source = canonical.getXmlFragment(fragment)
-    const target = doc.getXmlFragment(fragment)
-    const content = source
-      .toArray()
-      .filter(
-        (item): item is Y.XmlElement | Y.XmlText =>
-          item instanceof Y.XmlElement || item instanceof Y.XmlText,
-      )
-    if (content.length !== source.length) return null
-    doc.transact(() => {
-      target.delete(0, target.length)
-      target.insert(
-        0,
-        content.map((item) => item.clone()),
-      )
-    }, origin)
+    replaceNoteFragment(doc, canonical, fragment, origin)
   } finally {
     canonical.destroy()
   }
   return blocks
+}
+
+function replaceNoteFragment(
+  targetDocument: Y.Doc,
+  sourceDocument: Y.Doc,
+  fragment: string,
+  origin: unknown,
+): void {
+  const source = sourceDocument.getXmlFragment(fragment)
+  const content = source
+    .toArray()
+    .filter(
+      (item): item is Y.XmlElement | Y.XmlText =>
+        item instanceof Y.XmlElement || item instanceof Y.XmlText,
+    )
+  if (content.length !== source.length) {
+    throw new InvalidNoteYjsDocumentError('Note fragment contains unsupported content')
+  }
+  const target = targetDocument.getXmlFragment(fragment)
+  targetDocument.transact(() => {
+    target.delete(0, target.length)
+    target.insert(
+      0,
+      content.map((item) => item.clone()),
+    )
+  }, origin)
 }
 
 function normalizeNoteBlockIdentities(blocks: Array<Record<string, unknown>>): {
