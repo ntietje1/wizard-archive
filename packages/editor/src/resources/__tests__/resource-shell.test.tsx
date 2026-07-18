@@ -396,6 +396,52 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('keeps the upload control pending without projecting a transient file', async () => {
+    const { core } = await shellRuntime(true)
+    const files = core.runtime.content.files
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const controlledFiles: typeof files = {
+      get: (resourceId) => files.get(resourceId),
+      subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
+      export: (resourceId) => files.export(resourceId),
+      executeTransfer: async (...args) => {
+        await gate
+        return await files.executeTransfer(...args)
+      },
+      replace: (resourceId, expectedVersion, source) =>
+        files.replace(resourceId, expectedVersion, source),
+      dispose: () => files.dispose(),
+    }
+    const runtime = {
+      ...core.runtime,
+      content: {
+        ...core.runtime.content,
+        files: controlledFiles,
+      },
+    }
+    render(<ResourceShell ariaLabel="Pending upload" runtime={runtime} workspaceName="DM view" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
+    const uploadButton = screen.getByRole('menuitem', { name: 'Upload file' })
+    fireEvent.change(screen.getByLabelText('Create resource: choose file'), {
+      target: { files: [new File(['pending'], 'pending.txt', { type: 'text/plain' })] },
+    })
+
+    expect(uploadButton).toHaveAttribute('aria-busy', 'true')
+    expect(uploadButton).toBeDisabled()
+    expect(screen.queryByText('pending.txt')).not.toBeInTheDocument()
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    release()
+
+    expect(await screen.findByText('File uploaded')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    core.dispose()
+  })
+
   it('keeps the create surface pending until the completed receipt opens its resource', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
     if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')

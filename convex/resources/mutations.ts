@@ -57,7 +57,7 @@ import {
   heartbeatResourcePresence as heartbeatResourcePresenceFn,
   updateResourcePresence as updateResourcePresenceFn,
 } from './functions/resourcePresence'
-import { operationIdValidator, resourceIdValidator } from './validators'
+import { importJobIdValidator, operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { executeResourceAccessCommand as executeResourceAccessCommandFn } from './functions/executeResourceAccessCommand'
 import { executeNoteBlockAccessCommand as executeNoteBlockAccessCommandFn } from './functions/executeNoteBlockAccessCommand'
@@ -79,6 +79,14 @@ import {
   appendResourceSourcePathAlias,
   findResourceSourcePathAlias,
 } from './functions/resourceCatalogMetadata'
+import { getUserUploadSession } from '../storage/functions/getUserUploadSession'
+import {
+  beginPlainFileTransfer as beginPlainFileTransferFn,
+  cancelPlainFileTransfer as cancelPlainFileTransferFn,
+  settlePlainFileTransfer,
+  validatePlainFileTransferCommit,
+} from './functions/plainFileTransfer'
+import type { PlainFileTransferStartResult } from './functions/plainFileTransfer'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -94,7 +102,9 @@ type StoredVersionStamp = Infer<typeof versionStampValidator>
 type StoredSourcePathAlias = Infer<typeof sourcePathAliasValidator>
 
 type FileResourceCreationArgs = Readonly<{
+  jobId: string
   operationId: string
+  sourceDigest: string
   command: StoredResourceStructureCommand
   alias: StoredSourcePathAlias
   metadataVersion: StoredVersionStamp
@@ -117,6 +127,13 @@ type FileCreationIdentity = Readonly<{
   userId: Id<'userProfiles'>
   version: VersionStamp
 }>
+
+const plainTransferStartResultValidator = v.union(
+  v.object({ status: v.literal('ready') }),
+  v.object({ status: v.literal('cancelled') }),
+  v.object({ status: v.literal('completed') }),
+  v.object({ status: v.literal('rejected') }),
+)
 
 function existingFileContentMatches(
   content: Doc<'resourceFileContents'>,
@@ -551,9 +568,46 @@ export const disconnectResourcePresence = campaignMutation({
     ),
 })
 
+export const beginPlainFileTransfer = campaignInternalMutation({
+  args: {
+    jobId: importJobIdValidator,
+    operationId: operationIdValidator,
+    destinationParentId: v.nullable(resourceIdValidator),
+    sourceRootId: v.string(),
+    rawPath: v.string(),
+    normalizedPath: v.string(),
+  },
+  returns: plainTransferStartResultValidator,
+  handler: async (ctx, args): Promise<PlainFileTransferStartResult> =>
+    await beginPlainFileTransferFn(ctx, args),
+})
+
+export const cancelPlainFileTransfer = dmMutation({
+  args: {
+    jobId: importJobIdValidator,
+    operationId: operationIdValidator,
+    destinationParentId: v.nullable(resourceIdValidator),
+    uploadSessionId: v.id('fileStorage'),
+  },
+  returns: plainTransferStartResultValidator,
+  handler: async (ctx, args): Promise<PlainFileTransferStartResult> => {
+    const upload = await getUserUploadSession(ctx, args.uploadSessionId, ctx.membership.userId)
+    if (!upload?.originalFileName) return { status: 'rejected' }
+    return await cancelPlainFileTransferFn(ctx, {
+      jobId: args.jobId,
+      operationId: args.operationId,
+      destinationParentId: args.destinationParentId,
+      sourceRootId: 'selected-file',
+      rawPath: upload.originalFileName,
+    })
+  },
+})
+
 export const commitFileResourceCreation = campaignInternalMutation({
   args: {
+    jobId: importJobIdValidator,
     operationId: operationIdValidator,
+    sourceDigest: v.string(),
     command: resourceStructureCommandValidator,
     alias: sourcePathAliasValidator,
     metadataVersion: versionStampValidator,
@@ -562,8 +616,42 @@ export const commitFileResourceCreation = campaignInternalMutation({
     version: versionStampValidator,
   },
   returns: resourceStructureCommandResultValidator,
-  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
-    await commitFileResourceCreationFn(ctx, args),
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
+    const destinationParentId =
+      args.command.type === 'create'
+        ? args.command.parentId === null
+          ? null
+          : assertDomainId(DOMAIN_ID_KIND.resource, args.command.parentId)
+        : undefined
+    if (destinationParentId === undefined) {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
+    const alias = fileCreationAlias(args.alias)
+    const job = await validatePlainFileTransferCommit(ctx, {
+      jobId: args.jobId,
+      operationId: args.operationId,
+      destinationParentId,
+      sourceDigest: args.sourceDigest,
+      alias,
+    })
+    if (!job) return { status: 'rejected', reason: 'invalid_command' }
+    const result = await commitFileResourceCreationFn(ctx, args)
+    await settlePlainFileTransfer(ctx, job, {
+      sourceDigest: args.sourceDigest,
+      alias,
+      outcome:
+        result.status === 'completed' && result.receipt.result.type === 'created'
+          ? {
+              status: 'completed',
+              resourceId: assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId),
+            }
+          : {
+              status: 'rejected',
+              reason: result.status === 'completed' ? 'invalid_response' : result.reason,
+            },
+    })
+    return result
+  },
 })
 
 async function commitFileResourceCreationFn(

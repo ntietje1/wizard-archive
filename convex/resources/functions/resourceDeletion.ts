@@ -216,7 +216,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'accessOperations',
   'bookmarkOperations',
   'tombstones',
-  'aliases',
+  'transferMetadata',
   'assetsFolders',
   'operations',
   'noteContents',
@@ -242,6 +242,8 @@ type CampaignResourceRow =
   | Doc<'resourceAccessOperations'>
   | Doc<'resourceBookmarkOperations'>
   | Doc<'resourceTombstones'>
+  | Doc<'resourceTransferEntries'>
+  | Doc<'resourceTransferJobs'>
   | Doc<'resourceSourcePathAliases'>
   | Doc<'resourceAssetsFolders'>
   | Doc<'resourceOperations'>
@@ -332,11 +334,8 @@ async function loadCampaignResourceDeletionBatch(
         .query('resourceTombstones')
         .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'aliases':
-      return await ctx.db
-        .query('resourceSourcePathAliases')
-        .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'transferMetadata':
+      return await loadCampaignTransferMetadataDeletionBatch(ctx, campaignId)
     case 'assetsFolders':
       return await ctx.db
         .query('resourceAssetsFolders')
@@ -378,4 +377,28 @@ async function loadCampaignResourceDeletionBatch(
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
   }
+}
+
+async function loadCampaignTransferMetadataDeletionBatch(
+  ctx: ResourceDeletionCtx,
+  campaignId: CampaignId,
+): Promise<Array<CampaignResourceRow>> {
+  const entries = await ctx.db
+    .query('resourceTransferEntries')
+    .withIndex('by_campaign_and_job', (query) => query.eq('campaignUuid', campaignId))
+    .take(CAMPAIGN_DELETION_BATCH_SIZE)
+  const rows: Array<CampaignResourceRow> = [...entries]
+  if (rows.length === CAMPAIGN_DELETION_BATCH_SIZE) return rows
+  const jobs = await ctx.db
+    .query('resourceTransferJobs')
+    .withIndex('by_campaign_and_importJobUuid', (query) => query.eq('campaignUuid', campaignId))
+    .take(CAMPAIGN_DELETION_BATCH_SIZE - rows.length)
+  rows.push(...jobs)
+  if (rows.length === CAMPAIGN_DELETION_BATCH_SIZE) return rows
+  const aliases = await ctx.db
+    .query('resourceSourcePathAliases')
+    .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
+    .take(CAMPAIGN_DELETION_BATCH_SIZE - rows.length)
+  rows.push(...aliases)
+  return rows
 }

@@ -26,10 +26,11 @@ import { loadResourcePresence as loadResourcePresenceFn } from './functions/reso
 import { loadCanvasContent as loadCanvasContentFn } from './functions/canvasContent'
 import { loadFileContent as loadFileContentFn } from './functions/fileContent'
 import { loadMapContent as loadMapContentFn } from './functions/mapContent'
-import { resourceIdValidator } from './validators'
+import { importJobIdValidator, resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
 import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
+import { loadPlainFileTransfer as loadPlainFileTransferFn } from './functions/plainFileTransfer'
 import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 import { projectResourceAccess } from './functions/resourceAccess'
 import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
@@ -59,6 +60,37 @@ const authorizedResourceSearchValidator = v.object({
   results: v.array(workspaceSearchResultValidator),
   snapshot: authorizedResourceSnapshotValidator,
 })
+
+const plainFileTransferSnapshotValidator = v.union(
+  v.object({ status: v.literal('unavailable') }),
+  v.object({
+    status: v.union(
+      v.literal('pending'),
+      v.literal('completed'),
+      v.literal('cancelled'),
+      v.literal('rejected'),
+    ),
+    jobId: importJobIdValidator,
+    operationId: v.string(),
+    destinationParentId: v.nullable(resourceIdValidator),
+    sourceDigest: v.nullable(v.string()),
+    rejectionReason: v.nullable(v.string()),
+    entry: v.object({
+      sourceRootId: v.string(),
+      rawPath: v.string(),
+      normalizedPath: v.string(),
+      sourceDigest: v.nullable(v.string()),
+      resourceId: v.nullable(resourceIdValidator),
+      status: v.union(
+        v.literal('pending'),
+        v.literal('completed'),
+        v.literal('cancelled'),
+        v.literal('rejected'),
+      ),
+      rejectionReason: v.nullable(v.string()),
+    }),
+  }),
+)
 
 type StoredAuthorizedResourceCollectionPage = Infer<
   typeof authorizedResourceCollectionPageValidator
@@ -165,6 +197,13 @@ export const loadResourceProjectionAvailability = authQuery({
       participant.status === CAMPAIGN_MEMBER_STATUS.Accepted
     )
   },
+})
+
+export const loadPlainFileTransfer = dmQuery({
+  args: { jobId: importJobIdValidator },
+  returns: plainFileTransferSnapshotValidator,
+  handler: async (ctx, args) =>
+    await loadPlainFileTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
 })
 
 export const loadResourceAccess = dmQuery({

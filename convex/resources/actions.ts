@@ -12,6 +12,7 @@ import type { PlainTransferSourceEntry } from '@wizard-archive/editor/resources/
 import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { normalizeSourcePath } from '@wizard-archive/editor/resources/source-path-alias'
 import { TRANSFER_JOB_REQUEST_VERSION } from '@wizard-archive/editor/resources/transfer-job-contract'
 import type {
   PlainTransferJobRequest,
@@ -54,14 +55,26 @@ async function loadFileUpload(
   campaignId: string,
   uploadSessionId: Id<'fileStorage'>,
 ): Promise<LoadedFileUpload | null> {
-  const upload: StoredFileUpload = await ctx.runQuery(
-    internal.resources.fileUpload.prepareFileUpload,
-    { campaignId, uploadSessionId },
-  )
+  const upload = await prepareFileUpload(ctx, campaignId, uploadSessionId)
+  const bytes = await loadFileUploadBytes(ctx, upload)
+  return { bytes, upload }
+}
+
+async function prepareFileUpload(
+  ctx: ActionCtx,
+  campaignId: string,
+  uploadSessionId: Id<'fileStorage'>,
+): Promise<StoredFileUpload> {
+  return await ctx.runQuery(internal.resources.fileUpload.prepareFileUpload, {
+    campaignId,
+    uploadSessionId,
+  })
+}
+
+async function loadFileUploadBytes(ctx: ActionCtx, upload: StoredFileUpload): Promise<Uint8Array> {
   const blob = await ctx.storage.get(upload.storageId)
   if (!blob) throw new TypeError('Uploaded file bytes are unavailable')
-  const bytes = new Uint8Array(await blob.arrayBuffer())
-  return { bytes, upload }
+  return new Uint8Array(await blob.arrayBuffer())
 }
 
 async function loadClassifiedFileUpload(
@@ -89,25 +102,44 @@ export const executePlainFileTransfer = action({
   },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
-    const upload = await loadFileUpload(ctx, args.campaignId, args.uploadSessionId)
-    if (!upload) return { status: 'rejected', reason: 'invalid_command' }
+    const upload = await prepareFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    let normalizedPath: string
+    try {
+      normalizedPath = normalizeSourcePath(upload.originalFileName)
+    } catch {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
+    const start: { status: 'cancelled' | 'completed' | 'ready' | 'rejected' } =
+      await ctx.runMutation(internal.resources.mutations.beginPlainFileTransfer, {
+        campaignId: upload.campaignId,
+        jobId: args.jobId,
+        operationId: args.operationId,
+        destinationParentId: args.destinationParentId,
+        sourceRootId: 'selected-file',
+        rawPath: upload.originalFileName,
+        normalizedPath,
+      })
+    if (start.status === 'cancelled' || start.status === 'rejected') {
+      return { status: 'rejected', reason: 'invalid_command' }
+    }
+    const bytes = await loadFileUploadBytes(ctx, upload)
     const sources: ReadonlyArray<TransferSourceDescriptor> = [
-      { id: 'selected-file', kind: 'file', name: upload.upload.originalFileName },
+      { id: 'selected-file', kind: 'file', name: upload.originalFileName },
     ]
     const entries: ReadonlyArray<PlainTransferSourceEntry> = [
       {
         sourceId: 'selected-file',
-        path: upload.upload.originalFileName,
+        path: upload.originalFileName,
         type: 'file',
-        bytes: upload.bytes,
+        bytes,
       },
     ]
     const request: PlainTransferJobRequest = {
       version: TRANSFER_JOB_REQUEST_VERSION,
       jobId: assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId),
       operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
-      actorId: assertDomainId(DOMAIN_ID_KIND.campaignMember, upload.upload.actorId),
-      destinationCampaignId: assertDomainId(DOMAIN_ID_KIND.campaign, upload.upload.campaignUuid),
+      actorId: assertDomainId(DOMAIN_ID_KIND.campaignMember, upload.actorId),
+      destinationCampaignId: assertDomainId(DOMAIN_ID_KIND.campaign, upload.campaignUuid),
       destinationParentId:
         args.destinationParentId === null
           ? null
@@ -129,8 +161,10 @@ export const executePlainFileTransfer = action({
       return { status: 'rejected', reason: 'invalid_command' }
     }
     return await ctx.runMutation(internal.resources.mutations.commitFileResourceCreation, {
-      campaignId: upload.upload.campaignId,
+      campaignId: upload.campaignId,
+      jobId: args.jobId,
       operationId: args.operationId,
+      sourceDigest: planned.inventory.sourceDigest,
       command: {
         type: 'create',
         resourceId: resource.id,

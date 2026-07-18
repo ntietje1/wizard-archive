@@ -402,7 +402,7 @@ function fileSource(
   replace: FileContentSource['replace'] = vi.fn(),
 ): FileContentSource {
   return {
-    create: vi.fn(),
+    executeTransfer: vi.fn(),
     dispose: vi.fn(),
     export: exportFile,
     get: vi.fn(() => ({ status: 'loading' as const })),

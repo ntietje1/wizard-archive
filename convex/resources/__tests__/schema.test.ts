@@ -9,6 +9,8 @@ describe('canonical resource schema', () => {
       expect.objectContaining({
         resources: expect.anything(),
         resourceTombstones: expect.anything(),
+        resourceTransferEntries: expect.anything(),
+        resourceTransferJobs: expect.anything(),
         resourceSourcePathAliases: expect.anything(),
         resourceAssetsFolders: expect.anything(),
         resourceOperations: expect.anything(),

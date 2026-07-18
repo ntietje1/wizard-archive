@@ -34,6 +34,7 @@ import type { LiveResourceContentAuthority } from './live-resource-content-autho
 
 type CreateFileArgs = FunctionArgs<typeof api.resources.actions.executePlainFileTransfer>
 type CreateFileResult = FunctionReturnType<typeof api.resources.actions.executePlainFileTransfer>
+type CancelFileArgs = FunctionArgs<typeof api.resources.mutations.cancelPlainFileTransfer>
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 type ReplaceFileArgs = FunctionArgs<typeof api.resources.actions.replaceFileContent>
 type ReplaceFileResult = FunctionReturnType<typeof api.resources.actions.replaceFileContent>
@@ -42,6 +43,7 @@ type FileSnapshot = FunctionReturnType<typeof api.resources.queries.loadFileCont
 type LiveFileContentBackend = Readonly<{
   load(resourceId: ResourceId): Promise<FileSnapshot>
   watch(resourceId: ResourceId, apply: (snapshot: FileSnapshot) => void): () => void
+  cancel(args: CancelFileArgs): Promise<void>
   create(args: CreateFileArgs): Promise<CreateFileResult>
   download(resourceId: ResourceId): Promise<FileDownloadResult>
   discard(sessionId: Id<'fileStorage'>): Promise<void>
@@ -148,7 +150,7 @@ export function createLiveFileContentSource(
         mediaType: state.content.mediaType,
       }
     },
-    create: async (intent, source) => {
+    executeTransfer: async (intent, source, signal) => {
       if (intent.campaignId !== campaignId) return invalidCreateDelivery()
       const existing = pending.get(intent.jobId)
       if (
@@ -161,6 +163,20 @@ export function createLiveFileContentSource(
       }
       const undoRecording = beginCreateUndo()
       let current = existing
+      const cancelCurrent = async () => {
+        if (!current) return
+        await backend.cancel({
+          campaignId,
+          jobId: intent.jobId,
+          operationId: intent.operationId,
+          destinationParentId: intent.destinationParentId,
+          uploadSessionId: current.sessionId,
+        })
+      }
+      const cancel = () => {
+        void cancelCurrent().catch(() => undefined)
+      }
+      signal?.addEventListener('abort', cancel, { once: true })
       try {
         if (!current) {
           current = {
@@ -170,6 +186,13 @@ export function createLiveFileContentSource(
             source,
           }
           pending.set(intent.jobId, current)
+        }
+        if (signal?.aborted) {
+          pending.delete(intent.jobId)
+          await cancelCurrent().catch(() => undefined)
+          await backend.discard(current.sessionId)
+          undoRecording.abandon()
+          return invalidCreateDelivery()
         }
         const delivery = deliverExpectedPlainTransferResult(
           readLiveStructureResult(
@@ -204,6 +227,8 @@ export function createLiveFileContentSource(
         )
       } catch {
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
+      } finally {
+        signal?.removeEventListener('abort', cancel)
       }
     },
     replace: async (resourceId, expectedVersion, source) => {

@@ -36,6 +36,7 @@ describe('LiveFileContentSource', () => {
     const source = createSource(
       testDomainId('campaign', 'readonly-file-campaign'),
       {
+        cancel: vi.fn(),
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         create: vi.fn(),
@@ -74,6 +75,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         watch: (_resourceId, update) => {
           apply = update
@@ -149,6 +151,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load: () => Promise.resolve(snapshot),
         watch: vi.fn(() => () => undefined),
         create: vi.fn(),
@@ -192,6 +195,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load: () =>
           Promise.resolve({
             status: 'ready',
@@ -248,6 +252,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         create,
@@ -265,7 +270,7 @@ describe('LiveFileContentSource', () => {
     }
 
     await expect(
-      source.create(
+      source.executeTransfer(
         { campaignId, jobId: importJobId, operationId, destinationParentId: null },
         fileSource,
       ),
@@ -305,6 +310,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         create: vi.fn(() =>
@@ -334,7 +340,7 @@ describe('LiveFileContentSource', () => {
     )
 
     await expect(
-      source.create(
+      source.executeTransfer(
         {
           campaignId,
           jobId: testDomainId('importJob', 'invalid-create-file'),
@@ -354,6 +360,128 @@ describe('LiveFileContentSource', () => {
     expect(discard).toHaveBeenCalledWith(sessionId)
     expect(recording.abandon).toHaveBeenCalledOnce()
     expect(recording.completed).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
+  it('cancels the durable transfer job when an in-flight request is aborted', async () => {
+    const campaignId = testDomainId('campaign', 'cancel-file-campaign')
+    const jobId = testDomainId('importJob', 'cancel-file')
+    const operationId = testDomainId('operation', 'cancel-file')
+    const sessionId = 'cancel-file-session' as Id<'fileStorage'>
+    let resolveCreate!: (
+      result: FunctionReturnType<typeof api.resources.actions.executePlainFileTransfer>,
+    ) => void
+    const create = vi.fn(
+      () =>
+        new Promise<FunctionReturnType<typeof api.resources.actions.executePlainFileTransfer>>(
+          (resolve) => {
+            resolveCreate = resolve
+          },
+        ),
+    )
+    const cancel = vi.fn(() => Promise.resolve())
+    const discard = vi.fn(() => Promise.resolve())
+    const recording = { abandon: vi.fn(), completed: vi.fn() }
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        cancel,
+        create,
+        discard,
+        download: vi.fn(),
+        load: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload: vi.fn(() => Promise.resolve(sessionId)),
+        watch: vi.fn(() => () => undefined),
+      },
+      () => recording,
+    )
+    const controller = new AbortController()
+    const transfer = source.executeTransfer(
+      { campaignId, jobId, operationId, destinationParentId: null },
+      { bytes: new TextEncoder().encode('cancel me'), fileName: 'cancel.txt' },
+      controller.signal,
+    )
+    await vi.waitFor(() => expect(create).toHaveBeenCalledOnce())
+
+    controller.abort()
+    await vi.waitFor(() =>
+      expect(cancel).toHaveBeenCalledWith({
+        campaignId,
+        jobId,
+        operationId,
+        destinationParentId: null,
+        uploadSessionId: sessionId,
+      }),
+    )
+    resolveCreate({ status: 'rejected', reason: 'invalid_command' })
+
+    await expect(transfer).resolves.toEqual({
+      status: 'received',
+      result: { status: 'rejected', reason: 'invalid_command' },
+    })
+    expect(discard).toHaveBeenCalledWith(sessionId)
+    expect(recording.abandon).toHaveBeenCalledOnce()
+    source.dispose()
+  })
+
+  it('records cancellation when abort finishes before the upload session exists', async () => {
+    const campaignId = testDomainId('campaign', 'cancel-upload-campaign')
+    const jobId = testDomainId('importJob', 'cancel-upload')
+    const operationId = testDomainId('operation', 'cancel-upload')
+    const sessionId = 'cancel-upload-session' as Id<'fileStorage'>
+    let resolveUpload!: (sessionId: Id<'fileStorage'>) => void
+    const upload = vi.fn(
+      () =>
+        new Promise<Id<'fileStorage'>>((resolve) => {
+          resolveUpload = resolve
+        }),
+    )
+    const cancel = vi.fn(() => Promise.resolve())
+    const create = vi.fn()
+    const discard = vi.fn(() => Promise.resolve())
+    const recording = { abandon: vi.fn(), completed: vi.fn() }
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        cancel,
+        create,
+        discard,
+        download: vi.fn(),
+        load: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload,
+        watch: vi.fn(() => () => undefined),
+      },
+      () => recording,
+    )
+    const controller = new AbortController()
+    const transfer = source.executeTransfer(
+      { campaignId, jobId, operationId, destinationParentId: null },
+      { bytes: new TextEncoder().encode('cancel upload'), fileName: 'cancel.txt' },
+      controller.signal,
+    )
+    await vi.waitFor(() => expect(upload).toHaveBeenCalledOnce())
+
+    controller.abort()
+    resolveUpload(sessionId)
+
+    await expect(transfer).resolves.toEqual({
+      status: 'received',
+      result: { status: 'rejected', reason: 'invalid_command' },
+    })
+    expect(cancel).toHaveBeenCalledWith({
+      campaignId,
+      jobId,
+      operationId,
+      destinationParentId: null,
+      uploadSessionId: sessionId,
+    })
+    expect(create).not.toHaveBeenCalled()
+    expect(discard).toHaveBeenCalledWith(sessionId)
+    expect(recording.abandon).toHaveBeenCalledOnce()
     source.dispose()
   })
 
@@ -390,6 +518,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load,
         watch: vi.fn(() => () => undefined),
         create: vi.fn(),
@@ -438,6 +567,7 @@ describe('LiveFileContentSource', () => {
     const source = createLiveFileContentSource(
       campaignId,
       {
+        cancel: vi.fn(),
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         create: vi.fn(),

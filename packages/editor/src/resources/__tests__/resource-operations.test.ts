@@ -93,7 +93,9 @@ describe('resource application workflows', () => {
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
     const files = core.runtime.content.files
-    const create = vi.fn((...args: Parameters<typeof files.create>) => files.create(...args))
+    const executeTransfer = vi.fn((...args: Parameters<typeof files.executeTransfer>) =>
+      files.executeTransfer(...args),
+    )
     const runtime = {
       ...core.runtime,
       content: {
@@ -102,7 +104,7 @@ describe('resource application workflows', () => {
           get: (resourceId) => files.get(resourceId),
           subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
           export: (resourceId) => files.export(resourceId),
-          create,
+          executeTransfer,
           replace: (resourceId, expectedVersion, source) =>
             files.replace(resourceId, expectedVersion, source),
           dispose: () => files.dispose(),
@@ -117,8 +119,8 @@ describe('resource application workflows', () => {
     )
 
     expect(result).toMatchObject({ status: 'completed' })
-    expect(create).toHaveBeenCalledOnce()
-    const [intent, source] = create.mock.calls[0]!
+    expect(executeTransfer).toHaveBeenCalledOnce()
+    const [intent, source] = executeTransfer.mock.calls[0]!
     expect(intent).toMatchObject({
       campaignId,
       destinationParentId: null,

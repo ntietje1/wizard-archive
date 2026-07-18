@@ -852,6 +852,39 @@ export const resourceTables = {
       'normalizedPath',
     ]),
 
+  resourceTransferJobs: defineTable({
+    campaignUuid: campaignIdValidator,
+    importJobUuid: importJobIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    operationUuid: operationIdValidator,
+    destinationParentUuid: v.nullable(resourceIdValidator),
+    mode: v.literal('plain_resources'),
+    sourceDigest: v.nullable(v.string()),
+    status: literals('pending', 'completed', 'cancelled', 'rejected'),
+    rejectionReason: v.nullable(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_campaign_and_importJobUuid', ['campaignUuid', 'importJobUuid']),
+
+  resourceTransferEntries: defineTable({
+    campaignUuid: campaignIdValidator,
+    importJobUuid: importJobIdValidator,
+    sourceRootId: v.string(),
+    rawPath: v.string(),
+    normalizedPath: v.string(),
+    sourceDigest: v.nullable(v.string()),
+    resourceUuid: v.nullable(resourceIdValidator),
+    status: literals('pending', 'completed', 'cancelled', 'rejected'),
+    rejectionReason: v.nullable(v.string()),
+  })
+    .index('by_campaign_and_job', ['campaignUuid', 'importJobUuid'])
+    .index('by_campaign_and_job_and_source_and_path', [
+      'campaignUuid',
+      'importJobUuid',
+      'sourceRootId',
+      'normalizedPath',
+    ]),
+
   resourceAssetsFolders: defineTable({
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,

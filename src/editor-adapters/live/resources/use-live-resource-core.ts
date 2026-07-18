@@ -212,6 +212,10 @@ function createScopedLiveResourceRuntime(
         })
         return subscribeToWatch(watch, apply)
       },
+      cancel: (args) =>
+        write(() => convex.mutation(api.resources.mutations.cancelPlainFileTransfer, args)).then(
+          () => undefined,
+        ),
       create: (args) =>
         write(() => convex.action(api.resources.actions.executePlainFileTransfer, args)),
       download: (resourceId) =>

@@ -265,10 +265,12 @@ class InMemoryFileContentSource
     }
   }
 
-  async create(
+  async executeTransfer(
     intent: PlainFileTransferIntent,
     source: FileResourceSource,
+    signal?: AbortSignal,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+    if (signal?.aborted) return invalidCreateDelivery()
     if (intent.campaignId !== this.campaignId) return invalidCreateDelivery()
     const sources: ReadonlyArray<TransferSourceDescriptor> = [
       { id: 'selected-file', kind: 'file', name: source.fileName },
@@ -289,6 +291,7 @@ class InMemoryFileContentSource
       sources,
     }
     const planned = await buildPlainTransferInventory({ request, entries })
+    if (signal?.aborted) return invalidCreateDelivery()
     if (planned.status === 'rejected') return invalidCreateDelivery()
     const resource = planned.inventory.resources[0]
     if (

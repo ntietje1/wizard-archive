@@ -308,9 +308,10 @@ export interface FileContentSource {
   get(resourceId: ResourceId): FileContentState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
-  create(
+  executeTransfer(
     intent: PlainFileTransferIntent,
     source: FileResourceSource,
+    signal?: AbortSignal,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   replace(
     resourceId: ResourceId,

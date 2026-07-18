@@ -176,7 +176,7 @@ async function createWorkspaceFile(
   }
   return await completeWorkspaceCreation(
     { state: 'authoritative' },
-    () => runtime.content.files.create(intent, { bytes, fileName: file.name }),
+    () => runtime.content.files.executeTransfer(intent, { bytes, fileName: file.name }, signal),
     'File uploaded',
     report,
     signal,

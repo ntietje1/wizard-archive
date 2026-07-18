@@ -1181,6 +1181,41 @@ describe('deleteCampaign', () => {
         },
       })
     }
+    const transferJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.insert('resourceTransferJobs', {
+        campaignUuid: ctx.campaignDomainId,
+        importJobUuid: transferJobId,
+        actorMemberUuid: ctx.dm.memberDomainId,
+        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
+        destinationParentUuid: null,
+        mode: 'plain_resources',
+        sourceDigest: null,
+        status: 'pending',
+        rejectionReason: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+      await dbCtx.db.insert('resourceTransferEntries', {
+        campaignUuid: ctx.campaignDomainId,
+        importJobUuid: transferJobId,
+        sourceRootId: 'selected-file',
+        rawPath: 'pending.txt',
+        normalizedPath: 'pending.txt',
+        sourceDigest: null,
+        resourceUuid: null,
+        status: 'pending',
+        rejectionReason: null,
+      })
+      await dbCtx.db.insert('resourceSourcePathAliases', {
+        campaignUuid: ctx.campaignDomainId,
+        resourceUuid: resourceIds[0]!,
+        importJobUuid: transferJobId,
+        sourceRootId: 'selected-file',
+        rawPath: 'pending.txt',
+        normalizedPath: 'pending.txt',
+      })
+    })
     await createSession(t, ctx.campaignId)
     await Promise.all(
       Array.from({ length: 13 }, (_, batch) =>
@@ -1241,6 +1276,26 @@ describe('deleteCampaign', () => {
         .withIndex('by_campaignUuid', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
       expect(canvasContents).toHaveLength(0)
+
+      const transferJobs = await dbCtx.db
+        .query('resourceTransferJobs')
+        .withIndex('by_campaign_and_importJobUuid', (q) =>
+          q.eq('campaignUuid', ctx.campaignDomainId),
+        )
+        .collect()
+      expect(transferJobs).toHaveLength(0)
+
+      const transferEntries = await dbCtx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(transferEntries).toHaveLength(0)
+
+      const sourceAliases = await dbCtx.db
+        .query('resourceSourcePathAliases')
+        .withIndex('by_campaign_and_resource', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(sourceAliases).toHaveLength(0)
 
       const sessions = await dbCtx.db
         .query('sessions')
