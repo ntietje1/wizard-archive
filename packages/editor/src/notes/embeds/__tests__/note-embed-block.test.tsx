@@ -44,6 +44,22 @@ describe('NoteEmbedBlock', () => {
     expect(screen.getByRole('img', { name: 'harbor.png' })).toHaveAttribute('src', url)
   })
 
+  it('renders malformed percent escapes without changing the canonical external href', () => {
+    const url = parseSafeHttpsUrl('https://example.com/maps/truncated%E0%A4%A.png?raw=1#preview')
+    if (!url) throw new Error('Expected a safe URL')
+
+    expect(() =>
+      renderNoteEmbed(
+        { updateBlock: vi.fn() },
+        serializeAuthoredDestination({ kind: 'externalUrl', url }),
+        false,
+      ),
+    ).not.toThrow()
+
+    expect(screen.getByRole('link', { name: 'truncated%E0%A4%A.png' })).toHaveAttribute('href', url)
+    expect(screen.getByRole('img', { name: 'truncated%E0%A4%A.png' })).toHaveAttribute('src', url)
+  })
+
   it('uses the shared drop resolver and rejects recursive resource destinations', async () => {
     const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const editor = { updateBlock: vi.fn() }

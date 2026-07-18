@@ -16,6 +16,7 @@ import type { AuthoredDestinationDropResult } from '../../resources/authored-des
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import type { NoteBlockId, ResourceId } from '../../resources/domain-id'
 import type { EditorRuntime } from '../../resources/editor-runtime-contract'
+import { presentExternalUrl } from '../../resources/external-url-presentation'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import { ResourcePreviewSurface } from '../../resources/workspace/resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
@@ -440,13 +441,12 @@ function EmptyNoteEmbed({
 }
 
 function ExternalNoteEmbed({ url }: { url: SafeHttpsUrl }) {
-  const title = externalTitle(url)
-  const kind = externalMediaKind(url)
+  const { href, mediaKind, title } = presentExternalUrl(url)
   return (
     <>
       <a
         className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-2"
-        href={url}
+        href={href}
         rel="noreferrer"
         target="_blank"
       >
@@ -454,17 +454,17 @@ function ExternalNoteEmbed({ url }: { url: SafeHttpsUrl }) {
         <span className="min-w-0 truncate text-sm font-medium">{title}</span>
       </a>
       <div className="flex h-72 min-h-36 items-center justify-center overflow-hidden">
-        {kind === 'image' ? (
-          <img alt={title} className="size-full object-contain" draggable={false} src={url} />
-        ) : kind === 'audio' ? (
-          <audio className="w-full px-4" controls src={url} />
-        ) : kind === 'video' ? (
-          <video className="size-full object-contain" controls src={url} />
-        ) : kind === 'pdf' ? (
-          <iframe className="size-full border-0" src={url} title={title} />
+        {mediaKind === 'image' ? (
+          <img alt={title} className="size-full object-contain" draggable={false} src={href} />
+        ) : mediaKind === 'audio' ? (
+          <audio className="w-full px-4" controls src={href} />
+        ) : mediaKind === 'video' ? (
+          <video className="size-full object-contain" controls src={href} />
+        ) : mediaKind === 'pdf' ? (
+          <iframe className="size-full border-0" src={href} title={title} />
         ) : (
           <EmbedState>
-            <a className="text-sm underline" href={url} rel="noreferrer" target="_blank">
+            <a className="text-sm underline" href={href} rel="noreferrer" target="_blank">
               Open file
             </a>
           </EmbedState>
@@ -484,22 +484,4 @@ function EmbedState({ children }: { children: ReactNode }) {
 
 function recursiveDestination(destination: AuthoredDestination, ancestry: ReadonlySet<ResourceId>) {
   return destination.kind === 'internal' && ancestry.has(destination.target.resourceId)
-}
-
-function externalTitle(url: SafeHttpsUrl) {
-  const parsed = new URL(url)
-  return decodeURIComponent(parsed.pathname.split('/').filter(Boolean).at(-1) ?? parsed.hostname)
-}
-
-function externalMediaKind(url: SafeHttpsUrl) {
-  const extension = new URL(url).pathname.split('.').at(-1)?.toLowerCase()
-  if (
-    extension &&
-    ['apng', 'avif', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'].includes(extension)
-  ) {
-    return 'image'
-  }
-  if (extension && ['aac', 'flac', 'm4a', 'mp3', 'ogg', 'wav'].includes(extension)) return 'audio'
-  if (extension && ['m4v', 'mov', 'mp4', 'ogv', 'webm'].includes(extension)) return 'video'
-  return extension === 'pdf' ? 'pdf' : 'file'
 }

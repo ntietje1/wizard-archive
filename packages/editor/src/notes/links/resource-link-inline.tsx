@@ -6,6 +6,7 @@ import {
 import type { ResolvedAuthoredDestination } from '../../resources/authored-destination'
 import type { AuthoredDestination } from '../../resources/authored-destination-contract'
 import type { EditorRuntime } from '../../resources/editor-runtime-contract'
+import { presentExternalUrl } from '../../resources/external-url-presentation'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
 import { useNoteResourceRuntime } from '../use-note-resource-runtime'
@@ -134,7 +135,7 @@ function resolvedLabel(
   resolved: ResolvedAuthoredDestination<AuthorizedResourceSummary>,
 ) {
   if (resolved.status === 'available') return resolved.display.title
-  if (resolved.status === 'external') return resolved.url
+  if (resolved.status === 'external') return presentExternalUrl(resolved.url).title
   if (resolved.status === 'unresolved') return resolved.rawTarget || 'Unresolved link'
   if (destination.kind === 'internal') return resolved.status === 'broken' ? 'Missing link' : 'Link'
   return 'Invalid link'

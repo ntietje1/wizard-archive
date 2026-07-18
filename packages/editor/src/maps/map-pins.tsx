@@ -9,6 +9,7 @@ import type {
   MapSession,
 } from '../resources/content-session-contract'
 import type { AuthorizedResourceSummary } from '../resources/resource-index-contract'
+import { presentExternalUrl } from '../resources/external-url-presentation'
 import {
   hasWorkspaceResourceDrag,
   readWorkspaceResourceDrag,
@@ -314,7 +315,7 @@ function pinDestinationResourceId(pin: MapPin): ResourceId | null {
 
 function pinLabel(pin: MapPin, target: AuthorizedResourceSummary | null): string {
   if (target) return target.title
-  if (pin.destination.kind === 'externalUrl') return pin.destination.url
+  if (pin.destination.kind === 'externalUrl') return presentExternalUrl(pin.destination.url).title
   if (pin.destination.kind === 'unresolved') return pin.destination.rawTarget
   return 'Unavailable resource'
 }

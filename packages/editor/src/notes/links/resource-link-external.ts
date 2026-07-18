@@ -1,4 +1,5 @@
 import { parseSerializedAuthoredDestination } from '../../resources/authored-destination'
+import { presentExternalUrl } from '../../resources/external-url-presentation'
 import {
   NOTE_RESOURCE_LINK_PROP_DEFAULTS,
   noteResourceLinkPropsSchema,
@@ -13,7 +14,7 @@ export function noteResourceLinkText(props: Partial<NoteResourceLinkProps>): str
   const normalized = normalizeResourceLinkProps(props)
   if (normalized.label.trim()) return normalized.label
   const destination = parseSerializedAuthoredDestination(normalized.destination)
-  if (destination?.kind === 'externalUrl') return destination.url
+  if (destination?.kind === 'externalUrl') return presentExternalUrl(destination.url).title
   if (destination?.kind === 'unresolved') return destination.rawTarget || 'Unresolved link'
   return 'Linked resource'
 }
