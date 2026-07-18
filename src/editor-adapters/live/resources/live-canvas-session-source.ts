@@ -230,6 +230,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       version.digest === existing.version.digest
     ) {
       document.destroy()
+      this.#store.set(resourceId, { status: 'ready', session: existing })
       return
     }
     const content = readCanvasDocumentContent(document)
@@ -253,7 +254,10 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       }
       const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
       document.destroy()
-      existing.apply(update, version)
+      const decision = existing.apply(update, version)
+      if (decision !== 'conflict' && this.#sessions.get(resourceId) === existing) {
+        this.#store.set(resourceId, { status: 'ready', session: existing })
+      }
       return
     }
     let session: LiveCanvasSession

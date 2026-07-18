@@ -329,7 +329,10 @@ class LiveNoteSessionSource implements NoteSessionSource {
       return
     }
     if (session) {
-      session.apply(snapshot.update, version)
+      const decision = session.apply(snapshot.update, version)
+      if (decision !== 'conflict' && this.#sessions.get(resourceId) === session) {
+        this.#setState(resourceId, { status: 'ready', session })
+      }
       return
     }
     const doc = new Y.Doc()
@@ -361,6 +364,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       version.revision === session.version.revision &&
       version.digest === session.version.digest
     ) {
+      this.#setState(resourceId, { status: 'ready', session })
       return
     }
     const projection = new Y.Doc()

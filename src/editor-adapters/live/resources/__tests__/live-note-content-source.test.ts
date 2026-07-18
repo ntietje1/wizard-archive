@@ -679,6 +679,33 @@ describe('LiveNoteContentSource', () => {
     expect(source.get(resourceId)).toEqual(first)
   })
 
+  it('restores a retained session when an unchanged note is revisited', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const update = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
+    const version = await versionFor(update)
+    const unsubscribe = source.subscribe(resourceId, () => {})
+
+    provider.emit(resourceId, { status: 'ready', update, version })
+    const first = source.get(resourceId)
+    if (first.status !== 'ready') throw new TypeError('Expected ready note')
+
+    unsubscribe()
+    expect(source.get(resourceId)).toEqual({ status: 'loading' })
+
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, { status: 'ready', update, version })
+
+    expect(source.get(resourceId)).toEqual(first)
+  })
+
   it('flushes document-fragment edits through the canonical save backend', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
