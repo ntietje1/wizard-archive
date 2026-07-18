@@ -9,6 +9,7 @@ import {
 import type {
   FileContentSource,
   FileContentState,
+  FileResourceCreationSource,
   FileResourceSource,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
@@ -106,6 +107,10 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
   return { status: 'received', result: { status: 'rejected', reason: 'invalid_command' } }
 }
 
+function invalidCreateResponse(): CommandDelivery<ResourceStructureCommandResult> {
+  return { status: 'not_committed', retryable: false, reason: 'invalid_response' }
+}
+
 export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
@@ -146,7 +151,13 @@ export function createLiveFileContentSource(
       }
     },
     create: async (envelope, source) => {
-      if (envelope.campaignId !== campaignId) return invalidCreateDelivery()
+      if (
+        envelope.campaignId !== campaignId ||
+        source.alias.campaignId !== campaignId ||
+        source.alias.resourceId !== envelope.command.resourceId
+      ) {
+        return invalidCreateDelivery()
+      }
       const existing = pending.get(envelope.command.resourceId)
       if (
         existing &&
@@ -173,6 +184,8 @@ export function createLiveFileContentSource(
               command: toLiveStructureMutationCommand(
                 normalizeResourceStructureCommand(envelope.command),
               ),
+              alias: source.alias,
+              metadataVersion: source.metadataVersion,
               uploadSessionId: current.sessionId,
             }),
           ),
@@ -180,12 +193,18 @@ export function createLiveFileContentSource(
           envelope.operationId,
           envelope.command.resourceId,
         )
+        const verifiedDelivery = fileCreateMetadataMatches(delivery, source)
+          ? delivery
+          : invalidCreateResponse()
         pending.delete(envelope.command.resourceId)
-        if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
+        if (
+          verifiedDelivery.status !== 'received' ||
+          verifiedDelivery.result.status !== 'completed'
+        ) {
           await backend.discard(current.sessionId)
         }
         return await finalizeLiveContentCreate(
-          delivery,
+          verifiedDelivery,
           envelope.command.resourceId,
           envelope.command.parentId,
           backend,
@@ -234,6 +253,20 @@ export function createLiveFileContentSource(
       pending.clear()
     },
   }
+}
+
+function fileCreateMetadataMatches(
+  delivery: CommandDelivery<ResourceStructureCommandResult>,
+  source: FileResourceCreationSource,
+): boolean {
+  if (delivery.status !== 'received' || delivery.result.status !== 'completed') return true
+  const postcondition = delivery.result.receipt.postconditions.find(
+    (candidate) => candidate.resourceId === source.alias.resourceId,
+  )
+  return (
+    postcondition?.state === 'present' &&
+    versionStampEquals(postcondition.metadataVersion, source.metadataVersion)
+  )
 }
 
 async function fetchFile(url: string): Promise<Response> {

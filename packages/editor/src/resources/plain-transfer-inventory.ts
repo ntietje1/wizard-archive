@@ -6,7 +6,7 @@ import type { FileOwnedMetadata } from './file-content-contract'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceKind, ResourceTitle } from './resource-record'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE, canonicalizeResourceTitle } from './resource-record'
-import { classifyResourceSource } from './resource-source-classifier'
+import { classifyFileResourceSource, classifyResourceSource } from './resource-source-classifier'
 import type { ResourceSourceClassification } from './resource-source-classifier'
 import { createSourcePathAlias, normalizeSourcePath } from './source-path-alias'
 import type { SourcePathAlias } from './resource-catalog-contract'
@@ -565,10 +565,13 @@ function sourcePathKey(entry: Pick<CanonicalEntry, 'source'>, path: string) {
 
 function classifyEntry(entry: PlacedEntry): ResourceSourceClassification | null {
   if (entry.type === 'directory') return null
-  return classifyResourceSource({
+  const source = {
     bytes: entry.bytes!,
     fileName: pathBasename(entry.path),
-  })
+  }
+  return entry.source.kind === 'file'
+    ? classifyFileResourceSource(source)
+    : classifyResourceSource(source)
 }
 
 function inventoryContent(

@@ -22,6 +22,7 @@ import type {
   FileContentSource,
   FileContentState,
   FileContentReplaceResult,
+  FileResourceCreationSource,
   FileResourceSource,
   FileResourceContent,
   MapResourceContent,
@@ -45,7 +46,7 @@ import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
-import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
+import type { ResourceCatalogSnapshot, SourcePathAlias } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource } from './resource-source-classifier'
@@ -71,6 +72,8 @@ import {
   transitionMapContent,
 } from './map-session-policy'
 import type { MapImageBytes } from './map-session-policy'
+import { initialResourceMetadataVersion } from './resource-metadata-version'
+import { assertSourcePathAlias } from './source-path-alias'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -232,6 +235,7 @@ class InMemoryFileContentSource
     ready: ReadonlyArray<ReadyFileContent>,
     private readonly campaignId: CampaignId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
+    private readonly appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>,
   ) {
     super({ status: 'loading' })
     for (const entry of ready) {
@@ -256,9 +260,31 @@ class InMemoryFileContentSource
 
   async create(
     envelope: CommandEnvelope<CreateFileResourceCommand>,
-    source: FileResourceSource,
+    source: FileResourceCreationSource,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
-    if (envelope.campaignId !== this.campaignId) return invalidCreateDelivery()
+    try {
+      assertSourcePathAlias(source.alias)
+    } catch {
+      return invalidCreateDelivery()
+    }
+    if (
+      envelope.campaignId !== this.campaignId ||
+      source.alias.campaignId !== envelope.campaignId ||
+      source.alias.resourceId !== envelope.command.resourceId
+    ) {
+      return invalidCreateDelivery()
+    }
+    const metadataVersion = await initialResourceMetadataVersion({
+      parentId: envelope.command.parentId,
+      kind: envelope.command.kind,
+      title: envelope.command.title,
+      icon: envelope.command.icon,
+      color: envelope.command.color,
+      lifecycle: 'active',
+    })
+    if (!versionStampEquals(metadataVersion, source.metadataVersion)) {
+      return invalidCreateDelivery()
+    }
     const metadata = classifyFileResourceSource(source)
     if (metadata.classification === 'rejected') return invalidCreateDelivery()
     const delivery = await this.executeStructure(envelope)
@@ -270,6 +296,7 @@ class InMemoryFileContentSource
     ) {
       return delivery
     }
+    await this.appendAlias(source.alias)
     this.setReady(
       envelope.command.resourceId,
       { ...metadata, attachment: 'attached' },
@@ -754,11 +781,16 @@ export function createInMemoryEditorRuntime({
       retryable: false,
       reason: 'transport_unavailable',
     })
+  let appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias> = (_alias) =>
+    Promise.reject(new TypeError('Resource aliases are unavailable'))
   const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
-    executeStructure(envelope),
+  const files = new InMemoryFileContentSource(
+    content.files ?? [],
+    scope.campaignId,
+    (envelope) => executeStructure(envelope),
+    (alias) => appendAlias(alias),
   )
   let currentCatalogSnapshot = () => snapshot
   const maps = new InMemoryMapSessionSource(
@@ -789,6 +821,7 @@ export function createInMemoryEditorRuntime({
     ...(now ? { now } : {}),
   })
   currentCatalogSnapshot = resources.catalogSnapshot
+  appendAlias = resources.appendAlias
   const structureWithKindIndex: ResourceStructureCommandGateway = {
     execute: async (envelope) => {
       const createWasKnown =

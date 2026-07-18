@@ -3,6 +3,7 @@ import * as Y from 'yjs'
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import { canonicalizeResourceTitle } from '../resource-record'
+import { initialResourceMetadataVersion } from '../resource-metadata-version'
 import type { ResourceNavigation } from '../editor-runtime-contract'
 import type { ResourceCatalogSnapshot } from '../resource-catalog-contract'
 import type { ResourceRecord } from '../resource-record'
@@ -384,6 +385,15 @@ describe('createInMemoryEditorRuntime', () => {
       navigation: navigation(),
     })
     const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    const title = canonicalizeResourceTitle('image.png')
+    const metadataVersion = await initialResourceMetadataVersion({
+      parentId: null,
+      kind: 'file',
+      title,
+      icon: null,
+      color: null,
+      lifecycle: 'active',
+    })
     const delivery = await core.runtime.content.files.create(
       {
         campaignId: snapshot.campaignId,
@@ -393,12 +403,24 @@ describe('createInMemoryEditorRuntime', () => {
           resourceId,
           kind: 'file',
           parentId: null,
-          title: canonicalizeResourceTitle('image.png'),
+          title,
           icon: null,
           color: null,
         },
       },
-      { bytes, fileName: 'image.png' },
+      {
+        bytes,
+        fileName: 'image.png',
+        metadataVersion,
+        alias: {
+          campaignId: snapshot.campaignId,
+          resourceId,
+          importJobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+          sourceRootId: 'test-upload',
+          rawPath: 'image.png',
+          normalizedPath: 'image.png',
+        },
+      },
     )
 
     expect(delivery).toMatchObject({ status: 'received', result: { status: 'completed' } })

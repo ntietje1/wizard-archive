@@ -1,5 +1,5 @@
 import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useRef, useSyncExternalStore } from 'react'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
@@ -258,11 +258,12 @@ function useContentSnapshot<TState>(
   }>,
   resourceId: AuthorizedResourceSummary['id'],
 ): TState {
-  return useSyncExternalStore(
-    (listener) => source.subscribe(resourceId, listener),
-    () => source.get(resourceId),
-    () => source.get(resourceId),
+  const subscribe = useCallback(
+    (listener: () => void) => source.subscribe(resourceId, listener),
+    [resourceId, source],
   )
+  const getSnapshot = useCallback(() => source.get(resourceId), [resourceId, source])
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
 function FolderViewport({

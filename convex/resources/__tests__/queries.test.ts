@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  generateDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
-import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
+import {
+  MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
+  canonicalizeResourceTitle,
+} from '@wizard-archive/editor/resources/resource-record'
+import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import { MAX_RESOURCE_BOOKMARKS_PER_ACTOR } from '@wizard-archive/editor/resources/command-contract'
 import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-version'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
@@ -195,7 +203,7 @@ describe('authorized resource projection', () => {
 
     await expect(
       asDm(campaign).query(api.resources.queries.loadNoteContent, {
-        campaignId: campaignUuid,
+        campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
         resourceId,
       }),
     ).resolves.toEqual({ status: 'ready', update, version: expect.any(Object) })
@@ -749,7 +757,26 @@ describe('authorized resource projection', () => {
     return await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
+      alias: {
+        campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
+        resourceId: command.resourceId,
+        importJobId: '01890f47-65f2-7cc0-8a3b-000000000001',
+        sourceRootId: 'test-upload',
+        rawPath: `${command.resourceId}.bin`,
+        normalizedPath: `${command.resourceId}.bin`,
+      },
       command,
+      metadataVersion: await initialResourceMetadataVersion({
+        parentId:
+          command.parentId === null
+            ? null
+            : assertDomainId(DOMAIN_ID_KIND.resource, command.parentId),
+        kind: command.kind,
+        title: canonicalizeResourceTitle(command.title),
+        icon: command.icon,
+        color: command.color,
+        lifecycle: 'active',
+      }),
       uploadSessionId: upload.sessionId,
     })
   }

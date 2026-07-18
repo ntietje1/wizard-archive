@@ -14,6 +14,13 @@ import type { ResourceUndoHistory } from '../resource-undo-history'
 import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 import { validateFileUploadSize } from '../../../../../shared/storage/validation'
+import {
+  buildPlainTransferInventory,
+  digestPlainTransferSources,
+} from '../plain-transfer-inventory'
+import type { PlainTransferSourceEntry } from '../plain-transfer-inventory'
+import { TRANSFER_JOB_REQUEST_VERSION } from '../transfer-job-contract'
+import type { PlainTransferJobRequest, TransferSourceDescriptor } from '../transfer-job-contract'
 
 export type WorkspaceReport = (message: string, retry?: () => void) => void
 
@@ -158,14 +165,8 @@ async function createWorkspaceFile(
   if (!validation.valid) {
     return { status: 'rejected', reason: validation.error } as const
   }
-  const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+  const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
   const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-  let title
-  try {
-    title = canonicalizeResourceTitle(file.name)
-  } catch {
-    return { status: 'rejected', reason: 'invalid_title' } as const
-  }
   let bytes: Uint8Array
   try {
     bytes = new Uint8Array(await file.arrayBuffer())
@@ -173,22 +174,61 @@ async function createWorkspaceFile(
     if (signal?.aborted) return { status: 'cancelled' } as const
     return { status: 'rejected', reason: 'file_read_failed' } as const
   }
-  const source = { bytes, fileName: file.name }
+  if (signal?.aborted) return { status: 'cancelled' } as const
+  const sources: ReadonlyArray<TransferSourceDescriptor> = [
+    { id: 'selected-file', kind: 'file', name: file.name },
+  ]
+  const entries: ReadonlyArray<PlainTransferSourceEntry> = [
+    { sourceId: sources[0]!.id, path: file.name, type: 'file', bytes },
+  ]
+  const request: PlainTransferJobRequest = {
+    version: TRANSFER_JOB_REQUEST_VERSION,
+    jobId,
+    operationId,
+    actorId: runtime.scope.actorId,
+    destinationCampaignId: runtime.scope.campaignId,
+    destinationParentId: parentId,
+    manifestHandling: 'reject',
+    mode: 'plain_resources',
+    sourceDigest: await digestPlainTransferSources(sources, entries),
+    sources,
+  }
+  if (signal?.aborted) return { status: 'cancelled' } as const
+  const planned = await buildPlainTransferInventory({ request, entries })
+  if (signal?.aborted) return { status: 'cancelled' } as const
+  if (planned.status === 'rejected') {
+    return { status: 'rejected', reason: planned.reason } as const
+  }
+  const resource = planned.inventory.resources[0]
+  if (
+    planned.inventory.resources.length !== 1 ||
+    !resource ||
+    resource.kind !== 'file' ||
+    resource.content?.kind !== 'file'
+  ) {
+    return { status: 'rejected', reason: 'invalid_source' } as const
+  }
+  const source = {
+    bytes,
+    fileName: file.name,
+    alias: resource.alias,
+    metadataVersion: resource.metadataVersion,
+  }
   const envelope = {
     campaignId: runtime.scope.campaignId,
     operationId,
     command: {
       type: 'create' as const,
-      resourceId,
+      resourceId: resource.id,
       kind: 'file' as const,
       parentId,
-      title,
+      title: resource.title,
       icon: null,
       color: null,
     },
   }
   return await completeWorkspaceCreation(
-    resourceId,
+    resource.id,
     () => runtime.content.files.create(envelope, source),
     'File uploaded',
     report,

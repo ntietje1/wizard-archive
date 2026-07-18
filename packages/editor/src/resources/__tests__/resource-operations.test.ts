@@ -76,6 +76,77 @@ describe('resource application workflows', () => {
     ).toBe(true)
     core.dispose()
   })
+
+  it('plans explicit uploads through the canonical transfer inventory before file creation', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
+    })
+    const files = core.runtime.content.files
+    const create = vi.fn((...args: Parameters<typeof files.create>) => files.create(...args))
+    const runtime = {
+      ...core.runtime,
+      content: {
+        ...core.runtime.content,
+        files: {
+          get: (resourceId) => files.get(resourceId),
+          subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
+          export: (resourceId) => files.export(resourceId),
+          create,
+          replace: (resourceId, expectedVersion, source) =>
+            files.replace(resourceId, expectedVersion, source),
+          dispose: () => files.dispose(),
+        },
+      },
+    } satisfies EditorRuntime
+    const report = vi.fn()
+
+    const result = await createWorkspaceActions(runtime, report).createFile(
+      null,
+      new File(['# Kept as a file'], 'Session.md', { type: 'text/markdown' }),
+    )
+
+    expect(result).toMatchObject({ status: 'completed' })
+    expect(create).toHaveBeenCalledOnce()
+    const [envelope, source] = create.mock.calls[0]!
+    expect(envelope.command).toMatchObject({
+      kind: 'file',
+      parentId: null,
+      title: 'Session.md',
+    })
+    expect(source).toMatchObject({
+      fileName: 'Session.md',
+      alias: {
+        campaignId,
+        resourceId: envelope.command.resourceId,
+        sourceRootId: 'selected-file',
+        rawPath: 'Session.md',
+        normalizedPath: 'Session.md',
+      },
+      metadataVersion: expect.objectContaining({
+        scheme: 'authoritative-revision-v1',
+        revision: 1,
+      }),
+    })
+    expect(runtime.resources.index.getSnapshot().lookup(envelope.command.resourceId)).toMatchObject(
+      {
+        state: 'known',
+        value: { kind: 'file', title: 'Session.md' },
+      },
+    )
+    expect(report).toHaveBeenLastCalledWith('File uploaded')
+    core.dispose()
+  })
 })
 
 function navigation(initialResourceId: ResourceRecord['id']): ResourceNavigation {

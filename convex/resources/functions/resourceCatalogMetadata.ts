@@ -37,18 +37,8 @@ export async function appendResourceSourcePathAlias(
 ): Promise<SourcePathAlias> {
   assertSourcePathAlias(alias)
   await requireOwnedResource(ctx, alias.campaignId, alias.resourceId)
-  const existing = await ctx.db
-    .query('resourceSourcePathAliases')
-    .withIndex('by_import_entry', (query) =>
-      query
-        .eq('campaignUuid', alias.campaignId)
-        .eq('resourceUuid', alias.resourceId)
-        .eq('importJobUuid', alias.importJobId)
-        .eq('sourceRootId', alias.sourceRootId)
-        .eq('normalizedPath', alias.normalizedPath),
-    )
-    .unique()
-  if (existing) return sourcePathAliasFromRow(existing)
+  const existing = await findResourceSourcePathAlias(ctx, alias)
+  if (existing) return existing
 
   await ctx.db.insert('resourceSourcePathAliases', {
     campaignUuid: alias.campaignId,
@@ -59,6 +49,25 @@ export async function appendResourceSourcePathAlias(
     normalizedPath: alias.normalizedPath,
   })
   return alias
+}
+
+export async function findResourceSourcePathAlias(
+  ctx: MutationCtx,
+  alias: SourcePathAlias,
+): Promise<SourcePathAlias | null> {
+  assertSourcePathAlias(alias)
+  const row = await ctx.db
+    .query('resourceSourcePathAliases')
+    .withIndex('by_import_entry', (query) =>
+      query
+        .eq('campaignUuid', alias.campaignId)
+        .eq('resourceUuid', alias.resourceId)
+        .eq('importJobUuid', alias.importJobId)
+        .eq('sourceRootId', alias.sourceRootId)
+        .eq('normalizedPath', alias.normalizedPath),
+    )
+    .unique()
+  return row ? sourcePathAliasFromRow(row) : null
 }
 
 export async function assignResourceAssetsFolder(

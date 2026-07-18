@@ -8,6 +8,7 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import {
   advanceVersion,
   assertSha256Digest,
@@ -16,6 +17,7 @@ import {
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { FileOwnedMetadata } from '@wizard-archive/editor/resources/file-content-contract'
+import type { SourcePathAlias } from '@wizard-archive/editor/resources/catalog-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignInternalMutation, campaignMutation, dmMutation } from '../functions'
@@ -33,6 +35,7 @@ import {
   resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
+  sourcePathAliasValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   contentProviderSaveResultValidator,
@@ -64,6 +67,10 @@ import {
 import type { ResourceUploadClaim } from './functions/assetContent'
 import { executeMapContentCommand as executeMapContentCommandFn } from './functions/executeMapContentCommand'
 import { replaceMapImage as replaceMapImageFn } from './functions/replaceMapImage'
+import {
+  appendResourceSourcePathAlias,
+  findResourceSourcePathAlias,
+} from './functions/resourceCatalogMetadata'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -74,6 +81,24 @@ type StoredResourceCommandReceipt = Extract<
 type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValidator>
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
 type StoredVersionStamp = Infer<typeof versionStampValidator>
+type StoredSourcePathAlias = Infer<typeof sourcePathAliasValidator>
+
+type FileResourceCreationArgs = Readonly<{
+  operationId: string
+  command: StoredResourceStructureCommand
+  alias: StoredSourcePathAlias
+  metadataVersion: StoredVersionStamp
+  uploadSessionId: Id<'fileStorage'>
+  metadata: FileOwnedMetadata
+  version: StoredVersionStamp
+}>
+
+type FileCreateCommand = Extract<ResourceStructureCommand, { type: 'create' }> &
+  Readonly<{ kind: 'file' }>
+
+type FileCreationPlan =
+  | Readonly<{ state: 'ready'; command: FileCreateCommand; alias: SourcePathAlias }>
+  | Readonly<{ state: 'rejected'; result: StoredResourceStructureCommandResult }>
 
 type FileCreationIdentity = Readonly<{
   campaignId: CampaignId
@@ -416,82 +441,161 @@ export const commitFileResourceCreation = campaignInternalMutation({
   args: {
     operationId: operationIdValidator,
     command: resourceStructureCommandValidator,
+    alias: sourcePathAliasValidator,
+    metadataVersion: versionStampValidator,
     uploadSessionId: v.id('fileStorage'),
     metadata: v.object(fileOwnedMetadataValidators),
     version: versionStampValidator,
   },
   returns: resourceStructureCommandResultValidator,
-  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
-    const command = readStructureCommand(args.command)
-    if ('status' in command) return command
-    if (command.type !== 'create' || command.kind !== 'file') {
-      return { status: 'rejected', reason: 'invalid_command' }
-    }
-    const claim = await prepareResourceUploadClaim(ctx, {
-      campaignId: ctx.resourceScope.campaignId,
-      resourceId: command.resourceId,
-      sessionId: args.uploadSessionId,
-    })
-    if (claim.status === 'unavailable') {
-      return { status: 'rejected', reason: 'invalid_command' }
-    }
-    const existingContent = await ctx.db
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
+    await commitFileResourceCreationFn(ctx, args),
+})
+
+async function commitFileResourceCreationFn(
+  ctx: CampaignInternalMutationCtx,
+  args: FileResourceCreationArgs,
+): Promise<StoredResourceStructureCommandResult> {
+  const plan = await validateFileCreationPlan(ctx, args)
+  if (plan.state === 'rejected') return plan.result
+  const { alias, command } = plan
+  const claim = await prepareResourceUploadClaim(ctx, {
+    campaignId: ctx.resourceScope.campaignId,
+    resourceId: command.resourceId,
+    sessionId: args.uploadSessionId,
+  })
+  if (claim.status === 'unavailable') {
+    return { status: 'rejected', reason: 'invalid_command' }
+  }
+  const existingContent = await ctx.db
+    .query('resourceFileContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
+    .unique()
+  if (claim.status === 'claimed' && existingContent === null) {
+    return { status: 'rejected', reason: 'invalid_command' }
+  }
+  const result = await executeStructureCommandFn(ctx, {
+    operationId: args.operationId,
+    command,
+  })
+  if (result.status !== 'completed') return storedResult(result)
+
+  const content =
+    existingContent ??
+    (await ctx.db
       .query('resourceFileContents')
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
-      .unique()
-    if (claim.status === 'claimed' && existingContent === null) {
-      return { status: 'rejected', reason: 'invalid_command' }
-    }
-    const result = await executeStructureCommandFn(ctx, {
-      operationId: args.operationId,
-      command,
-    })
-    if (result.status !== 'completed') return storedResult(result)
+      .unique())
+  if (content) {
+    return (await existingFileCreationMatches(ctx, args, claim, content, alias))
+      ? storedResult(result)
+      : { status: 'rejected', reason: 'operation_id_reused' }
+  }
+  return await commitFreshFileCreation(ctx, args, claim, command, alias, result)
+}
 
-    const content =
-      existingContent ??
-      (await ctx.db
-        .query('resourceFileContents')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
-        .unique())
-    if (content) {
-      const version = assertVersionStamp(args.version)
-      if (
-        claim.status !== 'claimed' ||
-        !existingFileContentMatches(content, {
-          campaignId: ctx.resourceScope.campaignId,
-          metadata: args.metadata,
-          upload: claim.upload,
-          userId: ctx.membership.userId,
-          version,
-        })
-      ) {
-        return { status: 'rejected', reason: 'operation_id_reused' }
-      }
-      return storedResult(result)
+async function validateFileCreationPlan(
+  ctx: CampaignInternalMutationCtx,
+  args: FileResourceCreationArgs,
+): Promise<FileCreationPlan> {
+  const command = readStructureCommand(args.command)
+  if ('status' in command) return { state: 'rejected', result: command }
+  if (command.type !== 'create' || command.kind !== 'file') {
+    return {
+      state: 'rejected',
+      result: { status: 'rejected', reason: 'invalid_command' },
     }
+  }
+  const alias = fileCreationAlias(args.alias)
+  if (
+    alias.campaignId !== ctx.resourceScope.campaignId ||
+    alias.resourceId !== command.resourceId
+  ) {
+    return {
+      state: 'rejected',
+      result: { status: 'rejected', reason: 'invalid_command' },
+    }
+  }
+  const expectedMetadataVersion = await initialResourceMetadataVersion({
+    parentId: command.parentId,
+    kind: command.kind,
+    title: command.title,
+    icon: command.icon,
+    color: command.color,
+    lifecycle: 'active',
+  })
+  if (!versionStampEquals(assertVersionStamp(args.metadataVersion), expectedMetadataVersion)) {
+    return {
+      state: 'rejected',
+      result: { status: 'rejected', reason: 'invalid_command' },
+    }
+  }
+  return { state: 'ready', command: { ...command, kind: 'file' }, alias }
+}
 
-    if (claim.status !== 'available') {
-      return { status: 'rejected', reason: 'invalid_command' }
-    }
-    const version = assertVersionStamp(args.version)
-    if (version.revision !== 1) throw new TypeError('Initial file version must be revision 1')
-    const upload = await commitResourceUploadClaim(ctx, claim, {
+async function existingFileCreationMatches(
+  ctx: CampaignInternalMutationCtx,
+  args: FileResourceCreationArgs,
+  claim: ResourceUploadClaim,
+  content: Doc<'resourceFileContents'>,
+  alias: SourcePathAlias,
+): Promise<boolean> {
+  if (claim.status !== 'claimed') return false
+  if (
+    !existingFileContentMatches(content, {
       campaignId: ctx.resourceScope.campaignId,
-      resourceId: command.resourceId,
-      expectedByteSize: args.metadata.byteSize,
+      metadata: args.metadata,
+      upload: claim.upload,
+      userId: ctx.membership.userId,
+      version: assertVersionStamp(args.version),
     })
-    await ctx.db.insert('resourceFileContents', {
-      campaignUuid: ctx.resourceScope.campaignId,
-      resourceUuid: command.resourceId,
-      state: 'ready',
-      assetUuid: upload.assetId,
-      ...args.metadata,
-      version,
-    })
-    return storedResult(result)
-  },
-})
+  ) {
+    return false
+  }
+  const existingAlias = await findResourceSourcePathAlias(ctx, alias)
+  return existingAlias?.rawPath === alias.rawPath
+}
+
+async function commitFreshFileCreation(
+  ctx: CampaignInternalMutationCtx,
+  args: FileResourceCreationArgs,
+  claim: ResourceUploadClaim,
+  command: FileCreateCommand,
+  alias: SourcePathAlias,
+  result: Extract<ResourceStructureCommandResult, { status: 'completed' }>,
+): Promise<StoredResourceStructureCommandResult> {
+  if (claim.status !== 'available') {
+    return { status: 'rejected', reason: 'invalid_command' }
+  }
+  const version = assertVersionStamp(args.version)
+  if (version.revision !== 1) throw new TypeError('Initial file version must be revision 1')
+  const upload = await commitResourceUploadClaim(ctx, claim, {
+    campaignId: ctx.resourceScope.campaignId,
+    resourceId: command.resourceId,
+    expectedByteSize: args.metadata.byteSize,
+  })
+  await ctx.db.insert('resourceFileContents', {
+    campaignUuid: ctx.resourceScope.campaignId,
+    resourceUuid: command.resourceId,
+    state: 'ready',
+    assetUuid: upload.assetId,
+    ...args.metadata,
+    version,
+  })
+  await appendResourceSourcePathAlias(ctx, alias)
+  return storedResult(result)
+}
+
+function fileCreationAlias(value: Infer<typeof sourcePathAliasValidator>): SourcePathAlias {
+  return {
+    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, value.campaignId),
+    resourceId: assertDomainId(DOMAIN_ID_KIND.resource, value.resourceId),
+    importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, value.importJobId),
+    sourceRootId: value.sourceRootId,
+    rawPath: value.rawPath,
+    normalizedPath: value.normalizedPath,
+  }
+}
 
 export const commitFileContentReplacement = campaignInternalMutation({
   args: {

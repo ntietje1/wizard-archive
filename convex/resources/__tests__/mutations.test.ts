@@ -1,7 +1,11 @@
 // @vitest-environment node
 
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  generateDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
@@ -282,19 +286,27 @@ describe('resource structure commands', () => {
       new Blob([bytes], { type: 'application/octet-stream' }),
       'payload.bin',
     )
+    const command = fileCreateCommand(resourceId, 'evidence.png')
+    const metadataVersion = await fileCreateMetadataVersion(command)
+    await expect(
+      asDm(campaign).action(api.resources.actions.createFileResource, {
+        campaignId: campaignUuid,
+        operationId,
+        alias: fileCreateAlias(campaignUuid, resourceId),
+        metadataVersion: await fileCreateMetadataVersion(
+          fileCreateCommand(resourceId, 'different title'),
+        ),
+        command,
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
 
     const result = await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
-      command: {
-        type: 'create',
-        resourceId,
-        kind: 'file',
-        parentId: null,
-        title: 'evidence.png',
-        icon: null,
-        color: null,
-      },
+      alias: fileCreateAlias(campaignUuid, resourceId),
+      metadataVersion,
+      command,
       uploadSessionId: upload.sessionId,
     })
 
@@ -306,18 +318,26 @@ describe('resource structure commands', () => {
       asDm(campaign).action(api.resources.actions.createFileResource, {
         campaignId: campaignUuid,
         operationId,
-        command: {
-          type: 'create',
-          resourceId,
-          kind: 'file',
-          parentId: null,
-          title: 'evidence.png',
-          icon: null,
-          color: null,
-        },
+        alias: fileCreateAlias(campaignUuid, resourceId),
+        metadataVersion,
+        command,
         uploadSessionId: upload.sessionId,
       }),
     ).resolves.toMatchObject({ status: 'completed' })
+    await expect(
+      asDm(campaign).action(api.resources.actions.createFileResource, {
+        campaignId: campaignUuid,
+        operationId,
+        alias: {
+          ...fileCreateAlias(campaignUuid, resourceId),
+          rawPath: 'changed.bin',
+          normalizedPath: 'changed.bin',
+        },
+        metadataVersion,
+        command,
+        uploadSessionId: upload.sessionId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
     const conflictingUpload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
@@ -328,15 +348,9 @@ describe('resource structure commands', () => {
       asDm(campaign).action(api.resources.actions.createFileResource, {
         campaignId: campaignUuid,
         operationId,
-        command: {
-          type: 'create',
-          resourceId,
-          kind: 'file',
-          parentId: null,
-          title: 'evidence.png',
-          icon: null,
-          color: null,
-        },
+        alias: fileCreateAlias(campaignUuid, resourceId),
+        metadataVersion,
+        command,
         uploadSessionId: conflictingUpload.sessionId,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
@@ -357,6 +371,21 @@ describe('resource structure commands', () => {
           .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
           .unique(),
       ).resolves.toMatchObject({ assetUuid: upload.assetId })
+      await expect(
+        ctx.db
+          .query('resourceSourcePathAliases')
+          .withIndex('by_import_entry', (query) =>
+            query
+              .eq('campaignUuid', campaignUuid)
+              .eq('resourceUuid', resourceId)
+              .eq('importJobUuid', fileCreateAlias(campaignUuid, resourceId).importJobId)
+              .eq('sourceRootId', 'test-upload')
+              .eq('normalizedPath', `${resourceId}.bin`),
+          )
+          .unique(),
+      ).resolves.toMatchObject({
+        rawPath: `${resourceId}.bin`,
+      })
     })
   })
 
@@ -374,6 +403,8 @@ describe('resource structure commands', () => {
     await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
+      alias: fileCreateAlias(campaignUuid, resourceId),
+      metadataVersion: await fileCreateMetadataVersion(fileCreateCommand(resourceId, 'Evidence')),
       command: {
         type: 'create',
         resourceId,
@@ -466,6 +497,8 @@ describe('resource structure commands', () => {
     const created = await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId: ownerOperationId,
+      alias: fileCreateAlias(campaignUuid, ownerResourceId),
+      metadataVersion: await fileCreateMetadataVersion(ownerCommand),
       command: ownerCommand,
       uploadSessionId: upload.sessionId,
     })
@@ -474,6 +507,8 @@ describe('resource structure commands', () => {
       asDm(campaign).action(api.resources.actions.createFileResource, {
         campaignId: campaignUuid,
         operationId: ownerOperationId,
+        alias: fileCreateAlias(campaignUuid, ownerResourceId),
+        metadataVersion: await fileCreateMetadataVersion(ownerCommand),
         command: ownerCommand,
         uploadSessionId: upload.sessionId,
       }),
@@ -484,6 +519,10 @@ describe('resource structure commands', () => {
       asDm(campaign).action(api.resources.actions.createFileResource, {
         campaignId: campaignUuid,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        alias: fileCreateAlias(campaignUuid, secondResourceId),
+        metadataVersion: await fileCreateMetadataVersion(
+          fileCreateCommand(secondResourceId, 'Second'),
+        ),
         command: fileCreateCommand(secondResourceId, 'Second'),
         uploadSessionId: upload.sessionId,
       }),
@@ -494,6 +533,10 @@ describe('resource structure commands', () => {
       campaign.dm.authed.action(api.resources.actions.createFileResource, {
         campaignId: otherCampaign.campaignDomainId,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        alias: fileCreateAlias(otherCampaign.campaignDomainId, crossCampaignResourceId),
+        metadataVersion: await fileCreateMetadataVersion(
+          fileCreateCommand(crossCampaignResourceId, 'Cross campaign'),
+        ),
         command: fileCreateCommand(crossCampaignResourceId, 'Cross campaign'),
         uploadSessionId: upload.sessionId,
       }),
@@ -535,6 +578,10 @@ describe('resource structure commands', () => {
     await campaign.dm.authed.action(api.resources.actions.createFileResource, {
       campaignId: otherCampaign.campaignDomainId,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      alias: fileCreateAlias(otherCampaign.campaignDomainId, crossCampaignTargetId),
+      metadataVersion: await fileCreateMetadataVersion(
+        fileCreateCommand(crossCampaignTargetId, 'Other file'),
+      ),
       command: fileCreateCommand(crossCampaignTargetId, 'Other file'),
       uploadSessionId: crossCampaignUpload.sessionId,
     })
@@ -615,13 +662,18 @@ describe('resource structure commands', () => {
       generateDomainId(DOMAIN_ID_KIND.resource),
     ] as const
     const results = await Promise.all(
-      resourceIds.map((resourceId, index) =>
-        asDm(campaign).action(api.resources.actions.createFileResource, {
-          campaignId: campaignUuid,
-          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-          command: fileCreateCommand(resourceId, `Concurrent ${index}`),
-          uploadSessionId: upload.sessionId,
-        }),
+      resourceIds.map(
+        async (resourceId, index) =>
+          await asDm(campaign).action(api.resources.actions.createFileResource, {
+            campaignId: campaignUuid,
+            operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+            alias: fileCreateAlias(campaignUuid, resourceId),
+            metadataVersion: await fileCreateMetadataVersion(
+              fileCreateCommand(resourceId, `Concurrent ${index}`),
+            ),
+            command: fileCreateCommand(resourceId, `Concurrent ${index}`),
+            uploadSessionId: upload.sessionId,
+          }),
       ),
     )
     expect(results.map(({ status }) => status).sort()).toEqual(['completed', 'rejected'])
@@ -2824,6 +2876,33 @@ describe('resource structure commands', () => {
     }
   }
 
+  function fileCreateAlias(campaignId: string, resourceId: string) {
+    return {
+      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignId),
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+      importJobId: '01890f47-65f2-7cc0-8a3b-000000000001',
+      sourceRootId: 'test-upload',
+      rawPath: `${resourceId}.bin`,
+      normalizedPath: `${resourceId}.bin`,
+    }
+  }
+
+  async function fileCreateMetadataVersion(
+    command: Extract<StoredResourceStructureCommand, { type: 'create' }>,
+  ) {
+    return await initialResourceMetadataVersion({
+      parentId:
+        command.parentId === null
+          ? null
+          : assertDomainId(DOMAIN_ID_KIND.resource, command.parentId),
+      kind: command.kind,
+      title: canonicalizeResourceTitle(command.title),
+      icon: command.icon,
+      color: command.color,
+      lifecycle: 'active',
+    })
+  }
+
   async function createResource(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     campaignUuid: string,
@@ -2889,6 +2968,8 @@ describe('resource structure commands', () => {
     return await asDm(campaign).action(api.resources.actions.createFileResource, {
       campaignId: campaignUuid,
       operationId,
+      alias: fileCreateAlias(campaignUuid, command.resourceId),
+      metadataVersion: await fileCreateMetadataVersion(command),
       command,
       uploadSessionId: upload.sessionId,
     })

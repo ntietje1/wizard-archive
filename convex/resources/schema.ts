@@ -24,6 +24,15 @@ export const versionStampValidator = v.object({
   digest: v.string(),
 })
 
+export const sourcePathAliasValidator = v.object({
+  campaignId: campaignIdValidator,
+  resourceId: resourceIdValidator,
+  importJobId: importJobIdValidator,
+  sourceRootId: v.string(),
+  rawPath: v.string(),
+  normalizedPath: v.string(),
+})
+
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
 const canonicalTargetValidator = v.union(
   v.object({ kind: v.literal('resource'), resourceId: resourceIdValidator }),

@@ -15,6 +15,7 @@ import {
   mapContentMutationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
+  sourcePathAliasValidator,
   versionStampValidator,
 } from './schema'
 import { operationIdValidator, resourceIdValidator } from './validators'
@@ -72,6 +73,8 @@ export const createFileResource = action({
     campaignId: v.string(),
     operationId: operationIdValidator,
     command: resourceStructureCommandValidator,
+    alias: sourcePathAliasValidator,
+    metadataVersion: versionStampValidator,
     uploadSessionId: v.id('fileStorage'),
   },
   returns: resourceStructureCommandResultValidator,
@@ -84,6 +87,8 @@ export const createFileResource = action({
       campaignId: upload.upload.campaignId,
       operationId: args.operationId,
       command: args.command,
+      alias: args.alias,
+      metadataVersion: args.metadataVersion,
       uploadSessionId: args.uploadSessionId,
       metadata: upload.metadata,
       version: await initialFileContentVersion(upload.bytes, upload.metadata),

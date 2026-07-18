@@ -4,6 +4,8 @@ import type { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { createLiveFileContentSource } from '../live-file-content-source'
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
@@ -160,6 +162,176 @@ describe('LiveFileContentSource', () => {
       status: 'integrity_error',
       issue: 'content_corrupt',
     })
+    source.dispose()
+  })
+
+  it('commits a planned file identity and source alias through the authoritative create', async () => {
+    const campaignId = testDomainId('campaign', 'create-file-campaign')
+    const resourceId = testDomainId('resource', 'create-file')
+    const operationId = testDomainId('operation', 'create-file')
+    const importJobId = testDomainId('importJob', 'create-file')
+    const sessionId = 'create-file-session' as Id<'fileStorage'>
+    const command = {
+      type: 'create' as const,
+      resourceId,
+      kind: 'file' as const,
+      parentId: null,
+      title: canonicalizeResourceTitle('Session.md'),
+      icon: null,
+      color: null,
+    }
+    const metadataVersion = await initialResourceMetadataVersion({
+      parentId: command.parentId,
+      kind: command.kind,
+      title: command.title,
+      icon: command.icon,
+      color: command.color,
+      lifecycle: 'active',
+    })
+    const alias = {
+      campaignId,
+      resourceId,
+      importJobId,
+      sourceRootId: 'selected-file',
+      rawPath: 'Session.md',
+      normalizedPath: 'Session.md',
+    }
+    const create = vi.fn(() =>
+      Promise.resolve({
+        status: 'completed' as const,
+        receipt: {
+          campaignId,
+          operationId,
+          result: { type: 'created' as const, resourceId },
+          postconditions: [{ state: 'present' as const, resourceId, metadataVersion }],
+        },
+      }),
+    )
+    const discard = vi.fn()
+    const refresh = vi.fn(() => Promise.resolve())
+    const recording = { abandon: vi.fn(), completed: vi.fn() }
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load: vi.fn(),
+        watch: vi.fn(() => () => undefined),
+        create,
+        discard,
+        download: vi.fn(),
+        refresh,
+        replace: vi.fn(),
+        upload: vi.fn(() => Promise.resolve(sessionId)),
+      },
+      () => recording,
+    )
+    const fileSource = {
+      bytes: new TextEncoder().encode('# Kept as a file'),
+      fileName: 'Session.md',
+      alias,
+      metadataVersion,
+    }
+
+    await expect(
+      source.create({ campaignId, operationId, command }, fileSource),
+    ).resolves.toMatchObject({
+      status: 'received',
+      result: { status: 'completed' },
+    })
+    expect(create).toHaveBeenCalledWith({
+      campaignId,
+      operationId,
+      command,
+      alias,
+      metadataVersion,
+      uploadSessionId: sessionId,
+    })
+    expect(refresh).toHaveBeenCalledWith(resourceId, null)
+    expect(recording.completed).toHaveBeenCalledOnce()
+    expect(recording.abandon).not.toHaveBeenCalled()
+    expect(discard).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
+  it('rejects and cleans up a create receipt that does not match its planned metadata', async () => {
+    const campaignId = testDomainId('campaign', 'invalid-create-file-campaign')
+    const resourceId = testDomainId('resource', 'invalid-create-file')
+    const operationId = testDomainId('operation', 'invalid-create-file')
+    const command = {
+      type: 'create' as const,
+      resourceId,
+      kind: 'file' as const,
+      parentId: null,
+      title: canonicalizeResourceTitle('Evidence'),
+      icon: null,
+      color: null,
+    }
+    const metadataVersion = await initialResourceMetadataVersion({
+      parentId: null,
+      kind: 'file',
+      title: command.title,
+      icon: null,
+      color: null,
+      lifecycle: 'active',
+    })
+    const sessionId = 'invalid-create-file-session' as Id<'fileStorage'>
+    const discard = vi.fn(() => Promise.resolve())
+    const recording = { abandon: vi.fn(), completed: vi.fn() }
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load: vi.fn(),
+        watch: vi.fn(() => () => undefined),
+        create: vi.fn(() =>
+          Promise.resolve({
+            status: 'completed' as const,
+            receipt: {
+              campaignId,
+              operationId,
+              result: { type: 'created' as const, resourceId },
+              postconditions: [
+                {
+                  state: 'present' as const,
+                  resourceId,
+                  metadataVersion: { ...metadataVersion, digest: 'f'.repeat(64) },
+                },
+              ],
+            },
+          }),
+        ),
+        discard,
+        download: vi.fn(),
+        refresh: vi.fn(),
+        replace: vi.fn(),
+        upload: vi.fn(() => Promise.resolve(sessionId)),
+      },
+      () => recording,
+    )
+
+    await expect(
+      source.create(
+        { campaignId, operationId, command },
+        {
+          bytes: new TextEncoder().encode('evidence'),
+          fileName: 'Evidence',
+          alias: {
+            campaignId,
+            resourceId,
+            importJobId: testDomainId('importJob', 'invalid-create-file'),
+            sourceRootId: 'selected-file',
+            rawPath: 'Evidence',
+            normalizedPath: 'Evidence',
+          },
+          metadataVersion,
+        },
+      ),
+    ).resolves.toEqual({
+      status: 'not_committed',
+      retryable: false,
+      reason: 'invalid_response',
+    })
+    expect(discard).toHaveBeenCalledWith(sessionId)
+    expect(recording.abandon).toHaveBeenCalledOnce()
+    expect(recording.completed).not.toHaveBeenCalled()
     source.dispose()
   })
 

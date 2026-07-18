@@ -1,5 +1,5 @@
 import type { ContentCopyPlanner } from './content-copy-contract'
-import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
+import type { ResourceCatalogSnapshot, SourcePathAlias } from './resource-catalog-contract'
 import type {
   CommandDelivery,
   ResourceStructureCommandResult,
@@ -177,6 +177,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   const optimistic = createOptimisticResourceStructureRuntime(baseIndex, authoritative, now)
 
   return {
+    appendAlias: (alias: SourcePathAlias) => operations.appendAlias(alias),
     catalogSnapshot: () => catalog.getSnapshot(scope.campaignId),
     subscribeCatalog: (listener: () => void) => catalog.subscribe(scope.campaignId, listener),
     dispose: () => {

@@ -90,6 +90,38 @@ describe('plain transfer inventory', () => {
     )
   })
 
+  it('preserves explicit file uploads while importing note files from containers as notes', async () => {
+    const directSources: ReadonlyArray<TransferSourceDescriptor> = [
+      { id: 'selected-file', kind: 'file', name: 'Session.md' },
+    ]
+    const directEntries = [markdown('selected-file', 'Session.md', '# Session')]
+    const direct = await buildPlainTransferInventory({
+      request: await plainRequest('plain_resources', directSources, directEntries),
+      entries: directEntries,
+    })
+    const directorySources = [directorySource('upload', 'Campaign')]
+    const directoryEntries = [markdown('upload', 'Session.md', '# Session')]
+    const fromDirectory = await buildPlainTransferInventory({
+      request: await plainRequest('plain_resources', directorySources, directoryEntries),
+      entries: directoryEntries,
+    })
+
+    expect(direct.status === 'ready' ? direct.inventory.resources[0] : direct).toMatchObject({
+      kind: 'file',
+      title: 'Session.md',
+      content: { kind: 'file' },
+    })
+    expect(
+      fromDirectory.status === 'ready'
+        ? fromDirectory.inventory.resources.find((resource) => resource.kind === 'note')
+        : fromDirectory,
+    ).toMatchObject({
+      kind: 'note',
+      title: 'Session.md',
+      content: { kind: 'note' },
+    })
+  })
+
   it('strips a sole ZIP wrapper only for a new plain workspace', async () => {
     const sources = [zipSource('zip', 'campaign.zip')]
     const entries: Array<PlainTransferSourceEntry> = [

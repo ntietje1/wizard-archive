@@ -1345,6 +1345,7 @@ describe('ResourceShell', () => {
       for (const listener of listeners) listener()
     })
     expect(screen.getByLabelText('File content')).toBeInTheDocument()
+    expect(subscribe).toHaveBeenCalledOnce()
 
     view.unmount()
     expect(unsubscribe).toHaveBeenCalled()

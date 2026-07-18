@@ -10,6 +10,7 @@ import type {
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type { FileOwnedMetadata } from './file-content-contract'
+import type { SourcePathAlias } from './resource-catalog-contract'
 
 export type ContentUnavailableReason =
   | 'capability_not_supported'
@@ -289,6 +290,12 @@ export type FileResourceSource = Readonly<{
   fileName: string
 }>
 
+export type FileResourceCreationSource = FileResourceSource &
+  Readonly<{
+    alias: SourcePathAlias
+    metadataVersion: VersionStamp
+  }>
+
 export interface NoteSessionSource {
   get(resourceId: ResourceId): NoteSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
@@ -306,7 +313,7 @@ export interface FileContentSource {
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
   create(
     envelope: CommandEnvelope<CreateFileResourceCommand>,
-    source: FileResourceSource,
+    source: FileResourceCreationSource,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   replace(
     resourceId: ResourceId,
