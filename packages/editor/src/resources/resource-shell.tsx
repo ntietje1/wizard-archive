@@ -59,7 +59,7 @@ export function ResourceShell({
   const snapshot = useResourceSnapshot(runtime)
   const rootCollection = snapshot.list(ACTIVE_ROOT_QUERY)
   const rootLoad = useEnsureResourceCollection(
-    runtime,
+    runtime.resources.loader,
     ACTIVE_ROOT_QUERY,
     rootCollection.state === 'unknown',
   )

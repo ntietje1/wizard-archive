@@ -288,7 +288,7 @@ function FolderViewport({
 }) {
   const query = { parentId: folder.id, lifecycle: 'active' as const }
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, folder.id)
-  const load = useEnsureResourceCollection(runtime, query)
+  const load = useEnsureResourceCollection(runtime.resources.loader, query)
   const collection = snapshot.list(query)
   if (collection.state === 'unknown') return <FolderLoadingState load={load} />
 

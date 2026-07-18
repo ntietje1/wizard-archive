@@ -37,7 +37,7 @@ export function ResourceTrashControl({
   view: 'bookmarks' | 'resources' | 'trash'
 }) {
   const query = { parentId: null, lifecycle: 'trashed' as const }
-  useEnsureResourceCollection(runtime, query)
+  useEnsureResourceCollection(runtime.resources.loader, query)
   const collection = snapshot.list(query)
   const resources =
     collection.state === 'known'

@@ -1,5 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
@@ -163,101 +163,197 @@ describe('CanvasResourceEmbed', () => {
   })
 
   it('renders a complete canonical folder collection instead of a placeholder', () => {
-    const folderId = generateDomainId(DOMAIN_ID_KIND.resource)
-    const childId = generateDomainId(DOMAIN_ID_KIND.resource)
-    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
-    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
-    const scope = {
+    const ensureCollection = vi.fn(() => Promise.resolve({ status: 'completed' as const }))
+    renderFolderEmbed(true, ensureCollection)
+
+    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent('Documents')
+    expect(screen.getByText('Quest log')).toBeVisible()
+    expect(ensureCollection).not.toHaveBeenCalled()
+  })
+
+  it('does not load a known empty folder', () => {
+    const ensureCollection = vi.fn(() => Promise.resolve({ status: 'completed' as const }))
+    renderFolderEmbed(true, ensureCollection, false)
+
+    expect(screen.getByText('Folder is empty')).toBeVisible()
+    expect(ensureCollection).not.toHaveBeenCalled()
+  })
+
+  it('loads one folder page on mount and advances only from the explicit control', async () => {
+    let resolveFirst!: () => void
+    let resolveSecond!: () => void
+    const ensureCollection = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ status: 'completed' }>((resolve) => {
+            resolveFirst = () => resolve({ status: 'completed' })
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ status: 'completed' }>((resolve) => {
+            resolveSecond = () => resolve({ status: 'completed' })
+          }),
+      )
+    const folder = renderFolderEmbed(null, ensureCollection)
+
+    await waitFor(() => expect(ensureCollection).toHaveBeenCalledOnce())
+    folder.publish(false, true)
+    resolveFirst()
+
+    expect(await screen.findByText('Quest log')).toBeVisible()
+    const loadMore = await screen.findByRole('button', { name: 'Load more resources' })
+    expect(ensureCollection).toHaveBeenCalledOnce()
+
+    fireEvent.click(loadMore)
+    fireEvent.click(loadMore)
+    await waitFor(() => expect(ensureCollection).toHaveBeenCalledTimes(2))
+    expect(loadMore).toBeDisabled()
+
+    folder.publish(true, true)
+    resolveSecond()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Load more resources' })).not.toBeInTheDocument(),
+    )
+  })
+
+  it('shows retryable and terminal folder load failures truthfully', async () => {
+    const ensureCollection = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 'failed' as const,
+        retryable: true,
+        reason: 'network_unavailable' as const,
+      })
+      .mockResolvedValueOnce({
+        status: 'failed' as const,
+        retryable: false,
+        reason: 'invalid_response' as const,
+      })
+    renderFolderEmbed(null, ensureCollection)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Try loading folder again' }))
+    expect(await screen.findByText('Folder could not be loaded')).toHaveAttribute('role', 'status')
+    expect(screen.queryByRole('button', { name: /loading folder/i })).not.toBeInTheDocument()
+    expect(ensureCollection).toHaveBeenCalledTimes(2)
+  })
+})
+
+function renderFolderEmbed(
+  complete: boolean | null,
+  ensureCollection: ResourceIndexLoader['ensureCollection'],
+  includeChild = true,
+) {
+  const folderId = generateDomainId(DOMAIN_ID_KIND.resource)
+  const childId = generateDomainId(DOMAIN_ID_KIND.resource)
+  const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+  const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+  const scope = {
+    campaignId,
+    actorId,
+    projection: 'dm',
+    schema: RESOURCE_INDEX_SCHEMA,
+  } satisfies ResourceProjectionScope
+  const version = initialVersion(assertSha256Digest('c'.repeat(64)))
+  const resources = [
+    {
+      id: folderId,
       campaignId,
-      actorId,
-      projection: 'dm',
-      schema: RESOURCE_INDEX_SCHEMA,
-    } satisfies ResourceProjectionScope
-    const version = initialVersion(assertSha256Digest('a'.repeat(64)))
-    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
+      displayParentId: null,
+      kind: 'folder' as const,
+      title: canonicalizeResourceTitle('Documents'),
+      icon: null,
+      color: null,
+      lifecycle: 'active' as const,
+      metadataVersion: version,
+      createdAt: 1,
+      updatedAt: 1,
+    },
+    {
+      id: childId,
+      campaignId,
+      displayParentId: folderId,
+      kind: 'note' as const,
+      title: canonicalizeResourceTitle('Quest log'),
+      icon: null,
+      color: null,
+      lifecycle: 'active' as const,
+      metadataVersion: version,
+      createdAt: 1,
+      updatedAt: 1,
+    },
+  ]
+  const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty-folder'))
+  let revision = 0
+  const publish = (nextComplete: boolean, includePublishedChild: boolean) => {
+    revision += 1
     index.replaceSnapshot({
       scope,
-      revision: indexRevision('folder'),
-      resources: [
-        {
-          id: folderId,
-          campaignId,
-          displayParentId: null,
-          kind: 'folder',
-          title: canonicalizeResourceTitle('Documents'),
-          icon: null,
-          color: null,
-          lifecycle: 'active',
-          metadataVersion: version,
-          createdAt: 1,
-          updatedAt: 1,
-        },
-        {
-          id: childId,
-          campaignId,
-          displayParentId: folderId,
-          kind: 'note',
-          title: canonicalizeResourceTitle('Quest log'),
-          icon: null,
-          color: null,
-          lifecycle: 'active',
-          metadataVersion: version,
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      ],
+      revision: indexRevision(`folder-page-${revision}`),
+      resources,
       missingResourceIds: [],
       collections: [
         {
           query: { parentId: folderId, lifecycle: 'active' },
-          resourceIds: [childId],
-          complete: true,
+          resourceIds: includePublishedChild ? [childId] : [],
+          complete: nextComplete,
         },
       ],
     })
-    const loader = {
-      ensureResource: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
-      ensureCollection: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
-    } satisfies ResourceIndexLoader
-    const unavailable = {
-      get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
-      subscribe: () => () => {},
-    }
-    const notes = {
-      ...unavailable,
-      export: () => ({ status: 'loading' as const }),
-      create: () => Promise.reject(new Error('Not used')),
-      dispose: () => {},
-    } satisfies NoteSessionSource
-    const maps = {
-      ...unavailable,
-    } satisfies MapPreviewSource
-    render(
-      <CanvasResourceEmbed
-        activation={null}
-        canEdit
-        canvases={unavailable}
-        editing={false}
-        index={index}
-        loader={loader}
-        maps={maps}
-        node={{
-          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
-          type: 'embed',
-          position: { x: 0, y: 0 },
-          data: {
-            destination: {
-              kind: 'internal',
-              target: { kind: 'resource', resourceId: folderId },
+  }
+  index.replaceSnapshot({
+    scope,
+    revision: indexRevision('folder-resource'),
+    resources: includeChild ? resources : [resources[0]!],
+    missingResourceIds: [],
+    collections:
+      complete === null
+        ? []
+        : [
+            {
+              query: { parentId: folderId, lifecycle: 'active' },
+              resourceIds: includeChild ? [childId] : [],
+              complete,
             },
-          },
-        }}
-        notes={notes}
-      />,
-    )
-
-    expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent('Documents')
-    expect(screen.getByText('Quest log')).toBeVisible()
-    expect(loader.ensureCollection).not.toHaveBeenCalled()
+          ],
   })
-})
+  const loader = {
+    ensureResource: vi.fn(() => Promise.resolve({ status: 'completed' as const })),
+    ensureCollection,
+  } satisfies ResourceIndexLoader
+  const unavailable = {
+    get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
+    subscribe: () => () => {},
+  }
+  const notes = {
+    ...unavailable,
+    export: () => ({ status: 'loading' as const }),
+    create: () => Promise.reject(new Error('Not used')),
+    dispose: () => {},
+  } satisfies NoteSessionSource
+  render(
+    <CanvasResourceEmbed
+      activation={null}
+      canEdit
+      canvases={unavailable}
+      editing={false}
+      index={index}
+      loader={loader}
+      maps={unavailable}
+      node={{
+        id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+        type: 'embed',
+        position: { x: 0, y: 0 },
+        data: {
+          destination: {
+            kind: 'internal',
+            target: { kind: 'resource', resourceId: folderId },
+          },
+        },
+      }}
+      notes={notes}
+    />,
+  )
+  return { publish }
+}

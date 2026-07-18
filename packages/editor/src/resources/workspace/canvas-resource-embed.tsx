@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
+import { Loader2 } from 'lucide-react'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasDocumentNode } from '../../canvas/document-contract'
 import { canvasEmbedLabel } from '../../canvas/canvas-embed-label'
@@ -15,12 +16,14 @@ import type {
   AuthorizedResourceSummary,
   CollectionKnowledge,
   ResourceIndexLoader,
+  ResourceLoadResult,
   WorkspaceResourceIndex,
 } from '../resource-index-contract'
 import type { ResourceId } from '../domain-id'
 import type { BlockNoteActivation } from '../../rich-text/blocknote/use-blocknote-activation'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { resourceKindIcon } from './resource-presentation'
+import { useEnsureResourceCollection } from './resource-loading'
 
 const MISSING_RESOURCE = { state: 'missing' as const }
 
@@ -64,15 +67,6 @@ export function CanvasResourceEmbed({
   useEffect(() => {
     if (resourceId && resource.state === 'unknown') void loader.ensureResource(resourceId)
   }, [loader, resource.state, resourceId])
-  useEffect(() => {
-    if (
-      folderId &&
-      (folderCollection?.state === 'unknown' || folderCollection?.complete === false)
-    ) {
-      void loader.ensureCollection({ parentId: folderId, lifecycle: 'active' })
-    }
-  }, [folderCollection, folderId, loader])
-
   if (resource.state !== 'known') {
     return (
       <CanvasEmbedFrame label={canvasEmbedLabel(node)} missing zoom={zoom}>
@@ -104,7 +98,11 @@ export function CanvasResourceEmbed({
   if (resource.value.kind === 'folder') {
     return (
       <CanvasEmbedFrame label={resource.value.title} zoom={zoom}>
-        <CanvasFolderResourceEmbed collection={folderCollection} />
+        <CanvasFolderResourceEmbed
+          collection={folderCollection}
+          folderId={resource.value.id}
+          loader={loader}
+        />
       </CanvasEmbedFrame>
     )
   }
@@ -128,19 +126,30 @@ export function CanvasResourceEmbed({
 
 function CanvasFolderResourceEmbed({
   collection,
+  folderId,
+  loader,
 }: {
   collection: CollectionKnowledge<AuthorizedResourceSummary> | null
+  folderId: ResourceId
+  loader: ResourceIndexLoader
 }) {
-  if (collection?.state !== 'known') {
+  const load = useEnsureResourceCollection(
+    loader,
+    { parentId: folderId, lifecycle: 'active' },
+    collection?.state === 'unknown',
+  )
+  if (collection?.state !== 'known' && !load.result) {
     return <span className="flex size-full items-center justify-center p-3">Loading folder</span>
   }
-  if (collection.items.length === 0) {
+  if (collection?.state === 'known' && collection.complete && collection.items.length === 0) {
     return <span className="flex size-full items-center justify-center p-3">Folder is empty</span>
   }
+  const items = collection?.state === 'known' ? collection.items : []
+  const continuation = folderContinuation(collection, load.result)
   return (
     <ScrollArea className="size-full">
-      <ul className="flex flex-col gap-1 p-2">
-        {collection.items.map((item) => {
+      <ul aria-label="Folder contents" className="flex flex-col gap-1 p-2">
+        {items.map((item) => {
           const Icon = resourceKindIcon(item.kind)
           return (
             <li
@@ -152,9 +161,51 @@ function CanvasFolderResourceEmbed({
             </li>
           )
         })}
+        {continuation && (
+          <li>
+            {continuation.action ? (
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+                disabled={load.loading}
+                onClick={load.retry}
+              >
+                {load.loading && <Loader2 className="size-3 animate-spin" />}
+                {continuation.label}
+              </button>
+            ) : (
+              <span
+                className="block px-2 py-1.5 text-center text-xs text-muted-foreground"
+                role="status"
+              >
+                {continuation.label}
+              </span>
+            )}
+          </li>
+        )}
       </ul>
     </ScrollArea>
   )
+}
+
+function folderContinuation(
+  collection: CollectionKnowledge<AuthorizedResourceSummary> | null,
+  result: ResourceLoadResult | null,
+): Readonly<{ action: boolean; label: string }> | null {
+  if (result?.status === 'failed') {
+    return {
+      action: result.retryable,
+      label: result.retryable ? 'Try loading folder again' : 'Folder could not be loaded',
+    }
+  }
+  if (result?.status === 'unavailable') {
+    return { action: false, label: 'Folder preview unavailable' }
+  }
+  if (result?.status === 'scope_changed') {
+    return { action: false, label: 'Folder preview changed' }
+  }
+  if (collection?.state !== 'known' || collection.complete) return null
+  return { action: true, label: 'Load more resources' }
 }
 
 function CanvasMapResourceEmbed({

@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
-import type { ResourceCollectionQuery, ResourceLoadResult } from '../resource-index-contract'
+import type {
+  ResourceCollectionQuery,
+  ResourceIndexLoader,
+  ResourceLoadResult,
+} from '../resource-index-contract'
 import {
   resourceCollectionQueryFromKey,
   resourceCollectionQueryKey,
 } from '../resource-index-contract'
 
 export function useEnsureResourceCollection(
-  runtime: EditorRuntime,
+  loader: ResourceIndexLoader,
   query: ResourceCollectionQuery,
   loadOnMount = true,
 ) {
@@ -20,14 +24,15 @@ export function useEnsureResourceCollection(
   useEffect(() => {
     if ((!loadOnMount && attempt === 0) || settled) return
     let current = true
-    void runtime.resources.loader
+    void loader
       .ensureCollection(resourceCollectionQueryFromKey(queryKey))
       .then((result) => current && setLoaded({ key, result }))
     return () => {
       current = false
     }
-  }, [attempt, key, loadOnMount, queryKey, runtime, settled])
+  }, [attempt, key, loadOnMount, loader, queryKey, settled])
   return {
+    loading: (loadOnMount || attempt > 0) && !settled,
     result: loaded?.key === key ? loaded.result : null,
     retry: () => setAttempt((value) => value + 1),
   }

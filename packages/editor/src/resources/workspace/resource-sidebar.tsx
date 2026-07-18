@@ -341,7 +341,10 @@ function BookmarkedResourceCollection({
   const bookmarkedIds = bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARKS
   if (bookmarks.state === 'unknown')
     return (
-      <SidebarState load={{ result: null, retry: () => {} }} pendingLabel="Loading bookmarks…" />
+      <SidebarState
+        load={{ loading: true, result: null, retry: () => {} }}
+        pendingLabel="Loading bookmarks…"
+      />
     )
   const ids = [...bookmarkedIds]
   const resources = sortAuthorizedResourceSummaries(
@@ -416,7 +419,11 @@ function ResourceCollection({
   visibleIds: () => ReadonlyArray<ResourceId>
 }) {
   const collection = snapshot.list(query)
-  const load = useEnsureResourceCollection(runtime, query, collection.state === 'unknown')
+  const load = useEnsureResourceCollection(
+    runtime.resources.loader,
+    query,
+    collection.state === 'unknown',
+  )
   if (collection.state === 'unknown') {
     return <SidebarState load={load} pendingLabel="Loading resources…" />
   }

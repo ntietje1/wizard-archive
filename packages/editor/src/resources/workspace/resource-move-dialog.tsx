@@ -118,7 +118,7 @@ function MoveFolderCollection({
     lifecycle: 'active' as const,
     kinds: FOLDER_KINDS,
   }
-  const load = useEnsureResourceCollection(runtime, query)
+  const load = useEnsureResourceCollection(runtime.resources.loader, query)
   const collection = snapshot.list(query)
   if (collection.state === 'unknown') {
     if (load.result?.status === 'failed' && load.result.retryable) {
