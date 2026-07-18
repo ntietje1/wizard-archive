@@ -1,6 +1,6 @@
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type * as Y from 'yjs'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { useResolvedTheme } from '@wizard-archive/ui/theme/context'
@@ -25,6 +25,8 @@ import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-men
 import { NoteResourceRuntimeProvider } from './note-resource-runtime'
 import type { NoteResourceBinding } from './note-resource-runtime-context'
 import { NoteResourceLinkMenu } from './links/resource-link-menu'
+import { useResourcePreviewPublication } from '../resources/use-resource-preview-publication'
+import type { ResourcePreviewPublicationBinding } from '../resources/use-resource-preview-publication'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -35,6 +37,7 @@ type NoteEditorProps = {
   headingNavigationRef?: NoteHeadingNavigationRef
   resources?: NoteResourceBinding
   label: string
+  previewPublication?: ResourcePreviewPublicationBinding
   scroll: NoteScrollBehavior
 } & (
   | { mode: 'view' }
@@ -51,6 +54,7 @@ function NoteDocumentEditor(props: NoteEditorProps) {
   const editable = props.mode === 'edit'
   const flush = props.mode === 'edit' && props.persistence === 'ready' ? props.onFlush : null
   const resolvedTheme = useResolvedTheme()
+  const previewContainer = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null)
   const editor = useCreateBlockNote(
     {
@@ -103,9 +107,17 @@ function NoteDocumentEditor(props: NoteEditorProps) {
     }
   }, [editor, headingNavigationRef])
   useNoteScrollPersistence(props.scroll, viewport)
+  useResourcePreviewPublication({
+    binding: props.previewPublication ?? null,
+    containerRef: previewContainer,
+    document,
+    enabled: editable,
+    resolveElement: (container) => container.querySelector<HTMLElement>('.bn-editor'),
+  })
 
   const content = (
     <div
+      ref={previewContainer}
       className="resource-note-editor relative flex min-h-0 flex-1 flex-col"
       onBlurCapture={
         flush

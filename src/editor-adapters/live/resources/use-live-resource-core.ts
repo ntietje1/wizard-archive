@@ -211,6 +211,24 @@ function createScopedLiveResourceRuntime(
       throw error
     }
   }
+  const previewPublication = createLiveResourcePreviewPublicationGateway({
+    claim: (resourceId) =>
+      write(() =>
+        convex.mutation(api.resources.mutations.claimResourcePreviewGeneration, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        }),
+      ),
+    discard: discardUpload,
+    publish: (args) =>
+      write(() =>
+        convex.mutation(api.resources.mutations.publishResourcePreview, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
+      ),
+    upload: uploadFile,
+  })
   const files = createLiveFileContentSource(
     currentScope.campaignId,
     {
@@ -244,6 +262,7 @@ function createScopedLiveResourceRuntime(
     },
     undo.beginRecording,
     contentAuthority,
+    currentScope.projection === 'view_as_player' ? null : previewPublication,
   )
   const maps = createLiveMapSessionSource(
     currentScope.campaignId,
@@ -391,25 +410,6 @@ function createScopedLiveResourceRuntime(
     })
     return subscribeToWatch(watch, apply)
   })
-  const previewPublication = createLiveResourcePreviewPublicationGateway({
-    claim: (resourceId) =>
-      write(() =>
-        convex.mutation(api.resources.mutations.claimResourcePreviewGeneration, {
-          campaignId: currentScope.campaignId,
-          resourceId,
-        }),
-      ),
-    discard: discardUpload,
-    publish: (args) =>
-      write(() =>
-        convex.mutation(api.resources.mutations.publishResourcePreview, {
-          campaignId: currentScope.campaignId,
-          ...args,
-        }),
-      ),
-    upload: uploadFile,
-  })
-
   const unsupported = {
     status: 'unavailable',
     reason: 'capability_not_supported',

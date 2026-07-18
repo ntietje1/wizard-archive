@@ -218,6 +218,11 @@ function CanvasViewport({
       )}
       focusedNodeId={target?.kind === 'canvasNode' ? target.nodeId : null}
       openDestination={(destination) => openAuthoredDestination(runtime, destination)}
+      previewPublication={
+        runtime.resources.previewPublication.status === 'available'
+          ? runtime.resources.previewPublication.value
+          : undefined
+      }
       resourceId={resource.id}
       session={state.session}
       title={resource.title}
@@ -281,6 +286,14 @@ function NoteViewport({
         }}
         headingNavigationRef={headingNavigationRef}
         label={`${resource.title} note editor`}
+        previewPublication={
+          runtime.resources.previewPublication.status === 'available'
+            ? {
+                gateway: runtime.resources.previewPublication.value,
+                resourceId: resource.id,
+              }
+            : undefined
+        }
         scroll={{
           kind: 'persistent',
           campaignId: runtime.scope.campaignId,

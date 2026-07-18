@@ -31,6 +31,10 @@ import {
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
+import type { ResourcePreviewPublicationGateway } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { generatePdfPreview } from '@wizard-archive/editor/resources/preview-generation'
+import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
+import { FILE_CLASSIFICATION } from '@wizard-archive/editor/resources/file-content-contract'
 
 type CreateFileArgs = FunctionArgs<typeof api.resources.actions.executePlainFileTransfer>
 type CreateFileResult = FunctionReturnType<typeof api.resources.actions.executePlainFileTransfer>
@@ -115,6 +119,7 @@ export function createLiveFileContentSource(
   backend: LiveFileContentBackend,
   beginCreateUndo: () => ResourceUndoRecording,
   authority: LiveResourceContentAuthority,
+  previewPublication: ResourcePreviewPublicationGateway | null = null,
 ): FileContentSource {
   const content = new LiveFileContentStateSource(backend)
   const pending = new Map<ImportJobId, PendingFileCreate>()
@@ -218,13 +223,15 @@ export function createLiveFileContentSource(
           undoRecording.abandon()
           return { status: 'not_committed', retryable: false, reason: 'invalid_response' }
         }
-        return await finalizeLiveContentCreate(
+        const finalized = await finalizeLiveContentCreate(
           delivery,
           created.resourceId,
           intent.destinationParentId,
           backend,
           undoRecording,
         )
+        publishPdfPreview(previewPublication, created.resourceId, source)
+        return finalized
       } catch {
         return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
       } finally {
@@ -252,6 +259,7 @@ export function createLiveFileContentSource(
         }
         if (result.status === 'completed') {
           await content.load(resourceId).catch(() => undefined)
+          publishPdfPreview(previewPublication, resourceId, source)
           return {
             status: 'completed',
             content: result.content,
@@ -273,6 +281,22 @@ export function createLiveFileContentSource(
       pending.clear()
     },
   }
+}
+
+function publishPdfPreview(
+  publication: ResourcePreviewPublicationGateway | null,
+  resourceId: ResourceId,
+  source: FileResourceSource,
+) {
+  if (
+    !publication ||
+    classifyFileResourceSource(source).classification !== FILE_CLASSIFICATION.pdf
+  ) {
+    return
+  }
+  void publication
+    .publish(resourceId, () => generatePdfPreview(source.bytes))
+    .catch(() => undefined)
 }
 
 async function fetchFile(url: string): Promise<Response> {

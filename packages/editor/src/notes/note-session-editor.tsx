@@ -6,6 +6,8 @@ import type { NoteHeadingNavigationRef } from './note-heading-navigation'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
 import type { NoteResourceBinding } from './note-resource-runtime-context'
+import type { ResourcePreviewPublicationGateway } from '../resources/editor-runtime-contract'
+import type { ResourceId } from '../resources/domain-id'
 
 type RenderableNoteSessionState = Extract<
   NoteSessionState,
@@ -20,6 +22,7 @@ export function NoteSessionEditor({
   resources,
   headingNavigationRef,
   label,
+  previewPublication,
   scroll,
   state,
 }: {
@@ -30,6 +33,10 @@ export function NoteSessionEditor({
   resources?: NoteResourceBinding
   headingNavigationRef?: NoteHeadingNavigationRef
   label: string
+  previewPublication?: Readonly<{
+    gateway: ResourcePreviewPublicationGateway
+    resourceId: ResourceId
+  }>
   scroll: NoteScrollBehavior
   state: RenderableNoteSessionState
 }) {
@@ -77,6 +84,9 @@ export function NoteSessionEditor({
       label={label}
       mode="edit"
       persistence="ready"
+      previewPublication={
+        previewPublication ? { ...previewPublication, prepare: state.session.flush } : undefined
+      }
       scroll={scroll}
       onFlush={state.session.flush}
     />
