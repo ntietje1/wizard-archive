@@ -95,7 +95,11 @@ export function CanvasToolbar({
           aria-label="Zoom in"
           title="Zoom in"
           onClick={() =>
-            interactionController.zoomTo(interaction.viewport.zoom * 1.2, undefined, true)
+            zoomAroundSurfaceCenter(
+              interactionController,
+              surface.current,
+              interaction.viewport.zoom * 1.2,
+            )
           }
         >
           <Plus className="h-4 w-4" />
@@ -107,7 +111,11 @@ export function CanvasToolbar({
           aria-label="Zoom out"
           title="Zoom out"
           onClick={() =>
-            interactionController.zoomTo(interaction.viewport.zoom / 1.2, undefined, true)
+            zoomAroundSurfaceCenter(
+              interactionController,
+              surface.current,
+              interaction.viewport.zoom / 1.2,
+            )
           }
         >
           <Minus className="h-4 w-4" />
@@ -157,6 +165,16 @@ export function CanvasToolbar({
       </div>
     </>
   )
+}
+
+function zoomAroundSurfaceCenter(
+  interactionController: CanvasInteractionController,
+  surface: HTMLElement | null,
+  zoom: number,
+) {
+  if (!surface) return
+  const bounds = surface.getBoundingClientRect()
+  interactionController.zoomTo(zoom, { x: bounds.width / 2, y: bounds.height / 2 }, true)
 }
 
 function ToolGroupButton({

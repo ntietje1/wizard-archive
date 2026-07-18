@@ -307,6 +307,20 @@ describe('CanvasEditor', () => {
         .map((button) => button.getAttribute('aria-label')),
     ).toEqual(['Zoom in', 'Zoom out', 'Fit zoom', 'Undo', 'Redo'])
 
+    const surface = screen.getByTestId('canvas-surface')
+    const bounds = vi
+      .spyOn(surface, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 800, height: 600 }))
+    try {
+      fireEvent.click(within(viewportToolbar).getByRole('button', { name: 'Zoom in' }))
+      expect(screen.getByTestId('canvas-viewport')).toHaveStyle({
+        transform: 'translate(-80px, -60px) scale(1.2)',
+      })
+    } finally {
+      bounds.mockRestore()
+      window.localStorage.clear()
+    }
+
     view.unmount()
     session.dispose()
   })
