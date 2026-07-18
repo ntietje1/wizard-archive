@@ -1,8 +1,8 @@
 import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import type { ComponentType, MouseEvent, ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import type { AuthoredDestination, CanonicalTarget } from '../authored-destination-contract'
-import type { EditorRuntime, ResourcePreviewSource } from '../editor-runtime-contract'
+import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
   AuthorizedResourceSummary,
   ResourceLoadResult,
@@ -10,13 +10,11 @@ import type {
 } from '../resource-index-contract'
 import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import type { WorkspaceSort } from '../workspace-preferences'
-import { workspaceSelectionIntent } from '../workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
 import {
   allowWorkspaceResourceDrop,
   finishWorkspaceResourceDrop,
   leaveWorkspaceResourceDrop,
-  workspaceResourceInteractionProps,
 } from '../workspace-resource-drag'
 import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
@@ -40,6 +38,7 @@ import { MapViewer } from '../../maps/map-viewer'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
+import { ResourceCard } from './resource-card'
 
 export function ResourceViewport({
   actions,
@@ -471,166 +470,6 @@ function CreateNewDashboard({
       </div>
     </div>
   )
-}
-
-function ResourceCard({
-  actions,
-  ambiguous,
-  canEdit,
-  onSelectionChange,
-  onOpenContextMenu,
-  resource,
-  runtime,
-  selected,
-  selection,
-  visibleIds,
-}: {
-  actions: WorkspaceActions
-  ambiguous: boolean
-  canEdit: boolean
-  onSelectionChange: (action: WorkspaceSelectionAction) => void
-  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
-  selected: boolean
-  selection: WorkspaceSelection
-  visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
-}) {
-  const Icon = resourceKindIcon(resource.kind)
-  const folder = resource.kind === 'folder'
-  return (
-    <article
-      data-selected={selected}
-      {...workspaceResourceInteractionProps({
-        actions,
-        canEdit,
-        onOpenContextMenu,
-        onSelectionChange,
-        resource,
-        selection,
-      })}
-      className={
-        folder
-          ? 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-muted/60 p-3 pt-5 text-left outline-none hover:bg-muted focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
-          : 'group relative flex h-[140px] flex-col overflow-hidden rounded-md border border-border bg-card p-3 text-left shadow-sm outline-none hover:bg-muted/60 focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
-      }
-    >
-      <button
-        type="button"
-        aria-label={resource.title}
-        className="absolute inset-0 z-10 rounded-md outline-none"
-        onClick={(event) => selectCard({ actions, event, resource, visibleIds, onSelectionChange })}
-      />
-      {folder && (
-        <span className="absolute left-0 top-0 h-3 w-20 rounded-tr border-r border-border bg-muted" />
-      )}
-      <span className="flex min-w-0 items-center gap-2">
-        <Icon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">{resource.title}</span>
-      </span>
-      <ResourceCardPreview resource={resource} runtime={runtime} />
-      <span className="mt-auto text-xs text-muted-foreground">
-        {ambiguous
-          ? `${resourceKindLabel(resource.kind)} · ${resource.id.slice(-6)}`
-          : resourceKindLabel(resource.kind)}
-      </span>
-    </article>
-  )
-}
-
-function ResourceCardPreview({
-  resource,
-  runtime,
-}: {
-  resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
-}) {
-  const [element, setElement] = useState<HTMLDivElement | null>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    if (!element) return
-    if (typeof IntersectionObserver === 'undefined') return
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry?.isIntersecting === true),
-      { rootMargin: '140px' },
-    )
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [element])
-  return (
-    <div
-      ref={setElement}
-      inert
-      aria-hidden="true"
-      className="mt-2 min-h-0 flex-1 overflow-hidden rounded border border-border/60 bg-background"
-    >
-      {visible && runtime.resources.previews.status === 'available' ? (
-        <LoadedResourceCardPreview resource={resource} source={runtime.resources.previews.value} />
-      ) : (
-        <ResourceCardPreviewFallback resource={resource} />
-      )}
-    </div>
-  )
-}
-
-function LoadedResourceCardPreview({
-  resource,
-  source,
-}: {
-  resource: AuthorizedResourceSummary
-  source: ResourcePreviewSource
-}) {
-  const state = useResourceStoreSnapshot(source, resource.id)
-  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null)
-  if (state.status === 'ready' && state.imageUrl !== null && state.imageUrl !== failedImageUrl) {
-    return (
-      <img
-        alt={`Preview of ${resource.title}`}
-        className="size-full object-cover"
-        draggable={false}
-        loading="lazy"
-        referrerPolicy="no-referrer"
-        src={state.imageUrl}
-        onError={() => setFailedImageUrl(state.imageUrl)}
-      />
-    )
-  }
-  return state.status === 'ready' &&
-    state.preview.kind === 'note' &&
-    state.preview.excerpt.length > 0 ? (
-    <p className="size-full overflow-hidden whitespace-pre-wrap p-2 text-xs leading-relaxed text-muted-foreground">
-      {state.preview.excerpt}
-    </p>
-  ) : (
-    <ResourceCardPreviewFallback resource={resource} />
-  )
-}
-
-function ResourceCardPreviewFallback({ resource }: { resource: AuthorizedResourceSummary }) {
-  const Icon = resourceKindIcon(resource.kind)
-  return (
-    <span className="flex size-full items-center justify-center bg-muted/20">
-      <Icon className="size-8 text-muted-foreground" aria-hidden="true" />
-    </span>
-  )
-}
-
-function selectCard({
-  actions,
-  event,
-  onSelectionChange,
-  resource,
-  visibleIds,
-}: {
-  actions: WorkspaceActions
-  event: MouseEvent<HTMLButtonElement>
-  onSelectionChange: (action: WorkspaceSelectionAction) => void
-  resource: AuthorizedResourceSummary
-  visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
-}) {
-  const intent = workspaceSelectionIntent(event)
-  onSelectionChange({ type: 'select', resourceId: resource.id, visibleIds, intent })
-  if (intent === 'single') actions.open(resource.id)
 }
 
 function FolderLoadingState({

@@ -404,7 +404,7 @@ describe('CanvasResourceEmbed', () => {
     const ensureCollection = vi.fn(() => Promise.resolve({ status: 'completed' as const }))
     renderFolderEmbed(true, ensureCollection, false)
 
-    expect(screen.getByText('Folder is empty')).toBeVisible()
+    expect(screen.getByText('Empty folder')).toBeVisible()
     expect(ensureCollection).not.toHaveBeenCalled()
   })
 

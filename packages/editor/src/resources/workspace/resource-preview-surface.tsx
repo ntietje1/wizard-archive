@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
 import { noteBlocksPlainText } from '../../notes/document/plain-text'
 import type { NoteBlock } from '../../notes/document/model'
@@ -12,7 +13,7 @@ import type {
   MapPreviewState,
   NoteSessionState,
 } from '../content-session-contract'
-import type { EditorRuntime } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourcePreviewSource } from '../editor-runtime-contract'
 import type { CanonicalTarget } from '../authored-destination-contract'
 import type {
   AuthorizedResourceSummary,
@@ -20,6 +21,7 @@ import type {
   ResourceLoadResult,
 } from '../resource-index-contract'
 import { resourceKindIcon } from './resource-presentation'
+import { resourceKindLabel } from './resource-operations'
 import { useEnsureResourceCollection } from './resource-loading'
 import { useResourceStoreSnapshot, useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 
@@ -34,17 +36,24 @@ type ResourceNotePreviewRenderer = (input: {
   target: Extract<CanonicalTarget, { kind: 'noteBlock' | 'resource' }>
 }) => ReactNode
 
-export function ResourcePreviewSurface({
-  renderNote,
-  resource,
-  runtime,
-  target = { kind: 'resource', resourceId: resource.id },
-}: {
-  renderNote?: ResourceNotePreviewRenderer
+type ResourcePreviewSurfaceProps = {
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
-  target?: CanonicalTarget
-}) {
+} & (
+  | Readonly<{ mode: 'card'; renderNote?: never; target?: never }>
+  | Readonly<{
+      mode?: 'content'
+      renderNote?: ResourceNotePreviewRenderer
+      target?: CanonicalTarget
+    }>
+)
+
+export function ResourcePreviewSurface(props: ResourcePreviewSurfaceProps) {
+  const { resource, runtime } = props
+  if (props.mode === 'card') {
+    return <CardResourcePreview resource={resource} runtime={runtime} />
+  }
+  const target = props.target ?? { kind: 'resource', resourceId: resource.id }
   if (target.resourceId !== resource.id) {
     throw new TypeError('Resource preview target must belong to the rendered resource')
   }
@@ -52,7 +61,7 @@ export function ResourcePreviewSurface({
     case 'note':
       return (
         <NoteResourcePreview
-          render={renderNote}
+          render={props.renderNote}
           resource={resource}
           runtime={runtime}
           target={target}
@@ -75,6 +84,74 @@ export function ResourcePreviewSurface({
     case 'canvas':
       return <CanvasResourcePreview resource={resource} runtime={runtime} target={target} />
   }
+}
+
+function CardResourcePreview({
+  resource,
+  runtime,
+}: {
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  if (resource.kind === 'folder') {
+    return (
+      <FolderResourcePreview compact interactive={false} resource={resource} runtime={runtime} />
+    )
+  }
+  return runtime.resources.previews.status === 'available' ? (
+    <PublishedResourceCardPreview resource={resource} source={runtime.resources.previews.value} />
+  ) : (
+    <ResourceCardPreviewFallback resource={resource} />
+  )
+}
+
+function PublishedResourceCardPreview({
+  resource,
+  source,
+}: {
+  resource: AuthorizedResourceSummary
+  source: ResourcePreviewSource
+}) {
+  const state = useResourceStoreSnapshot(source, resource.id)
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null)
+  if (state.status === 'ready' && state.preview.kind !== resource.kind) {
+    return <ResourceCardPreviewFallback resource={resource} />
+  }
+  if (state.status === 'ready' && state.imageUrl !== null && state.imageUrl !== failedImageUrl) {
+    return (
+      <img
+        alt={`Preview of ${resource.title}`}
+        className={`size-full object-cover ${resource.kind === 'note' ? 'object-top' : ''}`}
+        draggable={false}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        src={state.imageUrl}
+        onError={() => setFailedImageUrl(state.imageUrl)}
+      />
+    )
+  }
+  if (
+    state.status === 'ready' &&
+    state.preview.kind === 'note' &&
+    state.preview.excerpt.length > 0
+  ) {
+    return (
+      <p className="size-full overflow-hidden whitespace-pre-wrap p-2 text-xs leading-relaxed text-muted-foreground">
+        {state.preview.excerpt}
+      </p>
+    )
+  }
+  return <ResourceCardPreviewFallback resource={resource} />
+}
+
+function ResourceCardPreviewFallback({ resource }: { resource: AuthorizedResourceSummary }) {
+  const Icon = resourceKindIcon(resource.kind)
+  return (
+    <span className="flex size-full items-center justify-center">
+      <Icon className="size-12 text-muted-foreground" aria-hidden="true" />
+      <span className="sr-only">{resourceKindLabel(resource.kind)} preview unavailable</span>
+    </span>
+  )
 }
 
 function NoteResourcePreview({
@@ -131,9 +208,13 @@ function StaticNoteResourcePreview({
 }
 
 function FolderResourcePreview({
+  compact = false,
+  interactive = true,
   resource,
   runtime,
 }: {
+  compact?: boolean
+  interactive?: boolean
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -146,28 +227,33 @@ function FolderResourcePreview({
     collection.state === 'unknown',
   )
   if (collection.state === 'known' && collection.complete && collection.items.length === 0) {
-    return <PreviewState label="Folder is empty" />
+    return <PreviewState label="Empty folder" />
   }
   const items = collection.state === 'known' ? collection.items : []
   const continuation = folderContinuation(collection, load.result)
   return (
-    <div className="size-full overflow-auto">
-      <ul aria-label="Folder contents" className="flex flex-col gap-1 p-2">
+    <ScrollArea className="size-full">
+      <ul aria-label="Folder contents" className={compact ? 'space-y-0.5 p-2' : 'space-y-1 p-2'}>
         {items.map((item) => {
           const Icon = resourceKindIcon(item.kind)
           return (
             <li
               key={item.id}
-              className="flex min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-sm"
+              className={`flex min-w-0 items-center rounded-sm ${
+                compact ? 'gap-1.5 px-1.5 py-1 text-xs' : 'gap-2 px-2 py-1.5 text-sm'
+              }`}
             >
-              <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <Icon
+                className={`${compact ? 'size-3.5' : 'size-4'} shrink-0 text-muted-foreground`}
+                aria-hidden="true"
+              />
               <span className="truncate">{item.title}</span>
             </li>
           )
         })}
         {continuation && (
           <li>
-            {continuation.action ? (
+            {continuation.action && interactive ? (
               <button
                 type="button"
                 className="flex w-full items-center justify-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
@@ -188,7 +274,7 @@ function FolderResourcePreview({
           </li>
         )}
       </ul>
-    </div>
+    </ScrollArea>
   )
 }
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { assertSha256Digest } from '../component-version'
@@ -7,6 +7,8 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
+import { createResourcePreview } from '../resource-preview'
+import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import { ResourcePreviewSurface } from '../workspace/resource-preview-surface'
 import { indexRevision } from '../workspace-resource-index'
 
@@ -164,6 +166,57 @@ describe('ResourcePreviewSurface', () => {
 
     expect(screen.getByTestId('interactive-note')).toHaveTextContent('Note')
     noteDocument.destroy()
+  })
+
+  it('uses the canonical preview source for card thumbnails and drops failed images', () => {
+    const note = resource('note', 'Note')
+    const imageUrl = parseSafeHttpsUrl('https://example.com/note.webp')
+    if (!imageUrl) throw new TypeError('Expected a safe test URL')
+    const previewState = {
+      status: 'ready' as const,
+      imageUrl,
+      preview: createResourcePreview('note', 'Canonical excerpt', []),
+    }
+    const runtime = {
+      resources: {
+        previews: {
+          status: 'available',
+          value: {
+            get: () => previewState,
+            subscribe: () => () => undefined,
+          },
+        },
+      },
+    } as unknown as EditorRuntime
+
+    render(<ResourcePreviewSurface mode="card" resource={note} runtime={runtime} />)
+
+    const image = screen.getByRole('img', { name: 'Preview of Note' })
+    expect(image).toHaveAttribute('src', imageUrl)
+    fireEvent.error(image)
+    expect(screen.queryByRole('img', { name: 'Preview of Note' })).not.toBeInTheDocument()
+    expect(screen.getByText('Canonical excerpt')).toBeInTheDocument()
+  })
+
+  it('keeps unauthorized card previews content-free', () => {
+    const file = resource('file', 'Private file')
+    const previewState = { status: 'unavailable' as const, reason: 'unauthorized' as const }
+    const runtime = {
+      resources: {
+        previews: {
+          status: 'available',
+          value: {
+            get: () => previewState,
+            subscribe: () => () => undefined,
+          },
+        },
+      },
+    } as unknown as EditorRuntime
+
+    render(<ResourcePreviewSurface mode="card" resource={file} runtime={runtime} />)
+
+    expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 })
 
