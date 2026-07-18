@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
+import * as Y from 'yjs'
 import {
   EMPTY_AUTHORED_DESTINATION_SERIALIZED,
   parseSerializedAuthoredDestination,
@@ -10,6 +11,7 @@ import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { NoteEmbedBlock } from '../note-embed-block'
 import { NoteResourceRuntimeProvider } from '../../note-resource-runtime'
 import { createEmbedItem } from '../../slash-menu/embed-slash-menu'
+import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc, noteYDocToBlocks } from '../../document/headless-yjs'
 
 describe('NoteEmbedBlock', () => {
   it('stores external links as canonical authored destinations', () => {
@@ -47,14 +49,19 @@ describe('NoteEmbedBlock', () => {
     const editor = { updateBlock: vi.fn() }
     const resolver = {
       canResolve: vi.fn(() => true),
-      resolveFiles: vi.fn(() => Promise.resolve([])),
+      resolveFiles: vi.fn(() =>
+        Promise.resolve({ kind: 'destinations' as const, destinations: [] }),
+      ),
       resolve: vi.fn(() =>
-        Promise.resolve([
-          {
-            kind: 'internal' as const,
-            target: { kind: 'resource' as const, resourceId: sourceResourceId },
-          },
-        ]),
+        Promise.resolve({
+          kind: 'destinations' as const,
+          destinations: [
+            {
+              kind: 'internal' as const,
+              target: { kind: 'resource' as const, resourceId: sourceResourceId },
+            },
+          ],
+        }),
       ),
     }
     render(
@@ -87,23 +94,24 @@ describe('NoteEmbedBlock', () => {
     const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const targetResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const editor = { updateBlock: vi.fn() }
-    let settle: (
-      destinations: ReadonlyArray<{
-        kind: 'internal'
-        target: { kind: 'resource'; resourceId: typeof targetResourceId }
-      }>,
-    ) => void = () => {}
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const document = noteBlocksToYDoc(
+      [embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED, blockId)],
+      NOTE_YJS_FRAGMENT,
+    )
+    let settle: (result: {
+      kind: 'resourceCreations'
+      settlements: [{ status: 'completed'; resourceId: typeof targetResourceId }]
+    }) => void = () => {}
     const resolver = {
       canResolve: vi.fn(() => true),
-      resolve: vi.fn(() => Promise.resolve([])),
+      resolve: vi.fn(() => Promise.resolve({ kind: 'destinations' as const, destinations: [] })),
       resolveFiles: vi.fn(
         () =>
-          new Promise<
-            ReadonlyArray<{
-              kind: 'internal'
-              target: { kind: 'resource'; resourceId: typeof targetResourceId }
-            }>
-          >((resolve) => {
+          new Promise<{
+            kind: 'resourceCreations'
+            settlements: [{ status: 'completed'; resourceId: typeof targetResourceId }]
+          }>((resolve) => {
             settle = resolve
           }),
       ),
@@ -116,10 +124,11 @@ describe('NoteEmbedBlock', () => {
           runtime: {} as never,
           sourceResourceId,
         }}
+        document={document}
         editable
       >
         <NoteEmbedBlock
-          block={embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED) as never}
+          block={embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED, blockId) as never}
           contentRef={() => {}}
           editor={editor as never}
         />
@@ -134,13 +143,193 @@ describe('NoteEmbedBlock', () => {
     expect(screen.getByRole('button', { name: 'Uploading' })).toBeDisabled()
     expect(resolver.resolveFiles).toHaveBeenCalledWith([file], 1, expect.any(AbortSignal))
 
-    settle([
-      {
+    settle({
+      kind: 'resourceCreations',
+      settlements: [{ status: 'completed', resourceId: targetResourceId }],
+    })
+    await waitFor(() => {
+      const inserted = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)[0]
+      expect(inserted?.type).toBe('embed')
+      expect(
+        parseSerializedAuthoredDestination(
+          inserted?.type === 'embed' ? inserted.props.destination : '',
+        ),
+      ).toEqual({
         kind: 'internal',
         target: { kind: 'resource', resourceId: targetResourceId },
+      })
+    })
+    expect(editor.updateBlock).not.toHaveBeenCalled()
+  })
+
+  it('retries an indeterminate creation receipt without creating another resource', async () => {
+    const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const targetResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const document = noteBlocksToYDoc(
+      [embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED, blockId)],
+      NOTE_YJS_FRAGMENT,
+    )
+    const retryCreation = vi.fn(() =>
+      Promise.resolve({ status: 'completed' as const, resourceId: targetResourceId }),
+    )
+    const report = vi.fn()
+    const resolver = {
+      canResolve: vi.fn(() => true),
+      resolve: vi.fn(() => Promise.resolve({ kind: 'destinations' as const, destinations: [] })),
+      resolveFiles: vi.fn(() =>
+        Promise.resolve({
+          kind: 'resourceCreations' as const,
+          settlements: [
+            {
+              status: 'indeterminate' as const,
+              reason: 'response_lost' as const,
+              retry: retryCreation,
+            },
+          ],
+        }),
+      ),
+    }
+    const { container } = render(
+      <NoteResourceRuntimeProvider
+        binding={{
+          drop: resolver,
+          report,
+          renderNote: () => null,
+          runtime: {} as never,
+          sourceResourceId,
+        }}
+        document={document}
+        editable
+      >
+        <NoteEmbedBlock
+          block={embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED, blockId) as never}
+          contentRef={() => {}}
+          editor={{ updateBlock: vi.fn() } as never}
+        />
+      </NoteResourceRuntimeProvider>,
+    )
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')
+    if (!input) throw new Error('Expected a file input')
+
+    fireEvent.change(input, {
+      target: { files: [new File(['map'], 'map.png', { type: 'image/png' })] },
+    })
+
+    await waitFor(() =>
+      expect(report).toHaveBeenCalledWith('File creation status is unknown', expect.any(Function)),
+    )
+    const retry = report.mock.calls.at(-1)?.[1]
+    if (!retry) throw new Error('Expected a creation retry')
+    retry()
+
+    await waitFor(() => expect(retryCreation).toHaveBeenCalledOnce())
+    await waitFor(() => {
+      const inserted = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)[0]
+      expect(
+        inserted?.type === 'embed'
+          ? parseSerializedAuthoredDestination(inserted.props.destination)
+          : null,
+      ).toEqual({
+        kind: 'internal',
+        target: { kind: 'resource', resourceId: targetResourceId },
+      })
+    })
+  })
+
+  it('reports creation after target unmount and retries insertion exactly once', async () => {
+    const sourceResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const targetResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const document = noteBlocksToYDoc(
+      [
+        embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED, blockId),
+        {
+          type: 'paragraph' as const,
+          content: [{ type: 'text' as const, text: 'Retained' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    let settle: (result: {
+      kind: 'resourceCreations'
+      settlements: [{ status: 'completed'; resourceId: typeof targetResourceId }]
+    }) => void = () => {}
+    const report = vi.fn()
+    const resolver = {
+      canResolve: vi.fn(() => true),
+      resolve: vi.fn(() => Promise.resolve({ kind: 'destinations' as const, destinations: [] })),
+      resolveFiles: vi.fn(
+        () =>
+          new Promise<{
+            kind: 'resourceCreations'
+            settlements: [{ status: 'completed'; resourceId: typeof targetResourceId }]
+          }>((resolve) => {
+            settle = resolve
+          }),
+      ),
+    }
+    const runtime = {
+      content: {
+        notes: {
+          get: () => ({
+            status: 'initializing' as const,
+            operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+            local: document,
+          }),
+        },
       },
-    ])
-    await waitFor(() => expect(editor.updateBlock).toHaveBeenCalledOnce())
+    }
+    const view = render(
+      <NoteResourceRuntimeProvider
+        binding={{
+          drop: resolver,
+          report,
+          renderNote: () => null,
+          runtime: runtime as never,
+          sourceResourceId,
+        }}
+        document={document}
+        editable
+      >
+        <NoteEmbedBlock
+          block={embedBlock(EMPTY_AUTHORED_DESTINATION_SERIALIZED, blockId) as never}
+          contentRef={() => {}}
+          editor={{ updateBlock: vi.fn() } as never}
+        />
+      </NoteResourceRuntimeProvider>,
+    )
+    const input = view.container.querySelector<HTMLInputElement>('input[type="file"]')
+    if (!input) throw new Error('Expected a file input')
+    fireEvent.change(input, {
+      target: { files: [new File(['map'], 'map.png', { type: 'image/png' })] },
+    })
+    removeNoteBlock(document, blockId)
+    view.unmount()
+
+    settle({
+      kind: 'resourceCreations',
+      settlements: [{ status: 'completed', resourceId: targetResourceId }],
+    })
+
+    await waitFor(() =>
+      expect(report).toHaveBeenCalledWith(
+        'Resource created, insertion failed',
+        expect.any(Function),
+      ),
+    )
+    const retry = report.mock.calls.at(-1)?.[1]
+    if (!retry) throw new Error('Expected an insertion retry')
+    retry()
+    retry()
+
+    const recovered = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT).filter(
+      (block) =>
+        block.type === 'embed' &&
+        parseSerializedAuthoredDestination(block.props.destination)?.kind === 'internal',
+    )
+    expect(recovered).toHaveLength(1)
+    expect(report).toHaveBeenLastCalledWith('Resource inserted')
   })
 })
 
@@ -189,16 +378,26 @@ function renderNoteEmbed(
   )
 }
 
-function embedBlock(destination: string) {
+function embedBlock(destination: string, id = generateDomainId(DOMAIN_ID_KIND.noteBlock)) {
   return {
-    id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
-    type: 'embed',
+    id,
+    type: 'embed' as const,
     props: {
       destination,
       backgroundColor: 'default',
-      textAlignment: 'left',
+      textAlignment: 'left' as const,
       previewWidth: 480,
     },
     children: [],
   }
+}
+
+function removeNoteBlock(document: Y.Doc, blockId: string) {
+  const root = document.getXmlFragment(NOTE_YJS_FRAGMENT).toArray()[0]
+  if (!(root instanceof Y.XmlElement)) throw new Error('Expected a note block group')
+  const index = root
+    .toArray()
+    .findIndex((child) => child instanceof Y.XmlElement && child.getAttribute('id') === blockId)
+  if (index < 0) throw new Error('Expected the note block')
+  document.transact(() => root.delete(index, 1))
 }

@@ -138,7 +138,11 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         <div className="note-editor-fill-height">
           <div className="note-editor-surface">
             <div className="note-editor-core-surface">
-              <NoteResourceRuntimeProvider binding={props.resources} editable={editable}>
+              <NoteResourceRuntimeProvider
+                binding={props.resources}
+                document={document}
+                editable={editable}
+              >
                 <NoteValueRuntimeProvider editor={editor} editable={editable}>
                   <BlockNoteView
                     editable={editable}

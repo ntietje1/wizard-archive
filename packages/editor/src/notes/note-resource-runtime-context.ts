@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { ReactNode } from 'react'
+import type * as Y from 'yjs'
 import type { AuthoredDestinationDropResolver } from '../resources/authored-destination-drop'
 import type { NoteSessionState } from '../resources/content-session-contract'
 import type { ResourceId } from '../resources/domain-id'
@@ -14,6 +15,7 @@ type RenderableNoteState = Extract<
 export type EmbeddedNoteResourceRenderer = (input: {
   ancestors: ReadonlySet<ResourceId>
   drop: AuthoredDestinationDropResolver | null
+  report: ((message: string, retry?: () => void) => void) | null
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   state: RenderableNoteState
@@ -22,6 +24,7 @@ export type EmbeddedNoteResourceRenderer = (input: {
 export type NoteResourceBinding = Readonly<{
   ancestors?: ReadonlySet<ResourceId>
   drop?: AuthoredDestinationDropResolver
+  report?: (message: string, retry?: () => void) => void
   renderNote: EmbeddedNoteResourceRenderer
   runtime: EditorRuntime
   sourceResourceId: ResourceId
@@ -29,8 +32,10 @@ export type NoteResourceBinding = Readonly<{
 
 type NoteResourceRuntime = Readonly<{
   ancestry: ReadonlySet<ResourceId>
+  document: Y.Doc | null
   editable: boolean
   drop: AuthoredDestinationDropResolver | null
+  report: ((message: string, retry?: () => void) => void) | null
   renderNote: EmbeddedNoteResourceRenderer | null
   runtime: EditorRuntime | null
   sourceResourceId: ResourceId | null

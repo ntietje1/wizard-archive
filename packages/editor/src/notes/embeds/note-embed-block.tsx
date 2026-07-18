@@ -12,12 +12,15 @@ import type {
   SafeHttpsUrl,
 } from '../../resources/authored-destination-contract'
 import { parseSafeHttpsUrl } from '../../resources/authored-destination-contract'
-import type { ResourceId } from '../../resources/domain-id'
+import type { AuthoredDestinationDropResult } from '../../resources/authored-destination-drop'
+import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
+import type { NoteBlockId, ResourceId } from '../../resources/domain-id'
 import type { EditorRuntime } from '../../resources/editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import { ResourcePreviewSurface } from '../../resources/workspace/resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
 import { useNoteResourceRuntime } from '../use-note-resource-runtime'
+import { settleNoteEmbedResourceCreation } from './note-embed-insertion'
 
 type NoteEmbedRenderProps = ReactCustomBlockRenderProps<
   'embed',
@@ -35,7 +38,12 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
       props: { destination: serializeAuthoredDestination(next) },
     })
   }
-  const drop = useNoteEmbedBlockDrop({ empty, setDestination, surface })
+  const drop = useNoteEmbedBlockDrop({
+    blockId: assertDomainId(DOMAIN_ID_KIND.noteBlock, block.id),
+    empty,
+    setDestination,
+    surface,
+  })
 
   return (
     <section
@@ -114,6 +122,7 @@ function NoteEmbedContent({
         ancestry={surface.ancestry}
         destination={destination}
         drop={surface.drop}
+        report={surface.report}
         renderNote={surface.renderNote}
         runtime={surface.runtime}
       />
@@ -141,26 +150,35 @@ function NoteEmbedContent({
 }
 
 function useNoteEmbedBlockDrop({
+  blockId,
   empty,
   setDestination,
   surface,
 }: {
+  blockId: NoteBlockId
   empty: boolean
   setDestination: (destination: AuthoredDestination) => void
   surface: ReturnType<typeof useNoteResourceRuntime>
 }) {
   const [pending, setPending] = useState<'drop' | 'upload' | null>(null)
   const operation = useRef<AbortController | null>(null)
+  const mounted = useRef(true)
   const enabled = Boolean(empty && surface.editable && surface.drop && pending === null)
 
-  useEffect(() => () => operation.current?.abort(), [])
+  useEffect(
+    () => () => {
+      mounted.current = false
+      operation.current?.abort()
+    },
+    [],
+  )
 
   const resolve = async (
     source: 'drop' | 'upload',
     load: (
       resolver: NonNullable<typeof surface.drop>,
       signal: AbortSignal,
-    ) => Promise<ReadonlyArray<AuthoredDestination>>,
+    ) => Promise<AuthoredDestinationDropResult>,
   ) => {
     if (!surface.drop) return
     const controller = new AbortController()
@@ -168,13 +186,27 @@ function useNoteEmbedBlockDrop({
     operation.current = controller
     setPending(source)
     try {
-      const [next] = await load(surface.drop, controller.signal)
-      if (!next || controller.signal.aborted || recursiveDestination(next, surface.ancestry)) return
-      setDestination(next)
+      const result = await load(surface.drop, controller.signal)
+      if (result.kind === 'destinations') {
+        const next = result.destinations[0]
+        if (next && !controller.signal.aborted && !recursiveDestination(next, surface.ancestry)) {
+          setDestination(next)
+        }
+      } else {
+        const creation = result.settlements[0]
+        if (!creation) return
+        settleNoteEmbedResourceCreation(creation, {
+          blockId,
+          canReplaceTarget: () => mounted.current && !controller.signal.aborted,
+          currentDocument: () => currentSourceDocument(surface),
+          document: surface.document,
+          report: surface.report,
+        })
+      }
     } finally {
       if (operation.current === controller) {
         operation.current = null
-        setPending(null)
+        if (mounted.current) setPending(null)
       }
     }
   }
@@ -210,16 +242,25 @@ function useNoteEmbedBlockDrop({
   }
 }
 
+function currentSourceDocument(surface: ReturnType<typeof useNoteResourceRuntime>) {
+  if (!surface.runtime || !surface.sourceResourceId) return surface.document
+  const state = surface.runtime.content.notes.get(surface.sourceResourceId)
+  if (state.status === 'initializing') return state.local
+  return state.status === 'ready' ? state.session.document : null
+}
+
 function InternalNoteEmbed({
   ancestry,
   destination,
   drop,
+  report,
   renderNote,
   runtime,
 }: {
   ancestry: ReadonlySet<ResourceId>
   destination: Extract<AuthoredDestination, { kind: 'internal' }>
   drop: ReturnType<typeof useNoteResourceRuntime>['drop']
+  report: ReturnType<typeof useNoteResourceRuntime>['report']
   renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime | null
 }) {
@@ -231,6 +272,7 @@ function InternalNoteEmbed({
     <InternalResourceEmbed
       ancestry={ancestry}
       drop={drop}
+      report={report}
       renderNote={renderNote}
       runtime={runtime}
       target={destination.target}
@@ -241,12 +283,14 @@ function InternalNoteEmbed({
 function InternalResourceEmbed({
   ancestry,
   drop,
+  report,
   renderNote,
   runtime,
   target,
 }: {
   ancestry: ReadonlySet<ResourceId>
   drop: ReturnType<typeof useNoteResourceRuntime>['drop']
+  report: ReturnType<typeof useNoteResourceRuntime>['report']
   renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime
   target: Extract<AuthoredDestination, { kind: 'internal' }>['target']
@@ -273,7 +317,7 @@ function InternalResourceEmbed({
         <ResourcePreviewSurface
           renderNote={({ resource: note, state }) =>
             renderNote ? (
-              renderNote({ ancestors: ancestry, drop, resource: note, runtime, state })
+              renderNote({ ancestors: ancestry, drop, report, resource: note, runtime, state })
             ) : (
               <EmbedState>Embedded notes are unavailable here</EmbedState>
             )

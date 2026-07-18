@@ -137,6 +137,77 @@ describe('resource application workflows', () => {
     core.dispose()
   })
 
+  it('replays a committed transfer after response loss even when the initiating surface aborts', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
+    })
+    const files = core.runtime.content.files
+    let attempts = 0
+    let committedDelivery: Awaited<ReturnType<typeof files.executeTransfer>> | null = null
+    const commitTransfer = vi.fn((...args: Parameters<typeof files.executeTransfer>) =>
+      files.executeTransfer(...args),
+    )
+    const executeTransfer = vi.fn(async (...args: Parameters<typeof files.executeTransfer>) => {
+      attempts += 1
+      if (attempts > 1 && committedDelivery) return committedDelivery
+      committedDelivery = await commitTransfer(args[0], args[1])
+      return {
+        status: 'indeterminate',
+        retryable: true,
+        reason: 'response_lost',
+      } as const
+    })
+    const runtime = {
+      ...core.runtime,
+      content: {
+        ...core.runtime.content,
+        files: {
+          get: (resourceId) => files.get(resourceId),
+          subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
+          export: (resourceId) => files.export(resourceId),
+          executeTransfer,
+          replace: (resourceId, expectedVersion, source) =>
+            files.replace(resourceId, expectedVersion, source),
+          dispose: () => files.dispose(),
+        },
+      },
+    } satisfies EditorRuntime
+    const controller = new AbortController()
+    const settlement = await createWorkspaceActions(runtime, vi.fn()).createAssetFile(
+      new File(['once'], 'Once.txt', { type: 'text/plain' }),
+      controller.signal,
+    )
+    if (settlement.status !== 'indeterminate') {
+      throw new Error('Expected an indeterminate creation')
+    }
+    controller.abort()
+
+    const replay = await settlement.retry()
+
+    if (replay.status !== 'completed') throw new Error('Expected a completed replay')
+    expect(executeTransfer).toHaveBeenCalledTimes(2)
+    expect(commitTransfer).toHaveBeenCalledOnce()
+    expect(executeTransfer.mock.calls[1]?.[0]).toEqual(executeTransfer.mock.calls[0]?.[0])
+    expect(executeTransfer.mock.calls[1]?.[2]).toBeUndefined()
+    const file = runtime.resources.index.getSnapshot().lookup(replay.resourceId)
+    expect(file).toMatchObject({ state: 'known', value: { kind: 'file', title: 'Once.txt' } })
+    if (file.state !== 'known' || file.value.displayParentId === null) {
+      throw new Error('Expected the created file in Assets')
+    }
+    core.dispose()
+  })
+
   it('creates authored uploads under one canonical Assets folder', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)

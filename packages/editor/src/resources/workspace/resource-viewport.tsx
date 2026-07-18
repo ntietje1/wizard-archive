@@ -274,6 +274,7 @@ function NoteViewport({
           drop: createWorkspaceAuthoredDestinationDropResolver({
             actions,
           }),
+          report: actions.report,
           renderNote: renderEmbeddedNoteResource,
           runtime,
           sourceResourceId: resource.id,

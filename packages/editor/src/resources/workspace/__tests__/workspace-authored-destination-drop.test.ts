@@ -20,12 +20,15 @@ describe('workspace canvas drops', () => {
     })
 
     expect(resolver.canResolve(transfer)).toBe(true)
-    await expect(resolver.resolve(transfer, 1, new AbortController().signal)).resolves.toEqual([
-      {
-        kind: 'internal',
-        target: { kind: 'resource', resourceId: RESOURCE_A },
-      },
-    ])
+    await expect(resolver.resolve(transfer, 1, new AbortController().signal)).resolves.toEqual({
+      kind: 'destinations',
+      destinations: [
+        {
+          kind: 'internal',
+          target: { kind: 'resource', resourceId: RESOURCE_A },
+        },
+      ],
+    })
     expect(createAssetFile).not.toHaveBeenCalled()
   })
 
@@ -42,12 +45,13 @@ describe('workspace canvas drops', () => {
     const transfer = createDataTransfer({}, [image, rejected])
 
     expect(resolver.canResolve(transfer)).toBe(true)
-    await expect(resolver.resolve(transfer, 2, new AbortController().signal)).resolves.toEqual([
-      {
-        kind: 'internal',
-        target: { kind: 'resource', resourceId: RESOURCE_A },
-      },
-    ])
+    await expect(resolver.resolve(transfer, 2, new AbortController().signal)).resolves.toEqual({
+      kind: 'resourceCreations',
+      settlements: [
+        { status: 'completed', resourceId: RESOURCE_A },
+        { status: 'rejected', reason: 'unsupported' },
+      ],
+    })
     expect(createAssetFile).toHaveBeenNthCalledWith(1, image, expect.any(AbortSignal))
     expect(createAssetFile).toHaveBeenNthCalledWith(2, rejected, expect.any(AbortSignal))
   })
@@ -61,13 +65,44 @@ describe('workspace canvas drops', () => {
       actions: { createAssetFile },
     })
 
-    await expect(resolver.resolveFiles([image], 1, new AbortController().signal)).resolves.toEqual([
-      {
-        kind: 'internal',
-        target: { kind: 'resource', resourceId: RESOURCE_A },
-      },
-    ])
+    await expect(resolver.resolveFiles([image], 1, new AbortController().signal)).resolves.toEqual({
+      kind: 'resourceCreations',
+      settlements: [{ status: 'completed', resourceId: RESOURCE_A }],
+    })
     expect(createAssetFile).toHaveBeenCalledWith(image, expect.any(AbortSignal))
+  })
+
+  it('retains the transfer-owned retry until the created resource is identified', async () => {
+    const image = new File(['image'], 'map.png', { type: 'image/png' })
+    const retry = vi.fn(() =>
+      Promise.resolve({ status: 'completed' as const, resourceId: RESOURCE_A }),
+    )
+    const resolver = createWorkspaceAuthoredDestinationDropResolver({
+      actions: {
+        createAssetFile: vi.fn(() =>
+          Promise.resolve({
+            status: 'indeterminate' as const,
+            reason: 'response_lost' as const,
+            retry,
+          }),
+        ),
+      },
+    })
+
+    const result = await resolver.resolveFiles([image], 1, new AbortController().signal)
+    if (result.kind !== 'resourceCreations') {
+      throw new Error('Expected resource creation settlements')
+    }
+    const creation = result.settlements[0]
+    if (creation?.status !== 'indeterminate') {
+      throw new Error('Expected an indeterminate creation')
+    }
+
+    await expect(creation.retry()).resolves.toEqual({
+      status: 'completed',
+      resourceId: RESOURCE_A,
+    })
+    expect(retry).toHaveBeenCalledOnce()
   })
 
   it('accepts the first safe external URI without creating a resource', async () => {
@@ -79,16 +114,17 @@ describe('workspace canvas drops', () => {
       'text/uri-list': '# browser metadata\r\nhttps://example.com/reference\r\n',
     })
 
-    await expect(resolver.resolve(transfer, 1, new AbortController().signal)).resolves.toEqual([
-      { kind: 'externalUrl', url: 'https://example.com/reference' },
-    ])
+    await expect(resolver.resolve(transfer, 1, new AbortController().signal)).resolves.toEqual({
+      kind: 'destinations',
+      destinations: [{ kind: 'externalUrl', url: 'https://example.com/reference' }],
+    })
     await expect(
       resolver.resolve(
         createDataTransfer({ 'text/uri-list': 'http://example.com' }),
         1,
         new AbortController().signal,
       ),
-    ).resolves.toEqual([])
+    ).resolves.toEqual({ kind: 'destinations', destinations: [] })
     expect(createAssetFile).not.toHaveBeenCalled()
   })
 })

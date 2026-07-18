@@ -66,6 +66,7 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
     open: (resourceId: ResourceId) => runtime.navigation.open({ kind: 'resource', resourceId }),
     paste: (clipboard: WorkspaceClipboard, destinationParentId: ResourceId) =>
       pasteWorkspaceClipboard(runtime, clipboard, destinationParentId, report),
+    report,
     update: (resourceId: ResourceId, values: { title: string; icon: string; color: string }) =>
       updateWorkspaceResource(runtime, resourceId, values, report),
     undo: (direction: 'redo' | 'undo') => {
@@ -178,7 +179,8 @@ async function createWorkspaceFile(
   }
   return await completeWorkspaceCreation(
     { state: 'authoritative' },
-    () => runtime.content.files.executeTransfer(intent, { bytes, fileName: file.name }, signal),
+    (attemptSignal) =>
+      runtime.content.files.executeTransfer(intent, { bytes, fileName: file.name }, attemptSignal),
     'File uploaded',
     report,
     signal,
@@ -280,7 +282,7 @@ async function completeWorkspaceCreation(
   expectation:
     | Readonly<{ state: 'authoritative' }>
     | Readonly<{ state: 'expected'; resourceId: ResourceId }>,
-  deliver: () => Promise<CommandDelivery<ResourceStructureCommandResult>>,
+  deliver: (signal?: AbortSignal) => Promise<CommandDelivery<ResourceStructureCommandResult>>,
   successMessage: string,
   report: WorkspaceReport,
   signal?: AbortSignal,
@@ -288,22 +290,18 @@ async function completeWorkspaceCreation(
   if (signal?.aborted) return { status: 'cancelled' }
   let delivery: CommandDelivery<ResourceStructureCommandResult>
   try {
-    delivery = await deliver()
+    delivery = await deliver(signal)
   } catch {
-    if (signal?.aborted) return { status: 'cancelled' }
-    const retry = () =>
-      completeWorkspaceCreation(expectation, deliver, successMessage, report, signal)
+    const retry = () => completeWorkspaceCreation(expectation, deliver, successMessage, report)
     return { status: 'failed', reason: 'provider_failure', retry }
   }
-  if (signal?.aborted) return { status: 'cancelled' }
   if (delivery.status === 'indeterminate') {
-    const retry = () =>
-      completeWorkspaceCreation(expectation, deliver, successMessage, report, signal)
+    const retry = () => completeWorkspaceCreation(expectation, deliver, successMessage, report)
     return { status: 'indeterminate', reason: delivery.reason, retry }
   }
   if (delivery.status === 'not_committed') {
     const retry = delivery.retryable
-      ? () => completeWorkspaceCreation(expectation, deliver, successMessage, report, signal)
+      ? () => completeWorkspaceCreation(expectation, deliver, successMessage, report)
       : null
     return { status: 'failed', reason: delivery.reason, retry }
   }

@@ -5,6 +5,7 @@ import { NoteSessionEditor } from '../../notes/note-session-editor'
 export const renderEmbeddedNoteResource: EmbeddedNoteResourceRenderer = ({
   ancestors,
   drop,
+  report,
   resource,
   runtime,
   state,
@@ -14,6 +15,7 @@ export const renderEmbeddedNoteResource: EmbeddedNoteResourceRenderer = ({
     resources={{
       ancestors,
       drop: drop ?? undefined,
+      report: report ?? undefined,
       renderNote: renderEmbeddedNoteResource,
       runtime,
       sourceResourceId: resource.id,

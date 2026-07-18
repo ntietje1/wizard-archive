@@ -184,20 +184,23 @@ describe('CanvasEditor', () => {
     const session = await createSession()
     const externalUrl = parseSafeHttpsUrl('https://example.com/reference')!
     const resolve = vi.fn(() =>
-      Promise.resolve([
-        {
-          kind: 'internal' as const,
-          target: { kind: 'resource' as const, resourceId: RESOURCE_ID },
-        },
-        { kind: 'externalUrl' as const, url: externalUrl },
-      ]),
+      Promise.resolve({
+        kind: 'destinations' as const,
+        destinations: [
+          {
+            kind: 'internal' as const,
+            target: { kind: 'resource' as const, resourceId: RESOURCE_ID },
+          },
+          { kind: 'externalUrl' as const, url: externalUrl },
+        ],
+      }),
     )
     const view = render(
       <ProductionCanvasEditor
         canEdit
         drop={{
           canResolve: () => true,
-          resolveFiles: () => Promise.resolve([]),
+          resolveFiles: () => Promise.resolve({ kind: 'destinations' as const, destinations: [] }),
           resolve,
         }}
         renderEmbed={() => null}

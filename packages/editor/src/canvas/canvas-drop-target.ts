@@ -68,8 +68,21 @@ export function useCanvasDropTarget({
     )
     const signal = lifetime.current?.signal
     if (maximumDestinations <= 0 || !signal) return
-    void drop.resolve(event.dataTransfer, maximumDestinations, signal).then((destinations) => {
+    void drop.resolve(event.dataTransfer, maximumDestinations, signal).then((result) => {
       if (signal.aborted) return
+      const destinations =
+        result.kind === 'destinations'
+          ? result.destinations
+          : result.settlements.flatMap((creation) =>
+              creation.status === 'completed'
+                ? [
+                    {
+                      kind: 'internal' as const,
+                      target: { kind: 'resource' as const, resourceId: creation.resourceId },
+                    },
+                  ]
+                : [],
+            )
       const available = Math.max(
         0,
         CANVAS_WORKLOAD_LIMITS.nodes - documentController.read().nodes.length,
