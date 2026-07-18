@@ -53,7 +53,7 @@ describe('ResourceRightSidebar note outline', () => {
       updated: { at: 1, by: actorId },
     }
     const navigation: ResourceNavigation = {
-      current: () => resourceId,
+      current: () => ({ kind: 'resource', resourceId }),
       open: vi.fn(),
       subscribe: () => () => {},
     }

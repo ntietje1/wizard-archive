@@ -1,6 +1,8 @@
 import { createInMemoryEditorRuntime } from '@wizard-archive/editor/resources/in-memory-editor-runtime'
+import { canonicalTargetsEqual } from '@wizard-archive/editor/resources/authored-destination'
 import type { ResourceNavigation } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CanonicalTarget } from '@wizard-archive/editor/resources/authored-destination-contract'
 import type { LocalWorkspaceFixture } from './local-workspace-fixture'
 import { createSampleLocalWorkspaceFixture } from './sample-local-workspace'
 import { useCommittedRuntime } from '../committed-runtime'
@@ -26,13 +28,15 @@ export function useLocalWorkspaceRuntime({
 }
 
 function createLocalResourceNavigation(initialResourceId: ResourceId | null): ResourceNavigation {
-  let currentResourceId = initialResourceId
+  let currentTarget: CanonicalTarget | null = initialResourceId
+    ? { kind: 'resource', resourceId: initialResourceId }
+    : null
   const listeners = new Set<() => void>()
   return {
-    current: () => currentResourceId,
-    open: (resourceId) => {
-      if (resourceId === currentResourceId) return
-      currentResourceId = resourceId
+    current: () => currentTarget,
+    open: (target) => {
+      if (currentTarget && canonicalTargetsEqual(target, currentTarget)) return
+      currentTarget = target
       for (const listener of listeners) listener()
     },
     subscribe: (listener) => {

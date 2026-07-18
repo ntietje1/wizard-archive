@@ -145,7 +145,7 @@ export function ResourceSidebar({
     () =>
       runtime.navigation.subscribe(() => {
         if (view === 'bookmarks') return
-        const resourceId = runtime.navigation.current()
+        const resourceId = runtime.navigation.current()?.resourceId ?? null
         if (resourceId === null) return
         const ancestorIds = visibleAncestorIds(snapshot, resourceId)
         setTreeExpansion((current) =>

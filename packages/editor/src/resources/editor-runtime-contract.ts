@@ -11,6 +11,7 @@ import type {
   NoteBlockId,
   ResourceId,
 } from './domain-id'
+import type { CanonicalTarget } from './authored-destination-contract'
 import type {
   CapabilityUnavailableReason,
   ResourceAccessCommandGateway,
@@ -81,8 +82,8 @@ export interface ResourceAssetsFolderGateway {
 }
 
 export interface ResourceNavigation {
-  current(): ResourceId | null
-  open(resourceId: ResourceId): void
+  current(): CanonicalTarget | null
+  open(target: CanonicalTarget): void
   subscribe(listener: () => void): () => void
 }
 

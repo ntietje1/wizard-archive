@@ -10,10 +10,18 @@ import type { CanvasNodeId } from '../resources/domain-id'
 
 const ignore = () => {}
 
-export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
+export function CanvasReadonlyPreview({
+  document,
+  focusedNodeId = null,
+}: {
+  document: Y.Doc
+  focusedNodeId?: CanvasNodeId | null
+}) {
   const surface = useRef<HTMLDivElement>(null)
   const viewport = useRef<HTMLDivElement>(null)
   const content = parseCanvasDocumentContent(document)
+  const focusedNode =
+    content?.nodes.find((node) => node.id === focusedNodeId && !node.hidden) ?? null
 
   useLayoutEffect(() => {
     const surfaceElement = surface.current
@@ -21,7 +29,7 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
     if (!surfaceElement || !viewportElement || !content) return
     const update = () => {
       const fitted = fitCanvasContent(
-        content.nodes,
+        focusedNode ? [focusedNode] : content.nodes,
         surfaceElement.clientWidth,
         surfaceElement.clientHeight,
       )
@@ -34,9 +42,12 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
     const observer = new ResizeObserver(update)
     observer.observe(surfaceElement)
     return () => observer.disconnect()
-  }, [content])
+  }, [content, focusedNode])
 
   if (!content) return <span className="text-xs text-muted-foreground">Preview unavailable</span>
+  if (focusedNodeId && !focusedNode) {
+    return <span className="text-xs text-muted-foreground">Target unavailable</span>
+  }
   const nodes = content.nodes.map((node, index) => ({
     ...node,
     zIndex: node.zIndex ?? index + 1,
@@ -100,7 +111,7 @@ export function CanvasReadonlyPreview({ document }: { document: Y.Doc }) {
                 node={node}
                 onFinishEditing={ignore}
                 onSaveContent={ignore}
-                selected={false}
+                selected={node.id === focusedNodeId}
                 zoom={1}
               />
             </div>

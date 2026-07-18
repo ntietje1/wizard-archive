@@ -4,7 +4,7 @@ import { testDomainId } from '../../../../shared/test/domain-id'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '~/editor-adapters/live/editor-route'
 import {
   useLiveWorkspaceNavigation,
-  useLiveWorkspaceSelectedResourceId,
+  useLiveWorkspaceSelectedTarget,
 } from '../use-live-workspace-navigation'
 
 const navigateMock = vi.hoisted(() => vi.fn())
@@ -40,33 +40,52 @@ describe('useLiveWorkspaceNavigation', () => {
     vi.restoreAllMocks()
   })
 
-  it('reads the selected resource UUID from the shared editor route', () => {
-    useMatchMock.mockReturnValue({ search: { resource: resourceId } })
+  it('reads the selected canonical target from the shared editor route', () => {
+    const blockId = testDomainId('noteBlock', 'arrival')
+    useMatchMock.mockReturnValue({
+      search: {
+        resource: resourceId,
+        target: 'noteBlock',
+        targetId: blockId,
+        presentation: 'heading',
+      },
+    })
 
-    const { result } = renderHook(() => useLiveWorkspaceSelectedResourceId())
+    const { result } = renderHook(() => useLiveWorkspaceSelectedTarget())
 
     expect(useMatchMock).toHaveBeenCalledWith({
       from: EDITOR_ROUTE_ID,
       shouldThrow: false,
     })
-    expect(result.current).toBe(resourceId)
+    expect(result.current).toEqual({
+      kind: 'noteBlock',
+      resourceId,
+      blockId,
+      presentation: 'heading',
+    })
   })
 
-  it('navigates to a resource and records it as the latest workspace resource', async () => {
+  it('navigates to an exact target and records its resource as the latest resource', async () => {
+    const blockId = testDomainId('noteBlock', 'arrival')
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
-      await result.current.navigateToResource(resourceId, {
-        heading: 'arrival',
-        replace: true,
-      })
+      await result.current.navigateToTarget(
+        { kind: 'noteBlock', resourceId, blockId, presentation: 'heading' },
+        true,
+      )
     })
 
     expect(lastResourceState.setLastSelectedResource).toHaveBeenCalledExactlyOnceWith(resourceId)
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { campaignId },
-      search: { resource: resourceId, heading: 'arrival' },
+      search: {
+        resource: resourceId,
+        target: 'noteBlock',
+        targetId: blockId,
+        presentation: 'heading',
+      },
       replace: true,
     })
   })
@@ -87,7 +106,7 @@ describe('useLiveWorkspaceNavigation', () => {
   })
 
   it('opens the last editor resource using the stored route search', async () => {
-    lastResourceState.lastSelectedResourceSearch = { resource: resourceId, heading: 'scene' }
+    lastResourceState.lastSelectedResourceSearch = { resource: resourceId }
 
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
@@ -98,7 +117,7 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { campaignId },
-      search: { resource: resourceId, heading: 'scene' },
+      search: { resource: resourceId },
       replace: undefined,
     })
   })

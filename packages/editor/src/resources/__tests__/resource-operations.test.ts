@@ -181,7 +181,7 @@ describe('resource application workflows', () => {
 
 function navigation(initialResourceId: ResourceRecord['id']): ResourceNavigation {
   return {
-    current: () => initialResourceId,
+    current: () => ({ kind: 'resource', resourceId: initialResourceId }),
     open: () => {},
     subscribe: () => () => {},
   }

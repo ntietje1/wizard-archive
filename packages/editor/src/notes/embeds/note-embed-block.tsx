@@ -227,22 +227,13 @@ function InternalNoteEmbed({
   if (ancestry.has(destination.target.resourceId)) {
     return <EmbedState>Recursive embedded resource</EmbedState>
   }
-  if (destination.target.kind !== 'resource') {
-    return (
-      <FocusedDestinationState
-        label={focusedDestinationLabel(destination.target.kind)}
-        resourceId={destination.target.resourceId}
-        runtime={runtime}
-      />
-    )
-  }
   return (
     <InternalResourceEmbed
       ancestry={ancestry}
       drop={drop}
       renderNote={renderNote}
-      resourceId={destination.target.resourceId}
       runtime={runtime}
+      target={destination.target}
     />
   )
 }
@@ -251,15 +242,16 @@ function InternalResourceEmbed({
   ancestry,
   drop,
   renderNote,
-  resourceId,
   runtime,
+  target,
 }: {
   ancestry: ReadonlySet<ResourceId>
   drop: ReturnType<typeof useNoteEmbedRuntime>['drop']
   renderNote: ReturnType<typeof useNoteEmbedRuntime>['renderNote']
-  resourceId: ResourceId
   runtime: EditorRuntime
+  target: Extract<AuthoredDestination, { kind: 'internal' }>['target']
 }) {
+  const resourceId = target.resourceId
   const snapshot = useWorkspaceIndexSnapshot(runtime.resources.index)
   const resource = snapshot.lookup(resourceId)
 
@@ -276,7 +268,7 @@ function InternalResourceEmbed({
   }
   return (
     <>
-      <InternalResourceHeader resource={resource.value} runtime={runtime} />
+      <InternalResourceHeader resource={resource.value} runtime={runtime} target={target} />
       <div className="h-72 min-h-36 overflow-hidden" data-note-embed-body="true">
         <ResourcePreviewSurface
           renderNote={({ resource: note, state }) =>
@@ -288,6 +280,7 @@ function InternalResourceEmbed({
           }
           resource={resource.value}
           runtime={runtime}
+          target={target}
         />
       </div>
     </>
@@ -297,43 +290,22 @@ function InternalResourceEmbed({
 function InternalResourceHeader({
   resource,
   runtime,
+  target,
 }: {
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target: Extract<AuthoredDestination, { kind: 'internal' }>['target']
 }) {
   return (
     <button
       type="button"
       className="flex w-full items-center gap-2 border-b border-border bg-muted/30 px-3 py-2 text-left"
       aria-label={`Open ${resource.title}`}
-      onClick={() => runtime.navigation.open(resource.id)}
+      onClick={() => runtime.navigation.open(target)}
     >
       <FileIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <span className="min-w-0 truncate text-sm font-medium">{resource.title}</span>
     </button>
-  )
-}
-
-function FocusedDestinationState({
-  label,
-  resourceId,
-  runtime,
-}: {
-  label: string
-  resourceId: ResourceId
-  runtime: EditorRuntime
-}) {
-  return (
-    <EmbedState>
-      <span>{label}</span>
-      <button
-        type="button"
-        className="text-sm underline"
-        onClick={() => runtime.navigation.open(resourceId)}
-      >
-        Open resource
-      </button>
-    </EmbedState>
   )
 }
 
@@ -468,21 +440,6 @@ function EmbedState({ children }: { children: ReactNode }) {
 
 function recursiveDestination(destination: AuthoredDestination, ancestry: ReadonlySet<ResourceId>) {
   return destination.kind === 'internal' && ancestry.has(destination.target.resourceId)
-}
-
-function focusedDestinationLabel(
-  kind: Exclude<AuthoredDestination, { kind: 'externalUrl' | 'unresolved' }>['target']['kind'],
-) {
-  switch (kind) {
-    case 'resource':
-      return 'Embedded resource'
-    case 'noteBlock':
-      return 'Embedded note block'
-    case 'mapPin':
-      return 'Embedded map pin'
-    case 'canvasNode':
-      return 'Embedded canvas node'
-  }
 }
 
 function externalTitle(url: SafeHttpsUrl) {

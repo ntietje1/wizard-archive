@@ -63,7 +63,7 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
       emptyWorkspaceTrash(runtime, resourceIds, report),
     move: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
       moveWorkspaceResources(runtime, resourceIds, destinationParentId, report),
-    open: (resourceId: ResourceId) => runtime.navigation.open(resourceId),
+    open: (resourceId: ResourceId) => runtime.navigation.open({ kind: 'resource', resourceId }),
     paste: (clipboard: WorkspaceClipboard, destinationParentId: ResourceId) =>
       pasteWorkspaceClipboard(runtime, clipboard, destinationParentId, report),
     update: (resourceId: ResourceId, values: { title: string; icon: string; color: string }) =>
@@ -439,7 +439,12 @@ async function duplicateWorkspaceResources(
         delivery.result.receipt.result.type === 'deepCopied'
       ) {
         const roots = delivery.result.receipt.result.roots
-        if (roots.length === 1 && roots[0]) runtime.navigation.open(roots[0].destinationRootId)
+        if (roots.length === 1 && roots[0]) {
+          runtime.navigation.open({
+            kind: 'resource',
+            resourceId: roots[0].destinationRootId,
+          })
+        }
         report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
         return
       }

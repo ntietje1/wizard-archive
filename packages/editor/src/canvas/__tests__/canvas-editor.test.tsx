@@ -37,6 +37,31 @@ async function createSession(content: CanvasDocumentContent = { nodes: [], edges
 }
 
 describe('CanvasEditor', () => {
+  it('selects an exact canonical node target when the canvas opens', async () => {
+    const session = await createSession({
+      nodes: [
+        { id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: NODE_B, type: 'text', position: { x: 400, y: 300 }, data: {} },
+      ],
+      edges: [],
+    })
+    const view = render(
+      <CanvasEditor
+        canEdit
+        focusedNodeId={NODE_B}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Focused board"
+      />,
+    )
+
+    const nodes = screen.getAllByTestId('canvas-node')
+    await waitFor(() => expect(nodes[1]).toHaveAttribute('data-selected', 'true'))
+    expect(nodes[0]).toHaveAttribute('data-selected', 'false')
+    view.unmount()
+    session.dispose()
+  })
+
   it('owns a fresh controller runtime for each committed StrictMode effect lifetime', async () => {
     const session = await createSession({
       nodes: [{ id: NODE_A, type: 'text', position: { x: 0, y: 0 }, data: {} }],
@@ -664,6 +689,40 @@ describe('CanvasEditor', () => {
     expect(screen.queryByRole('menuitem', { name: 'Copy' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
     expect(readCanvasDocumentContent(session.document).edges).toHaveLength(1)
+    view.unmount()
+    session.dispose()
+  })
+
+  it('opens the exact authored destination from an embedded node menu', async () => {
+    const destination = {
+      kind: 'internal' as const,
+      target: { kind: 'canvasNode' as const, resourceId: RESOURCE_ID, nodeId: NODE_A },
+    }
+    const session = await createSession({
+      nodes: [
+        {
+          id: NODE_B,
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          data: { destination },
+        },
+      ],
+      edges: [],
+    })
+    const openDestination = vi.fn()
+    const view = render(
+      <CanvasEditor
+        canEdit
+        openDestination={openDestination}
+        resourceId={RESOURCE_ID}
+        session={session}
+        title="Target menu board"
+      />,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('canvas-node'), { clientX: 100, clientY: 100 })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Open target' }))
+    expect(openDestination).toHaveBeenCalledExactlyOnceWith(destination)
     view.unmount()
     session.dispose()
   })

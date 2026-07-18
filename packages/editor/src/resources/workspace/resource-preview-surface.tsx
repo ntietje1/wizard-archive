@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
 import { noteBlocksPlainText } from '../../notes/document/plain-text'
+import type { NoteBlock } from '../../notes/document/model'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import { FileEmbedPreview } from '../../files/file-embed-preview'
 import { MapEmbedPreview } from '../../maps/map-embed-preview'
@@ -12,6 +13,7 @@ import type {
   NoteSessionState,
 } from '../content-session-contract'
 import type { EditorRuntime } from '../editor-runtime-contract'
+import type { CanonicalTarget } from '../authored-destination-contract'
 import type {
   AuthorizedResourceSummary,
   CollectionKnowledge,
@@ -29,28 +31,49 @@ type RenderableNoteState = Extract<
 type ResourceNotePreviewRenderer = (input: {
   resource: AuthorizedResourceSummary
   state: RenderableNoteState
+  target: Extract<CanonicalTarget, { kind: 'noteBlock' | 'resource' }>
 }) => ReactNode
 
 export function ResourcePreviewSurface({
   renderNote,
   resource,
   runtime,
+  target = { kind: 'resource', resourceId: resource.id },
 }: {
   renderNote?: ResourceNotePreviewRenderer
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target?: CanonicalTarget
 }) {
+  if (target.resourceId !== resource.id) {
+    throw new TypeError('Resource preview target must belong to the rendered resource')
+  }
   switch (resource.kind) {
     case 'note':
-      return <NoteResourcePreview render={renderNote} resource={resource} runtime={runtime} />
+      return (
+        <NoteResourcePreview
+          render={renderNote}
+          resource={resource}
+          runtime={runtime}
+          target={target}
+        />
+      )
     case 'folder':
-      return <FolderResourcePreview resource={resource} runtime={runtime} />
+      return target.kind === 'resource' ? (
+        <FolderResourcePreview resource={resource} runtime={runtime} />
+      ) : (
+        <PreviewState label="Target unavailable" />
+      )
     case 'map':
-      return <MapResourcePreview resource={resource} runtime={runtime} />
+      return <MapResourcePreview resource={resource} runtime={runtime} target={target} />
     case 'file':
-      return <FileResourcePreview resource={resource} runtime={runtime} />
+      return target.kind === 'resource' ? (
+        <FileResourcePreview resource={resource} runtime={runtime} />
+      ) : (
+        <PreviewState label="Target unavailable" />
+      )
     case 'canvas':
-      return <CanvasResourcePreview resource={resource} runtime={runtime} />
+      return <CanvasResourcePreview resource={resource} runtime={runtime} target={target} />
   }
 }
 
@@ -58,33 +81,43 @@ function NoteResourcePreview({
   render,
   resource,
   runtime,
+  target,
 }: {
   render?: ResourceNotePreviewRenderer
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target: CanonicalTarget
 }) {
   const state = useResourceStoreSnapshot(runtime.content.notes, resource.id)
+  if (target.kind !== 'resource' && target.kind !== 'noteBlock') {
+    return <PreviewState label="Target unavailable" />
+  }
   if (state.status !== 'initializing' && state.status !== 'ready') {
     return <PreviewContentState kind={resource.kind} state={state} />
   }
-  return render ? (
-    render({ resource, state })
+  return render && target.kind === 'resource' ? (
+    render({ resource, state, target })
   ) : (
-    <StaticNoteResourcePreview resource={resource} state={state} />
+    <StaticNoteResourcePreview resource={resource} state={state} target={target} />
   )
 }
 
 function StaticNoteResourcePreview({
   resource,
   state,
+  target,
 }: {
   resource: AuthorizedResourceSummary
   state: RenderableNoteState
+  target: Extract<CanonicalTarget, { kind: 'noteBlock' | 'resource' }>
 }) {
   const session = state.status === 'ready' ? state.session : null
   useEffect(() => session?.retain(), [session])
   const document = state.status === 'ready' ? state.session.document : state.local
-  const text = noteBlocksPlainText(noteYDocToBlocks(document, NOTE_YJS_FRAGMENT))
+  const blocks = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
+  const targetBlocks = target.kind === 'noteBlock' ? findNoteBlock(blocks, target.blockId) : blocks
+  if (!targetBlocks) return <PreviewState label="Target unavailable" />
+  const text = noteBlocksPlainText(targetBlocks)
   return text ? (
     <div
       aria-label={`${resource.title} preview`}
@@ -162,13 +195,22 @@ function FolderResourcePreview({
 function MapResourcePreview({
   resource,
   runtime,
+  target,
 }: {
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target: CanonicalTarget
 }) {
   const state = useResourceStoreSnapshot(runtime.content.maps.previews, resource.id)
+  if (target.kind !== 'resource' && target.kind !== 'mapPin') {
+    return <PreviewState label="Target unavailable" />
+  }
   return state.status === 'ready' ? (
-    <MapEmbedPreview preview={state.preview} title={resource.title} />
+    <MapEmbedPreview
+      focusedPinId={target.kind === 'mapPin' ? target.pinId : null}
+      preview={state.preview}
+      title={resource.title}
+    />
   ) : (
     <PreviewContentState kind={resource.kind} state={state} />
   )
@@ -198,13 +240,21 @@ function FileResourcePreview({
 function CanvasResourcePreview({
   resource,
   runtime,
+  target,
 }: {
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target: CanonicalTarget
 }) {
   const state = useResourceStoreSnapshot(runtime.content.canvases.previews, resource.id)
+  if (target.kind !== 'resource' && target.kind !== 'canvasNode') {
+    return <PreviewState label="Target unavailable" />
+  }
   return state.status === 'ready' ? (
-    <CanvasReadonlyPreview document={state.document} />
+    <CanvasReadonlyPreview
+      document={state.document}
+      focusedNodeId={target.kind === 'canvasNode' ? target.nodeId : null}
+    />
   ) : (
     <PreviewContentState kind={resource.kind} state={state} />
   )
@@ -264,4 +314,16 @@ function PreviewState({ label }: { label: string }) {
       {label}
     </span>
   )
+}
+
+function findNoteBlock(
+  blocks: ReadonlyArray<NoteBlock>,
+  blockId: Extract<CanonicalTarget, { kind: 'noteBlock' }>['blockId'],
+): ReadonlyArray<NoteBlock> | null {
+  for (const block of blocks) {
+    if (block.id === blockId) return [block]
+    const nested = findNoteBlock(block.children ?? [], blockId)
+    if (nested) return nested
+  }
+  return null
 }

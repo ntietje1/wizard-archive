@@ -2,6 +2,7 @@ import { MapPin as MapPinIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { MapPinId, ResourceId } from '../resources/domain-id'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import type {
   MapContentCommand,
   MapResourceContent,
@@ -24,27 +25,32 @@ type PinFeedback = Readonly<{
 
 export function MapPinSurface({
   canEdit,
+  focusedPinId,
   imageRef,
   layerId,
   mapResourceId,
-  openResource,
+  openDestination,
   resolveResource,
   session,
   src,
   title,
 }: {
   canEdit: boolean
+  focusedPinId: MapPinId | null
   imageRef: RefObject<HTMLImageElement | null>
   layerId: string | null
   mapResourceId: ResourceId
-  openResource: (resourceId: ResourceId) => void
+  openDestination: (destination: AuthoredDestination) => void
   resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null
   session: MapSession
   src: string
   title: string
 }) {
   const [resourceDragActive, setResourceDragActive] = useState(false)
-  const [selectedPinId, setSelectedPinId] = useState<MapPinId | null>(null)
+  const [selection, setSelection] = useState<{
+    focusedPinId: MapPinId | null
+    selectedPinId: MapPinId | null
+  }>({ focusedPinId, selectedPinId: focusedPinId })
   const [movingPinId, setMovingPinId] = useState<MapPinId | null>(null)
   const [menu, setMenu] = useState<{ pin: MapPin; x: number; y: number } | null>(null)
   const [feedback, setFeedback] = useState<PinFeedback | null>(null)
@@ -57,6 +63,9 @@ export function MapPinSurface({
   const pins = session.content.pins.filter(
     (pin) => pin.layerId === layerId && (canEdit || pin.visible),
   )
+  const selectedPinId =
+    selection.focusedPinId === focusedPinId ? selection.selectedPinId : focusedPinId
+  const selectPin = (pinId: MapPinId) => setSelection({ focusedPinId, selectedPinId: pinId })
 
   const execute = async (command: MapContentCommand, success: string) => {
     const result = await session.execute(command)
@@ -106,20 +115,18 @@ export function MapPinSurface({
             onClick={(event) => {
               event.preventDefault()
               event.stopPropagation()
-              setSelectedPinId(pin.id)
+              selectPin(pin.id)
               setMenu(null)
-            }}
-            onDoubleClick={() => {
-              if (targetId) openResource(targetId)
+              openDestination(pin.destination)
             }}
             onContextMenu={(event) => {
               event.preventDefault()
               event.stopPropagation()
-              setSelectedPinId(pin.id)
+              selectPin(pin.id)
               setMenu({ pin, x: event.clientX, y: event.clientY })
             }}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && targetId) openResource(targetId)
+              if (event.key === 'Enter') openDestination(pin.destination)
             }}
             onPointerDown={(event) => {
               if (!canEdit || event.button !== 0) return

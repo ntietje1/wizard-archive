@@ -1,6 +1,7 @@
 import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ComponentType, MouseEvent, ReactNode } from 'react'
+import type { AuthoredDestination, CanonicalTarget } from '../authored-destination-contract'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type {
   AuthorizedResourceSummary,
@@ -52,6 +53,7 @@ export function ResourceViewport({
   selection,
   snapshot,
   sort,
+  target,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
@@ -63,6 +65,7 @@ export function ResourceViewport({
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
+  target: CanonicalTarget | null
 }) {
   if (resource.lifecycle === 'trashed') {
     return (
@@ -97,6 +100,7 @@ export function ResourceViewport({
           headingNavigationRef={noteHeadingNavigation}
           resource={resource}
           runtime={runtime}
+          target={target}
           onOpenContextMenu={onOpenContextMenu}
         />
       )
@@ -105,40 +109,47 @@ export function ResourceViewport({
     case 'map':
       return (
         <MapViewport
-          actions={actions}
           canEdit={canEdit}
           resource={resource}
           runtime={runtime}
           snapshot={snapshot}
+          target={target}
         />
       )
     case 'canvas':
       return (
-        <CanvasViewport actions={actions} canEdit={canEdit} resource={resource} runtime={runtime} />
+        <CanvasViewport
+          actions={actions}
+          canEdit={canEdit}
+          resource={resource}
+          runtime={runtime}
+          target={target}
+        />
       )
   }
 }
 
 function MapViewport({
-  actions,
   canEdit,
   resource,
   runtime,
   snapshot,
+  target,
 }: {
-  actions: WorkspaceActions
   canEdit: boolean
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   snapshot: WorkspaceResourceIndexSnapshot
+  target: CanonicalTarget | null
 }) {
   const state = useResourceStoreSnapshot(runtime.content.maps, resource.id)
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
   return (
     <MapViewer
       canEdit={canEdit}
+      focusedPinId={target?.kind === 'mapPin' ? target.pinId : null}
       mapResourceId={resource.id}
-      openResource={actions.open}
+      openDestination={(destination) => openAuthoredDestination(runtime, destination)}
       resolveResource={(resourceId) => {
         const knowledge = snapshot.lookup(resourceId)
         return knowledge.state === 'known' ? knowledge.value : null
@@ -178,11 +189,13 @@ function CanvasViewport({
   canEdit,
   resource,
   runtime,
+  target,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target: CanonicalTarget | null
 }) {
   const state = useResourceStoreSnapshot(runtime.content.canvases, resource.id)
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
@@ -204,6 +217,8 @@ function CanvasViewport({
           zoom={zoom}
         />
       )}
+      focusedNodeId={target?.kind === 'canvasNode' ? target.nodeId : null}
+      openDestination={(destination) => openAuthoredDestination(runtime, destination)}
       resourceId={resource.id}
       session={state.session}
       title={resource.title}
@@ -218,6 +233,7 @@ function NoteViewport({
   onOpenContextMenu,
   resource,
   runtime,
+  target,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
@@ -225,9 +241,15 @@ function NoteViewport({
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
+  target: CanonicalTarget | null
 }) {
   const source = runtime.content.notes
   const state = useResourceStoreSnapshot(source, resource.id)
+  const focusedBlockId = target?.kind === 'noteBlock' ? target.blockId : null
+  useEffect(() => {
+    if (state.status !== 'initializing' && state.status !== 'ready') return
+    if (focusedBlockId) headingNavigationRef.current?.(focusedBlockId)
+  }, [focusedBlockId, headingNavigationRef, state.status])
   if (state.status !== 'initializing' && state.status !== 'ready') {
     return <ContentState resource={resource} state={state} />
   }
@@ -617,4 +639,14 @@ export function ViewportState({
       </div>
     </div>
   )
+}
+
+function openAuthoredDestination(runtime: EditorRuntime, destination: AuthoredDestination) {
+  if (destination.kind === 'internal') {
+    runtime.navigation.open(destination.target)
+    return
+  }
+  if (destination.kind === 'externalUrl') {
+    window.open(destination.url, '_blank', 'noopener,noreferrer')
+  }
 }

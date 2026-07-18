@@ -32,6 +32,7 @@ export function CanvasResourceEmbed({
 }) {
   const resourceId =
     node.data.destination?.kind === 'internal' ? node.data.destination.target.resourceId : null
+  const target = node.data.destination?.kind === 'internal' ? node.data.destination.target : null
   const snapshot = useWorkspaceIndexSnapshot(runtime.resources.index)
   const resource =
     resourceId && resourceId !== sourceResourceId ? snapshot.lookup(resourceId) : MISSING_RESOURCE
@@ -55,6 +56,7 @@ export function CanvasResourceEmbed({
       <ResourcePreviewSurface
         resource={resource.value}
         runtime={runtime}
+        target={target ?? { kind: 'resource', resourceId: resource.value.id }}
         renderNote={({ resource: note, state }) => (
           <CanvasNoteSurface canEdit={canEdit} editing={editing}>
             <NoteSessionEditor

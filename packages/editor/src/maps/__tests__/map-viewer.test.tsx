@@ -265,12 +265,13 @@ describe('MapViewer', () => {
         mediaType: 'image/png',
       }),
     )
-    const openResource = vi.fn()
+    const openDestination = vi.fn()
     render(
       <MapViewer
         canEdit
+        focusedPinId={pinId}
         mapResourceId={testDomainId('resource', 'map-viewer')}
-        openResource={openResource}
+        openDestination={openDestination}
         resolveResource={(resourceId) =>
           resourceId === targetId
             ? {
@@ -298,8 +299,12 @@ describe('MapViewer', () => {
       DOMRect.fromRect({ x: 0, y: 0, width: 100, height: 100 }),
     )
     const pin = screen.getByRole('button', { name: 'Pinned note' })
-    fireEvent.doubleClick(pin)
-    expect(openResource).toHaveBeenCalledWith(targetId)
+    await waitFor(() => expect(pin).toHaveAttribute('data-selected', 'true'))
+    fireEvent.click(pin)
+    expect(openDestination).toHaveBeenCalledWith({
+      kind: 'internal',
+      target: { kind: 'resource', resourceId: targetId },
+    })
     fireEvent.contextMenu(pin, { clientX: 10, clientY: 20 })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Remove pin' }))
     expect(execute).toHaveBeenCalledWith({ type: 'removePin', pinId })
@@ -398,7 +403,7 @@ function mapViewer(session: MapSession, canEdit = true) {
     <MapViewer
       canEdit={canEdit}
       mapResourceId={testDomainId('resource', 'map-viewer')}
-      openResource={vi.fn()}
+      openDestination={vi.fn()}
       resolveResource={() => null}
       session={session}
       title="Harbor"

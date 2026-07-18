@@ -126,6 +126,10 @@
       "types": "./dist/resources/authored-destination.d.mts",
       "default": "./dist/resources/authored-destination.mjs"
     },
+    "./resources/authored-destination-contract": {
+      "types": "./dist/resources/authored-destination-contract.d.mts",
+      "default": "./dist/resources/authored-destination-contract.mjs"
+    },
     "./resources/editor-runtime-contract": {
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"

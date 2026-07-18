@@ -11,7 +11,9 @@ import { ResourcePreviewSurface } from '../workspace/resource-preview-surface'
 import { indexRevision } from '../workspace-resource-index'
 
 vi.mock('../../canvas/canvas-readonly-preview', () => ({
-  CanvasReadonlyPreview: () => <div data-testid="canvas-preview" />,
+  CanvasReadonlyPreview: ({ focusedNodeId }: { focusedNodeId?: string | null }) => (
+    <div data-focused-node={focusedNodeId ?? ''} data-testid="canvas-preview" />
+  ),
 }))
 
 vi.mock('../../files/file-embed-preview', () => ({
@@ -19,7 +21,11 @@ vi.mock('../../files/file-embed-preview', () => ({
 }))
 
 vi.mock('../../maps/map-embed-preview', () => ({
-  MapEmbedPreview: ({ title }: { title: string }) => <div data-testid="map-preview">{title}</div>,
+  MapEmbedPreview: ({ focusedPinId, title }: { focusedPinId?: string | null; title: string }) => (
+    <div data-focused-pin={focusedPinId ?? ''} data-testid="map-preview">
+      {title}
+    </div>
+  ),
 }))
 
 describe('ResourcePreviewSurface', () => {
@@ -32,8 +38,18 @@ describe('ResourcePreviewSurface', () => {
     const file = resource('file', 'File')
     const canvas = resource('canvas', 'Canvas')
     const child = resource('note', 'Child')
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const pinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
+    const nodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
     const noteDocument = noteBlocksToYDoc(
-      [{ type: 'paragraph', content: [{ type: 'text', text: 'Static note content' }] }],
+      [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Other note content' }] },
+        {
+          id: blockId,
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Static note content' }],
+        },
+      ],
       NOTE_YJS_FRAGMENT,
     )
     const source = (state: unknown) => ({
@@ -72,18 +88,50 @@ describe('ResourcePreviewSurface', () => {
 
     const view = render(<ResourcePreviewSurface resource={note} runtime={runtime} />)
     expect(screen.getByLabelText('Note preview')).toHaveTextContent('Static note content')
+    expect(screen.getByLabelText('Note preview')).toHaveTextContent('Other note content')
+
+    view.rerender(
+      <ResourcePreviewSurface
+        resource={note}
+        runtime={runtime}
+        target={{
+          kind: 'noteBlock',
+          resourceId: note.id,
+          blockId,
+          presentation: 'block',
+        }}
+      />,
+    )
+    expect(screen.getByLabelText('Note preview')).toHaveTextContent('Static note content')
+    expect(screen.getByLabelText('Note preview')).not.toHaveTextContent('Other note content')
 
     view.rerender(<ResourcePreviewSurface resource={folder} runtime={runtime} />)
     expect(screen.getByRole('list', { name: 'Folder contents' })).toHaveTextContent('Child')
 
     view.rerender(<ResourcePreviewSurface resource={map} runtime={runtime} />)
     expect(screen.getByTestId('map-preview')).toHaveTextContent('Map')
+    view.rerender(
+      <ResourcePreviewSurface
+        resource={map}
+        runtime={runtime}
+        target={{ kind: 'mapPin', resourceId: map.id, pinId }}
+      />,
+    )
+    expect(screen.getByTestId('map-preview')).toHaveAttribute('data-focused-pin', pinId)
 
     view.rerender(<ResourcePreviewSurface resource={file} runtime={runtime} />)
     expect(screen.getByTestId('file-preview')).toHaveTextContent('File')
 
     view.rerender(<ResourcePreviewSurface resource={canvas} runtime={runtime} />)
     expect(screen.getByTestId('canvas-preview')).toBeInTheDocument()
+    view.rerender(
+      <ResourcePreviewSurface
+        resource={canvas}
+        runtime={runtime}
+        target={{ kind: 'canvasNode', resourceId: canvas.id, nodeId }}
+      />,
+    )
+    expect(screen.getByTestId('canvas-preview')).toHaveAttribute('data-focused-node', nodeId)
     noteDocument.destroy()
   })
 

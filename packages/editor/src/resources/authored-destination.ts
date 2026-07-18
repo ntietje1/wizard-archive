@@ -193,7 +193,7 @@ export function remapAuthoredDestination(
   if (destination.kind !== 'internal' || mode === 'same_campaign_update') {
     return { status: 'completed', destination }
   }
-  const mapping = targetMap.find((entry) => sameCanonicalTarget(entry.source, destination.target))
+  const mapping = targetMap.find((entry) => canonicalTargetsEqual(entry.source, destination.target))
   if (mapping) {
     return {
       status: 'completed',
@@ -274,7 +274,7 @@ function isCanonicalTarget(value: unknown): value is CanonicalTarget {
   }
 }
 
-function sameCanonicalTarget(left: CanonicalTarget, right: CanonicalTarget): boolean {
+export function canonicalTargetsEqual(left: CanonicalTarget, right: CanonicalTarget): boolean {
   return canonicalTargetKey(left) === canonicalTargetKey(right)
 }
 

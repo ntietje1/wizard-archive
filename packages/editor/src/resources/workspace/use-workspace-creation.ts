@@ -55,7 +55,7 @@ export function useWorkspaceCreation(
     if (settlement.status === 'completed') {
       active.current = null
       setView(null)
-      navigation.open(settlement.resourceId)
+      navigation.open({ kind: 'resource', resourceId: settlement.resourceId })
       return settlement
     }
     if (settlement.status === 'cancelled') {

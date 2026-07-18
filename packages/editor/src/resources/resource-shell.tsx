@@ -64,7 +64,8 @@ export function ResourceShell({
     ACTIVE_ROOT_QUERY,
     rootCollection.state === 'unknown',
   )
-  const selectedResourceId = useResourceSelection(runtime)
+  const selectedTarget = useResourceSelection(runtime)
+  const selectedResourceId = selectedTarget?.resourceId ?? null
   const bookmarks = useResourceBookmarks(runtime)
   const preferencesState = useWorkspacePreferences(runtime)
   const preferences =
@@ -227,6 +228,7 @@ export function ResourceShell({
           selection={selection}
           snapshot={snapshot}
           sort={preferences.sort}
+          target={selectedTarget}
           onModeChange={(mode) => changePreference({ type: 'mode', mode })}
           onOpenHistory={() => {
             setRightPanel('history')
@@ -446,6 +448,7 @@ function SelectedResource({
   selection,
   snapshot,
   sort,
+  target,
 }: {
   actions: WorkspaceActions
   canEditStructure: boolean
@@ -466,6 +469,7 @@ function SelectedResource({
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
   sort: typeof DEFAULT_WORKSPACE_PREFERENCES.sort
+  target: ReturnType<EditorRuntime['navigation']['current']>
 }) {
   if (!resourceId) {
     return (
@@ -531,6 +535,7 @@ function SelectedResource({
         selection={selection}
         snapshot={snapshot}
         sort={sort}
+        target={target}
         onOpenContextMenu={onOpenContextMenu}
         onSelectionChange={onSelectionChange}
       />

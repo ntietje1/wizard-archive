@@ -1,16 +1,20 @@
 import { useMatch, useNavigate } from '@tanstack/react-router'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CanonicalTarget } from '@wizard-archive/editor/resources/authored-destination-contract'
+import {
+  workspaceRouteSearchForTarget,
+  workspaceRouteTarget,
+} from '~/editor-adapters/workspace-route-search'
 import type { WorkspaceRouteSearch } from '~/editor-adapters/workspace-route-search'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '~/editor-adapters/live/editor-route'
 import { useLastResource } from '~/editor-adapters/live/use-last-resource'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
-export function useLiveWorkspaceSelectedResourceId(): ResourceId | null {
+export function useLiveWorkspaceSelectedTarget(): CanonicalTarget | null {
   const editorMatch = useMatch({
     from: EDITOR_ROUTE_ID,
     shouldThrow: false,
   })
-  return editorMatch?.search.resource ?? null
+  return editorMatch ? workspaceRouteTarget(editorMatch.search) : null
 }
 
 export const useLiveWorkspaceNavigation = () => {
@@ -29,17 +33,9 @@ export const useLiveWorkspaceNavigation = () => {
     })
   }
 
-  const navigateToResource = async (
-    resourceId: ResourceId,
-    options: { heading?: string; replace?: boolean } = {},
-  ) => {
-    setLastSelectedResource(resourceId)
-    await navigateToWorkspaceRoute(
-      options.heading
-        ? { resource: resourceId, heading: options.heading }
-        : { resource: resourceId },
-      options.replace,
-    )
+  const navigateToTarget = async (target: CanonicalTarget, replace?: boolean) => {
+    setLastSelectedResource(target.resourceId)
+    await navigateToWorkspaceRoute(workspaceRouteSearchForTarget(target), replace)
   }
 
   const clearWorkspaceContent = async () => {
@@ -59,7 +55,7 @@ export const useLiveWorkspaceNavigation = () => {
   }
 
   return {
-    navigateToResource,
+    navigateToTarget,
     clearWorkspaceContent,
     openLastResource,
     openCampaignsDashboard,

@@ -5,14 +5,17 @@ import { createCanvasDocumentController } from './document-controller'
 import { createCanvasInteractionController } from './interaction-controller'
 import type { CanvasSession } from '../resources/content-session-contract'
 import type { CanvasDocumentNode } from './document-contract'
-import type { ResourceId } from '../resources/domain-id'
+import type { CanvasNodeId, ResourceId } from '../resources/domain-id'
 import type { AuthoredDestinationDropResolver } from '../resources/authored-destination-drop'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
   drop?: AuthoredDestinationDropResolver
+  focusedNodeId?: CanvasNodeId | null
+  openDestination?: (destination: AuthoredDestination) => void
   renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   session: CanvasSession
@@ -43,6 +46,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
       collaboration={props.session.collaboration}
       documentController={runtime.documentController}
       drop={props.drop ?? null}
+      focusedNodeId={props.focusedNodeId ?? null}
+      openDestination={props.openDestination ?? null}
       interactionController={runtime.interactionController}
       interactionRenderStore={runtime.interactionRenderStore}
       renderEmbed={props.renderEmbed}

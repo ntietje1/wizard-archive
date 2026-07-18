@@ -221,9 +221,11 @@ describe('ResourceShell', () => {
       ...authorizedResourceSummaryFromRecord(resource, 'edit'),
       kind: 'note' as const,
     }
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
     const document = noteBlocksToYDoc(
       [
         {
+          id: blockId,
           type: 'paragraph',
           content: [{ type: 'text', text: 'Shared viewer document' }],
         },
@@ -260,6 +262,15 @@ describe('ResourceShell', () => {
         },
       },
     }
+    const previousScrollIntoView = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'scrollIntoView',
+    )
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
     const view = render(
       <ResourceViewport
         actions={createWorkspaceActions(runtime, vi.fn())}
@@ -270,6 +281,12 @@ describe('ResourceShell', () => {
         selection={EMPTY_WORKSPACE_SELECTION}
         snapshot={runtime.resources.index.getSnapshot()}
         sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
+        target={{
+          kind: 'noteBlock',
+          resourceId: resource.id,
+          blockId,
+          presentation: 'block',
+        }}
         onOpenContextMenu={vi.fn()}
         onSelectionChange={vi.fn()}
       />,
@@ -277,9 +294,15 @@ describe('ResourceShell', () => {
 
     const editor = await screen.findByRole('textbox', { name: `${resource.title} note editor` })
     expect(editor).toHaveTextContent('Shared viewer document')
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
     fireEvent.blur(editor, { relatedTarget: null })
     view.unmount()
     expect(flush).not.toHaveBeenCalled()
+    if (previousScrollIntoView) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', previousScrollIntoView)
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+    }
 
     awareness.destroy()
     document.destroy()
@@ -302,8 +325,10 @@ describe('ResourceShell', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
 
     expect(await screen.findByText('Resource duplicated')).toBeInTheDocument()
-    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
-    expect(core.runtime.resources.index.getSnapshot().lookup(navigation.current()!)).toMatchObject({
+    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
+    expect(
+      core.runtime.resources.index.getSnapshot().lookup(navigation.current()!.resourceId),
+    ).toMatchObject({
       state: 'known',
       value: { title: resource.title, kind: 'folder' },
     })
@@ -478,12 +503,12 @@ describe('ResourceShell', () => {
     expect(folderButton).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('Creating…')).not.toBeInTheDocument()
     expect(screen.getByRole('menu')).toBeInTheDocument()
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
 
     release()
 
     expect(await screen.findByText('Folder created')).toBeInTheDocument()
-    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
+    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
     core.dispose()
   })
@@ -544,7 +569,7 @@ describe('ResourceShell', () => {
       await Promise.resolve()
     })
 
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
     core.dispose()
   })
 
@@ -580,7 +605,7 @@ describe('ResourceShell', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Folder' })).toBeEnabled()
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
     core.dispose()
   })
 
@@ -634,7 +659,7 @@ describe('ResourceShell', () => {
     expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
     expect(trigger).toBeDisabled()
     expect(screen.getByRole('menuitem', { name: 'Note' })).toBeDisabled()
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(folderButton).toHaveAttribute('aria-busy', 'true')
@@ -642,7 +667,7 @@ describe('ResourceShell', () => {
     releaseRetry()
 
     expect(await screen.findByText('Folder created')).toBeVisible()
-    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
+    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     expect(operationIds).toHaveLength(2)
     expect(operationIds[1]).toBe(operationIds[0])
     expect(resourceIds[1]).toBe(resourceIds[0])
@@ -715,7 +740,7 @@ describe('ResourceShell', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
     expect(await screen.findByText('Creation unresolved: response_lost')).toBeVisible()
 
-    act(() => navigation.open(resource.id))
+    act(() => navigation.open({ kind: 'resource', resourceId: resource.id }))
 
     await waitFor(() => expect(trigger).toBeEnabled())
     expect(screen.queryByText('Creation unresolved: response_lost')).not.toBeInTheDocument()
@@ -810,7 +835,7 @@ describe('ResourceShell', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
 
     expect(await screen.findByText('Folder created')).toBeVisible()
-    await waitFor(() => expect(navigation.current()).not.toBe(resource.id))
+    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     expect(operationIds).toHaveLength(2)
     expect(operationIds[1]).not.toBe(operationIds[0])
     core.dispose()
@@ -850,12 +875,12 @@ describe('ResourceShell', () => {
 
     expect(settlement).toMatchObject({ status: 'indeterminate', reason: 'response_lost' })
     if (settlement.status !== 'indeterminate') throw new Error('expected indeterminate creation')
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
 
     await expect(settlement.retry()).resolves.toMatchObject({ status: 'completed' })
     expect(operationIds).toHaveLength(2)
     expect(operationIds[1]).toBe(operationIds[0])
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
     core.dispose()
   })
 
@@ -893,11 +918,11 @@ describe('ResourceShell', () => {
       throw new Error('expected retryable provider failure')
     }
     expect(report).not.toHaveBeenCalled()
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
 
     await expect(settlement.retry()).resolves.toMatchObject({ status: 'completed' })
     expect(operationIds[1]).toBe(operationIds[0])
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
     core.dispose()
   })
 
@@ -946,7 +971,7 @@ describe('ResourceShell', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'New Map' }))
 
     expect(await screen.findByText('Map created')).toBeInTheDocument()
-    const createdId = navigation.current()
+    const createdId = navigation.current()?.resourceId
     if (!createdId) throw new Error('expected created map to open')
     expect(core.runtime.resources.index.getSnapshot().lookup(createdId)).toMatchObject({
       state: 'known',
@@ -957,7 +982,7 @@ describe('ResourceShell', () => {
     fireEvent.click(sidebar.getByRole('button', { name: resource.title }))
     fireEvent.click(screen.getByRole('button', { name: 'Collapse all folders' }))
     expect(sidebar.queryByRole('button', { name: 'Untitled map' })).not.toBeInTheDocument()
-    act(() => navigation.open(createdId))
+    act(() => navigation.open({ kind: 'resource', resourceId: createdId }))
     await waitFor(() => expect(sidebar.getByRole('button', { name: 'Untitled map' })).toBeVisible())
     core.dispose()
   })
@@ -1278,7 +1303,7 @@ describe('ResourceShell', () => {
     const result = await screen.findByRole('option', { name: /Campaign folder/ })
     fireEvent.click(result)
 
-    expect(navigation.current()).toBe(resource.id)
+    expect(navigation.current()?.resourceId).toBe(resource.id)
     expect(screen.queryByRole('dialog', { name: 'Search' })).not.toBeInTheDocument()
     core.dispose()
   })
@@ -1441,6 +1466,7 @@ describe('ResourceShell', () => {
         selection={EMPTY_WORKSPACE_SELECTION}
         snapshot={snapshot}
         sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
+        target={{ kind: 'resource', resourceId: resource.id }}
         onOpenContextMenu={vi.fn()}
         onSelectionChange={vi.fn()}
       />,
@@ -1489,6 +1515,7 @@ describe('ResourceShell', () => {
         selection={EMPTY_WORKSPACE_SELECTION}
         snapshot={runtime.resources.index.getSnapshot()}
         sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
+        target={{ kind: 'resource', resourceId: resource.id }}
         onOpenContextMenu={vi.fn()}
         onSelectionChange={vi.fn()}
       />,
@@ -1594,12 +1621,15 @@ async function shellRuntime(
 }
 
 function createNavigation(initialResourceId: ResourceRecord['id']): ResourceNavigation {
-  let resourceId = initialResourceId
+  let target: ReturnType<ResourceNavigation['current']> = {
+    kind: 'resource',
+    resourceId: initialResourceId,
+  }
   const listeners = new Set<() => void>()
   return {
-    current: () => resourceId,
-    open: (nextResourceId) => {
-      resourceId = nextResourceId
+    current: () => target,
+    open: (nextTarget) => {
+      target = nextTarget
       for (const listener of listeners) listener()
     },
     subscribe: (listener) => {

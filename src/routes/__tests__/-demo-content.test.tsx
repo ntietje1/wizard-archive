@@ -70,7 +70,7 @@ describe('LocalDemoRouteContent', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
     const resourceId = scenario.workspace.snapshot.resources[0]!.id
-    window.history.replaceState(null, '', `/demo?resource=${resourceId}&heading=Intro`)
+    window.history.replaceState(null, '', `/demo?resource=${resourceId}`)
 
     render(<LocalDemoRouteContent />)
 
@@ -130,7 +130,7 @@ describe('LocalDemoRouteContent', () => {
     window.history.replaceState(
       null,
       '',
-      `/demo?resource=${encodeURIComponent('../private-note')}&heading=${'h'.repeat(513)}`,
+      `/demo?resource=${encodeURIComponent('../private-note')}&target=noteBlock&targetId=invalid`,
     )
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
 
@@ -147,7 +147,7 @@ describe('LocalDemoRouteContent', () => {
     )
   })
 
-  it('mounts the editor host with an empty heading request when URL state is absent', () => {
+  it('mounts the editor host without a requested resource when URL state is absent', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
 

@@ -10,7 +10,8 @@ import type {
   MapResourceContent,
   MapSession,
 } from '../resources/content-session-contract'
-import type { ResourceId } from '../resources/domain-id'
+import type { MapPinId, ResourceId } from '../resources/domain-id'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import type { AuthorizedResourceSummary } from '../resources/resource-index-contract'
 import { MapPinSurface } from './map-pins'
 import { useAssetReplacement } from '../resources/asset-replacement'
@@ -20,20 +21,22 @@ import { useMapImageUrl } from './use-map-image-url'
 
 export function MapViewer({
   canEdit,
+  focusedPinId,
   mapResourceId,
-  openResource,
+  openDestination,
   resolveResource,
   session,
   title,
 }: {
   canEdit: boolean
+  focusedPinId?: MapPinId | null
   mapResourceId: ResourceId
-  openResource: (resourceId: ResourceId) => void
+  openDestination: (destination: AuthoredDestination) => void
   resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null
   session: MapSession
   title: string
 }) {
-  const layer = useSelectedMapLayer(session)
+  const layer = useSelectedMapLayer(session, focusedPinId ?? null)
   const replacement = useMapImageReplacement(session, mapResourceId, layer.id)
   const transform = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -70,9 +73,10 @@ export function MapViewer({
       <MapImageCanvas
         image={layer.image}
         imageRef={imageRef}
+        focusedPinId={focusedPinId ?? null}
         layerId={layer.id}
         mapResourceId={mapResourceId}
-        openResource={openResource}
+        openDestination={openDestination}
         replacement={replacement}
         session={session}
         resolveResource={resolveResource}
@@ -95,22 +99,26 @@ export function MapViewer({
   )
 }
 
-function useSelectedMapLayer(session: MapSession) {
+function useSelectedMapLayer(session: MapSession, focusedPinId: MapPinId | null) {
   const layers = session.content.layers
-  const [selected, setSelected] = useState<{ session: MapSession; layerId: string | null }>(() => ({
-    session,
-    layerId: layers[0]?.id ?? null,
-  }))
+  const focusedLayerId =
+    session.content.pins.find((pin) => pin.id === focusedPinId)?.layerId ?? null
+  const [selected, setSelected] = useState<{
+    focusedPinId: MapPinId | null
+    session: MapSession
+    layerId: string | null
+  }>(() => ({ focusedPinId, session, layerId: focusedLayerId ?? layers[0]?.id ?? null }))
   const validSelection =
     selected.session === session &&
+    selected.focusedPinId === focusedPinId &&
     (selected.layerId === null || layers.some((layer) => layer.id === selected.layerId))
-  const id = validSelection ? selected.layerId : (layers[0]?.id ?? null)
+  const id = validSelection ? selected.layerId : (focusedLayerId ?? layers[0]?.id ?? null)
   const selectedLayer = id === null ? null : layers.find((layer) => layer.id === id)!
   return {
     id,
     image: selectedLayer?.image ?? session.content.image,
     name: selectedLayer?.name ?? 'Base map',
-    select: (layerId: string | null) => setSelected({ session, layerId }),
+    select: (layerId: string | null) => setSelected({ focusedPinId, session, layerId }),
   }
 }
 
@@ -232,12 +240,13 @@ function MapImageActionsMenu({
 
 function MapImageCanvas({
   canEdit,
+  focusedPinId,
   image,
   imageRef,
   layerId,
   mapResourceId,
   onContextMenu,
-  openResource,
+  openDestination,
   replacement,
   session,
   resolveResource,
@@ -245,12 +254,13 @@ function MapImageCanvas({
   transform,
 }: {
   canEdit: boolean
+  focusedPinId: MapPinId | null
   image: MapImageAttachment
   imageRef: React.RefObject<HTMLImageElement | null>
   layerId: string | null
   mapResourceId: ResourceId
   onContextMenu: (event: ReactMouseEvent) => void
-  openResource: (resourceId: ResourceId) => void
+  openDestination: (destination: AuthoredDestination) => void
   replacement: MapImageReplacementController
   session: MapSession
   resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null
@@ -302,10 +312,11 @@ function MapImageCanvas({
         >
           <MapPinSurface
             canEdit={canEdit}
+            focusedPinId={focusedPinId}
             imageRef={imageRef}
             layerId={layerId}
             mapResourceId={mapResourceId}
-            openResource={openResource}
+            openDestination={openDestination}
             resolveResource={resolveResource}
             session={session}
             src={state.url}

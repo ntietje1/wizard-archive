@@ -4,6 +4,7 @@ import { CANVAS_ARRANGE_ACTIONS, createCanvasArrangeChange } from './canvas-arra
 import type { CanvasDocumentController } from './document-controller'
 import type { CanvasDocumentContent } from './document-contract'
 import type { CanvasSelection } from './interaction-types'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { CANVAS_REORDER_ACTIONS, createCanvasReorderChange } from './canvas-z-order'
 import { CanvasMenuItem } from './canvas-menu-item'
 import { CanvasSubmenu } from './canvas-submenu'
@@ -30,6 +31,7 @@ export function CanvasContextMenu({
   content,
   documentController,
   onClose,
+  onOpenDestination,
   request,
   selection,
 }: {
@@ -39,6 +41,7 @@ export function CanvasContextMenu({
   content: CanvasDocumentContent
   documentController: CanvasDocumentController
   onClose: () => void
+  onOpenDestination: ((destination: AuthoredDestination) => void) | null
   request: CanvasContextMenuRequest
   selection: CanvasSelection
 }) {
@@ -58,6 +61,12 @@ export function CanvasContextMenu({
   }
   const selectedNodes = selection.nodeIds.size
   const selectedElements = selectedNodes + selection.edgeIds.size
+  const selectedNode =
+    selectedNodes === 1 && selection.edgeIds.size === 0
+      ? content.nodes.find((node) => selection.nodeIds.has(node.id))
+      : undefined
+  const selectedDestination =
+    selectedNode?.type === 'embed' ? selectedNode.data.destination : undefined
   return (
     <div
       ref={menu}
@@ -77,6 +86,12 @@ export function CanvasContextMenu({
         </>
       ) : (
         <>
+          {selectedDestination && onOpenDestination && (
+            <CanvasMenuItem
+              label="Open target"
+              onSelect={() => run(() => onOpenDestination(selectedDestination))}
+            />
+          )}
           {selectedNodes > 0 && <CanvasMenuItem label="Copy" onSelect={() => run(actions.copy)} />}
           {canEdit && selectedNodes > 0 && (
             <>

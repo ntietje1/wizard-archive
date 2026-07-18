@@ -27,14 +27,16 @@ import { canvasStrokeBounds } from './canvas-stroke-geometry'
 import { createCanvasTextDocument } from './text/model'
 import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
-import type { ResourceId } from '../resources/domain-id'
+import type { CanvasNodeId, ResourceId } from '../resources/domain-id'
 import type { ContentCollaboration } from '../resources/content-session-contract'
 import type { CanvasEmbedRenderer } from './canvas-editor'
 import type { AuthoredDestinationDropResolver } from '../resources/authored-destination-drop'
+import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
 import { useCanvasSurface } from './use-canvas-surface'
 import { useCanvasDropTarget } from './canvas-drop-target'
 import type { CanvasBounds } from './canvas-bounds'
+import { canvasNodeSize } from './canvas-layout'
 
 const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
   ['1', 'select'],
@@ -51,8 +53,10 @@ type CanvasEditorSurfaceProps = Readonly<{
   collaboration: ContentCollaboration
   documentController: CanvasDocumentController
   drop: AuthoredDestinationDropResolver | null
+  focusedNodeId: CanvasNodeId | null
   interactionController: CanvasInteractionController
   interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
+  openDestination: ((destination: AuthoredDestination) => void) | null
   renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   title: string
@@ -63,8 +67,10 @@ export function CanvasEditorSurface({
   collaboration,
   documentController,
   drop,
+  focusedNodeId,
   interactionController,
   interactionRenderStore,
+  openDestination,
   renderEmbed,
   resourceId,
   title,
@@ -114,6 +120,27 @@ export function CanvasEditorSurface({
       saveCanvasViewport(window.localStorage, resourceId, viewport),
     )
   }, [interactionController, resourceId])
+
+  useEffect(() => {
+    if (!focusedNodeId) return
+    const node = content.nodes.find(
+      (candidate) => candidate.id === focusedNodeId && !candidate.hidden,
+    )
+    if (!node) return
+    interactionController.setTool('select')
+    interactionController.setSelection({ nodeIds: new Set([node.id]), edgeIds: new Set() })
+    if (surfaceSize.width <= 0 || surfaceSize.height <= 0) return
+    const size = canvasNodeSize(node)
+    const zoom = interactionController.get().viewport.zoom
+    interactionController.setViewport(
+      {
+        x: surfaceSize.width / 2 - (node.position.x + size.width / 2) * zoom,
+        y: surfaceSize.height / 2 - (node.position.y + size.height / 2) * zoom,
+        zoom,
+      },
+      true,
+    )
+  }, [content.nodes, focusedNodeId, interactionController, surfaceSize])
 
   useEffect(() => () => setCanvasCollaborationCursor(collaboration, null), [collaboration])
 
@@ -260,6 +287,7 @@ export function CanvasEditorSurface({
           request={contextMenu}
           selection={interaction.selection}
           onClose={() => setContextMenu(null)}
+          onOpenDestination={openDestination}
         />
       )}
       <section

@@ -54,15 +54,22 @@ describe('useLocalWorkspaceRuntime', () => {
     })
   })
 
-  it('owns local navigation by canonical resource ID', () => {
+  it('owns local navigation by canonical target', () => {
     const { result } = renderHook(() =>
       useLocalWorkspaceRuntime({ initialResourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap }),
     )
 
     const runtime = requireRuntime(result.current)
-    expect(runtime.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)
-    act(() => runtime.navigation.open(SAMPLE_LOCAL_RESOURCE_IDS.marketNote))
-    expect(runtime.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
+    expect(runtime.navigation.current()).toEqual({
+      kind: 'resource',
+      resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
+    })
+    const target = {
+      kind: 'resource' as const,
+      resourceId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
+    }
+    act(() => runtime.navigation.open(target))
+    expect(runtime.navigation.current()).toBe(target)
   })
 })
 
