@@ -7,6 +7,7 @@ import type { CanvasNodeId } from '../resources/domain-id'
 const MIN_CANVAS_NODE_SIZE = 40
 
 export function resolveCanvasResize({
+  aspectRatio,
   handle,
   initialBounds,
   point,
@@ -16,6 +17,7 @@ export function resolveCanvasResize({
   snap,
   zoom,
 }: {
+  aspectRatio: number | null
   handle: ResizeHandle
   initialBounds: CanvasBounds
   point: Readonly<{ x: number; y: number }>
@@ -25,7 +27,14 @@ export function resolveCanvasResize({
   snap: boolean
   zoom: number
 }): Readonly<{ bounds: CanvasBounds; guides: ReadonlyArray<CanvasSnapGuide> }> {
-  const bounds = resolveCanvasResizeBounds(handle, initialBounds, point, initialNodeBounds, square)
+  const bounds = resolveCanvasResizeBounds(
+    handle,
+    initialBounds,
+    point,
+    initialNodeBounds,
+    aspectRatio,
+    square,
+  )
   if (!snap || targetBounds.length === 0) return { bounds, guides: [] }
   const threshold = canvasSnapThreshold(zoom)
   const xCandidates = affectsResizeAxis(handle, 'x')
@@ -34,9 +43,10 @@ export function resolveCanvasResize({
   const yCandidates = affectsResizeAxis(handle, 'y')
     ? resizeSnapCandidatesForTargets('y', bounds, targetBounds, handle)
     : []
-  const candidates = square
-    ? [bestSnapCandidate(chainCandidates(xCandidates, yCandidates), threshold)]
-    : [bestSnapCandidate(xCandidates, threshold), bestSnapCandidate(yCandidates, threshold)]
+  const candidates =
+    aspectRatio || square
+      ? [bestSnapCandidate(chainCandidates(xCandidates, yCandidates), threshold)]
+      : [bestSnapCandidate(xCandidates, threshold), bestSnapCandidate(yCandidates, threshold)]
   const selected = candidates.filter(
     (candidate): candidate is CanvasResizeSnapCandidate => candidate !== null,
   )
@@ -50,6 +60,7 @@ export function resolveCanvasResize({
     initialBounds,
     snappedPoint,
     initialNodeBounds,
+    aspectRatio,
     square,
   )
   return {
@@ -67,20 +78,41 @@ function resolveCanvasResizeBounds(
   initialBounds: CanvasBounds,
   point: Readonly<{ x: number; y: number }>,
   initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
+  aspectRatio: number | null,
   square: boolean,
 ): CanvasBounds {
   const minimum = minimumSelectionSize(initialBounds, initialNodeBounds)
   if (handle === 'top' || handle === 'right' || handle === 'bottom' || handle === 'left') {
-    return resolveSideResize(handle, initialBounds, point, minimum)
+    return aspectRatio
+      ? resolveAspectRatioSideResize(handle, initialBounds, point, minimum, aspectRatio)
+      : resolveSideResize(handle, initialBounds, point, minimum)
   }
   const anchor = oppositeCorner(initialBounds, handle)
   const direction = resizeDirection(handle)
   const width = Math.max((point.x - anchor.x) * direction.x, minimum.width)
   const height = Math.max((point.y - anchor.y) * direction.y, minimum.height)
-  const size = square ? Math.max(width, height, minimum.width, minimum.height) : null
+  if (aspectRatio) {
+    const verticalWidth = height * aspectRatio
+    const proposedWidth =
+      Math.abs(width - initialBounds.width) >= Math.abs(verticalWidth - initialBounds.width)
+        ? width
+        : verticalWidth
+    const constrainedWidth = Math.max(proposedWidth, minimum.width, minimum.height * aspectRatio)
+    return normalizeBounds(anchor, {
+      x: anchor.x + direction.x * constrainedWidth,
+      y: anchor.y + direction.y * (constrainedWidth / aspectRatio),
+    })
+  }
+  if (square) {
+    const size = Math.max(width, height, minimum.width, minimum.height)
+    return normalizeBounds(anchor, {
+      x: anchor.x + direction.x * size,
+      y: anchor.y + direction.y * size,
+    })
+  }
   return normalizeBounds(anchor, {
-    x: anchor.x + direction.x * (size ?? width),
-    y: anchor.y + direction.y * (size ?? height),
+    x: anchor.x + direction.x * width,
+    y: anchor.y + direction.y * height,
   })
 }
 
@@ -145,6 +177,34 @@ function resolveSideResize(
     case 'bottom':
       return { ...bounds, height: Math.max(point.y - bounds.y, minimum.height) }
   }
+}
+
+function resolveAspectRatioSideResize(
+  handle: 'bottom' | 'left' | 'right' | 'top',
+  bounds: CanvasBounds,
+  point: Readonly<{ x: number; y: number }>,
+  minimum: Readonly<{ width: number; height: number }>,
+  aspectRatio: number,
+): CanvasBounds {
+  const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+  const horizontal = handle === 'left' || handle === 'right'
+  const proposedWidth = horizontal
+    ? handle === 'left'
+      ? bounds.x + bounds.width - point.x
+      : point.x - bounds.x
+    : (handle === 'top' ? bounds.y + bounds.height - point.y : point.y - bounds.y) * aspectRatio
+  const width = Math.max(proposedWidth, minimum.width, minimum.height * aspectRatio)
+  const height = width / aspectRatio
+  if (handle === 'left') {
+    return { x: bounds.x + bounds.width - width, y: center.y - height / 2, width, height }
+  }
+  if (handle === 'right') {
+    return { x: bounds.x, y: center.y - height / 2, width, height }
+  }
+  if (handle === 'top') {
+    return { x: center.x - width / 2, y: bounds.y + bounds.height - height, width, height }
+  }
+  return { x: center.x - width / 2, y: bounds.y, width, height }
 }
 
 function oppositeCorner(bounds: CanvasBounds, handle: ResizeHandle) {

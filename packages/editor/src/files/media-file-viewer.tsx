@@ -10,6 +10,31 @@ export function MediaFileViewer({ kind, url }: { kind: 'audio' | 'video'; url: s
   const Icon = kind === 'audio' ? Music : Video
   const label = kind === 'audio' ? 'audio' : 'video'
 
+  const player =
+    kind === 'audio' ? (
+      <audio className="w-full max-w-2xl" controls src={url} onError={() => setFailed(true)}>
+        <track
+          default
+          kind="captions"
+          label="Captions unavailable"
+          src={UNAVAILABLE_CAPTIONS}
+          srcLang="en"
+        />
+        Your browser does not support audio playback.
+      </audio>
+    ) : (
+      <video className="max-h-full max-w-full" controls src={url} onError={() => setFailed(true)}>
+        <track
+          default
+          kind="captions"
+          label="Captions unavailable"
+          src={UNAVAILABLE_CAPTIONS}
+          srcLang="en"
+        />
+        Your browser does not support video playback.
+      </video>
+    )
+
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-auto bg-background p-4">
       <Icon className="size-16 text-muted-foreground" aria-hidden="true" />
@@ -18,29 +43,7 @@ export function MediaFileViewer({ kind, url }: { kind: 'audio' | 'video'; url: s
           Failed to load {label}
         </p>
       )}
-      {kind === 'audio' ? (
-        <audio className="w-full max-w-2xl" controls src={url} onError={() => setFailed(true)}>
-          <track
-            default
-            kind="captions"
-            label="Captions unavailable"
-            src={UNAVAILABLE_CAPTIONS}
-            srcLang="en"
-          />
-          Your browser does not support audio playback.
-        </audio>
-      ) : (
-        <video className="max-h-full max-w-full" controls src={url} onError={() => setFailed(true)}>
-          <track
-            default
-            kind="captions"
-            label="Captions unavailable"
-            src={UNAVAILABLE_CAPTIONS}
-            srcLang="en"
-          />
-          Your browser does not support video playback.
-        </video>
-      )}
+      {player}
       <p className="text-sm text-muted-foreground">Captions unavailable</p>
     </div>
   )

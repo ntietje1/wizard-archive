@@ -1,6 +1,7 @@
 import type { FileContentSource, FileResourceContent } from '../resources/content-session-contract'
 import type { VersionStamp } from '../resources/component-version'
 import type { ResourceId } from '../resources/domain-id'
+import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
 import { FileContentPreview, FilePreviewState } from './file-content-preview'
 import { useFileContentUrl } from './use-file-content-url'
 
@@ -10,12 +11,14 @@ export function FileEmbedPreview({
   source,
   title,
   version,
+  onMediaLayout,
 }: {
   content: FileResourceContent
   resourceId: ResourceId
   source: FileContentSource
   title: string
   version: VersionStamp
+  onMediaLayout?: EmbedMediaLayoutReporter
 }) {
   if (content.attachment === 'unattached') {
     return <FilePreviewState compact title="No file attached" />
@@ -27,6 +30,7 @@ export function FileEmbedPreview({
       source={source}
       title={title}
       version={version}
+      onMediaLayout={onMediaLayout}
     />
   )
 }
@@ -37,12 +41,14 @@ function AttachedFileEmbedPreview({
   source,
   title,
   version,
+  onMediaLayout,
 }: {
   content: FileResourceContent
   resourceId: ResourceId
   source: FileContentSource
   title: string
   version: VersionStamp
+  onMediaLayout?: EmbedMediaLayoutReporter
 }) {
   const { retry, state } = useFileContentUrl(source, resourceId, version)
   if (state.status === 'loading') return <FilePreviewState compact title="Loading file…" />
@@ -69,6 +75,8 @@ function AttachedFileEmbedPreview({
     <FileContentPreview
       content={content}
       fileName={fileDownloadName(title, content.extension)}
+      mode="embed"
+      onMediaLayout={onMediaLayout}
       url={state.url}
     />
   )

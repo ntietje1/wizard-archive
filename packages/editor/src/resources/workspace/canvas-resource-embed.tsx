@@ -7,6 +7,7 @@ import { NoteSessionEditor } from '../../notes/note-session-editor'
 import type { BlockNoteActivation } from '../../rich-text/blocknote/use-blocknote-activation'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { ResourceId } from '../domain-id'
+import type { EmbedMediaLayoutReporter } from '../embed-media-layout'
 import { RESOURCE_PERMISSION, resourcePermissionAllows } from '../resource-access-policy'
 import { ResourcePreviewSurface } from './resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
@@ -19,6 +20,7 @@ export function CanvasResourceEmbed({
   canEdit,
   editing,
   node,
+  onMediaLayout,
   runtime,
   sourceResourceId,
   zoom = 1,
@@ -27,6 +29,7 @@ export function CanvasResourceEmbed({
   canEdit: boolean
   editing: boolean
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
+  onMediaLayout?: EmbedMediaLayoutReporter
   runtime: EditorRuntime
   sourceResourceId: ResourceId
   zoom?: number
@@ -55,6 +58,7 @@ export function CanvasResourceEmbed({
   return (
     <CanvasEmbedFrame label={resource.value.title} zoom={zoom}>
       <ResourcePreviewSurface
+        onMediaLayout={onMediaLayout}
         resource={resource.value}
         runtime={runtime}
         target={target ?? { kind: 'resource', resourceId: resource.value.id }}

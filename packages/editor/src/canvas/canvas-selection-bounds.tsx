@@ -63,6 +63,12 @@ export function CanvasSelectionBounds({
   const bounds = canvasBoundsUnion(selectedNodes.map(canvasNodeBounds))
   if (!bounds) return null
   const initialNodeBounds = new Map(selectedNodes.map((node) => [node.id, canvasNodeBounds(node)]))
+  const lockedAspectRatio =
+    selectedNodes.length === 1 &&
+    selectedNodes[0]?.type === 'embed' &&
+    typeof selectedNodes[0].data.lockedAspectRatio === 'number'
+      ? selectedNodes[0].data.lockedAspectRatio
+      : null
   const hitSize = resizeHitSize()
   return (
     <CanvasSelectionChrome
@@ -88,7 +94,13 @@ export function CanvasSelectionBounds({
               event.preventDefault()
               event.stopPropagation()
               surface.current?.setPointerCapture(event.pointerId)
-              interactionController.beginResize(event.pointerId, handle, bounds, initialNodeBounds)
+              interactionController.beginResize(
+                event.pointerId,
+                handle,
+                bounds,
+                initialNodeBounds,
+                lockedAspectRatio,
+              )
             }}
           />
         ))}

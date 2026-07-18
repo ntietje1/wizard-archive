@@ -9,12 +9,14 @@ const KEYBOARD_STEP = 16
 type NoteEmbedSize = Readonly<{ width: number; height: number }>
 
 export function startNoteEmbedResize({
+  aspectRatio,
   editorElement,
   event,
   handle,
   onCommit,
   root,
 }: {
+  aspectRatio?: number | null
   editorElement: HTMLElement | null
   event: ReactPointerEvent<HTMLElement>
   handle: ResizeHandle
@@ -63,6 +65,7 @@ export function startNoteEmbedResize({
   const move = (moveEvent: PointerEvent) => {
     moved = true
     latest = resizeNoteEmbed({
+      aspectRatio,
       editorWidth: editorElement?.firstElementChild?.clientWidth,
       handle,
       start,
@@ -87,12 +90,14 @@ export function startNoteEmbedResize({
 }
 
 export function keyboardResizeNoteEmbed({
+  aspectRatio,
   editorWidth,
   handle,
   height,
   key,
   width,
 }: {
+  aspectRatio?: number | null
   editorWidth?: number
   handle: ResizeHandle
   height: number
@@ -109,6 +114,7 @@ export function keyboardResizeNoteEmbed({
     return null
   }
   return resizeNoteEmbed({
+    aspectRatio,
     editorWidth,
     handle,
     start: { height, width },
@@ -118,12 +124,14 @@ export function keyboardResizeNoteEmbed({
 }
 
 function resizeNoteEmbed({
+  aspectRatio,
   editorWidth,
   handle,
   start,
   x,
   y,
 }: {
+  aspectRatio?: number | null
   editorWidth?: number
   handle: ResizeHandle
   start: NoteEmbedSize
@@ -133,10 +141,53 @@ function resizeNoteEmbed({
   const widthDelta = handle.includes('left') ? -x : handle.includes('right') ? x : 0
   const heightDelta = handle.includes('top') ? -y : handle.includes('bottom') ? y : 0
   const maximumWidth = positive(editorWidth) ?? Number.MAX_VALUE
+  const activeAspectRatio = positive(aspectRatio ?? undefined)
+  if (activeAspectRatio)
+    return resizeProportionalNoteEmbed({
+      aspectRatio: activeAspectRatio,
+      heightDelta,
+      maximumWidth,
+      start,
+      widthDelta,
+    })
   return {
     width: Math.round(Math.min(Math.max(start.width + widthDelta, MIN_WIDTH), maximumWidth)),
     height: Math.round(Math.max(start.height + heightDelta, MIN_HEIGHT)),
   }
+}
+
+function resizeProportionalNoteEmbed({
+  aspectRatio,
+  heightDelta,
+  maximumWidth,
+  start,
+  widthDelta,
+}: {
+  aspectRatio: number
+  heightDelta: number
+  maximumWidth: number
+  start: NoteEmbedSize
+  widthDelta: number
+}): NoteEmbedSize {
+  const horizontalWidth = widthDelta === 0 ? null : Math.max(start.width + widthDelta, MIN_WIDTH)
+  const verticalWidth =
+    heightDelta === 0 ? null : Math.max(start.height + heightDelta, MIN_HEIGHT) * aspectRatio
+  const proposedWidth = resizeDriverWidth(start.width, horizontalWidth, verticalWidth)
+  const minimumWidth = Math.max(MIN_WIDTH, MIN_HEIGHT * aspectRatio)
+  const width = Math.round(Math.min(Math.max(proposedWidth, minimumWidth), maximumWidth))
+  return { width, height: Math.round(width / aspectRatio) }
+}
+
+function resizeDriverWidth(
+  initialWidth: number,
+  horizontalWidth: number | null,
+  verticalWidth: number | null,
+): number {
+  if (horizontalWidth === null) return verticalWidth ?? initialWidth
+  if (verticalWidth === null) return horizontalWidth
+  return Math.abs(horizontalWidth - initialWidth) >= Math.abs(verticalWidth - initialWidth)
+    ? horizontalWidth
+    : verticalWidth
 }
 
 export function noteEmbedResizeLabel(handle: ResizeHandle): string {

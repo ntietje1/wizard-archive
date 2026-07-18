@@ -59,4 +59,25 @@ describe('note embed resize', () => {
       }),
     ).toBeNull()
   })
+
+  it('preserves intrinsic media proportions from horizontal and vertical handles', () => {
+    expect(
+      keyboardResizeNoteEmbed({
+        aspectRatio: 16 / 9,
+        handle: 'right',
+        height: 270,
+        key: 'ArrowRight',
+        width: 480,
+      }),
+    ).toEqual({ width: 496, height: 279 })
+    expect(
+      keyboardResizeNoteEmbed({
+        aspectRatio: 16 / 9,
+        handle: 'bottom',
+        height: 270,
+        key: 'ArrowDown',
+        width: 480,
+      }),
+    ).toEqual({ width: 508, height: 286 })
+  })
 })

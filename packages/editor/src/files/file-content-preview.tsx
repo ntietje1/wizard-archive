@@ -2,6 +2,8 @@ import { File as FileIcon } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import type { FileResourceContent } from '../resources/content-session-contract'
+import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
+import { EmbeddedMedia } from '../resources/embedded-media'
 import { FILE_CLASSIFICATION } from '../resources/file-content-contract'
 import { ImageFileViewer } from './image-file-viewer'
 import { MediaFileViewer } from './media-file-viewer'
@@ -10,28 +12,48 @@ const PdfFileViewer = lazy(() =>
   import('./pdf-file-viewer').then(({ PdfFileViewer: Viewer }) => ({ default: Viewer })),
 )
 
-export function FileContentPreview({
-  content,
-  fileName,
-  url,
-}: {
+type FileContentPreviewProps = {
   content: FileResourceContent
   fileName: string
   url: string
-}) {
+} & (
+  | Readonly<{ mode: 'embed'; onMediaLayout?: EmbedMediaLayoutReporter }>
+  | Readonly<{ mode?: 'viewport'; onMediaLayout?: never }>
+)
+
+export function FileContentPreview(props: FileContentPreviewProps) {
+  const { content, fileName, url } = props
+  const mode = props.mode ?? 'viewport'
+  const onMediaLayout = props.mode === 'embed' ? props.onMediaLayout : undefined
   switch (content.classification) {
     case FILE_CLASSIFICATION.image:
-      return <ImageFileViewer alt={fileName} url={url} />
+      return mode === 'embed' ? (
+        <EmbeddedMedia alt={fileName} kind="image" onMediaLayout={onMediaLayout} url={url} />
+      ) : (
+        <ImageFileViewer alt={fileName} url={url} />
+      )
     case FILE_CLASSIFICATION.pdf:
       return (
         <Suspense fallback={<FilePreviewState title="Loading PDF…" />}>
-          <PdfFileViewer url={url} />
+          {props.mode === 'embed' ? (
+            <PdfFileViewer mode="embed" onMediaLayout={props.onMediaLayout} url={url} />
+          ) : (
+            <PdfFileViewer url={url} />
+          )}
         </Suspense>
       )
     case FILE_CLASSIFICATION.audio:
-      return <MediaFileViewer kind="audio" url={url} />
+      return props.mode === 'embed' ? (
+        <EmbeddedMedia kind="audio" onMediaLayout={props.onMediaLayout} url={url} />
+      ) : (
+        <MediaFileViewer kind="audio" url={url} />
+      )
     case FILE_CLASSIFICATION.video:
-      return <MediaFileViewer kind="video" url={url} />
+      return props.mode === 'embed' ? (
+        <EmbeddedMedia kind="video" onMediaLayout={props.onMediaLayout} url={url} />
+      ) : (
+        <MediaFileViewer kind="video" url={url} />
+      )
     case FILE_CLASSIFICATION.inert:
       return (
         <FilePreviewState

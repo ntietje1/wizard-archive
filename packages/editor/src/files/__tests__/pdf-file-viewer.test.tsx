@@ -28,8 +28,25 @@ vi.mock('react-pdf', () => ({
       {children}
     </div>
   ),
-  Page: ({ pageNumber, scale }: { pageNumber: number; scale: number }) => (
-    <div data-page={pageNumber} data-scale={scale} data-testid="pdf-page" />
+  Page: ({
+    onLoadSuccess,
+    pageNumber,
+    scale,
+  }: {
+    onLoadSuccess?: (page: { getViewport: () => { width: number; height: number } }) => void
+    pageNumber: number
+    scale: number
+  }) => (
+    <div data-page={pageNumber} data-scale={scale} data-testid="pdf-page">
+      {onLoadSuccess && (
+        <button
+          type="button"
+          onClick={() => onLoadSuccess({ getViewport: () => ({ width: 612, height: 792 }) })}
+        >
+          Load page
+        </button>
+      )}
+    </div>
   ),
 }))
 
@@ -57,5 +74,19 @@ describe('PdfFileViewer', () => {
     render(<PdfFileViewer url="blob:invalid-pdf" />)
     fireEvent.click(screen.getByRole('button', { name: 'Fail document' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to load PDF')
+  })
+
+  it('renders a static first-page embed and reports its intrinsic ratio', () => {
+    const onMediaLayout = vi.fn()
+    render(<PdfFileViewer mode="embed" onMediaLayout={onMediaLayout} url="blob:pdf" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load document' }))
+    expect(screen.queryByText(/Page 1 of/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Zoom in' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Load page' }))
+    expect(onMediaLayout).toHaveBeenCalledWith({
+      kind: 'intrinsicAspectRatio',
+      aspectRatio: 0.772727,
+    })
   })
 })

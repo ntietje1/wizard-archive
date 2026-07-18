@@ -44,6 +44,60 @@ describe('NoteEmbedBlock', () => {
     expect(screen.getByRole('img', { name: 'harbor.png' })).toHaveAttribute('src', url)
   })
 
+  it('stores and applies an external image ratio through the canonical embed props', () => {
+    const url = parseSafeHttpsUrl('https://example.com/maps/harbor.png')
+    if (!url) throw new Error('Expected a safe URL')
+    const editor = {
+      domElement: null,
+      setTextCursorPosition: vi.fn(),
+      updateBlock: vi.fn(),
+    }
+    renderNoteEmbed(editor, serializeAuthoredDestination({ kind: 'externalUrl', url }))
+    const image = screen.getByRole('img', { name: 'harbor.png' })
+    Object.defineProperties(image, {
+      naturalWidth: { configurable: true, value: 1600 },
+      naturalHeight: { configurable: true, value: 900 },
+    })
+
+    fireEvent.load(image)
+
+    expect(editor.updateBlock).toHaveBeenCalledWith(expect.anything(), {
+      props: { previewAspectRatio: 1.777778 },
+    })
+    expect(image.closest('[data-note-embed-body="true"]')).toHaveStyle({
+      aspectRatio: '1.777778 / 1',
+    })
+
+    fireEvent.pointerDown(screen.getByTestId('note-embed-block'), { button: 0 })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize embedded resource right' }), {
+      key: 'ArrowRight',
+    })
+    expect(editor.updateBlock).toHaveBeenLastCalledWith(expect.anything(), {
+      props: { previewHeight: undefined, previewWidth: 496 },
+    })
+  })
+
+  it('uses a fixed native audio height and exposes horizontal resizing only', () => {
+    const url = parseSafeHttpsUrl('https://example.com/audio/theme.mp3')
+    if (!url) throw new Error('Expected a safe URL')
+    const editor = {
+      domElement: null,
+      setTextCursorPosition: vi.fn(),
+      updateBlock: vi.fn(),
+    }
+    const view = renderNoteEmbed(editor, serializeAuthoredDestination({ kind: 'externalUrl', url }))
+    const audio = view.container.querySelector('audio')
+    if (!audio) throw new Error('Expected an audio player')
+
+    fireEvent.loadedMetadata(audio)
+
+    expect(audio.closest('[data-note-embed-body="true"]')).toHaveStyle({ height: '40px' })
+    fireEvent.pointerDown(screen.getByTestId('note-embed-block'), { button: 0 })
+    expect(screen.getAllByTestId(/note-embed-resize-zone-/)).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Resize embedded resource left' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Resize embedded resource right' })).toBeVisible()
+  })
+
   it('renders malformed percent escapes without changing the canonical external href', () => {
     const url = parseSafeHttpsUrl('https://example.com/maps/truncated%E0%A4%A.png?raw=1#preview')
     if (!url) throw new Error('Expected a safe URL')

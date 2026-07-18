@@ -117,6 +117,7 @@ type CanvasInteraction =
       initialBounds: CanvasBounds
       bounds: CanvasBounds
       initialNodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>
+      lockedAspectRatio: number | null
       guides: ReadonlyArray<CanvasSnapGuide>
     }>
 
@@ -731,6 +732,7 @@ class CanvasInteractionControllerState {
     handle: ResizeHandle,
     bounds: CanvasBounds,
     nodeBounds: ReadonlyMap<CanvasNodeId, CanvasBounds>,
+    lockedAspectRatio: number | null = null,
   ): void {
     this.#assertActive()
     if (nodeBounds.size === 0 || nodeBounds.size > CANVAS_WORKLOAD_LIMITS.selectedElements) {
@@ -749,6 +751,7 @@ class CanvasInteractionControllerState {
         initialBounds: { ...bounds },
         bounds: { ...bounds },
         initialNodeBounds: new Map(nodeBounds),
+        lockedAspectRatio,
         guides: [],
       },
     })
@@ -766,6 +769,7 @@ class CanvasInteractionControllerState {
       return
     }
     const unsnapped = resolveCanvasResize({
+      aspectRatio: interaction.lockedAspectRatio ?? (square ? 1 : null),
       handle: interaction.handle,
       initialBounds: interaction.initialBounds,
       point,
@@ -779,6 +783,7 @@ class CanvasInteractionControllerState {
       ? candidates.index.near(unsnapped.bounds, canvasSnapThreshold(this.#snapshot.viewport.zoom))
       : []
     const resolved = resolveCanvasResize({
+      aspectRatio: interaction.lockedAspectRatio ?? (square ? 1 : null),
       handle: interaction.handle,
       initialBounds: interaction.initialBounds,
       point,

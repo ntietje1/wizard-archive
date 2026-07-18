@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import { useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
+import { intrinsicMediaAspectRatio } from '../resources/embed-media-layout'
+import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 // Vite resolves the worker asset URL while react-pdf owns the renderer.
@@ -18,7 +20,17 @@ type PdfState =
   | { readonly status: 'ready'; readonly pages: number }
   | { readonly status: 'failed' }
 
-export function PdfFileViewer({ url }: { url: string }) {
+type PdfFileViewerProps = {
+  url: string
+} & (
+  | Readonly<{ mode: 'embed'; onMediaLayout?: EmbedMediaLayoutReporter }>
+  | Readonly<{ mode?: 'viewport'; onMediaLayout?: never }>
+)
+
+export function PdfFileViewer(props: PdfFileViewerProps) {
+  const { url } = props
+  const mode = props.mode ?? 'viewport'
+  const onMediaLayout = props.mode === 'embed' ? props.onMediaLayout : undefined
   const [state, setState] = useState<PdfState>({ status: 'loading' })
   const [page, setPage] = useState(1)
   const [scale, setScale] = useState(1)
@@ -28,6 +40,46 @@ export function PdfFileViewer({ url }: { url: string }) {
     return (
       <div className="flex h-full items-center justify-center p-6" role="alert">
         <p className="text-sm text-muted-foreground">Failed to load PDF</p>
+      </div>
+    )
+  }
+
+  if (mode === 'embed') {
+    return (
+      <div
+        className="flex size-full min-h-0 items-center justify-center overflow-hidden bg-background [&_.react-pdf__Page__canvas]:!h-auto [&_.react-pdf__Page__canvas]:!max-h-full [&_.react-pdf__Page__canvas]:!max-w-full"
+        data-testid="pdf-file-viewer"
+      >
+        {state.status === 'loading' && (
+          <output
+            aria-label="Loading PDF"
+            className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground"
+          >
+            Loading PDF…
+          </output>
+        )}
+        <Document
+          file={url}
+          loading={null}
+          onLoadError={() => setState({ status: 'failed' })}
+          onLoadSuccess={({ numPages }) => setState({ status: 'ready', pages: numPages })}
+        >
+          {pages > 0 && (
+            <Page
+              pageNumber={1}
+              renderAnnotationLayer={false}
+              renderTextLayer={false}
+              scale={1}
+              onLoadSuccess={(loadedPage) => {
+                const viewport = loadedPage.getViewport({ scale: 1 })
+                onMediaLayout?.({
+                  kind: 'intrinsicAspectRatio',
+                  aspectRatio: intrinsicMediaAspectRatio(viewport.width, viewport.height),
+                })
+              }}
+            />
+          )}
+        </Document>
       </div>
     )
   }

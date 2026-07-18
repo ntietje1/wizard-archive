@@ -296,6 +296,7 @@ describe('CanvasResourceEmbed', () => {
     TestURL.createObjectURL = vi.fn(() => 'blob:harbor-image')
     TestURL.revokeObjectURL = revokeObjectURL
     vi.stubGlobal('URL', TestURL)
+    const onMediaLayout = vi.fn()
     const view = render(
       <CanvasResourceEmbed
         activation={null}
@@ -312,6 +313,7 @@ describe('CanvasResourceEmbed', () => {
             },
           },
         }}
+        onMediaLayout={onMediaLayout}
         runtime={previewRuntime({
           canvases: unavailable,
           files,
@@ -325,12 +327,19 @@ describe('CanvasResourceEmbed', () => {
       />,
     )
 
-    expect(await screen.findByRole('img', { name: 'Harbor.png' })).toHaveAttribute(
-      'src',
-      'blob:harbor-image',
-    )
+    const image = await screen.findByRole('img', { name: 'Harbor.png' })
+    expect(image).toHaveAttribute('src', 'blob:harbor-image')
     expect(screen.getByTestId('canvas-embed-floating-label')).toHaveTextContent('Harbor.png')
     expect(exportFile).toHaveBeenCalledOnce()
+    Object.defineProperties(image, {
+      naturalWidth: { configurable: true, value: 1600 },
+      naturalHeight: { configurable: true, value: 900 },
+    })
+    fireEvent.load(image)
+    expect(onMediaLayout).toHaveBeenCalledWith({
+      kind: 'intrinsicAspectRatio',
+      aspectRatio: 1.777778,
+    })
 
     view.unmount()
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:harbor-image')

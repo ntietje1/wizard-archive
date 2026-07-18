@@ -15,6 +15,7 @@ import type {
 } from '../content-session-contract'
 import type { EditorRuntime, ResourcePreviewSource } from '../editor-runtime-contract'
 import type { CanonicalTarget } from '../authored-destination-contract'
+import type { EmbedMediaLayoutReporter } from '../embed-media-layout'
 import type {
   AuthorizedResourceSummary,
   CollectionKnowledge,
@@ -40,9 +41,10 @@ type ResourcePreviewSurfaceProps = {
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 } & (
-  | Readonly<{ mode: 'card'; renderNote?: never; target?: never }>
+  | Readonly<{ mode: 'card'; onMediaLayout?: never; renderNote?: never; target?: never }>
   | Readonly<{
       mode?: 'content'
+      onMediaLayout?: EmbedMediaLayoutReporter
       renderNote?: ResourceNotePreviewRenderer
       target?: CanonicalTarget
     }>
@@ -74,10 +76,21 @@ export function ResourcePreviewSurface(props: ResourcePreviewSurfaceProps) {
         <PreviewState label="Target unavailable" />
       )
     case 'map':
-      return <MapResourcePreview resource={resource} runtime={runtime} target={target} />
+      return (
+        <MapResourcePreview
+          onMediaLayout={props.onMediaLayout}
+          resource={resource}
+          runtime={runtime}
+          target={target}
+        />
+      )
     case 'file':
       return target.kind === 'resource' ? (
-        <FileResourcePreview resource={resource} runtime={runtime} />
+        <FileResourcePreview
+          onMediaLayout={props.onMediaLayout}
+          resource={resource}
+          runtime={runtime}
+        />
       ) : (
         <PreviewState label="Target unavailable" />
       )
@@ -279,10 +292,12 @@ function FolderResourcePreview({
 }
 
 function MapResourcePreview({
+  onMediaLayout,
   resource,
   runtime,
   target,
 }: {
+  onMediaLayout?: EmbedMediaLayoutReporter
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   target: CanonicalTarget
@@ -294,6 +309,7 @@ function MapResourcePreview({
   return state.status === 'ready' ? (
     <MapEmbedPreview
       focusedPinId={target.kind === 'mapPin' ? target.pinId : null}
+      onMediaLayout={onMediaLayout}
       preview={state.preview}
       title={resource.title}
     />
@@ -303,9 +319,11 @@ function MapResourcePreview({
 }
 
 function FileResourcePreview({
+  onMediaLayout,
   resource,
   runtime,
 }: {
+  onMediaLayout?: EmbedMediaLayoutReporter
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -313,6 +331,7 @@ function FileResourcePreview({
   return state.status === 'ready' ? (
     <FileEmbedPreview
       content={state.content}
+      onMediaLayout={onMediaLayout}
       resourceId={resource.id}
       source={runtime.content.files}
       title={resource.title}

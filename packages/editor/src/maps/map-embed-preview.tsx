@@ -1,6 +1,8 @@
 import { Image as ImageIcon, MapPin } from 'lucide-react'
 import type { MapPreview } from '../resources/content-session-contract'
 import type { MapPinId } from '../resources/domain-id'
+import { intrinsicMediaAspectRatio } from '../resources/embed-media-layout'
+import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
 import { MapImagePinLayout } from './map-image-pin-layout'
 import { useMapImageUrl } from './use-map-image-url'
 
@@ -8,8 +10,10 @@ export function MapEmbedPreview({
   focusedPinId,
   preview,
   title,
+  onMediaLayout,
 }: {
   focusedPinId?: MapPinId | null
+  onMediaLayout?: EmbedMediaLayoutReporter
   preview: MapPreview
   title: string
 }) {
@@ -61,6 +65,15 @@ export function MapEmbedPreview({
             />
           ) : null,
         )}
+        onImageLoad={(event) =>
+          onMediaLayout?.({
+            kind: 'intrinsicAspectRatio',
+            aspectRatio: intrinsicMediaAspectRatio(
+              event.currentTarget.naturalWidth,
+              event.currentTarget.naturalHeight,
+            ),
+          })
+        }
         src={state.url}
       />
     </div>

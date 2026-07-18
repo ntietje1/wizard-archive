@@ -22,6 +22,9 @@ import type { AuthoredDestinationDropResult } from '../../resources/authored-des
 import { assertDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 import type { NoteBlockId, ResourceId } from '../../resources/domain-id'
 import type { EditorRuntime } from '../../resources/editor-runtime-contract'
+import { mediaLayoutAspectRatio, mediaLayoutsEqual } from '../../resources/embed-media-layout'
+import type { EmbedMediaLayout } from '../../resources/embed-media-layout'
+import { EmbeddedMedia } from '../../resources/embedded-media'
 import { presentExternalUrl } from '../../resources/external-url-presentation'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import { ResourcePreviewSurface } from '../../resources/workspace/resource-preview-surface'
@@ -47,10 +50,29 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
   const [linking, setLinking] = useState(false)
   const root = useRef<HTMLElement>(null)
   const [selected, setSelected] = useState(false)
+  const layoutIdentity = block.props.destination
+  const [reportedLayout, setReportedLayout] = useState<{
+    identity: string
+    layout: EmbedMediaLayout
+  } | null>(null)
+  const storedAspectRatio = positiveSize(block.props.previewAspectRatio)
+  const mediaLayout =
+    reportedLayout?.identity === layoutIdentity
+      ? reportedLayout.layout
+      : storedAspectRatio !== null
+        ? {
+            kind: 'intrinsicAspectRatio' as const,
+            aspectRatio: storedAspectRatio,
+          }
+        : null
   const resizable = surface.editable && destination !== null && !empty
   const setDestination = (next: AuthoredDestination) => {
     editor.updateBlock(block, {
-      props: { destination: serializeAuthoredDestination(next) },
+      props: {
+        destination: serializeAuthoredDestination(next),
+        previewAspectRatio: undefined,
+        previewHeight: undefined,
+      },
     })
   }
   const drop = useNoteEmbedBlockDrop({
@@ -69,7 +91,34 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
     return () => window.removeEventListener('pointerdown', clear, true)
   }, [selected])
   const commitSize = ({ height, width }: { height: number; width: number }) => {
-    editor.updateBlock(block, { props: { previewHeight: height, previewWidth: width } })
+    editor.updateBlock(block, {
+      props: {
+        previewHeight: mediaLayout === null ? height : undefined,
+        previewWidth: width,
+      },
+    })
+  }
+  const reportMediaLayout = (layout: EmbedMediaLayout) => {
+    setReportedLayout((current) =>
+      current?.identity === layoutIdentity && mediaLayoutsEqual(current.layout, layout)
+        ? current
+        : { identity: layoutIdentity, layout },
+    )
+    const aspectRatio = mediaLayoutAspectRatio(layout)
+    if (surface.editable && layout.kind === 'fixedHeight') {
+      if (block.props.previewAspectRatio !== undefined) {
+        editor.updateBlock(block, { props: { previewAspectRatio: undefined } })
+      }
+      return
+    }
+    if (
+      !surface.editable ||
+      aspectRatio === null ||
+      block.props.previewAspectRatio === aspectRatio
+    ) {
+      return
+    }
+    editor.updateBlock(block, { props: { previewAspectRatio: aspectRatio } })
   }
 
   return (
@@ -100,6 +149,8 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
           empty={empty}
           height={block.props.previewHeight}
           linking={linking}
+          mediaLayout={mediaLayout}
+          onMediaLayout={reportMediaLayout}
           pending={drop.pending}
           setDestination={setDestination}
           setLinking={setLinking}
@@ -111,6 +162,7 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
         <NoteEmbedSelectionControls
           editorElement={editor.domElement ?? null}
           height={block.props.previewHeight}
+          mediaLayout={mediaLayout}
           onCommit={commitSize}
           resizable={resizable}
           root={root}
@@ -139,6 +191,8 @@ function NoteEmbedContent({
   empty,
   height,
   linking,
+  mediaLayout,
+  onMediaLayout,
   pending,
   setDestination,
   setLinking,
@@ -149,6 +203,8 @@ function NoteEmbedContent({
   empty: boolean
   height?: number
   linking: boolean
+  mediaLayout: EmbedMediaLayout | null
+  onMediaLayout: (layout: EmbedMediaLayout) => void
   pending: 'drop' | 'upload' | null
   setDestination: (destination: AuthoredDestination) => void
   setLinking: (linking: boolean) => void
@@ -174,11 +230,20 @@ function NoteEmbedContent({
         renderNote={surface.renderNote}
         runtime={surface.runtime}
         height={height}
+        mediaLayout={mediaLayout}
+        onMediaLayout={onMediaLayout}
       />
     )
   }
   if (destination.kind === 'externalUrl') {
-    return <ExternalNoteEmbed height={height} url={destination.url} />
+    return (
+      <ExternalNoteEmbed
+        height={height}
+        mediaLayout={mediaLayout}
+        onMediaLayout={onMediaLayout}
+        url={destination.url}
+      />
+    )
   }
   if (empty) {
     return (
@@ -193,7 +258,7 @@ function NoteEmbedContent({
     )
   }
   return (
-    <NoteEmbedBody height={height}>
+    <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
       <EmbedState>
         <span className="font-medium">Unresolved embedded resource</span>
         <span className="text-muted-foreground">{destination.rawTarget}</span>
@@ -310,6 +375,8 @@ function InternalNoteEmbed({
   renderNote,
   runtime,
   height,
+  mediaLayout,
+  onMediaLayout,
 }: {
   ancestry: ReadonlySet<ResourceId>
   destination: Extract<AuthoredDestination, { kind: 'internal' }>
@@ -318,17 +385,19 @@ function InternalNoteEmbed({
   renderNote: ReturnType<typeof useNoteResourceRuntime>['renderNote']
   runtime: EditorRuntime | null
   height?: number
+  mediaLayout: EmbedMediaLayout | null
+  onMediaLayout: (layout: EmbedMediaLayout) => void
 }) {
   if (!runtime) {
     return (
-      <NoteEmbedBody height={height}>
+      <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
         <EmbedState>Embedded resources are unavailable here</EmbedState>
       </NoteEmbedBody>
     )
   }
   if (ancestry.has(destination.target.resourceId)) {
     return (
-      <NoteEmbedBody height={height}>
+      <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
         <EmbedState>Recursive embedded resource</EmbedState>
       </NoteEmbedBody>
     )
@@ -342,6 +411,8 @@ function InternalNoteEmbed({
       runtime={runtime}
       target={destination.target}
       height={height}
+      mediaLayout={mediaLayout}
+      onMediaLayout={onMediaLayout}
     />
   )
 }
@@ -354,6 +425,8 @@ function InternalResourceEmbed({
   runtime,
   target,
   height,
+  mediaLayout,
+  onMediaLayout,
 }: {
   ancestry: ReadonlySet<ResourceId>
   drop: ReturnType<typeof useNoteResourceRuntime>['drop']
@@ -362,6 +435,8 @@ function InternalResourceEmbed({
   runtime: EditorRuntime
   target: Extract<AuthoredDestination, { kind: 'internal' }>['target']
   height?: number
+  mediaLayout: EmbedMediaLayout | null
+  onMediaLayout: (layout: EmbedMediaLayout) => void
 }) {
   const resourceId = target.resourceId
   const snapshot = useWorkspaceIndexSnapshot(runtime.resources.index)
@@ -373,7 +448,7 @@ function InternalResourceEmbed({
 
   if (resource.state !== 'known') {
     return (
-      <NoteEmbedBody height={height}>
+      <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
         <EmbedState>
           {resource.state === 'unknown' ? 'Loading resource' : 'Resource unavailable'}
         </EmbedState>
@@ -383,8 +458,9 @@ function InternalResourceEmbed({
   return (
     <>
       <InternalResourceHeader resource={resource.value} runtime={runtime} target={target} />
-      <NoteEmbedBody height={height}>
+      <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
         <ResourcePreviewSurface
+          onMediaLayout={onMediaLayout}
           renderNote={({ resource: note, state }) =>
             renderNote ? (
               renderNote({ ancestors: ancestry, drop, report, resource: note, runtime, state })
@@ -509,7 +585,17 @@ function EmptyNoteEmbed({
   )
 }
 
-function ExternalNoteEmbed({ height, url }: { height?: number; url: SafeHttpsUrl }) {
+function ExternalNoteEmbed({
+  height,
+  mediaLayout,
+  onMediaLayout,
+  url,
+}: {
+  height?: number
+  mediaLayout: EmbedMediaLayout | null
+  onMediaLayout: (layout: EmbedMediaLayout) => void
+  url: SafeHttpsUrl
+}) {
   const { href, mediaKind, title } = presentExternalUrl(url)
   return (
     <>
@@ -522,13 +608,15 @@ function ExternalNoteEmbed({ height, url }: { height?: number; url: SafeHttpsUrl
         <Link className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="min-w-0 truncate text-sm font-medium">{title}</span>
       </a>
-      <NoteEmbedBody height={height}>
+      <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
         {mediaKind === 'image' ? (
-          <img alt={title} className="size-full object-contain" draggable={false} src={href} />
+          <EmbeddedMedia alt={title} kind="image" onMediaLayout={onMediaLayout} url={href} />
         ) : mediaKind === 'audio' ? (
-          <audio className="w-full px-4" controls src={href} />
+          <div className="flex size-full items-center px-4">
+            <EmbeddedMedia kind="audio" onMediaLayout={onMediaLayout} url={href} />
+          </div>
         ) : mediaKind === 'video' ? (
-          <video className="size-full object-contain" controls src={href} />
+          <EmbeddedMedia kind="video" onMediaLayout={onMediaLayout} url={href} />
         ) : mediaKind === 'pdf' ? (
           <iframe className="size-full border-0" src={href} title={title} />
         ) : (
@@ -551,12 +639,31 @@ function EmbedState({ children }: { children: ReactNode }) {
   )
 }
 
-function NoteEmbedBody({ children, height }: { children: ReactNode; height?: number }) {
+function NoteEmbedBody({
+  children,
+  height,
+  mediaLayout,
+}: {
+  children: ReactNode
+  height?: number
+  mediaLayout: EmbedMediaLayout | null
+}) {
+  const aspectRatio = mediaLayoutAspectRatio(mediaLayout)
   return (
     <div
-      className="flex h-72 min-h-36 items-center justify-center overflow-hidden"
+      className={`flex w-full items-center justify-center overflow-hidden ${
+        mediaLayout?.kind === 'fixedHeight' ? '' : 'min-h-36'
+      } ${mediaLayout === null ? 'h-72' : ''}`}
       data-note-embed-body="true"
-      style={height ? { height } : undefined}
+      style={
+        mediaLayout?.kind === 'fixedHeight'
+          ? { height: mediaLayout.height }
+          : aspectRatio
+            ? { aspectRatio: `${aspectRatio} / 1` }
+            : height
+              ? { height }
+              : undefined
+      }
     >
       {children}
     </div>
@@ -566,6 +673,7 @@ function NoteEmbedBody({ children, height }: { children: ReactNode; height?: num
 function NoteEmbedSelectionControls({
   editorElement,
   height,
+  mediaLayout,
   onCommit,
   resizable,
   root,
@@ -573,11 +681,14 @@ function NoteEmbedSelectionControls({
 }: {
   editorElement: HTMLElement | null
   height?: number
+  mediaLayout: EmbedMediaLayout | null
   onCommit: (size: { height: number; width: number }) => void
   resizable: boolean
   root: RefObject<HTMLElement | null>
   width?: number
 }) {
+  const resizeHandles =
+    mediaLayout?.kind === 'fixedHeight' ? (['left', 'right'] as const) : RESIZE_HANDLES
   return (
     <div
       className="pointer-events-none absolute inset-0 z-30"
@@ -594,7 +705,7 @@ function NoteEmbedSelectionControls({
         style={{ borderColor: 'var(--canvas-selection-stroke)', inset: -3 }}
       />
       {resizable &&
-        RESIZE_HANDLES.map((handle) => (
+        resizeHandles.map((handle) => (
           <button
             key={handle}
             type="button"
@@ -608,6 +719,7 @@ function NoteEmbedSelectionControls({
                 editorElement,
                 handle,
                 height,
+                mediaLayout,
                 onCommit,
                 root: root.current,
                 width,
@@ -618,6 +730,7 @@ function NoteEmbedSelectionControls({
                 editorElement,
                 event,
                 handle,
+                aspectRatio: mediaLayoutAspectRatio(mediaLayout),
                 onCommit,
                 root: root.current,
               })
@@ -638,6 +751,7 @@ function resizeFromKeyboard(
     editorElement,
     handle,
     height,
+    mediaLayout,
     onCommit,
     root,
     width,
@@ -645,6 +759,7 @@ function resizeFromKeyboard(
     editorElement: HTMLElement | null
     handle: ResizeHandle
     height?: number
+    mediaLayout: EmbedMediaLayout | null
     onCommit: (size: { height: number; width: number }) => void
     root: HTMLElement | null
     width?: number
@@ -657,6 +772,7 @@ function resizeFromKeyboard(
     editorWidth: editorElement?.firstElementChild?.clientWidth,
     handle,
     height: positiveSize(height) ?? positiveSize(bodyBounds?.height) ?? 144,
+    aspectRatio: mediaLayoutAspectRatio(mediaLayout),
     key: event.key,
     width: positiveSize(width) ?? positiveSize(rootBounds?.width) ?? 64,
   })

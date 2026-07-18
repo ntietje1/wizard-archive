@@ -14,6 +14,7 @@ describe('canvas resize geometry', () => {
       [NODE_B, { x: 300, y: 0, width: 180, height: 80 }],
     ])
     const bounds = resolveCanvasResize({
+      aspectRatio: null,
       handle: 'bottom-right',
       initialBounds,
       point: { x: 960, y: 160 },
@@ -39,6 +40,7 @@ describe('canvas resize geometry', () => {
 
     expect(
       resolveCanvasResize({
+        aspectRatio: null,
         handle: 'left',
         initialBounds,
         point: { x: 400, y: 0 },
@@ -51,6 +53,7 @@ describe('canvas resize geometry', () => {
     ).toEqual({ x: 240, y: 100, width: 40, height: 80 })
     expect(
       resolveCanvasResize({
+        aspectRatio: null,
         handle: 'bottom-right',
         initialBounds,
         point: { x: 320, y: 200 },
@@ -66,6 +69,7 @@ describe('canvas resize geometry', () => {
   it('snaps active resize edges only while the primary modifier is active', () => {
     const initialBounds = { x: 0, y: 0, width: 180, height: 80 }
     const options = {
+      aspectRatio: null,
       handle: 'bottom-right' as const,
       initialBounds,
       point: { x: 296, y: 126 },
@@ -98,9 +102,42 @@ describe('canvas resize geometry', () => {
     })
   })
 
+  it('preserves a locked embed ratio from corner and side handles', () => {
+    const initialBounds = { x: 100, y: 100, width: 320, height: 180 }
+    const nodeBounds = new Map([[NODE_A, initialBounds]])
+
+    expect(
+      resolveCanvasResize({
+        aspectRatio: 16 / 9,
+        handle: 'bottom-right',
+        initialBounds,
+        point: { x: 580, y: 300 },
+        initialNodeBounds: nodeBounds,
+        targetBounds: [],
+        square: false,
+        snap: false,
+        zoom: 1,
+      }).bounds,
+    ).toEqual({ x: 100, y: 100, width: 480, height: 270 })
+    expect(
+      resolveCanvasResize({
+        aspectRatio: 16 / 9,
+        handle: 'right',
+        initialBounds,
+        point: { x: 500, y: 0 },
+        initialNodeBounds: nodeBounds,
+        targetBounds: [],
+        square: false,
+        snap: false,
+        zoom: 1,
+      }).bounds,
+    ).toEqual({ x: 100, y: 77.5, width: 400, height: 225 })
+  })
+
   it('snaps against the maximum supported resize target set without refusing late work', () => {
     const initialBounds = { x: 0, y: 0, width: 180, height: 80 }
     const options = {
+      aspectRatio: null,
       handle: 'bottom-right' as const,
       initialBounds,
       point: { x: 296, y: 126 },

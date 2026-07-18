@@ -6,6 +6,7 @@ export function MapImagePinLayout({
   children,
   className,
   imageRef,
+  onImageLoad,
   pins,
   src,
   ...surfaceProps
@@ -13,6 +14,7 @@ export function MapImagePinLayout({
   alt: string
   children?: ReactNode
   imageRef?: RefObject<HTMLImageElement | null>
+  onImageLoad?: ComponentPropsWithoutRef<'img'>['onLoad']
   pins: ReactNode
   src: string
 }) {
@@ -28,6 +30,7 @@ export function MapImagePinLayout({
         className="block max-h-full max-w-full select-none"
         draggable={false}
         src={src}
+        onLoad={onImageLoad}
       />
       <div className="pointer-events-none absolute inset-0" data-slot="map-pin-layer">
         {pins}

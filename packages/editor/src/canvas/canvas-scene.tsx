@@ -44,6 +44,7 @@ import type { CanvasEmbedRenderer } from './canvas-editor'
 import { projectCanvasRenderContent } from './canvas-render-projection'
 import type { CanvasSurfaceSize } from './canvas-render-projection'
 import { canvasTextPlacementDragBounds } from './canvas-node-placement'
+import { canvasEmbedMediaLayoutUpdate } from './canvas-embed-media-layout'
 
 export function CanvasScene({
   canEdit,
@@ -347,6 +348,20 @@ function CanvasNode({
                   : null,
                 editing,
                 node,
+                onMediaLayout: (layout) => {
+                  if (!canEdit) return
+                  const latest = documentController
+                    .read()
+                    .nodes.find(
+                      (candidate): candidate is Extract<CanvasDocumentNode, { type: 'embed' }> =>
+                        candidate.id === node.id && candidate.type === 'embed',
+                    )
+                  if (!latest) return
+                  const update = canvasEmbedMediaLayoutUpdate(latest, layout)
+                  if (update) {
+                    documentController.apply({ type: 'update', nodes: [update], edges: [] })
+                  }
+                },
                 zoom: viewport.zoom,
               })
             : undefined

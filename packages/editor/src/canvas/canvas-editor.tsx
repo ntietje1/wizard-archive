@@ -11,6 +11,7 @@ import type { AuthoredDestination } from '../resources/authored-destination-cont
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import type { ResourcePreviewPublicationGateway } from '../resources/editor-runtime-contract'
+import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
@@ -28,6 +29,7 @@ export type CanvasEmbedRenderer = (props: {
   activation: BlockNoteActivation | null
   editing: boolean
   node: Extract<CanvasDocumentNode, { type: 'embed' }>
+  onMediaLayout: EmbedMediaLayoutReporter
   zoom: number
 }) => ReactNode
 
