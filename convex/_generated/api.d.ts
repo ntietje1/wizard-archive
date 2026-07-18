@@ -62,6 +62,7 @@ import type * as resources_functions_campaignPlayer from "../resources/functions
 import type * as resources_functions_canvasContent from "../resources/functions/canvasContent.js";
 import type * as resources_functions_contentCopyTypes from "../resources/functions/contentCopyTypes.js";
 import type * as resources_functions_contentVersion from "../resources/functions/contentVersion.js";
+import type * as resources_functions_ensureResourceAssetsFolder from "../resources/functions/ensureResourceAssetsFolder.js";
 import type * as resources_functions_executeBookmarkCommand from "../resources/functions/executeBookmarkCommand.js";
 import type * as resources_functions_executeMapContentCommand from "../resources/functions/executeMapContentCommand.js";
 import type * as resources_functions_executeNoteBlockAccessCommand from "../resources/functions/executeNoteBlockAccessCommand.js";
@@ -193,6 +194,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/canvasContent": typeof resources_functions_canvasContent;
   "resources/functions/contentCopyTypes": typeof resources_functions_contentCopyTypes;
   "resources/functions/contentVersion": typeof resources_functions_contentVersion;
+  "resources/functions/ensureResourceAssetsFolder": typeof resources_functions_ensureResourceAssetsFolder;
   "resources/functions/executeBookmarkCommand": typeof resources_functions_executeBookmarkCommand;
   "resources/functions/executeMapContentCommand": typeof resources_functions_executeMapContentCommand;
   "resources/functions/executeNoteBlockAccessCommand": typeof resources_functions_executeNoteBlockAccessCommand;

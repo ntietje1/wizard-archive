@@ -650,6 +650,38 @@ export const resourceStructureCommandResultValidator = v.union(
   }),
 )
 
+export const resourceAssetsFolderResolutionValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    resourceId: resourceIdValidator,
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'integrity_error',
+      'invalid_command',
+      'invalid_uuid',
+      'invalid_title',
+      'ownership_mismatch',
+      'unauthorized',
+      'resource_missing',
+      'invalid_parent',
+      'invalid_parent_kind',
+      'hierarchy_cycle',
+      'invalid_lifecycle',
+      'invalid_root_selection',
+      'closure_too_large',
+      'content_unavailable',
+      'content_integrity_failure',
+      'version_exhausted',
+      'operation_id_reused',
+      'capability_not_supported',
+      'dependency_unavailable',
+      'scope_unavailable',
+    ),
+  }),
+)
+
 export const resourceCompensationResultValidator = v.union(
   v.object({ status: v.literal('completed'), receipt: resourceCommandReceiptValidator }),
   v.object({

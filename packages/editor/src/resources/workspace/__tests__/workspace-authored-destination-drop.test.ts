@@ -7,10 +7,9 @@ const RESOURCE_B = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8
 
 describe('workspace canvas drops', () => {
   it('resolves active workspace drags directly to bounded canonical destinations', async () => {
-    const createFile = vi.fn()
+    const createAssetFile = vi.fn()
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
-      actions: { createFile },
-      parentId: null,
+      actions: { createAssetFile },
     })
     const transfer = createDataTransfer({
       'application/x-wizard-archive-resource-ids': JSON.stringify({
@@ -27,19 +26,18 @@ describe('workspace canvas drops', () => {
         target: { kind: 'resource', resourceId: RESOURCE_A },
       },
     ])
-    expect(createFile).not.toHaveBeenCalled()
+    expect(createAssetFile).not.toHaveBeenCalled()
   })
 
-  it('creates dropped images through the ordinary file resource owner', async () => {
+  it('creates dropped files through the canonical Assets destination', async () => {
     const image = new File(['image'], 'map.png', { type: 'image/png' })
     const rejected = new File(['bad'], 'bad.bin')
-    const createFile = vi
+    const createAssetFile = vi
       .fn()
       .mockResolvedValueOnce({ status: 'completed', resourceId: RESOURCE_A })
       .mockResolvedValueOnce({ status: 'rejected', reason: 'unsupported' })
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
-      actions: { createFile },
-      parentId: RESOURCE_B,
+      actions: { createAssetFile },
     })
     const transfer = createDataTransfer({}, [image, rejected])
 
@@ -50,18 +48,17 @@ describe('workspace canvas drops', () => {
         target: { kind: 'resource', resourceId: RESOURCE_A },
       },
     ])
-    expect(createFile).toHaveBeenNthCalledWith(1, RESOURCE_B, image, expect.any(AbortSignal))
-    expect(createFile).toHaveBeenNthCalledWith(2, RESOURCE_B, rejected, expect.any(AbortSignal))
+    expect(createAssetFile).toHaveBeenNthCalledWith(1, image, expect.any(AbortSignal))
+    expect(createAssetFile).toHaveBeenNthCalledWith(2, rejected, expect.any(AbortSignal))
   })
 
   it('uses the same canonical file creation path for picker uploads', async () => {
     const image = new File(['image'], 'map.png', { type: 'image/png' })
-    const createFile = vi.fn(() =>
+    const createAssetFile = vi.fn(() =>
       Promise.resolve({ status: 'completed' as const, resourceId: RESOURCE_A }),
     )
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
-      actions: { createFile },
-      parentId: RESOURCE_B,
+      actions: { createAssetFile },
     })
 
     await expect(resolver.resolveFiles([image], 1, new AbortController().signal)).resolves.toEqual([
@@ -70,14 +67,13 @@ describe('workspace canvas drops', () => {
         target: { kind: 'resource', resourceId: RESOURCE_A },
       },
     ])
-    expect(createFile).toHaveBeenCalledWith(RESOURCE_B, image, expect.any(AbortSignal))
+    expect(createAssetFile).toHaveBeenCalledWith(image, expect.any(AbortSignal))
   })
 
   it('accepts the first safe external URI without creating a resource', async () => {
-    const createFile = vi.fn()
+    const createAssetFile = vi.fn()
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
-      actions: { createFile },
-      parentId: null,
+      actions: { createAssetFile },
     })
     const transfer = createDataTransfer({
       'text/uri-list': '# browser metadata\r\nhttps://example.com/reference\r\n',
@@ -93,7 +89,7 @@ describe('workspace canvas drops', () => {
         new AbortController().signal,
       ),
     ).resolves.toEqual([])
-    expect(createFile).not.toHaveBeenCalled()
+    expect(createAssetFile).not.toHaveBeenCalled()
   })
 })
 

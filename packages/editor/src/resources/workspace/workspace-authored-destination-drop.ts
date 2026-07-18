@@ -7,10 +7,8 @@ import type { WorkspaceActions } from './resource-operations'
 
 export function createWorkspaceAuthoredDestinationDropResolver({
   actions,
-  parentId,
 }: {
-  actions: Pick<WorkspaceActions, 'createFile'>
-  parentId: ResourceId | null
+  actions: Pick<WorkspaceActions, 'createAssetFile'>
 }): AuthoredDestinationDropResolver {
   return {
     canResolve: (dataTransfer) =>
@@ -26,12 +24,12 @@ export function createWorkspaceAuthoredDestinationDropResolver({
         )
       }
       const files = Array.from(dataTransfer.files).slice(0, maximumDestinations)
-      if (files.length > 0) return createFileDestinations(files, actions, parentId, signal)
+      if (files.length > 0) return createFileDestinations(files, actions, signal)
       const url = parseDroppedUrl(dataTransfer.getData('text/uri-list'))
       return Promise.resolve(url ? [{ kind: 'externalUrl', url }] : [])
     },
     resolveFiles: (files, maximumDestinations, signal) =>
-      createFileDestinations(files.slice(0, maximumDestinations), actions, parentId, signal),
+      createFileDestinations(files.slice(0, maximumDestinations), actions, signal),
   }
 }
 
@@ -41,13 +39,10 @@ function resourceDestination(resourceId: ResourceId): AuthoredDestination {
 
 async function createFileDestinations(
   files: ReadonlyArray<File>,
-  actions: Pick<WorkspaceActions, 'createFile'>,
-  parentId: ResourceId | null,
+  actions: Pick<WorkspaceActions, 'createAssetFile'>,
   signal: AbortSignal,
 ): Promise<ReadonlyArray<AuthoredDestination>> {
-  const settlements = await Promise.all(
-    files.map((file) => actions.createFile(parentId, file, signal)),
-  )
+  const settlements = await Promise.all(files.map((file) => actions.createAssetFile(file, signal)))
   if (signal.aborted) return []
   return settlements.flatMap((settlement) =>
     settlement.status === 'completed' ? [resourceDestination(settlement.resourceId)] : [],

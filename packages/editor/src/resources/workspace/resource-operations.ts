@@ -53,6 +53,8 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
     ) => createWorkspaceResource(runtime, kind, parentId, title, report, signal),
     createFile: (parentId: ResourceId | null, file: File, signal?: AbortSignal) =>
       createWorkspaceFile(runtime, parentId, file, report, signal),
+    createAssetFile: (file: File, signal?: AbortSignal) =>
+      createWorkspaceAssetFile(runtime, file, report, signal),
     download: (resource: AuthorizedResourceSummary) =>
       downloadWorkspaceResource(runtime, resource, report),
     duplicate: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
@@ -181,6 +183,35 @@ async function createWorkspaceFile(
     report,
     signal,
   )
+}
+
+async function createWorkspaceAssetFile(
+  runtime: EditorRuntime,
+  file: File,
+  report: WorkspaceReport,
+  signal?: AbortSignal,
+): Promise<WorkspaceCreationSettlement> {
+  if (signal?.aborted) return { status: 'cancelled' }
+  const assets = runtime.resources.assets
+  if (assets.status !== 'available') {
+    return { status: 'rejected', reason: assets.reason }
+  }
+  let resolution
+  try {
+    resolution = await assets.value.ensure()
+  } catch {
+    if (signal?.aborted) return { status: 'cancelled' }
+    return {
+      status: 'failed',
+      reason: 'provider_failure',
+      retry: () => createWorkspaceAssetFile(runtime, file, report, signal),
+    }
+  }
+  if (signal?.aborted) return { status: 'cancelled' }
+  if (resolution.status === 'rejected') {
+    return { status: 'rejected', reason: resolution.reason }
+  }
+  return await createWorkspaceFile(runtime, resolution.resourceId, file, report, signal)
 }
 
 async function downloadWorkspaceResource(

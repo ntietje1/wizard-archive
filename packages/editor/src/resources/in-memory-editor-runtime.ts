@@ -39,7 +39,7 @@ import type {
   ResourceStructureCommandGateway,
   ResourceStructureCommandResult,
 } from './resource-command-contract'
-import type { ResourceNavigation, EditorRuntime } from './editor-runtime-contract'
+import type { EditorRuntime, ResourceNavigation } from './editor-runtime-contract'
 import type { CampaignId, CampaignMemberId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
@@ -79,6 +79,7 @@ import type {
   PlainTransferJobRequest,
   TransferSourceDescriptor,
 } from './transfer-job-contract'
+import { createInMemoryResourceAssetsFolderGateway } from './in-memory-resource-assets-folder'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -917,6 +918,12 @@ export function createInMemoryEditorRuntime({
     catalogResources().some((resource) => resource.id === resourceId),
   )
   const search = createInMemoryWorkspaceSearch(catalogResources, notes)
+  const assetsFolder = createInMemoryResourceAssetsFolderGateway({
+    campaignId: scope.campaignId,
+    readSnapshot: resources.catalogSnapshot,
+    execute: (envelope) => structureWithKindIndex.execute(envelope),
+    assign: (resourceId) => resources.assignAssetsFolder(resourceId),
+  })
 
   return {
     runtime: {
@@ -928,6 +935,9 @@ export function createInMemoryEditorRuntime({
         access: unsupported,
         noteBlockAccess: unsupported,
         bookmarks: { status: 'available', value: bookmarks },
+        assets: canEdit
+          ? { status: 'available', value: assetsFolder }
+          : { status: 'unavailable', reason: 'unauthorized' },
         previews: unsupported,
         undo: canEdit
           ? { status: 'available', value: undo.history }

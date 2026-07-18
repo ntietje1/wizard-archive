@@ -136,6 +136,47 @@ describe('resource application workflows', () => {
     expect(report).toHaveBeenLastCalledWith('File uploaded')
     core.dispose()
   })
+
+  it('creates authored uploads under one canonical Assets folder', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
+    })
+    const actions = createWorkspaceActions(core.runtime, vi.fn())
+
+    const [first, second] = await Promise.all([
+      actions.createAssetFile(new File(['first'], 'First.txt', { type: 'text/plain' })),
+      actions.createAssetFile(new File(['second'], 'Second.txt', { type: 'text/plain' })),
+    ])
+
+    if (first.status !== 'completed' || second.status !== 'completed') {
+      throw new TypeError('Expected completed Assets uploads')
+    }
+    const snapshot = core.runtime.resources.index.getSnapshot()
+    const firstFile = snapshot.lookup(first.resourceId)
+    const secondFile = snapshot.lookup(second.resourceId)
+    if (firstFile.state !== 'known' || secondFile.state !== 'known') {
+      throw new TypeError('Expected uploaded resources')
+    }
+    expect(firstFile.value.displayParentId).toBe(secondFile.value.displayParentId)
+    const assetsFolderId = firstFile.value.displayParentId
+    if (assetsFolderId === null) throw new TypeError('Expected Assets parent')
+    expect(snapshot.lookup(assetsFolderId)).toMatchObject({
+      state: 'known',
+      value: { kind: 'folder', title: 'Assets', displayParentId: null, icon: 'Box' },
+    })
+    core.dispose()
+  })
 })
 
 function navigation(initialResourceId: ResourceRecord['id']): ResourceNavigation {

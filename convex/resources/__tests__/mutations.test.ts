@@ -72,6 +72,92 @@ describe('resource structure commands', () => {
 
   afterEach(() => vi.useRealTimers())
 
+  it('atomically creates and assigns one Assets folder for concurrent resolutions', async () => {
+    const campaign = await setupCampaignContext(t)
+    const firstCandidate = generateDomainId(DOMAIN_ID_KIND.resource)
+    const secondCandidate = generateDomainId(DOMAIN_ID_KIND.resource)
+
+    const [first, second] = await Promise.all([
+      asDm(campaign).mutation(api.resources.mutations.ensureResourceAssetsFolder, {
+        campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        resourceId: firstCandidate,
+      }),
+      asDm(campaign).mutation(api.resources.mutations.ensureResourceAssetsFolder, {
+        campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        resourceId: secondCandidate,
+      }),
+    ])
+
+    expect(first.status).toBe('completed')
+    expect(second).toEqual(first)
+    await t.run(async (ctx) => {
+      const assignment = await ctx.db
+        .query('resourceAssetsFolders')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaign.campaignDomainId))
+        .unique()
+      const folders = await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) =>
+          query.eq('campaignUuid', campaign.campaignDomainId).eq('parentResourceUuid', null),
+        )
+        .take(3)
+      expect(folders).toHaveLength(1)
+      expect(folders[0]).toMatchObject({
+        resourceUuid: assignment?.resourceUuid,
+        kind: 'folder',
+        lifecycle: 'active',
+        title: 'Assets',
+        icon: 'Box',
+      })
+    })
+  })
+
+  it('keeps same-title folders unrelated and restores the canonical assignment', async () => {
+    const campaign = await setupCampaignContext(t)
+    const unrelatedAssetsId = await createResource(
+      campaign,
+      campaign.campaignDomainId,
+      'folder',
+      null,
+      'Assets',
+    )
+    const adopted = await asDm(campaign).mutation(
+      api.resources.mutations.ensureResourceAssetsFolder,
+      {
+        campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
+      },
+    )
+    if (adopted.status !== 'completed') throw new TypeError('Expected Assets assignment')
+    expect(adopted.resourceId).not.toBe(unrelatedAssetsId)
+
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaign.campaignDomainId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: { type: 'trash', resourceIds: [adopted.resourceId] },
+    })
+    const restored = await asDm(campaign).mutation(
+      api.resources.mutations.ensureResourceAssetsFolder,
+      {
+        campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
+      },
+    )
+
+    expect(restored).toEqual({ status: 'completed', resourceId: adopted.resourceId })
+    await t.run(async (ctx) => {
+      const resource = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', adopted.resourceId))
+        .unique()
+      expect(resource?.lifecycle).toBe('active')
+    })
+  })
+
   it('replays safe compensation and rejects it after a conflicting edit', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -3178,10 +3264,7 @@ describe('resource structure commands', () => {
         ctx.db
           .query('noteBlockAudienceAccess')
           .withIndex('by_note_and_block', (query) =>
-            query
-              .eq('campaignUuid', campaignUuid)
-              .eq('noteUuid', noteId)
-              .eq('blockUuid', blockId),
+            query.eq('campaignUuid', campaignUuid).eq('noteUuid', noteId).eq('blockUuid', blockId),
           )
           .unique(),
       ).resolves.not.toBeNull()

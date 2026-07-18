@@ -48,6 +48,7 @@ import {
   resourcePresenceHeartbeatResultValidator,
   resourcePresenceReleaseResultValidator,
   resourcePresenceUpdateResultValidator,
+  resourceAssetsFolderResolutionValidator,
   versionStampValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
@@ -79,6 +80,7 @@ import {
   appendResourceSourcePathAlias,
   findResourceSourcePathAlias,
 } from './functions/resourceCatalogMetadata'
+import { ensureResourceAssetsFolder as ensureResourceAssetsFolderFn } from './functions/ensureResourceAssetsFolder'
 import { getUserUploadSession } from '../storage/functions/getUserUploadSession'
 import {
   beginPlainFileTransfer as beginPlainFileTransferFn,
@@ -371,6 +373,15 @@ export const executeStructureCommand = campaignMutation({
     })
     return storedResult(result)
   },
+})
+
+export const ensureResourceAssetsFolder = dmMutation({
+  args: {
+    operationId: operationIdValidator,
+    resourceId: resourceIdValidator,
+  },
+  returns: resourceAssetsFolderResolutionValidator,
+  handler: async (ctx, args) => await ensureResourceAssetsFolderFn(ctx, args),
 })
 
 export const compensateResourceOperation = campaignMutation({

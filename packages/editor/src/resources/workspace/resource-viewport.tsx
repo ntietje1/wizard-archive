@@ -193,7 +193,6 @@ function CanvasViewport({
       canEdit={canEdit}
       drop={createWorkspaceAuthoredDestinationDropResolver({
         actions,
-        parentId: resource.displayParentId,
       })}
       renderEmbed={({ activation, editing, node, zoom }) => (
         <CanvasResourceEmbed
@@ -254,7 +253,6 @@ function NoteViewport({
         embeds={{
           drop: createWorkspaceAuthoredDestinationDropResolver({
             actions,
-            parentId: resource.displayParentId,
           }),
           renderNote: renderEmbeddedNoteResource,
           runtime,
