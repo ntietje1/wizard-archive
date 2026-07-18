@@ -23,7 +23,7 @@ type NoteDocumentSpecRenderers = {
 
 type EmbedBlockRenderer = () => { dom: HTMLElement }
 
-const embedBlockConfig = {
+export const embedBlockConfig = {
   type: 'embed',
   propSchema: {
     destination: { default: EMPTY_AUTHORED_DESTINATION_SERIALIZED },
@@ -58,11 +58,15 @@ export function createNoteBlockSpecs({
 }: {
   renderEmbedBlock: EmbedBlockRenderer
 }) {
+  return createNoteBlockSpecsWithEmbed(createEmbedBlockSpec(renderEmbedBlock))
+}
+
+export function createNoteBlockSpecsWithEmbed<TEmbed extends BlockSpecs[string]>(embed: TEmbed) {
   return {
     ...commonRichTextBlockSpecs,
     toggleListItem: defaultBlockSpecs.toggleListItem,
     divider: defaultBlockSpecs.divider,
     table: defaultBlockSpecs.table,
-    embed: createEmbedBlockSpec(renderEmbedBlock),
+    embed,
   } satisfies BlockSpecs
 }

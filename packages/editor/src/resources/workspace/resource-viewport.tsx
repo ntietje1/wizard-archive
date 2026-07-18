@@ -35,11 +35,12 @@ import { CanvasEditor } from '../../canvas/canvas-editor'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import type { CanvasPreviewSource } from '../content-session-contract'
 import { CanvasResourceEmbed } from './canvas-resource-embed'
-import { createWorkspaceCanvasDropResolver } from './workspace-canvas-drop'
+import { createWorkspaceAuthoredDestinationDropResolver } from './workspace-authored-destination-drop'
 import { FileViewer } from '../../files/file-viewer'
 import { MapViewer } from '../../maps/map-viewer'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
+import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
 
 export function ResourceViewport({
   actions,
@@ -92,6 +93,7 @@ export function ResourceViewport({
     case 'note':
       return (
         <NoteViewport
+          actions={actions}
           canEdit={canEdit}
           headingNavigationRef={noteHeadingNavigation}
           resource={resource}
@@ -189,7 +191,7 @@ function CanvasViewport({
     <CanvasEditor
       key={`${resource.id}:${state.session.document.guid}`}
       canEdit={canEdit}
-      drop={createWorkspaceCanvasDropResolver({
+      drop={createWorkspaceAuthoredDestinationDropResolver({
         actions,
         parentId: resource.displayParentId,
       })}
@@ -212,12 +214,14 @@ function CanvasViewport({
 }
 
 function NoteViewport({
+  actions,
   canEdit,
   headingNavigationRef,
   onOpenContextMenu,
   resource,
   runtime,
 }: {
+  actions: WorkspaceActions
   canEdit: boolean
   headingNavigationRef: NoteHeadingNavigationRef
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
@@ -247,6 +251,15 @@ function NoteViewport({
             : undefined
         }
         canEdit={canEdit}
+        embeds={{
+          drop: createWorkspaceAuthoredDestinationDropResolver({
+            actions,
+            parentId: resource.displayParentId,
+          }),
+          renderNote: renderEmbeddedNoteResource,
+          runtime,
+          sourceResourceId: resource.id,
+        }}
         headingNavigationRef={headingNavigationRef}
         label={`${resource.title} note editor`}
         scroll={{

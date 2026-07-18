@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { DragEvent } from 'react'
-import type { CanvasDropResolver } from './canvas-editor'
+import type { AuthoredDestinationDropResolver } from '../resources/authored-destination-drop'
 import type { CanvasDocumentController } from './document-controller'
 import type { CanvasInteractionController } from './interaction-controller'
 import { screenToCanvasPoint } from './canvas-viewport'
@@ -24,7 +24,7 @@ export function useCanvasDropTarget({
 }: {
   canEdit: boolean
   documentController: CanvasDocumentController
-  drop: CanvasDropResolver | null
+  drop: AuthoredDestinationDropResolver | null
   interactionController: CanvasInteractionController
 }) {
   const lifetime = useRef<AbortController | null>(null)

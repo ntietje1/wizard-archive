@@ -3,8 +3,6 @@ import type { ReactNode } from 'react'
 import { CanvasReadonlyPreview } from '../../canvas/canvas-readonly-preview'
 import { FileEmbedPreview } from '../../files/file-embed-preview'
 import { MapEmbedPreview } from '../../maps/map-embed-preview'
-import { EPHEMERAL_NOTE_SCROLL } from '../../notes/note-scroll-persistence'
-import { NoteSessionEditor } from '../../notes/note-session-editor'
 import type {
   FileContentState,
   MapPreviewState,
@@ -35,7 +33,7 @@ export function ResourcePreviewSurface({
   resource,
   runtime,
 }: {
-  renderNote?: ResourceNotePreviewRenderer
+  renderNote: ResourceNotePreviewRenderer
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -58,7 +56,7 @@ function NoteResourcePreview({
   resource,
   runtime,
 }: {
-  render?: ResourceNotePreviewRenderer
+  render: ResourceNotePreviewRenderer
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -66,18 +64,7 @@ function NoteResourcePreview({
   if (state.status !== 'initializing' && state.status !== 'ready') {
     return <PreviewContentState kind={resource.kind} state={state} />
   }
-  if (render) return render({ resource, state })
-  return (
-    <div className="flex size-full min-h-0 flex-col overflow-hidden text-left">
-      <NoteSessionEditor
-        canEdit={false}
-        formattingToolbar={false}
-        label={`${resource.title} note preview`}
-        scroll={EPHEMERAL_NOTE_SCROLL}
-        state={state}
-      />
-    </div>
-  )
+  return render({ resource, state })
 }
 
 function FolderResourcePreview({

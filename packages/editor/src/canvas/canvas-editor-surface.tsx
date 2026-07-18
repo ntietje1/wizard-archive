@@ -29,7 +29,8 @@ import { loadCanvasViewport, saveCanvasViewport } from './viewport-storage'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId } from '../resources/domain-id'
 import type { ContentCollaboration } from '../resources/content-session-contract'
-import type { CanvasDropResolver, CanvasEmbedRenderer } from './canvas-editor'
+import type { CanvasEmbedRenderer } from './canvas-editor'
+import type { AuthoredDestinationDropResolver } from '../resources/authored-destination-drop'
 import { setCanvasCollaborationCursor } from './canvas-collaboration'
 import { useCanvasSurface } from './use-canvas-surface'
 import { useCanvasDropTarget } from './canvas-drop-target'
@@ -49,7 +50,7 @@ type CanvasEditorSurfaceProps = Readonly<{
   canEdit: boolean
   collaboration: ContentCollaboration
   documentController: CanvasDocumentController
-  drop: CanvasDropResolver | null
+  drop: AuthoredDestinationDropResolver | null
   interactionController: CanvasInteractionController
   interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
   renderEmbed: CanvasEmbedRenderer

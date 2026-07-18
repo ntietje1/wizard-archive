@@ -384,6 +384,14 @@ describe('NoteEditor', () => {
 
     fireEvent.drop(surface, { dataTransfer: { files: [], types: ['text/html'] } })
     expect(received).toHaveBeenCalledOnce()
+
+    const embedTarget = window.document.createElement('div')
+    embedTarget.dataset.blocknoteExternalDropTarget = 'true'
+    surface.append(embedTarget)
+    fireEvent.drop(embedTarget, {
+      dataTransfer: { files: [new File(['content'], 'embedded.txt')], types: ['Files'] },
+    })
+    expect(received).toHaveBeenCalledTimes(2)
   })
 })
 

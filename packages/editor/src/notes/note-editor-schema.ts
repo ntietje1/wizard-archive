@@ -1,17 +1,11 @@
 import { BlockNoteSchema } from '@blocknote/core'
 import type { BlockNoteEditor } from '@blocknote/core'
-import { createNoteBlockSpecs } from './document/schema-factory'
+import { createNoteBlockSpecsWithEmbed } from './document/schema-factory'
 import { noteInlineContentSpecs, noteStyleSpecs } from './dom-specs'
 import { reactNoteValueInlineSpec } from './values/react-spec'
+import { noteEmbedBlockSpec } from './embeds/note-embed-block-spec'
 
-const noteBlockSpecs = createNoteBlockSpecs({
-  renderEmbedBlock: () => {
-    const element = document.createElement('div')
-    element.className = 'note-embed-placeholder'
-    element.textContent = 'Embedded content'
-    return { dom: element }
-  },
-})
+const noteBlockSpecs = createNoteBlockSpecsWithEmbed(noteEmbedBlockSpec)
 const { value: _value, ...noteInlineContentSpecsWithoutValue } = noteInlineContentSpecs
 
 export const noteEditorSchema = BlockNoteSchema.create({

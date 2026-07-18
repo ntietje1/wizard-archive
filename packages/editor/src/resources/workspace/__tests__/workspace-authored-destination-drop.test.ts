@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../domain-id'
-import { createWorkspaceCanvasDropResolver } from '../workspace-canvas-drop'
+import { createWorkspaceAuthoredDestinationDropResolver } from '../workspace-authored-destination-drop'
 
 const RESOURCE_A = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-111111111111')
 const RESOURCE_B = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-222222222222')
@@ -8,7 +8,7 @@ const RESOURCE_B = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8
 describe('workspace canvas drops', () => {
   it('resolves active workspace drags directly to bounded canonical destinations', async () => {
     const createFile = vi.fn()
-    const resolver = createWorkspaceCanvasDropResolver({
+    const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createFile },
       parentId: null,
     })
@@ -37,7 +37,7 @@ describe('workspace canvas drops', () => {
       .fn()
       .mockResolvedValueOnce({ status: 'completed', resourceId: RESOURCE_A })
       .mockResolvedValueOnce({ status: 'rejected', reason: 'unsupported' })
-    const resolver = createWorkspaceCanvasDropResolver({
+    const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createFile },
       parentId: RESOURCE_B,
     })
@@ -54,9 +54,28 @@ describe('workspace canvas drops', () => {
     expect(createFile).toHaveBeenNthCalledWith(2, RESOURCE_B, rejected, expect.any(AbortSignal))
   })
 
+  it('uses the same canonical file creation path for picker uploads', async () => {
+    const image = new File(['image'], 'map.png', { type: 'image/png' })
+    const createFile = vi.fn(() =>
+      Promise.resolve({ status: 'completed' as const, resourceId: RESOURCE_A }),
+    )
+    const resolver = createWorkspaceAuthoredDestinationDropResolver({
+      actions: { createFile },
+      parentId: RESOURCE_B,
+    })
+
+    await expect(resolver.resolveFiles([image], 1, new AbortController().signal)).resolves.toEqual([
+      {
+        kind: 'internal',
+        target: { kind: 'resource', resourceId: RESOURCE_A },
+      },
+    ])
+    expect(createFile).toHaveBeenCalledWith(RESOURCE_B, image, expect.any(AbortSignal))
+  })
+
   it('accepts the first safe external URI without creating a resource', async () => {
     const createFile = vi.fn()
-    const resolver = createWorkspaceCanvasDropResolver({
+    const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createFile },
       parentId: null,
     })

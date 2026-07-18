@@ -1,17 +1,17 @@
-import type { CanvasDropResolver } from '../../canvas/canvas-editor'
+import type { AuthoredDestinationDropResolver } from '../authored-destination-drop'
 import type { AuthoredDestination } from '../authored-destination-contract'
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import type { ResourceId } from '../domain-id'
 import { hasWorkspaceResourceDrag, readWorkspaceResourceDrag } from '../workspace-resource-drag'
 import type { WorkspaceActions } from './resource-operations'
 
-export function createWorkspaceCanvasDropResolver({
+export function createWorkspaceAuthoredDestinationDropResolver({
   actions,
   parentId,
 }: {
   actions: Pick<WorkspaceActions, 'createFile'>
   parentId: ResourceId | null
-}): CanvasDropResolver {
+}): AuthoredDestinationDropResolver {
   return {
     canResolve: (dataTransfer) =>
       hasWorkspaceResourceDrag(dataTransfer) ||
@@ -30,6 +30,8 @@ export function createWorkspaceCanvasDropResolver({
       const url = parseDroppedUrl(dataTransfer.getData('text/uri-list'))
       return Promise.resolve(url ? [{ kind: 'externalUrl', url }] : [])
     },
+    resolveFiles: (files, maximumDestinations, signal) =>
+      createFileDestinations(files.slice(0, maximumDestinations), actions, parentId, signal),
   }
 }
 

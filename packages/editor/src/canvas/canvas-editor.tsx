@@ -6,26 +6,17 @@ import { createCanvasInteractionController } from './interaction-controller'
 import type { CanvasSession } from '../resources/content-session-contract'
 import type { CanvasDocumentNode } from './document-contract'
 import type { ResourceId } from '../resources/domain-id'
-import type { AuthoredDestination } from '../resources/authored-destination-contract'
+import type { AuthoredDestinationDropResolver } from '../resources/authored-destination-drop'
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 
 type CanvasEditorProps = Readonly<{
   canEdit: boolean
-  drop?: CanvasDropResolver
+  drop?: AuthoredDestinationDropResolver
   renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   session: CanvasSession
   title: string
-}>
-
-export type CanvasDropResolver = Readonly<{
-  canResolve(dataTransfer: Pick<DataTransfer, 'types'>): boolean
-  resolve(
-    dataTransfer: DataTransfer,
-    maximumDestinations: number,
-    signal: AbortSignal,
-  ): Promise<ReadonlyArray<AuthoredDestination>>
 }>
 
 export type CanvasEmbedRenderer = (props: {

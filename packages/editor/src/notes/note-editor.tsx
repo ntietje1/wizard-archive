@@ -22,6 +22,8 @@ import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-act
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import { NoteBlockAccessMenuProvider } from './sharing/note-block-access-menu'
 import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
+import { NoteEmbedRuntimeProvider } from './embeds/note-embed-runtime'
+import type { NoteEmbedBinding } from './embeds/note-embed-runtime-context'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -30,6 +32,7 @@ type NoteEditorProps = {
   document: Y.Doc
   formattingToolbar?: boolean
   headingNavigationRef?: NoteHeadingNavigationRef
+  embeds?: NoteEmbedBinding
   label: string
   scroll: NoteScrollBehavior
 } & (
@@ -112,6 +115,12 @@ function NoteDocumentEditor(props: NoteEditorProps) {
       }
       onDropCapture={(event) => {
         if (!editable || !isExternalFileDrop(event.dataTransfer)) return
+        if (
+          event.target instanceof Element &&
+          event.target.closest('[data-blocknote-external-drop-target="true"]')
+        ) {
+          return
+        }
         event.preventDefault()
         event.stopPropagation()
       }}
@@ -128,24 +137,26 @@ function NoteDocumentEditor(props: NoteEditorProps) {
         <div className="note-editor-fill-height">
           <div className="note-editor-surface">
             <div className="note-editor-core-surface">
-              <NoteValueRuntimeProvider editor={editor} editable={editable}>
-                <BlockNoteView
-                  editable={editable}
-                  editor={editor}
-                  formattingToolbar={false}
-                  linkToolbar={false}
-                  sideMenu={false}
-                  slashMenu={false}
-                  theme={resolvedTheme}
-                >
-                  {editable && (
-                    <>
-                      <SideMenuController sideMenu={NoteSideMenu} />
-                      <NoteSlashMenu editor={editor} />
-                    </>
-                  )}
-                </BlockNoteView>
-              </NoteValueRuntimeProvider>
+              <NoteEmbedRuntimeProvider binding={props.embeds} editable={editable}>
+                <NoteValueRuntimeProvider editor={editor} editable={editable}>
+                  <BlockNoteView
+                    editable={editable}
+                    editor={editor}
+                    formattingToolbar={false}
+                    linkToolbar={false}
+                    sideMenu={false}
+                    slashMenu={false}
+                    theme={resolvedTheme}
+                  >
+                    {editable && (
+                      <>
+                        <SideMenuController sideMenu={NoteSideMenu} />
+                        <NoteSlashMenu editor={editor} />
+                      </>
+                    )}
+                  </BlockNoteView>
+                </NoteValueRuntimeProvider>
+              </NoteEmbedRuntimeProvider>
             </div>
           </div>
         </div>

@@ -172,6 +172,7 @@ describe('CanvasEditor', () => {
         canEdit
         drop={{
           canResolve: () => true,
+          resolveFiles: () => Promise.resolve([]),
           resolve,
         }}
         renderEmbed={() => null}

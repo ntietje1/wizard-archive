@@ -4,10 +4,15 @@ import { Sigma } from 'lucide-react'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import type { NoteBlockNoteEditor } from '../note-editor-schema'
 import { insertNoteValueFromSlashMenu } from './value-slash-menu'
+import { createEmbedItem } from './embed-slash-menu'
 import './slash-menu.css'
 
 export function NoteSlashMenu({ editor }: { editor: NoteBlockNoteEditor }) {
-  const items = [createValueItem(editor), ...getDefaultReactSlashMenuItems(editor)]
+  const items = [
+    createValueItem(editor),
+    createEmbedItem(editor),
+    ...getDefaultReactSlashMenuItems(editor),
+  ]
 
   return (
     <SuggestionMenuController

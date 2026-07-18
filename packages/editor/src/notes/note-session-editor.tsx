@@ -5,6 +5,7 @@ import type { NoteScrollBehavior } from './note-scroll-persistence'
 import type { NoteHeadingNavigationRef } from './note-heading-navigation'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import type { NoteBlockAccessMenuBinding } from './sharing/note-block-access-menu'
+import type { NoteEmbedBinding } from './embeds/note-embed-runtime-context'
 
 type RenderableNoteSessionState = Extract<
   NoteSessionState,
@@ -16,6 +17,7 @@ export function NoteSessionEditor({
   activation,
   blockAccess,
   formattingToolbar,
+  embeds,
   headingNavigationRef,
   label,
   scroll,
@@ -25,6 +27,7 @@ export function NoteSessionEditor({
   activation?: BlockNoteActivation
   blockAccess?: NoteBlockAccessMenuBinding
   formattingToolbar?: boolean
+  embeds?: NoteEmbedBinding
   headingNavigationRef?: NoteHeadingNavigationRef
   label: string
   scroll: NoteScrollBehavior
@@ -41,6 +44,7 @@ export function NoteSessionEditor({
         activation={activation}
         blockAccess={blockAccess}
         formattingToolbar={formattingToolbar}
+        embeds={embeds}
         headingNavigationRef={headingNavigationRef}
         label={label}
         mode="edit"
@@ -52,6 +56,7 @@ export function NoteSessionEditor({
         key={state.local.guid}
         document={state.local}
         formattingToolbar={formattingToolbar}
+        embeds={embeds}
         headingNavigationRef={headingNavigationRef}
         label={label}
         mode="view"
@@ -67,6 +72,7 @@ export function NoteSessionEditor({
       blockAccess={blockAccess}
       document={state.session.document}
       formattingToolbar={formattingToolbar}
+      embeds={embeds}
       headingNavigationRef={headingNavigationRef}
       label={label}
       mode="edit"
@@ -80,6 +86,7 @@ export function NoteSessionEditor({
       collaboration={state.session.collaboration}
       document={state.session.document}
       formattingToolbar={formattingToolbar}
+      embeds={embeds}
       headingNavigationRef={headingNavigationRef}
       label={label}
       mode="view"

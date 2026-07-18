@@ -9,6 +9,7 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import type { ResourceId } from '../domain-id'
 import { ResourcePreviewSurface } from './resource-preview-surface'
 import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
+import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
 
 const MISSING_RESOURCE = { state: 'missing' as const }
 
@@ -59,6 +60,12 @@ export function CanvasResourceEmbed({
             <NoteSessionEditor
               activation={editing ? (activation ?? undefined) : undefined}
               canEdit={editing}
+              embeds={{
+                ancestors: new Set([sourceResourceId]),
+                renderNote: renderEmbeddedNoteResource,
+                runtime,
+                sourceResourceId: note.id,
+              }}
               formattingToolbar={false}
               label={`${note.title} embedded note`}
               scroll={EPHEMERAL_NOTE_SCROLL}
