@@ -25,6 +25,7 @@ import { findCanonicalResource } from './findCanonicalResource'
 import { prepareAssetCopies } from './assetContent'
 import { loadPendingAssetState } from './assetContentState'
 import { authorizeResourceContent } from './authorizeResourceContent'
+import { replaceResourceReferenceProjection } from './resourceReferences'
 
 const EMPTY_MAP_CONTENT = {
   image: { status: 'unattached' as const },
@@ -239,6 +240,18 @@ export async function prepareMapContentCopy(
             version,
           })
           await Promise.all(copiedPins.map((pin) => ctx.db.insert('resourceMapPins', pin)))
+          if (
+            (
+              await replaceResourceReferenceProjection(ctx, {
+                campaignId,
+                sourceResourceId: destinationResourceId,
+                sourceVersion: version,
+                destinations: copiedPins.map((pin) => pin.destination),
+              })
+            ).status !== 'completed'
+          ) {
+            throw new RangeError('Copied map reference projection exceeds its bound')
+          }
           await assets.commit()
         }
       },

@@ -477,8 +477,8 @@ export const createNoteResource = campaignMutation({
     if (command.type !== 'create' || command.kind !== 'note') {
       return { status: 'rejected', reason: 'invalid_command' }
     }
-    const version = await prepareNoteContentCreation(args.update)
-    if (!version) return { status: 'rejected', reason: 'content_integrity_failure' }
+    const prepared = await prepareNoteContentCreation(args.update, command.resourceId)
+    if (!prepared) return { status: 'rejected', reason: 'content_integrity_failure' }
     const result = await executeStructureCommandFn(ctx, {
       operationId: args.operationId,
       command,
@@ -490,7 +490,8 @@ export const createNoteResource = campaignMutation({
       command.resourceId,
       assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
       args.update,
-      version,
+      prepared.version,
+      prepared.destinations,
     )
     if (contentResult === 'operation_id_reused') {
       return { status: 'rejected', reason: 'operation_id_reused' }

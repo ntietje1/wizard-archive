@@ -16,6 +16,7 @@ import {
   noteBlockAccessPresentationPageValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
+  resourceReferenceSnapshotValidator,
   resourceAccessPresentationPageValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
@@ -42,6 +43,7 @@ import {
   CAMPAIGN_STATUS,
 } from '../../shared/campaigns/types'
 import { normalizeNoteBlockAccessSelection } from '@wizard-archive/editor/resources/note-block-access-policy'
+import { loadResourceReferenceRows } from './functions/resourceReferences'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 const NOTE_BLOCK_ACCESS_PARTICIPANT_PAGE_SIZE = 8
@@ -307,6 +309,30 @@ export const loadCanvasContent = resourceQuery({
   handler: async (ctx, args) => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     return await loadCanvasContentFn(ctx, resourceId)
+  },
+})
+
+export const loadResourceReferences = resourceQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: resourceReferenceSnapshotValidator,
+  handler: async (ctx, args) => {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+    const current = await loadAuthorizedResourceProjection(ctx, [resourceId])
+    if (current.missingResourceIds.includes(resourceId)) return { status: 'unavailable' as const }
+    const rows = await loadResourceReferenceRows(ctx, resourceId)
+    if (rows.status !== 'ready') return rows
+    const relatedResourceIds = [
+      ...rows.outgoing.map((edge) => edge.target.resourceId),
+      ...rows.backlinks.map((edge) => edge.sourceResourceId),
+    ]
+    const snapshot = await loadAuthorizedResourceProjection(ctx, relatedResourceIds)
+    const visibleResourceIds = new Set(snapshot.resources.map((resource) => resource.id))
+    return {
+      status: 'ready' as const,
+      outgoing: rows.outgoing.filter((edge) => visibleResourceIds.has(edge.target.resourceId)),
+      backlinks: rows.backlinks.filter((edge) => visibleResourceIds.has(edge.sourceResourceId)),
+      snapshot: storedSnapshot(snapshot),
+    }
   },
 })
 

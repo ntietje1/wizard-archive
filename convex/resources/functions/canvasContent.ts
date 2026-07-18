@@ -8,6 +8,7 @@ import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/c
 import { remapAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import {
   createCanvasDocumentDoc,
+  canvasAuthoredDestinations,
   parseCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import type {
@@ -21,6 +22,7 @@ import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 import { authorizeResourceContent } from './authorizeResourceContent'
+import { replaceResourceReferenceProjection } from './resourceReferences'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
 
@@ -124,6 +126,18 @@ export async function prepareCanvasContentCopy(
             update,
             version,
           })
+          if (
+            (
+              await replaceResourceReferenceProjection(ctx, {
+                campaignId,
+                sourceResourceId: destinationResourceId,
+                sourceVersion: version,
+                destinations: canvasAuthoredDestinations(nodes),
+              })
+            ).status !== 'completed'
+          ) {
+            throw new RangeError('Copied canvas reference projection exceeds its bound')
+          }
         }
       },
     },

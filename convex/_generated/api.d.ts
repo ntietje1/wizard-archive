@@ -51,6 +51,7 @@ import type * as errors from "../errors.js";
 import type * as functions from "../functions.js";
 import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
+import type * as migrations from "../migrations.js";
 import type * as resources_actions from "../resources/actions.js";
 import type * as resources_fileUpload from "../resources/fileUpload.js";
 import type * as resources_functions_ConvexResourceCatalog from "../resources/functions/ConvexResourceCatalog.js";
@@ -86,6 +87,7 @@ import type * as resources_functions_resourceContentCopy from "../resources/func
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
 import type * as resources_functions_resourcePresence from "../resources/functions/resourcePresence.js";
 import type * as resources_functions_resourceRecordRow from "../resources/functions/resourceRecordRow.js";
+import type * as resources_functions_resourceReferences from "../resources/functions/resourceReferences.js";
 import type * as resources_functions_resourceSearchProjection from "../resources/functions/resourceSearchProjection.js";
 import type * as resources_functions_saveCanvasContent from "../resources/functions/saveCanvasContent.js";
 import type * as resources_functions_saveNoteContent from "../resources/functions/saveNoteContent.js";
@@ -183,6 +185,7 @@ declare const fullApi: ApiFromModules<{
   functions: typeof functions;
   http: typeof http;
   httpBridge: typeof httpBridge;
+  migrations: typeof migrations;
   "resources/actions": typeof resources_actions;
   "resources/fileUpload": typeof resources_fileUpload;
   "resources/functions/ConvexResourceCatalog": typeof resources_functions_ConvexResourceCatalog;
@@ -218,6 +221,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
   "resources/functions/resourcePresence": typeof resources_functions_resourcePresence;
   "resources/functions/resourceRecordRow": typeof resources_functions_resourceRecordRow;
+  "resources/functions/resourceReferences": typeof resources_functions_resourceReferences;
   "resources/functions/resourceSearchProjection": typeof resources_functions_resourceSearchProjection;
   "resources/functions/saveCanvasContent": typeof resources_functions_saveCanvasContent;
   "resources/functions/saveNoteContent": typeof resources_functions_saveNoteContent;
@@ -296,4 +300,5 @@ export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
   presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
 };

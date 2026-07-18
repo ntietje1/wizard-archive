@@ -32,6 +32,7 @@ import type { VersionStamp } from './component-version'
 import type { WorkspacePreferencesSource } from './workspace-preferences'
 import type { ResourceUndoHistory } from './resource-undo-history'
 import type { WorkspaceSearchOutcome } from './resource-search-policy'
+import type { ReferenceGraphEdge } from './authored-destination'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -67,6 +68,21 @@ export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway 
 
 export interface ResourcePreviewSource {
   get(resourceId: ResourceId): ResourceKnowledge<AssetId | null>
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+}
+
+export type ResourceReferenceState =
+  | Readonly<{ status: 'loading' }>
+  | Readonly<{
+      status: 'ready'
+      outgoing: ReadonlyArray<ReferenceGraphEdge>
+      backlinks: ReadonlyArray<ReferenceGraphEdge>
+    }>
+  | Readonly<{ status: 'unavailable' }>
+  | Readonly<{ status: 'error' }>
+
+export interface ResourceReferenceSource {
+  get(resourceId: ResourceId): ResourceReferenceState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
@@ -131,6 +147,7 @@ export interface EditorRuntime {
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly assets: ResourceCapability<ResourceAssetsFolderGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>
+    readonly references: ResourceCapability<ResourceReferenceSource>
     readonly undo: ResourceCapability<ResourceUndoHistory>
   }
   readonly content: {

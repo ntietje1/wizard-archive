@@ -247,7 +247,7 @@ export const resourceAccessPresentationPageValidator = v.object({
   cursor: v.nullable(v.string()),
 })
 
-const canonicalTargetValidator = v.union(
+export const canonicalTargetValidator = v.union(
   v.object({ kind: v.literal('resource'), resourceId: resourceIdValidator }),
   v.object({
     kind: v.literal('noteBlock'),
@@ -272,6 +272,13 @@ export const authoredDestinationValidator = v.union(
   v.object({ kind: v.literal('externalUrl'), url: v.string() }),
   v.object({ kind: v.literal('unresolved'), rawTarget: v.string() }),
 )
+
+export const referenceGraphEdgeValidator = v.object({
+  sourceResourceId: resourceIdValidator,
+  sourceVersion: versionStampValidator,
+  target: canonicalTargetValidator,
+})
+
 export const fileClassificationValidator = literals(...Object.values(FILE_CLASSIFICATION))
 export const fileViewerUnavailableReasonValidator = literals(
   ...Object.values(FILE_VIEWER_UNAVAILABLE_REASON),
@@ -491,6 +498,17 @@ export const authorizedResourceSnapshotValidator = v.object({
     }),
   ),
 })
+
+export const resourceReferenceSnapshotValidator = v.union(
+  v.object({
+    status: v.literal('ready'),
+    outgoing: v.array(referenceGraphEdgeValidator),
+    backlinks: v.array(referenceGraphEdgeValidator),
+    snapshot: authorizedResourceSnapshotValidator,
+  }),
+  v.object({ status: v.literal('unavailable') }),
+  v.object({ status: v.literal('integrity_error') }),
+)
 
 const resourceAuditFields = {
   createdAt: v.number(),
@@ -1060,6 +1078,16 @@ export const resourceTables = {
       searchField: 'body',
       filterFields: ['campaignUuid'],
     }),
+
+  resourceReferenceEdges: defineTable({
+    campaignUuid: campaignIdValidator,
+    sourceResourceUuid: resourceIdValidator,
+    sourceVersion: versionStampValidator,
+    targetResourceUuid: resourceIdValidator,
+    target: canonicalTargetValidator,
+  })
+    .index('by_campaign_and_source', ['campaignUuid', 'sourceResourceUuid'])
+    .index('by_campaign_and_target', ['campaignUuid', 'targetResourceUuid', 'sourceResourceUuid']),
 
   resourceNoteContents: defineTable({
     campaignUuid: campaignIdValidator,

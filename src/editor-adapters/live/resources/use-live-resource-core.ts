@@ -29,6 +29,7 @@ import { executeResourceWrite, resourceQueryScope } from './resource-query-scope
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 import { createLiveResourceAssetsFolderGateway } from './live-resource-assets-folder'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { createLiveResourceReferenceSource } from './live-resource-references'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -358,6 +359,20 @@ function createScopedLiveResourceRuntime(
             : result
         })
       : null
+  const references = createLiveResourceReferenceSource(
+    base.applyProjection,
+    (resourceId, apply) => {
+      const watch = convex.watchQuery(api.resources.queries.loadResourceReferences, {
+        ...queryScope,
+        resourceId,
+      })
+      return subscribeToWatch(watch, apply)
+    },
+  )
+  const referencesCapability: EditorRuntime['resources']['references'] = {
+    status: 'available',
+    value: references.source,
+  }
 
   const unsupported = {
     status: 'unavailable',
@@ -399,6 +414,7 @@ function createScopedLiveResourceRuntime(
             : unsupported,
         assets: assetsCapability,
         previews: unsupported,
+        references: referencesCapability,
         undo: undoCapability,
       },
       content,
@@ -421,6 +437,7 @@ function createScopedLiveResourceRuntime(
       bookmarks.dispose()
       access.dispose()
       noteBlockAccess.dispose()
+      references.dispose()
       optimistic.dispose()
       base.dispose()
     },

@@ -118,6 +118,14 @@ export type CanvasDocumentNode =
   | CanvasStrokeDocumentNode
   | CanvasTextDocumentNode
 
+export function canvasAuthoredDestinations(
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+): ReadonlyArray<AuthoredDestination> {
+  return nodes.flatMap((node) =>
+    node.type === 'embed' && node.data.destination ? [node.data.destination] : [],
+  )
+}
+
 export interface CanvasEdgeStyle {
   stroke?: string
   strokeWidth?: number

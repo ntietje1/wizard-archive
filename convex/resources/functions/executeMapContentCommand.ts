@@ -25,6 +25,7 @@ import { jsonContentDigest } from './contentVersion'
 import { findCanonicalResource } from './findCanonicalResource'
 import type { projectMapContent } from './mapContent'
 import { loadValidMapContentRows } from './mapContent'
+import { replaceResourceReferenceProjection } from './resourceReferences'
 
 const MAX_RECENT_MAP_OPERATIONS = 32
 
@@ -100,6 +101,18 @@ export async function executeMapContentCommand(
   }
   const advanced = await advanceMapCommand(transition.content, currentVersion)
   if (!advanced.completed) return advanced.result
+  if (
+    (
+      await replaceResourceReferenceProjection(ctx, {
+        campaignId: ctx.resourceScope.campaignId,
+        sourceResourceId: resourceId,
+        sourceVersion: advanced.version,
+        destinations: transition.content.pins.map((pin) => pin.destination),
+      })
+    ).status !== 'completed'
+  ) {
+    return rejected('content_corrupt')
+  }
   await applyMapPinWrites(
     ctx,
     mapPinWrites(ctx.resourceScope.campaignId, resourceId, pins, command),

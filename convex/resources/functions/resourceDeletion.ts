@@ -28,6 +28,7 @@ type ResourceDeletionPlan = {
   canvasContents: Array<Doc<'resourceCanvasContents'>>
   assetCopyIntents: Array<Doc<'resourceAssetCopyIntents'>>
   assetOwners: Array<Doc<'resourceAssetOwners'>>
+  referenceEdges: Array<Doc<'resourceReferenceEdges'>>
   retirementAssetUuids: Set<AssetId>
 }
 
@@ -47,6 +48,7 @@ function createPlan(): ResourceDeletionPlan {
     canvasContents: [],
     assetCopyIntents: [],
     assetOwners: [],
+    referenceEdges: [],
     retirementAssetUuids: new Set(),
   }
 }
@@ -71,6 +73,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.canvasContents,
     plan.assetCopyIntents,
     plan.assetOwners,
+    plan.referenceEdges,
   ]
 }
 
@@ -191,6 +194,14 @@ export async function planResourceDeletion(
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resource.resourceUuid))
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    plan.referenceEdges.push(
+      ...(await ctx.db
+        .query('resourceReferenceEdges')
+        .withIndex('by_campaign_and_source', (query) =>
+          query.eq('campaignUuid', campaignId).eq('sourceResourceUuid', resource.resourceUuid),
+        )
+        .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+    )
     await addContent(ctx, plan, resource)
     if (rowCount(plan) > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) return null
   }
@@ -224,6 +235,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'mapContents',
   'mapPins',
   'canvasContents',
+  'referenceEdges',
   'assetCopyIntents',
   'assetOwners',
 ] as const
@@ -252,6 +264,7 @@ type CampaignResourceRow =
   | Doc<'resourceMapContents'>
   | Doc<'resourceMapPins'>
   | Doc<'resourceCanvasContents'>
+  | Doc<'resourceReferenceEdges'>
   | Doc<'resourceAssetCopyIntents'>
 
 export async function deleteCampaignResourceBatch(
@@ -271,7 +284,13 @@ export async function deleteCampaignResourceBatch(
     await Promise.all(owners.map((owner) => ctx.db.delete(owner._id)))
     return owners.length === CAMPAIGN_DELETION_BATCH_SIZE ? stage : null
   }
-  const rows = await loadCampaignResourceDeletionBatch(ctx, campaignId, stage)
+  const rows =
+    stage === 'referenceEdges'
+      ? await ctx.db
+          .query('resourceReferenceEdges')
+          .withIndex('by_campaign_and_source', (query) => query.eq('campaignUuid', campaignId))
+          .take(CAMPAIGN_DELETION_BATCH_SIZE)
+      : await loadCampaignResourceDeletionBatch(ctx, campaignId, stage)
   await Promise.all(rows.map((row) => ctx.db.delete(row._id)))
   if (rows.length === CAMPAIGN_DELETION_BATCH_SIZE) return stage
   const index = CAMPAIGN_RESOURCE_DELETION_STAGES.indexOf(stage)
@@ -281,7 +300,7 @@ export async function deleteCampaignResourceBatch(
 async function loadCampaignResourceDeletionBatch(
   ctx: ResourceDeletionCtx,
   campaignId: CampaignId,
-  stage: Exclude<CampaignResourceDeletionStage, 'assetOwners'>,
+  stage: Exclude<CampaignResourceDeletionStage, 'assetOwners' | 'referenceEdges'>,
 ): Promise<Array<CampaignResourceRow>> {
   switch (stage) {
     case 'resources':

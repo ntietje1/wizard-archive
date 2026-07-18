@@ -1276,6 +1276,19 @@ describe('resource structure commands', () => {
       },
       version: { revision: 2 },
     })
+    if (created.status !== 'completed') throw new TypeError('Expected pin creation')
+    await t.run(async (ctx) => {
+      const edge = await ctx.db
+        .query('resourceReferenceEdges')
+        .withIndex('by_campaign_and_source', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', mapId),
+        )
+        .unique()
+      expect(edge).toMatchObject({
+        sourceVersion: created.version,
+        target: { kind: 'resource', resourceId: targetId },
+      })
+    })
     await expect(
       asDm(campaign).mutation(api.resources.mutations.executeMapContentCommand, createArgs),
     ).resolves.toEqual(created)
@@ -1285,8 +1298,6 @@ describe('resource structure commands', () => {
         command: { type: 'removePin', pinId },
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
-    if (created.status !== 'completed') throw new TypeError('Expected pin creation')
-
     let version = created.version
     for (let index = 0; index < 35; index += 1) {
       const result = await asDm(campaign).mutation(
@@ -1329,6 +1340,14 @@ describe('resource structure commands', () => {
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', mapId))
         .unique()
       expect(content?.recentOperations).toHaveLength(32)
+      expect(
+        await ctx.db
+          .query('resourceReferenceEdges')
+          .withIndex('by_campaign_and_source', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', mapId),
+          )
+          .collect(),
+      ).toEqual([])
       await expect(
         ctx.db
           .query('resourceMapPins')
@@ -1507,6 +1526,124 @@ describe('resource structure commands', () => {
         )
         .join(''),
     ).toBe(`${firstInsertion}Middle${secondInsertion}`)
+  })
+
+  it('replaces canonical note reference edges at the exact committed content version', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const targetId = await createResource(campaign, campaignUuid, 'note', null, 'Target')
+    const sourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const sourceUpdate = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [
+          {
+            type: 'resourceLink',
+            props: {
+              destination: serializeAuthoredDestination({
+                kind: 'internal',
+                target: { kind: 'resource', resourceId: targetId },
+              }),
+              label: 'Target',
+            },
+          },
+        ],
+      },
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Retained' }],
+      },
+    ])
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: sourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Source',
+        icon: null,
+        color: null,
+      },
+      update: sourceUpdate,
+    })
+
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', sourceId))
+        .unique()
+      const edges = await ctx.db
+        .query('resourceReferenceEdges')
+        .withIndex('by_campaign_and_source', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', sourceId),
+        )
+        .collect()
+      expect(edges).toEqual([
+        expect.objectContaining({
+          sourceResourceUuid: sourceId,
+          sourceVersion: content!.version,
+          targetResourceUuid: targetId,
+          target: { kind: 'resource', resourceId: targetId },
+        }),
+      ])
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourceReferences, {
+        campaignId: campaignUuid,
+        resourceId: sourceId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      outgoing: [
+        {
+          sourceResourceId: sourceId,
+          target: { kind: 'resource', resourceId: targetId },
+        },
+      ],
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourceReferences, {
+        campaignId: campaignUuid,
+        resourceId: targetId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      backlinks: [
+        {
+          sourceResourceId: sourceId,
+          target: { kind: 'resource', resourceId: targetId },
+        },
+      ],
+    })
+
+    const document = new Y.Doc()
+    Y.applyUpdate(document, new Uint8Array(sourceUpdate))
+    const stateVector = Y.encodeStateVector(document)
+    const blockGroup = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)
+    if (!(blockGroup instanceof Y.XmlElement)) throw new TypeError('Expected note block group')
+    blockGroup.delete(0, 1)
+    const removeLink = Uint8Array.from(Y.encodeStateAsUpdate(document, stateVector)).buffer
+    document.destroy()
+    const saved = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: sourceId,
+      update: removeLink,
+    })
+    expect(saved).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    await t.run(async (ctx) => {
+      expect(
+        await ctx.db
+          .query('resourceReferenceEdges')
+          .withIndex('by_campaign_and_source', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', sourceId),
+          )
+          .collect(),
+      ).toEqual([])
+    })
   })
 
   it('completes a causally incomplete note delta from the authoritative state vector', async () => {
@@ -1766,15 +1903,21 @@ describe('resource structure commands', () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = await createResource(campaign, campaignUuid, 'canvas', null, 'Canvas')
+    const targetId = await createResource(campaign, campaignUuid, 'note', null, 'Target')
     const firstNodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
     const secondNodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
     const firstDocument = createCanvasDocumentDoc({
       nodes: [
         {
           id: firstNodeId,
-          type: 'text',
+          type: 'embed',
           position: { x: 10, y: 20 },
-          data: {},
+          data: {
+            destination: {
+              kind: 'internal',
+              target: { kind: 'resource', resourceId: targetId },
+            },
+          },
         },
       ],
       edges: [],
@@ -1816,6 +1959,18 @@ describe('resource structure commands', () => {
       ]),
     )
     merged.destroy()
+    await t.run(async (ctx) => {
+      const edge = await ctx.db
+        .query('resourceReferenceEdges')
+        .withIndex('by_campaign_and_source', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('sourceResourceUuid', resourceId),
+        )
+        .unique()
+      expect(edge).toMatchObject({
+        sourceVersion: second.version,
+        target: { kind: 'resource', resourceId: targetId },
+      })
+    })
 
     const invalid = new Y.Doc()
     invalid.getMap('nodes').set('invalid-node-id', {

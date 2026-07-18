@@ -1,18 +1,23 @@
 import * as Y from 'yjs'
-import { canonicalizeCanvasDocumentContent } from '@wizard-archive/editor/canvas/document-contract'
+import {
+  canvasAuthoredDestinations,
+  canonicalizeCanvasDocumentContent,
+} from '@wizard-archive/editor/canvas/document-contract'
 import {
   advanceVersion,
   assertVersionStamp,
   sha256Digest,
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { loadCanvasContentDeletion } from './canvasContent'
 import { applyYjsContentDelta, contentMergeRejection } from './contentVersion'
 import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
+import { replaceResourceReferenceProjection } from './resourceReferences'
+import type { ResourceReferenceProjection } from './resourceReferences'
 
 export type SaveCanvasContentResult =
   | Readonly<{
@@ -47,9 +52,17 @@ export async function saveCanvasContent(
   const content = await loadCanvasContentDeletion(ctx, resourceId)
   if (!content) return { status: 'rejected', reason: 'content_missing' }
 
-  const merged = await mergeCanvasUpdate(content.update, args.update, content.version)
+  const merged = await mergeCanvasUpdate(
+    ctx.resourceScope.campaignId,
+    resourceId,
+    content.update,
+    args.update,
+    content.version,
+  )
   if (merged.status !== 'completed') return merged
   if (merged.version.digest !== content.version.digest) {
+    const projection = await replaceResourceReferenceProjection(ctx, merged.references)
+    if (projection.status === 'rejected') return projection
     await ctx.db.patch('resourceCanvasContents', content._id, {
       update: merged.update,
       version: merged.version,
@@ -59,11 +72,18 @@ export async function saveCanvasContent(
 }
 
 async function mergeCanvasUpdate(
+  campaignId: CampaignId,
+  resourceId: ResourceId,
   current: ArrayBuffer,
   delta: ArrayBuffer,
   currentVersion: unknown,
 ): Promise<
-  | Readonly<{ status: 'completed'; update: ArrayBuffer; version: VersionStamp }>
+  | Readonly<{
+      status: 'completed'
+      update: ArrayBuffer
+      version: VersionStamp
+      references: ResourceReferenceProjection
+    }>
   | ContentMergeRejection
   | ContentMergeRetry
   | Readonly<{ status: 'rejected'; reason: 'content_limit_exceeded' }>
@@ -75,7 +95,8 @@ async function mergeCanvasUpdate(
   try {
     const pending = applyYjsContentDelta(document, current, delta)
     if (pending) return pending
-    if (!canonicalizeCanvasDocumentContent(document)) {
+    const content = canonicalizeCanvasDocumentContent(document)
+    if (!content) {
       return { status: 'rejected', reason: 'content_corrupt' }
     }
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
@@ -86,7 +107,17 @@ async function mergeCanvasUpdate(
       assertVersionStamp(currentVersion),
       await sha256Digest(new Uint8Array(update)),
     )
-    return { status: 'completed', update, version }
+    return {
+      status: 'completed',
+      update,
+      version,
+      references: {
+        campaignId,
+        sourceResourceId: resourceId,
+        sourceVersion: version,
+        destinations: canvasAuthoredDestinations(content.nodes),
+      },
+    }
   } catch (error) {
     return contentMergeRejection(error)
   } finally {

@@ -23,6 +23,9 @@ import type { ContentCopyPreparation } from './contentCopyTypes'
 import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyTypes'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
+import type { AuthoredDestination } from '@wizard-archive/editor/resources/authored-destination-contract'
+import { projectReferenceGraph } from '@wizard-archive/editor/resources/authored-destination'
+import { replaceResourceReferenceProjection } from './resourceReferences'
 
 export async function findNoteContent(
   db: GenericDatabaseReader<DataModel>,
@@ -41,6 +44,7 @@ export async function createNoteContent(
   operationId: OperationId,
   update: ArrayBuffer,
   version: VersionStamp,
+  destinations: ReadonlyArray<AuthoredDestination>,
 ): Promise<'completed' | 'operation_id_reused'> {
   const existing = await findNoteContent(ctx.db, resourceId)
   if (existing) {
@@ -60,15 +64,34 @@ export async function createNoteContent(
     update,
     version,
   })
+  if (
+    (
+      await replaceResourceReferenceProjection(ctx, {
+        campaignId,
+        sourceResourceId: resourceId,
+        sourceVersion: version,
+        destinations,
+      })
+    ).status !== 'completed'
+  ) {
+    throw new RangeError('Note reference projection exceeds its bound')
+  }
   return 'completed'
 }
 
 export async function prepareNoteContentCreation(
   update: ArrayBuffer,
-): Promise<VersionStamp | null> {
+  resourceId: ResourceId,
+): Promise<Readonly<{
+  version: VersionStamp
+  destinations: ReadonlyArray<AuthoredDestination>
+}> | null> {
   try {
-    decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
-    return await initialNoteContentVersion(new Uint8Array(update))
+    const blocks = decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
+    const version = await initialNoteContentVersion(new Uint8Array(update))
+    const destinations = noteAuthoredDestinations(blocks)
+    projectReferenceGraph(resourceId, version, destinations)
+    return { version, destinations }
   } catch {
     return null
   }
@@ -160,6 +183,18 @@ export async function prepareNoteContentCopy(
             update,
             version,
           })
+          if (
+            (
+              await replaceResourceReferenceProjection(ctx, {
+                campaignId,
+                sourceResourceId: destinationResourceId,
+                sourceVersion: version,
+                destinations: noteAuthoredDestinations(finalized),
+              })
+            ).status !== 'completed'
+          ) {
+            throw new RangeError('Copied note reference projection exceeds its bound')
+          }
         }
       },
     },

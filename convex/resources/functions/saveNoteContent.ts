@@ -1,5 +1,9 @@
 import * as Y from 'yjs'
-import type { NoteBlockId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  NoteBlockId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import { advanceNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
@@ -13,6 +17,9 @@ import type { ContentMergeRejection, ContentMergeRetry } from './contentVersion'
 import { findNoteContent } from './noteContent'
 import { syncNoteSearchProjection } from './resourceSearchProjection'
 import { flattenNoteBlockIds, loadNoteBlockAccessRows } from './noteBlockAccess'
+import { noteAuthoredDestinations } from '@wizard-archive/editor/notes/authored-destinations'
+import { replaceResourceReferenceProjection } from './resourceReferences'
+import type { ResourceReferenceProjection } from './resourceReferences'
 
 export type SaveNoteContentResult =
   | {
@@ -23,7 +30,12 @@ export type SaveNoteContentResult =
     }
   | {
       status: 'rejected'
-      reason: 'unauthorized' | 'content_missing' | 'content_corrupt' | 'version_exhausted'
+      reason:
+        | 'unauthorized'
+        | 'content_missing'
+        | 'content_corrupt'
+        | 'content_limit_exceeded'
+        | 'version_exhausted'
     }
   | ContentMergeRetry
 
@@ -44,20 +56,31 @@ export async function saveNoteContent(
     return { status: 'rejected', reason: 'content_missing' }
   }
 
-  const merged = await mergeNoteUpdate(content.update, args.update, content.version)
+  const merged = await mergeNoteUpdate(
+    ctx.resourceScope.campaignId,
+    resourceId,
+    content.update,
+    args.update,
+    content.version,
+  )
   if (merged.status !== 'completed') return merged
+  const retainedBlockIds = new Set(merged.blockIds)
   if (merged.version.digest !== content.version.digest) {
+    const projection = await replaceResourceReferenceProjection(ctx, merged.references)
+    if (projection.status === 'rejected') return projection
     await ctx.db.patch('resourceNoteContents', content._id, {
       update: merged.update,
       version: merged.version,
     })
   }
-  await removeDeletedBlockAccess(ctx, resourceId, new Set(merged.blockIds))
+  await removeDeletedBlockAccess(ctx, resourceId, retainedBlockIds)
   await syncNoteSearchProjection(ctx, resourceId, merged.update)
   return { status: 'completed', resourceId, update: merged.update, version: merged.version }
 }
 
 async function mergeNoteUpdate(
+  campaignId: CampaignId,
+  resourceId: ResourceId,
   current: ArrayBuffer,
   delta: ArrayBuffer,
   currentVersion: unknown,
@@ -67,6 +90,7 @@ async function mergeNoteUpdate(
       update: ArrayBuffer
       version: Awaited<ReturnType<typeof advanceNoteContentVersion>>
       blockIds: ReadonlyArray<NoteBlockId>
+      references: ResourceReferenceProjection
     }>
   | ContentMergeRejection
   | ContentMergeRetry
@@ -84,7 +108,18 @@ async function mergeNoteUpdate(
       assertVersionStamp(currentVersion),
       new Uint8Array(update),
     )
-    return { status: 'completed', update, version, blockIds: flattenNoteBlockIds(blocks) }
+    return {
+      status: 'completed',
+      update,
+      version,
+      blockIds: flattenNoteBlockIds(blocks),
+      references: {
+        campaignId,
+        sourceResourceId: resourceId,
+        sourceVersion: version,
+        destinations: noteAuthoredDestinations(blocks),
+      },
+    }
   } catch (error) {
     return contentMergeRejection(error)
   } finally {

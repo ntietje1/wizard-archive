@@ -11,7 +11,7 @@ import {
 import { canonicalizeResourceTitle } from '../resource-record'
 import { ResourceRightSidebar } from '../workspace/resource-right-sidebar'
 import { createWorkspaceActions } from '../workspace/resource-operations'
-import type { ResourceNavigation } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourceNavigation } from '../editor-runtime-contract'
 import type { ResourceRecord } from '../resource-record'
 
 describe('ResourceRightSidebar note outline', () => {
@@ -52,9 +52,10 @@ describe('ResourceRightSidebar note outline', () => {
       created: { at: 1, by: actorId },
       updated: { at: 1, by: actorId },
     }
+    const open = vi.fn()
     const navigation: ResourceNavigation = {
       current: () => ({ kind: 'resource', resourceId }),
-      open: vi.fn(),
+      open,
       subscribe: () => () => {},
     }
     const core = createInMemoryEditorRuntime({
@@ -90,6 +91,106 @@ describe('ResourceRightSidebar note outline', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Expand Chapter one' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hidden vault' }))
     expect(navigate).toHaveBeenCalledWith(headingId)
+
+    core.dispose()
+  })
+})
+
+describe('ResourceRightSidebar references', () => {
+  it('restores outgoing link rows and opens their exact canonical targets', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const targetId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const version = initialVersion(await sha256Digest(new Uint8Array([9])))
+    const records: Array<ResourceRecord> = [
+      {
+        id: resourceId,
+        campaignId,
+        parentId: null,
+        kind: 'note',
+        title: canonicalizeResourceTitle('Field notes'),
+        icon: null,
+        color: null,
+        lifecycle: { state: 'active' },
+        metadataVersion: version,
+        created: { at: 1, by: actorId },
+        updated: { at: 1, by: actorId },
+      },
+      {
+        id: targetId,
+        campaignId,
+        parentId: null,
+        kind: 'note',
+        title: canonicalizeResourceTitle('Hidden vault'),
+        icon: null,
+        color: null,
+        lifecycle: { state: 'active' },
+        metadataVersion: version,
+        created: { at: 1, by: actorId },
+        updated: { at: 1, by: actorId },
+      },
+    ]
+    const openTarget = vi.fn()
+    const navigation: ResourceNavigation = {
+      current: () => ({ kind: 'resource', resourceId }),
+      open: openTarget,
+      subscribe: () => () => {},
+    }
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: records,
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation,
+    })
+    await core.runtime.resources.loader.ensureResource(targetId)
+    const target = {
+      kind: 'noteBlock' as const,
+      resourceId: targetId,
+      blockId,
+      presentation: 'heading' as const,
+    }
+    const references = {
+      status: 'ready' as const,
+      outgoing: [{ sourceResourceId: resourceId, sourceVersion: version, target }],
+      backlinks: [],
+    }
+    const runtime: EditorRuntime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        references: {
+          status: 'available',
+          value: {
+            get: () => references,
+            subscribe: () => () => {},
+          },
+        },
+      },
+    }
+
+    render(
+      <ResourceRightSidebar
+        actions={createWorkspaceActions(runtime, vi.fn())}
+        activePanel="outgoing"
+        noteHeadingNavigation={{ current: null }}
+        resource={authorizedResourceSummaryFromRecord(records[0]!, 'edit')}
+        runtime={runtime}
+        onActivePanelChange={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('navigation', { name: 'Outgoing links' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: /Hidden vault/ }))
+    expect(openTarget).toHaveBeenCalledWith(target)
 
     core.dispose()
   })

@@ -20,6 +20,7 @@ import {
 } from './assetContent'
 import type { ResourceUploadClaim } from './assetContent'
 import { loadValidMapContentRows, projectMapContent } from './mapContent'
+import { replaceResourceReferenceProjection } from './resourceReferences'
 
 type MapContentMutationResult = Infer<typeof mapContentMutationResultValidator>
 type ValidMapContentRows = Extract<
@@ -202,6 +203,18 @@ async function commitMapImageReplacement(
   ctx: CampaignInternalMutationCtx,
   prepared: PreparedMapImageReplacement,
 ): Promise<MapContentMutationResult> {
+  if (
+    (
+      await replaceResourceReferenceProjection(ctx, {
+        campaignId: ctx.resourceScope.campaignId,
+        sourceResourceId: prepared.resourceId,
+        sourceVersion: prepared.version,
+        destinations: prepared.projected.pins.map((pin) => pin.destination),
+      })
+    ).status !== 'completed'
+  ) {
+    return rejected('content_corrupt')
+  }
   await commitResourceUploadClaim(ctx, prepared.claim, {
     campaignId: ctx.resourceScope.campaignId,
     resourceId: prepared.resourceId,

@@ -14,6 +14,7 @@ describe('canonical resource schema', () => {
         resourceSourcePathAliases: expect.anything(),
         resourceAssetsFolders: expect.anything(),
         resourceOperations: expect.anything(),
+        resourceReferenceEdges: expect.anything(),
         resourceCanvasContents: expect.anything(),
         resourceFileContents: expect.anything(),
         resourceMapContents: expect.anything(),

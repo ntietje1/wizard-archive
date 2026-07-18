@@ -2,12 +2,18 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { ChevronRight, Clock3, FileText, Link2, List, X } from 'lucide-react'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
 import { noteDocumentOutline, noteOutlineTree } from '../../notes/document/outline'
-import type { EditorRuntime, ResourceHistoryEntry } from '../editor-runtime-contract'
+import type {
+  EditorRuntime,
+  ResourceHistoryEntry,
+  ResourceReferenceSource,
+} from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
 import type { NoteOutlineNode } from '../../notes/document/outline'
 import type * as Y from 'yjs'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
+import { canonicalTargetKey } from '../authored-destination'
+import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
 
@@ -31,8 +37,18 @@ export function ResourceRightSidebar({
   const panels = [
     { id: 'details' as const, label: 'Details', icon: FileText, available: true },
     { id: 'outline' as const, label: 'Outline', icon: List, available: resource.kind === 'note' },
-    { id: 'backlinks' as const, label: 'Backlinks', icon: Link2, available: false },
-    { id: 'outgoing' as const, label: 'Outgoing links', icon: Link2, available: false },
+    {
+      id: 'backlinks' as const,
+      label: 'Backlinks',
+      icon: Link2,
+      available: runtime.resources.references.status === 'available',
+    },
+    {
+      id: 'outgoing' as const,
+      label: 'Outgoing links',
+      icon: Link2,
+      available: runtime.resources.references.status === 'available',
+    },
     {
       id: 'history' as const,
       label: 'History',
@@ -107,8 +123,107 @@ function ResourcePanel({
       />
     )
   }
+  if (panel === 'backlinks' || panel === 'outgoing') {
+    if (runtime.resources.references.status !== 'available') {
+      return <p className="p-3 text-sm text-muted-foreground">Links are unavailable.</p>
+    }
+    return (
+      <ResourceReferencesPanel
+        kind={panel}
+        resource={resource}
+        runtime={runtime}
+        source={runtime.resources.references.value}
+      />
+    )
+  }
   if (panel === 'history') return <ResourceHistoryPanel resource={resource} runtime={runtime} />
-  throw new TypeError(`${panel} panel is unavailable`)
+  throw new TypeError('Resource panel is unavailable')
+}
+
+function ResourceReferencesPanel({
+  kind,
+  resource,
+  runtime,
+  source,
+}: {
+  kind: 'backlinks' | 'outgoing'
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+  source: ResourceReferenceSource
+}) {
+  const state = useSyncExternalStore(
+    (listener) => source.subscribe(resource.id, listener),
+    () => source.get(resource.id),
+  )
+  const index = useWorkspaceIndexSnapshot(runtime.resources.index)
+  const label = kind === 'backlinks' ? 'backlinks' : 'outgoing links'
+  if (state.status === 'loading') {
+    return <p className="p-3 text-sm text-muted-foreground">Loading {label}…</p>
+  }
+  if (state.status === 'error') {
+    return <p className="p-3 text-sm text-destructive">Could not load {label}.</p>
+  }
+  if (state.status === 'unavailable') {
+    return <p className="p-3 text-sm text-muted-foreground">Links are unavailable.</p>
+  }
+  const edges = state[kind]
+  if (edges.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 text-center">
+        <Link2 className="mb-2 size-8 text-muted-foreground" aria-hidden="true" />
+        <p className="text-sm font-medium text-muted-foreground">
+          {kind === 'backlinks' ? 'No backlinks' : 'No outgoing links'}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {kind === 'backlinks'
+            ? 'Other resources do not link here yet'
+            : 'This resource does not link to other resources yet'}
+        </p>
+      </div>
+    )
+  }
+  return (
+    <nav aria-label={kind === 'backlinks' ? 'Backlinks' : 'Outgoing links'} className="py-1">
+      {edges.map((edge) => {
+        const target =
+          kind === 'backlinks'
+            ? { kind: 'resource' as const, resourceId: edge.sourceResourceId }
+            : edge.target
+        const linked = index.lookup(target.resourceId)
+        const title = linked.state === 'known' ? linked.value.title : 'Unavailable resource'
+        return (
+          <button
+            key={`${edge.sourceResourceId}:${canonicalTargetKey(edge.target)}`}
+            type="button"
+            className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            disabled={linked.state !== 'known'}
+            onClick={() => runtime.navigation.open(target)}
+          >
+            <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm">{title}</span>
+              {kind === 'outgoing' && edge.target.kind !== 'resource' ? (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {referenceTargetLabel(edge.target.kind)}
+                </span>
+              ) : null}
+            </span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+function referenceTargetLabel(kind: 'noteBlock' | 'mapPin' | 'canvasNode') {
+  switch (kind) {
+    case 'noteBlock':
+      return 'Note section'
+    case 'mapPin':
+      return 'Map pin'
+    case 'canvasNode':
+      return 'Canvas item'
+  }
 }
 
 function NoteOutlinePanel({

@@ -599,6 +599,7 @@ function previewRuntime({
       bookmarks: unsupported,
       assets: unsupported,
       previews: unsupported,
+      references: unsupported,
       undo: unsupported,
     },
     content: { notes, files, maps: mapSessions, canvases: canvasSessions },

@@ -49,6 +49,8 @@ export type ReferenceGraphEdge = Readonly<{
   target: CanonicalTarget
 }>
 
+export const MAX_RESOURCE_REFERENCE_TARGETS = 500
+
 export const EMPTY_AUTHORED_DESTINATION_SERIALIZED = serializeAuthoredDestination({
   kind: 'unresolved',
   rawTarget: '',
@@ -229,6 +231,9 @@ export function projectReferenceGraph(
       targets.set(canonicalTargetKey(destination.target), destination.target)
     }
   }
+  if (targets.size > MAX_RESOURCE_REFERENCE_TARGETS) {
+    throw new RangeError('Resource reference projection exceeds its bound')
+  }
   return Array.from(targets.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([, target]) => ({ sourceResourceId, sourceVersion, target }))
@@ -291,7 +296,7 @@ export function canonicalTargetsEqual(left: CanonicalTarget, right: CanonicalTar
   return canonicalTargetKey(left) === canonicalTargetKey(right)
 }
 
-function canonicalTargetKey(target: CanonicalTarget): string {
+export function canonicalTargetKey(target: CanonicalTarget): string {
   switch (target.kind) {
     case 'resource':
       return `resource:${target.resourceId}`
