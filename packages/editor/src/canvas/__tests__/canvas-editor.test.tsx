@@ -1,7 +1,16 @@
-import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  act,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { StrictMode } from 'react'
 import type { ComponentProps } from 'react'
+import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 import { CanvasEditor as ProductionCanvasEditor } from '../canvas-editor'
 import { createCanvasDocumentController } from '../document-controller'
@@ -65,6 +74,54 @@ describe('CanvasEditor', () => {
     expect(session.collaboration.provider.awareness.getLocalState()).toMatchObject({ cursor: null })
 
     view.unmount()
+    session.dispose()
+  })
+
+  it('composes local viewport changes immediately around spring-smoothed remote points', async () => {
+    const session = await createSession()
+    const remoteDocument = new Y.Doc()
+    const remoteAwareness = new Awareness(remoteDocument)
+    remoteAwareness.setLocalState({
+      cursor: { x: 120, y: 80 },
+      user: { name: 'Remote', color: '#e06c75' },
+    })
+    const view = render(
+      <CanvasEditor canEdit resourceId={RESOURCE_ID} session={session} title="Shared board" />,
+    )
+
+    act(() =>
+      applyAwarenessUpdate(
+        session.collaboration.provider.awareness,
+        encodeAwarenessUpdate(remoteAwareness, [remoteDocument.clientID]),
+        'remote',
+      ),
+    )
+    const viewport = screen.getByTestId('canvas-viewport')
+    const cursor = screen.getByLabelText('Remote cursor')
+    expect(viewport).toContainElement(cursor)
+    expect(cursor).toHaveStyle({ transform: 'translate(120px, 80px)' })
+
+    const surface = screen.getByTestId('canvas-surface')
+    const bounds = vi
+      .spyOn(surface, 'getBoundingClientRect')
+      .mockReturnValue(DOMRect.fromRect({ width: 800, height: 600 }))
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+      expect(viewport).toHaveStyle({
+        transform: 'translate(-80px, -60px) scale(1.2)',
+      })
+      expect(cursor).toHaveStyle({ transform: 'translate(120px, 80px)' })
+      expect(screen.getByTestId('canvas-remote-cursor-visual')).toHaveStyle({
+        transform: `scale(${1 / 1.2})`,
+      })
+    } finally {
+      bounds.mockRestore()
+      window.localStorage.clear()
+    }
+
+    view.unmount()
+    remoteAwareness.destroy()
+    remoteDocument.destroy()
     session.dispose()
   })
 

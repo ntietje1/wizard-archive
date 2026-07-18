@@ -21,12 +21,7 @@ describe('canvas collaboration', () => {
       user: { name: 'Remote', color: '#e06c75' },
     })
 
-    render(
-      <CanvasCollaborationCursors
-        collaboration={collaboration}
-        viewport={{ x: 10, y: 20, zoom: 2 }}
-      />,
-    )
+    const view = render(<CanvasCollaborationCursors collaboration={collaboration} zoom={2} />)
     act(() =>
       applyAwarenessUpdate(
         awareness,
@@ -43,8 +38,17 @@ describe('canvas collaboration', () => {
       },
     ])
     const cursor = screen.getByLabelText('Remote cursor')
-    expect(cursor).toHaveStyle({ transform: 'translate(250px, 180px)' })
+    expect(cursor).toHaveStyle({ transform: 'translate(120px, 80px)' })
+    expect(screen.getByTestId('canvas-remote-cursor-visual')).toHaveStyle({
+      transform: 'scale(0.5)',
+    })
     expect(cursor.querySelector('path')).toHaveAttribute('fill', '#e06c75')
+
+    view.rerender(<CanvasCollaborationCursors collaboration={collaboration} zoom={4} />)
+    expect(cursor).toHaveStyle({ transform: 'translate(120px, 80px)' })
+    expect(screen.getByTestId('canvas-remote-cursor-visual')).toHaveStyle({
+      transform: 'scale(0.25)',
+    })
 
     act(() => setCanvasCollaborationCursor(collaboration, { x: 40, y: 60 }))
     expect(awareness.getLocalState()).toMatchObject({ cursor: { x: 40, y: 60 } })

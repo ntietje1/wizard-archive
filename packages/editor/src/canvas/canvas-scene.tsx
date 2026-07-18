@@ -186,8 +186,11 @@ export function CanvasScene({
             }
           />
         ))}
+        <CanvasCollaborationCursors
+          collaboration={collaboration}
+          zoom={interaction.viewport.zoom}
+        />
       </div>
-      <CanvasCollaborationCursors collaboration={collaboration} viewport={interaction.viewport} />
       <CanvasSelectionBounds
         canEdit={canEdit}
         interaction={interaction}
