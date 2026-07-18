@@ -95,7 +95,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
         resource.lifecycle.state === 'trashed' && parent?.lifecycle.state !== 'trashed'
           ? null
           : resource.parentId
-      return authorizedResourceSummaryFromRecord(resource, displayParentId)
+      return authorizedResourceSummaryFromRecord(resource, 'edit', displayParentId)
     })
     const resourcesById = new Map(resources.map((resource) => [resource.id, resource]))
     const includedIds = new Set<ResourceId>()

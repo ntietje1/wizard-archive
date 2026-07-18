@@ -3,6 +3,7 @@ import type {
   CampaignMemberId,
   UserProfileId,
 } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceAccessDefaults } from '@wizard-archive/editor/resources/access-policy'
 import type { CampaignSlug } from './validation'
 import type { UserProfile, UserProfileSummary } from '../users/types'
 
@@ -38,7 +39,7 @@ export type Campaign = {
   description: string
   slug: CampaignSlug
   status: CampaignStatus
-  defaultFolderInheritShares: boolean
+  resourceAccessDefaults: ResourceAccessDefaults
   dmUserProfile: UserProfileSummary
   myMembership: CampaignMemberSummary | null
   acceptedMemberCount: number

@@ -19,6 +19,7 @@ import { indexRevision } from '@wizard-archive/editor/resources/workspace-index'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { CampaignQueryCtx } from '../../functions'
 import { ConvexResourceCatalog } from './ConvexResourceCatalog'
+import { createResourceAccessResolver } from './resourceAccess'
 
 type CollectionPage = Readonly<{
   snapshot: AuthorizedResourceSnapshot
@@ -29,6 +30,7 @@ type LoadResource = (resourceId: ResourceId) => Promise<ResourceRecord | null>
 type ResourceProjectionCache = Readonly<{
   loadResource: LoadResource
   folderSpines: Map<ResourceId, ReadonlyArray<ResourceRecord>>
+  access: ReturnType<typeof createResourceAccessResolver> | null
 }>
 
 function projectionScope(ctx: CampaignQueryCtx): ResourceProjectionScope {
@@ -83,6 +85,7 @@ function cacheSpines(
 }
 
 async function uniqueSummaries(
+  cache: ResourceProjectionCache,
   loadResource: LoadResource,
   resources: ReadonlyArray<ResourceRecord>,
 ): Promise<ReadonlyArray<AuthorizedResourceSummary>> {
@@ -97,7 +100,11 @@ async function uniqueSummaries(
         resource.lifecycle.state === 'trashed' && parent?.lifecycle.state !== 'trashed'
           ? null
           : resource.parentId
-      return authorizedResourceSummaryFromRecord(resource, displayParentId)
+      const permission = cache.access === null ? 'edit' : await cache.access.permission(resource)
+      if (permission === 'none') {
+        throw new TypeError('Authorized projection contains an unauthorized resource')
+      }
+      return authorizedResourceSummaryFromRecord(resource, permission, displayParentId)
     }),
   )
   for (const summary of projected) {
@@ -107,6 +114,7 @@ async function uniqueSummaries(
 }
 
 function createResourceProjectionCache(
+  ctx: CampaignQueryCtx,
   catalog: ConvexResourceCatalog,
   campaignId: ResourceRecord['campaignId'],
 ): ResourceProjectionCache {
@@ -118,7 +126,24 @@ function createResourceProjectionCache(
     resources.set(resourceId, pending)
     return pending
   }
-  return { loadResource, folderSpines: new Map() }
+  return {
+    loadResource,
+    folderSpines: new Map(),
+    access:
+      ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
+        ? null
+        : createResourceAccessResolver(ctx, campaignId, ctx.resourceScope.actorId, loadResource),
+  }
+}
+
+async function canProject(
+  cache: ResourceProjectionCache,
+  resource: ResourceRecord,
+): Promise<boolean> {
+  return (
+    cache.access === null ||
+    (resource.lifecycle.state === 'active' && (await cache.access.canProject(resource)))
+  )
 }
 
 function compareText(left: string, right: string): number {
@@ -144,18 +169,9 @@ export async function loadAuthorizedResource(
   const scope = projectionScope(ctx)
   const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, resourceIdValue)
   const catalog = new ConvexResourceCatalog(ctx.db)
-  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    return await createSnapshot({
-      scope,
-      resources: [],
-      missingResourceIds: [resourceId],
-      collections: [],
-    })
-  }
-
-  const cache = createResourceProjectionCache(catalog, scope.campaignId)
+  const cache = createResourceProjectionCache(ctx, catalog, scope.campaignId)
   const resource = await cache.loadResource(resourceId)
-  if (!resource) {
+  if (!resource || !(await canProject(cache, resource))) {
     return await createSnapshot({
       scope,
       resources: [],
@@ -166,7 +182,7 @@ export async function loadAuthorizedResource(
   const spine = await visibleSpine(cache, resource)
   return await createSnapshot({
     scope,
-    resources: await uniqueSummaries(cache.loadResource, [...spine, resource]),
+    resources: await uniqueSummaries(cache, cache.loadResource, [...spine, resource]),
     missingResourceIds: [],
     collections: [],
   })
@@ -178,20 +194,17 @@ export async function loadAuthorizedResourceProjection(
 ): Promise<AuthorizedResourceSnapshot> {
   const scope = projectionScope(ctx)
   const uniqueIds = Array.from(new Set(resourceIds))
-  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    return await createSnapshot({
-      scope,
-      resources: [],
-      missingResourceIds: uniqueIds,
-      collections: [],
-    })
-  }
   const catalog = new ConvexResourceCatalog(ctx.db)
-  const cache = createResourceProjectionCache(catalog, scope.campaignId)
+  const cache = createResourceProjectionCache(ctx, catalog, scope.campaignId)
   const resources = new Map(
-    (await Promise.all(uniqueIds.map(cache.loadResource))).flatMap((resource) =>
-      resource === null ? [] : [[resource.id, resource] as const],
-    ),
+    (
+      await Promise.all(
+        uniqueIds.map(async (resourceId) => {
+          const resource = await cache.loadResource(resourceId)
+          return resource && (await canProject(cache, resource)) ? resource : null
+        }),
+      )
+    ).flatMap((resource) => (resource === null ? [] : [[resource.id, resource] as const])),
   )
   const projected: Array<ResourceRecord> = []
   for (const resource of resources.values()) {
@@ -199,7 +212,7 @@ export async function loadAuthorizedResourceProjection(
   }
   return await createSnapshot({
     scope,
-    resources: await uniqueSummaries(cache.loadResource, projected),
+    resources: await uniqueSummaries(cache, cache.loadResource, projected),
     missingResourceIds: uniqueIds.filter((resourceId) => !resources.has(resourceId)),
     collections: [],
   })
@@ -215,23 +228,12 @@ export async function loadAuthorizedCollection(
   const scope = projectionScope(ctx)
   const query = normalizeResourceCollectionQuery(input.query)
   const catalog = new ConvexResourceCatalog(ctx.db)
-  const cache = createResourceProjectionCache(catalog, scope.campaignId)
-  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    return {
-      snapshot: await createSnapshot({
-        scope,
-        resources: [],
-        missingResourceIds: [],
-        collections: [{ query, resourceIds: [], complete: true }],
-      }),
-      cursor: null,
-    }
-  }
+  const cache = createResourceProjectionCache(ctx, catalog, scope.campaignId)
 
   let parentSpine: ReadonlyArray<ResourceRecord> = []
   if (query.parentId !== null) {
     const parent = await cache.loadResource(query.parentId)
-    if (!parent || parent.kind !== 'folder') {
+    if (!parent || parent.kind !== 'folder' || !(await canProject(cache, parent))) {
       return {
         snapshot: await createSnapshot({
           scope,
@@ -251,11 +253,15 @@ export async function loadAuthorizedCollection(
     MAX_RESOURCE_CATALOG_PAGE_SIZE,
     input.cursor,
   )
-  const items = page.items
+  const items = (
+    await Promise.all(
+      page.items.map(async (resource) => ((await canProject(cache, resource)) ? resource : null)),
+    )
+  ).flatMap((resource) => (resource ? [resource] : []))
   return {
     snapshot: await createSnapshot({
       scope,
-      resources: await uniqueSummaries(cache.loadResource, [...parentSpine, ...items]),
+      resources: await uniqueSummaries(cache, cache.loadResource, [...parentSpine, ...items]),
       missingResourceIds: [],
       collections: [
         {

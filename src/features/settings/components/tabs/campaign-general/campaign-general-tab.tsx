@@ -4,6 +4,7 @@ import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { SettingsSection } from '~/features/settings/components/settings-section'
 import { Switch } from '@wizard-archive/ui/shadcn/components/switch'
 import { useUpdateCampaignMutation } from '~/features/campaigns/hooks/use-campaign-operations'
+import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
 
 export function CampaignGeneralTab() {
   const campaignContext = useOptionalCampaign()
@@ -43,10 +44,10 @@ export function CampaignGeneralTab() {
   const pendingValue =
     updateCampaign.isPending &&
     updateCampaign.variables?.campaignId === campaign.id &&
-    updateCampaign.variables.defaultFolderInheritShares !== undefined
-      ? updateCampaign.variables.defaultFolderInheritShares
+    updateCampaign.variables.resourceAccessDefaults !== undefined
+      ? updateCampaign.variables.resourceAccessDefaults.folderInheritance
       : undefined
-  const shareFolderContentsByDefault = pendingValue ?? campaign.defaultFolderInheritShares
+  const folderInheritance = pendingValue ?? campaign.resourceAccessDefaults.folderInheritance
   const canEdit = campaignContext.isDm === true
 
   return (
@@ -61,12 +62,16 @@ export function CampaignGeneralTab() {
           </div>
           <Switch
             aria-label="Share folder contents automatically"
-            checked={shareFolderContentsByDefault}
+            checked={folderInheritance === FOLDER_ACCESS_INHERITANCE.enabled}
             disabled={!canEdit || updateCampaign.isPending}
-            onCheckedChange={(defaultFolderInheritShares) => {
+            onCheckedChange={(enabled) => {
               updateCampaign.mutate({
                 campaignId: campaign.id,
-                defaultFolderInheritShares,
+                resourceAccessDefaults: {
+                  folderInheritance: enabled
+                    ? FOLDER_ACCESS_INHERITANCE.enabled
+                    : FOLDER_ACCESS_INHERITANCE.disabled,
+                },
               })
             }}
           />

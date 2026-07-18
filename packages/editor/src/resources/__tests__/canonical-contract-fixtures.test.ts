@@ -62,6 +62,7 @@ describe('canonical contract fixtures', () => {
       icon: null,
       color: null,
       lifecycle: 'active',
+      permission: 'edit',
       metadataVersion: version,
       createdAt: 1,
       updatedAt: 1,

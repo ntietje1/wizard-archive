@@ -11,6 +11,7 @@ import { prepareCampaignDescription } from '../../../shared/campaigns/validation
 import { prepareCampaignName } from '../validation'
 import type { AuthMutationCtx } from '../../functions'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
 
 export async function createCampaign(
   ctx: AuthMutationCtx,
@@ -48,7 +49,7 @@ export async function createCampaign(
     status: CAMPAIGN_STATUS.Active,
     acceptedMemberCount: 1,
     currentSessionId: null,
-    defaultFolderInheritShares: false,
+    resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS,
   })
 
   await ctx.db.insert('campaignMembers', {

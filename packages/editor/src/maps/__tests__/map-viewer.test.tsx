@@ -282,6 +282,7 @@ describe('MapViewer', () => {
                 icon: null,
                 color: null,
                 lifecycle: 'active',
+                permission: 'edit',
                 metadataVersion: testVersion(),
                 createdAt: 1,
                 updatedAt: 1,

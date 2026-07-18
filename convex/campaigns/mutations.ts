@@ -14,6 +14,7 @@ import {
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
 import type { CampaignMemberStatus } from '../../shared/campaigns/types'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
 
 export const createCampaign = authMutation({
   args: {
@@ -50,7 +51,14 @@ export const updateCampaign = dmMutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     slug: v.optional(campaignSlugValidator),
-    defaultFolderInheritShares: v.optional(v.boolean()),
+    resourceAccessDefaults: v.optional(
+      v.object({
+        folderInheritance: v.union(
+          v.literal(FOLDER_ACCESS_INHERITANCE.disabled),
+          v.literal(FOLDER_ACCESS_INHERITANCE.enabled),
+        ),
+      }),
+    ),
   },
   returns: campaignIdValidator,
   handler: async (ctx, args): Promise<CampaignId> => {
@@ -58,7 +66,7 @@ export const updateCampaign = dmMutation({
       name: args.name,
       description: args.description,
       slug: args.slug ? assertCampaignSlug(args.slug) : undefined,
-      defaultFolderInheritShares: args.defaultFolderInheritShares,
+      resourceAccessDefaults: args.resourceAccessDefaults,
     })
   },
 })

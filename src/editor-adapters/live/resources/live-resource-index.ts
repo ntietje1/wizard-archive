@@ -45,6 +45,7 @@ function readSummary(value: LoadResourceResult['resources'][number]): Authorized
     icon: value.icon,
     color: value.color,
     lifecycle: value.lifecycle,
+    permission: value.permission,
     metadataVersion: assertVersionStamp(value.metadataVersion),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,

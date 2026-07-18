@@ -62,6 +62,7 @@ import type * as resources_functions_contentCopyTypes from "../resources/functio
 import type * as resources_functions_contentVersion from "../resources/functions/contentVersion.js";
 import type * as resources_functions_executeBookmarkCommand from "../resources/functions/executeBookmarkCommand.js";
 import type * as resources_functions_executeMapContentCommand from "../resources/functions/executeMapContentCommand.js";
+import type * as resources_functions_executeResourceAccessCommand from "../resources/functions/executeResourceAccessCommand.js";
 import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
@@ -72,6 +73,7 @@ import type * as resources_functions_mapContent from "../resources/functions/map
 import type * as resources_functions_noteContent from "../resources/functions/noteContent.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_functions_replaceMapImage from "../resources/functions/replaceMapImage.js";
+import type * as resources_functions_resourceAccess from "../resources/functions/resourceAccess.js";
 import type * as resources_functions_resourceBookmarks from "../resources/functions/resourceBookmarks.js";
 import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
@@ -186,6 +188,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/contentVersion": typeof resources_functions_contentVersion;
   "resources/functions/executeBookmarkCommand": typeof resources_functions_executeBookmarkCommand;
   "resources/functions/executeMapContentCommand": typeof resources_functions_executeMapContentCommand;
+  "resources/functions/executeResourceAccessCommand": typeof resources_functions_executeResourceAccessCommand;
   "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
   "resources/functions/fileContent": typeof resources_functions_fileContent;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
@@ -196,6 +199,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/noteContent": typeof resources_functions_noteContent;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/functions/replaceMapImage": typeof resources_functions_replaceMapImage;
+  "resources/functions/resourceAccess": typeof resources_functions_resourceAccess;
   "resources/functions/resourceBookmarks": typeof resources_functions_resourceBookmarks;
   "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;

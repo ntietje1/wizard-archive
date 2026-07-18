@@ -86,6 +86,10 @@
       "types": "./dist/resources/resource-command-protocol.d.mts",
       "default": "./dist/resources/resource-command-protocol.mjs"
     },
+    "./resources/access-policy": {
+      "types": "./dist/resources/resource-access-policy.d.mts",
+      "default": "./dist/resources/resource-access-policy.mjs"
+    },
     "./resources/undo-history": {
       "types": "./dist/resources/resource-undo-history.d.mts",
       "default": "./dist/resources/resource-undo-history.mjs"

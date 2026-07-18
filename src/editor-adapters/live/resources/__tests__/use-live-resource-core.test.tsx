@@ -66,10 +66,8 @@ describe('useLiveResourceCore', () => {
     expect(current.content.canvases).toBe(initial.content.canvases)
     expect(current.navigation).toBe(navigation)
     expect(current.preferences).toBe(initial.preferences)
-    expect(current.resources.access).toEqual({
-      status: 'unavailable',
-      reason: 'capability_not_supported',
-    })
+    expect(current.resources.access).toBe(initial.resources.access)
+    expect(current.resources.access.status).toBe('available')
   })
 
   it('replaces every capability at a new actor projection scope boundary', () => {
@@ -99,6 +97,8 @@ describe('useLiveResourceCore', () => {
       status: 'unavailable',
       reason: 'unauthorized',
     })
+    expect(next.resources.access).not.toBe(initial.resources.access)
+    expect(next.resources.access.status).toBe('available')
     expect(next.content.notes).not.toBe(initial.content.notes)
     expect(next.content.files).not.toBe(initial.content.files)
     expect(next.content.maps).not.toBe(initial.content.maps)

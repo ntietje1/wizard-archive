@@ -59,6 +59,7 @@ function summary(
     icon: null,
     color: null,
     lifecycle: 'active',
+    permission: 'edit',
     metadataVersion: version,
     createdAt: 1,
     updatedAt: 2,
@@ -231,6 +232,14 @@ describe('MutableWorkspaceResourceIndex', () => {
     expect(knowledge).not.toHaveProperty('value.canonicalParentId')
     expect(knowledge).not.toHaveProperty('value.effectiveAccess')
     expect(knowledge).not.toHaveProperty('value.bookmarked')
+    expect(
+      index.replaceSnapshot(
+        authorizedSnapshot({
+          revision: indexRevision('unauthorized'),
+          resources: [{ ...providerResource, permission: 'none' as 'view' }],
+        }),
+      ),
+    ).toEqual({ status: 'replacement_required', reason: 'invalid_projection' })
   })
 
   it('uses one normalized query model for complete, incomplete, empty, and unknown collections', () => {

@@ -1,6 +1,7 @@
 import type { VersionStamp } from './component-version'
 import { assertDomainId, DOMAIN_ID_KIND, isUuidV7 } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
+import type { GrantedResourcePermission } from './resource-access-policy'
 import { RESOURCE_KIND } from './resource-record'
 import type {
   ResourceColor,
@@ -50,6 +51,7 @@ export type AuthorizedResourceSummary = Readonly<{
   icon: ResourceIcon | null
   color: ResourceColor | null
   lifecycle: 'active' | 'trashed'
+  permission: GrantedResourcePermission
   metadataVersion: VersionStamp
   createdAt: number
   updatedAt: number
@@ -57,6 +59,7 @@ export type AuthorizedResourceSummary = Readonly<{
 
 export function authorizedResourceSummaryFromRecord(
   resource: ResourceRecord,
+  permission: GrantedResourcePermission,
   displayParentId: ResourceId | null = resource.parentId,
 ): AuthorizedResourceSummary {
   return {
@@ -68,6 +71,7 @@ export function authorizedResourceSummaryFromRecord(
     icon: resource.icon,
     color: resource.color,
     lifecycle: resource.lifecycle.state,
+    permission,
     metadataVersion: resource.metadataVersion,
     createdAt: resource.created.at,
     updatedAt: resource.updated.at,

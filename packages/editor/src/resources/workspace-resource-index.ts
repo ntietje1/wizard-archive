@@ -26,6 +26,7 @@ import {
 } from './resource-index-contract'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
 import type { ResourceKind } from './resource-record'
+import { RESOURCE_PERMISSION } from './resource-access-policy'
 
 export type ResourceIndexLoadSource = Readonly<{
   loadResource(scope: ResourceProjectionScope, resourceId: ResourceId): Promise<ResourceLoadResult>
@@ -57,6 +58,7 @@ const emptyState = (): IndexState => ({
 })
 
 const resourceKinds = new Set<ResourceKind>(Object.values(RESOURCE_KIND))
+const resourcePermissions = new Set([RESOURCE_PERMISSION.view, RESOURCE_PERMISSION.edit])
 
 function fixedSummary(resource: AuthorizedResourceSummary): object {
   return {
@@ -68,6 +70,7 @@ function fixedSummary(resource: AuthorizedResourceSummary): object {
     icon: resource.icon,
     color: resource.color,
     lifecycle: resource.lifecycle,
+    permission: resource.permission,
     metadataVersion: resource.metadataVersion,
     createdAt: resource.createdAt,
     updatedAt: resource.updatedAt,
@@ -135,6 +138,7 @@ function projectSummary(
     (resource.icon !== null && typeof resource.icon !== 'string') ||
     (resource.color !== null && typeof resource.color !== 'string') ||
     (resource.lifecycle !== 'active' && resource.lifecycle !== 'trashed') ||
+    !resourcePermissions.has(resource.permission) ||
     !isVersionStamp(resource.metadataVersion) ||
     !Number.isSafeInteger(resource.createdAt) ||
     resource.createdAt < 0 ||
@@ -152,6 +156,7 @@ function projectSummary(
     icon: resource.icon,
     color: resource.color,
     lifecycle: resource.lifecycle,
+    permission: resource.permission,
     metadataVersion: resource.metadataVersion,
     createdAt: resource.createdAt,
     updatedAt: resource.updatedAt,

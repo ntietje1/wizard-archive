@@ -8,7 +8,6 @@ import type {
   NoteBlockAccessCommand,
   ResourceAccessCommand,
   ResourceBookmarkCommand,
-  ResourcePermission,
   ResourceStructureCommand,
   ResourceStructureRejection,
   RestoreResourcesCommand,
@@ -16,6 +15,8 @@ import type {
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
 import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from './resource-command-contract'
+import { FOLDER_ACCESS_INHERITANCE, RESOURCE_PERMISSION } from './resource-access-policy'
+import type { FolderAccessInheritance, ResourcePermission } from './resource-access-policy'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
 import type { ResourceKind } from './resource-record'
 
@@ -23,7 +24,7 @@ export const RESOURCE_COMMAND_PROTOCOL_VERSION = 'resource-command-v1' as const
 
 const textEncoder = new TextEncoder()
 const resourceKinds = new Set<ResourceKind>(Object.values(RESOURCE_KIND))
-const resourcePermissions = new Set<ResourcePermission>(['none', 'view', 'edit'])
+const resourcePermissions = new Set<ResourcePermission>(Object.values(RESOURCE_PERMISSION))
 
 export function resourceStructureInputRejection(error: unknown): ResourceStructureRejection {
   if (!(error instanceof Error)) return 'invalid_command'
@@ -75,6 +76,13 @@ function normalizeNullableString(value: string | null, field: string): string | 
 
 function normalizeBoolean(value: boolean, field: string): boolean {
   if (typeof value !== 'boolean') throw new TypeError(`Invalid ${field}`)
+  return value
+}
+
+function normalizeFolderAccessInheritance(value: unknown): FolderAccessInheritance {
+  if (value !== FOLDER_ACCESS_INHERITANCE.disabled && value !== FOLDER_ACCESS_INHERITANCE.enabled) {
+    throw new TypeError('Invalid folder inheritance state')
+  }
   return value
 }
 
@@ -183,7 +191,7 @@ export function normalizeResourceAccessCommand(
       return {
         type: 'setFolderAccessInheritance',
         folderId: normalizeResourceId(command.folderId),
-        inherited: normalizeBoolean(command.inherited, 'folder inheritance state'),
+        inheritance: normalizeFolderAccessInheritance(command.inheritance),
       }
   }
 }

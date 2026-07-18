@@ -42,7 +42,7 @@ import {
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
 import presenceTest from '@convex-dev/presence/test'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
@@ -51,6 +51,9 @@ import { projectMapContent } from '../functions/mapContent'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
+>['command']
+type StoredResourceAccessCommand = FunctionArgs<
+  typeof api.resources.mutations.executeResourceAccessCommand
 >['command']
 
 function resourcePresenceUpdate(state: Record<string, unknown> = {}) {
@@ -2826,6 +2829,193 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('consumes the campaign folder access default and preserves only propagation on deep copy', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    await t.run(async (ctx) => {
+      await ctx.db.patch('campaigns', campaign.campaignId, {
+        resourceAccessDefaults: { folderInheritance: 'enabled' },
+      })
+    })
+    const sourceId = await createResource(campaign, campaignUuid, 'folder', null, 'Shared source')
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setAudienceAccess',
+      resourceIds: [sourceId],
+      permission: 'edit',
+    })
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [sourceId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+
+    const copied = await execute(campaign, campaignUuid, {
+      type: 'deepCopy',
+      sourceRootIds: [sourceId],
+      destinationParentId: null,
+    })
+    if (copied.status !== 'completed' || copied.receipt.result.type !== 'deepCopied') {
+      throw new Error('Expected completed deep copy')
+    }
+    const destinationId = copied.receipt.result.roots[0]!.destinationRootId
+
+    await t.run(async (ctx) => {
+      const policies = await Promise.all(
+        [sourceId, destinationId].map((resourceId) =>
+          ctx.db
+            .query('resourceAccessPolicies')
+            .withIndex('by_campaign_and_resource', (query) =>
+              query.eq('campaignUuid', campaignUuid).eq('resourceUuid', resourceId),
+            )
+            .unique(),
+        ),
+      )
+      expect(policies).toEqual([
+        expect.objectContaining({
+          subject: 'folder',
+          inheritance: 'enabled',
+          audiencePermission: 'edit',
+        }),
+        expect.objectContaining({
+          subject: 'folder',
+          inheritance: 'enabled',
+          audiencePermission: 'none',
+        }),
+      ])
+      const copiedMemberAccess = await ctx.db
+        .query('resourceMemberAccess')
+        .withIndex('by_resource_and_member', (query) =>
+          query
+            .eq('campaignUuid', campaignUuid)
+            .eq('resourceUuid', destinationId)
+            .eq('memberUuid', campaign.player.memberDomainId),
+        )
+        .unique()
+      expect(copiedMemberAccess).toBeNull()
+    })
+  })
+
+  it('enforces view and edit permissions at the canonical content boundary', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Shared note')
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [noteId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready' })
+    const update = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Player edit' }],
+      },
+    ])
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+        update,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [noteId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'edit',
+    })
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+        update,
+      }),
+    ).resolves.toMatchObject({ status: 'completed', version: { revision: 2 } })
+  })
+
+  it('replays identical access commands and rejects operation id reuse', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Idempotent')
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const args = {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'setAudienceAccess' as const,
+        resourceIds: [resourceId],
+        permission: 'view' as const,
+      },
+    }
+
+    const first = await asDm(campaign).mutation(
+      api.resources.mutations.executeResourceAccessCommand,
+      args,
+    )
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeResourceAccessCommand, args),
+    ).resolves.toEqual(first)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeResourceAccessCommand, {
+        ...args,
+        command: { ...args.command, permission: 'edit' },
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+  })
+
+  it('revokes a removed member immediately without deleting retained access rows', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Membership')
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [resourceId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResource, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ resources: [{ id: resourceId, permission: 'view' }] })
+
+    await asDm(campaign).mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId: campaignUuid,
+      memberId: campaign.player.memberDomainId,
+      status: CAMPAIGN_MEMBER_STATUS.Removed,
+    })
+
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResource, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).rejects.toThrow()
+    await t.run(async (ctx) => {
+      const retained = await ctx.db
+        .query('resourceMemberAccess')
+        .withIndex('by_resource_and_member', (query) =>
+          query
+            .eq('campaignUuid', campaignUuid)
+            .eq('resourceUuid', resourceId)
+            .eq('memberUuid', campaign.player.memberDomainId),
+        )
+        .unique()
+      expect(retained?.permission).toBe('view')
+    })
+  })
+
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {
     return await t.run(async (ctx) => {
       return (await ctx.db.get('campaigns', campaignId))!.campaignUuid
@@ -2985,6 +3175,23 @@ describe('resource structure commands', () => {
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       command,
     })
+  }
+
+  async function executeAccess(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaignUuid: string,
+    command: StoredResourceAccessCommand,
+  ) {
+    const result = await asDm(campaign).mutation(
+      api.resources.mutations.executeResourceAccessCommand,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command,
+      },
+    )
+    expect(result.status).toBe('completed')
+    return result
   }
 
   async function storedParentIds(...resourceIds: ReadonlyArray<ResourceId>) {

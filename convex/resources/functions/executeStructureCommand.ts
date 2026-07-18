@@ -59,6 +59,7 @@ import {
   deleteResourceSearchProjection,
   syncResourceSearchProjection,
 } from './resourceSearchProjection'
+import { copyResourceAccessPolicy, createInitialResourceAccessPolicy } from './resourceAccess'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -320,7 +321,9 @@ async function persistTransition(
         await syncResourceSearchProjection(ctx, resource)
         return
       }
-      await ctx.db.insert('resources', resourceRowFromRecord(resource))
+      const resourceRow = resourceRowFromRecord(resource)
+      await ctx.db.insert('resources', resourceRow)
+      await createInitialResourceAccessPolicy(ctx, resourceRow)
       await syncResourceSearchProjection(ctx, resource)
     }),
   )
@@ -403,7 +406,13 @@ async function deepCopyResources(
     throw new ResourceGraphRejection('content_integrity_failure')
   }
   await Promise.all(
-    copies.map(({ destination }) => ctx.db.insert('resources', resourceRowFromRecord(destination))),
+    copies.map(async ({ source, destination }) => {
+      const sourceRow = graph.rows.get(source.id)
+      if (!sourceRow) throw new ResourceGraphRejection('content_integrity_failure')
+      const destinationRow = resourceRowFromRecord(destination)
+      await ctx.db.insert('resources', destinationRow)
+      await copyResourceAccessPolicy(ctx, sourceRow, destinationRow)
+    }),
   )
   await Promise.all(content.commits.map((commit) => commit()))
   await Promise.all(

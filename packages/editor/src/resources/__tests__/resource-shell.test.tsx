@@ -109,7 +109,10 @@ describe('ResourceShell', () => {
 
   it('renders the canonical note session in view mode without persistence triggers', async () => {
     const { core, resource } = await shellRuntime(false)
-    const summary = { ...authorizedResourceSummaryFromRecord(resource), kind: 'note' as const }
+    const summary = {
+      ...authorizedResourceSummaryFromRecord(resource, 'edit'),
+      kind: 'note' as const,
+    }
     const document = noteBlocksToYDoc(
       [
         {
@@ -1249,7 +1252,7 @@ describe('ResourceShell', () => {
 
   it('offers an accessible continuation action for incomplete folder knowledge', async () => {
     const { core, resource } = await shellRuntime(false)
-    const summary = authorizedResourceSummaryFromRecord(resource)
+    const summary = authorizedResourceSummaryFromRecord(resource, 'edit')
     const baseSnapshot = core.runtime.resources.index.getSnapshot()
     const snapshot = {
       ...baseSnapshot,
@@ -1290,7 +1293,10 @@ describe('ResourceShell', () => {
 
   it('subscribes the active kind-owned content viewport and renders its loaded state', async () => {
     const { core, resource } = await shellRuntime(false)
-    const summary = { ...authorizedResourceSummaryFromRecord(resource), kind: 'file' as const }
+    const summary = {
+      ...authorizedResourceSummaryFromRecord(resource, 'edit'),
+      kind: 'file' as const,
+    }
     let state: ReturnType<typeof core.runtime.content.files.get> = { status: 'loading' }
     const listeners = new Set<() => void>()
     const unsubscribe = vi.fn()

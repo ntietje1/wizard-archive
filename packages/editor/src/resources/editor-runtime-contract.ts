@@ -8,9 +8,9 @@ import type { AssetId, CampaignMemberId, HistoryEntryId, ResourceId } from './do
 import type {
   ResourceAccessCommandGateway,
   ResourceBookmarkCommandGateway,
-  ResourcePermission,
   ResourceStructureCommandGateway,
 } from './resource-command-contract'
+import type { ResourcePermission } from './resource-access-policy'
 import type {
   ResourceIndexLoader,
   ResourceKnowledge,

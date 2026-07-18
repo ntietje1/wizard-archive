@@ -27,6 +27,7 @@ function resource(id: ResourceId, parentId: ResourceId | null = null) {
     icon: null,
     color: null,
     lifecycle: 'active' as const,
+    permission: 'edit' as const,
     metadataVersion: version,
     createdAt: 1,
     updatedAt: 1,

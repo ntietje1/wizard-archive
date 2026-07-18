@@ -23,6 +23,7 @@ import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
 import { useCommittedRuntime } from '../../committed-runtime'
+import { createLiveResourceAccessGateway } from './live-resource-access-gateway'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -250,6 +251,13 @@ function createScopedLiveResourceRuntime(
     base.applyProjection,
     (args) => convex.query(api.resources.queries.searchResources, args),
   )
+  const access = createLiveResourceAccessGateway(
+    currentScope.campaignId,
+    optimistic.index,
+    currentScope.projection === 'dm'
+      ? (args) => convex.mutation(api.resources.mutations.executeResourceAccessCommand, args)
+      : null,
+  )
 
   const unsupported = {
     status: 'unavailable',
@@ -263,6 +271,10 @@ function createScopedLiveResourceRuntime(
     currentScope.projection === 'dm'
       ? { status: 'available', value: undo.history }
       : { status: 'unavailable', reason: 'unauthorized' }
+  const accessCapability: EditorRuntime['resources']['access'] = {
+    status: 'available',
+    value: access,
+  }
   const content = { notes, files, maps, canvases }
   return {
     runtime: {
@@ -271,7 +283,7 @@ function createScopedLiveResourceRuntime(
         index: optimistic.index,
         loader: base.loader,
         structure,
-        access: unsupported,
+        access: accessCapability,
         bookmarks:
           currentScope.projection === 'dm'
             ? ({ status: 'available', value: bookmarks.gateway } as const)

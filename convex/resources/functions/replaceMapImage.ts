@@ -120,7 +120,7 @@ async function loadMapImageReplacement(
   LoadedMapImageReplacement | Readonly<{ ready: false; result: MapContentMutationResult }>
 > {
   const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
-  const authorization = await authorizeResourceContent(ctx, resourceId, 'map')
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'map', 'edit')
   if (authorization.status !== 'authorized') {
     return { ready: false, result: rejected('unauthorized') }
   }

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
 import { CampaignGeneralTab } from '~/features/settings/components/tabs/campaign-general/campaign-general-tab'
 import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
@@ -111,7 +112,7 @@ describe('CampaignGeneralTab', () => {
 
   it('shows the current new-folder share default', () => {
     const campaign = createCampaign({
-      defaultFolderInheritShares: true,
+      resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.enabled },
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
@@ -134,7 +135,7 @@ describe('CampaignGeneralTab', () => {
 
   it('updates the campaign default when the switch changes', () => {
     const campaign = createCampaign({
-      defaultFolderInheritShares: false,
+      resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.disabled },
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
@@ -154,13 +155,13 @@ describe('CampaignGeneralTab', () => {
 
     expect(mutate).toHaveBeenCalledWith({
       campaignId: campaign.id,
-      defaultFolderInheritShares: true,
+      resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.enabled },
     })
   })
 
   it('shows failed campaign default update feedback', () => {
     const campaign = createCampaign({
-      defaultFolderInheritShares: false,
+      resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.disabled },
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
@@ -181,7 +182,7 @@ describe('CampaignGeneralTab', () => {
       new Error('update failed'),
       {
         campaignId: campaign.id,
-        defaultFolderInheritShares: true,
+        resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.enabled },
       },
       undefined,
       undefined as never,
@@ -192,7 +193,7 @@ describe('CampaignGeneralTab', () => {
 
   it('disables the folder-sharing switch for non-DMs', () => {
     const campaign = createCampaign({
-      defaultFolderInheritShares: false,
+      resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.disabled },
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
@@ -215,7 +216,7 @@ describe('CampaignGeneralTab', () => {
 
   it('disables the folder-sharing switch while a campaign update is pending', () => {
     const campaign = createCampaign({
-      defaultFolderInheritShares: false,
+      resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.disabled },
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
@@ -229,7 +230,7 @@ describe('CampaignGeneralTab', () => {
         isPending: true,
         variables: {
           campaignId: campaign.id,
-          defaultFolderInheritShares: true,
+          resourceAccessDefaults: { folderInheritance: FOLDER_ACCESS_INHERITANCE.enabled },
         },
       }),
     )

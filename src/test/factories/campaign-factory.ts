@@ -7,6 +7,7 @@ import { assertCampaignSlug } from 'shared/campaigns/validation'
 import { createUser } from './user-factory'
 import type { Campaign, CampaignMember } from 'shared/campaigns/types'
 import { testDomainId } from 'shared/test/domain-id'
+import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
 
 let campaignCounter = 0
 
@@ -19,12 +20,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   campaignCounter++
   const dmUser = createUser()
   const campaignId = overrides?.id ?? testDomainId('campaign', `campaign_${campaignCounter}`)
-  const {
-    defaultFolderInheritShares = false,
-    myMembership: memberOverrides,
-    slug,
-    ...rest
-  } = overrides ?? {}
+  const { myMembership: memberOverrides, slug, ...rest } = overrides ?? {}
   const campaign: Campaign = {
     id: campaignId,
     createdAt: Date.now(),
@@ -32,7 +28,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
     description: '',
     slug: assertCampaignSlug(slug ?? `test-campaign-${campaignCounter}`),
     status: CAMPAIGN_STATUS.Active,
-    defaultFolderInheritShares,
+    resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS,
     dmUserProfile: dmUser,
     myMembership: memberOverrides ? createCampaignMember({ ...memberOverrides, campaignId }) : null,
     acceptedMemberCount: 0,

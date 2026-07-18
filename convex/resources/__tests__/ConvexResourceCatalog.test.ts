@@ -16,6 +16,7 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { CampaignMutationCtx } from '../../functions'
@@ -69,6 +70,7 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
             await executeStructureCommand(
               {
                 ...ctx,
+                campaign: { resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS },
                 membership: {
                   role: authorized ? CAMPAIGN_MEMBER_ROLE.DM : CAMPAIGN_MEMBER_ROLE.Player,
                 },

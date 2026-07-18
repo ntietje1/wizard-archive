@@ -46,6 +46,7 @@ function summary(
     icon: null,
     color: null,
     lifecycle: 'active',
+    permission: 'edit',
     metadataVersion: version1,
     createdAt: 1,
     updatedAt: 2,

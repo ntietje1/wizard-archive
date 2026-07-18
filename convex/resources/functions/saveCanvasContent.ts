@@ -36,7 +36,7 @@ export async function saveCanvasContent(
   ctx: CampaignMutationCtx,
   args: { resourceId: ResourceId; update: ArrayBuffer },
 ): Promise<SaveCanvasContentResult> {
-  const authorization = await authorizeResourceContent(ctx, args.resourceId, 'canvas')
+  const authorization = await authorizeResourceContent(ctx, args.resourceId, 'canvas', 'edit')
   if (authorization.status !== 'authorized') {
     return {
       status: 'rejected',

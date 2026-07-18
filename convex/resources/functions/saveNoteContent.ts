@@ -30,7 +30,7 @@ export async function saveNoteContent(
   ctx: CampaignMutationCtx,
   args: { resourceId: ResourceId; update: ArrayBuffer },
 ): Promise<SaveNoteContentResult> {
-  const authorization = await authorizeResourceContent(ctx, args.resourceId, 'note')
+  const authorization = await authorizeResourceContent(ctx, args.resourceId, 'note', 'edit')
   if (authorization.status !== 'authorized') {
     return {
       status: 'rejected',

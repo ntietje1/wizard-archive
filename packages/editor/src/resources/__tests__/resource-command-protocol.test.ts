@@ -163,6 +163,27 @@ describe('separate command families', () => {
     ).toThrow(/audience state/)
   })
 
+  it('accepts only finite folder access inheritance states', () => {
+    expect(
+      normalizeResourceAccessCommand({
+        type: 'setFolderAccessInheritance',
+        folderId: resourceA,
+        inheritance: 'enabled',
+      }),
+    ).toEqual({
+      type: 'setFolderAccessInheritance',
+      folderId: resourceA,
+      inheritance: 'enabled',
+    })
+    expect(() =>
+      normalizeResourceAccessCommand({
+        type: 'setFolderAccessInheritance',
+        folderId: resourceA,
+        inheritance: true as unknown as 'enabled',
+      }),
+    ).toThrow(/inheritance state/)
+  })
+
   it('bounds bookmark command selections after normalization', () => {
     expect(() =>
       normalizeResourceBookmarkCommand({

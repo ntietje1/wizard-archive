@@ -17,6 +17,10 @@ import {
   FILE_CLASSIFICATION,
   FILE_VIEWER_UNAVAILABLE_REASON,
 } from '@wizard-archive/editor/resources/file-content-contract'
+import {
+  FOLDER_ACCESS_INHERITANCE,
+  RESOURCE_PERMISSION,
+} from '@wizard-archive/editor/resources/access-policy'
 
 export const versionStampValidator = v.object({
   scheme: v.literal(VERSION_SCHEME),
@@ -34,6 +38,67 @@ export const sourcePathAliasValidator = v.object({
 })
 
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
+export const resourcePermissionValidator = literals(...Object.values(RESOURCE_PERMISSION))
+const grantedResourcePermissionValidator = literals(
+  RESOURCE_PERMISSION.view,
+  RESOURCE_PERMISSION.edit,
+)
+export const folderAccessInheritanceValidator = literals(
+  ...Object.values(FOLDER_ACCESS_INHERITANCE),
+)
+
+export const resourceAccessCommandValidator = v.union(
+  v.object({
+    type: v.literal('setAudienceAccess'),
+    resourceIds: v.array(resourceIdValidator),
+    permission: resourcePermissionValidator,
+  }),
+  v.object({
+    type: v.literal('setMemberAccess'),
+    resourceIds: v.array(resourceIdValidator),
+    memberId: campaignMemberIdValidator,
+    permission: resourcePermissionValidator,
+  }),
+  v.object({
+    type: v.literal('clearMemberAccess'),
+    resourceIds: v.array(resourceIdValidator),
+    memberId: campaignMemberIdValidator,
+  }),
+  v.object({
+    type: v.literal('setFolderAccessInheritance'),
+    folderId: resourceIdValidator,
+    inheritance: folderAccessInheritanceValidator,
+  }),
+)
+
+const resourceAccessReceiptValidator = v.object({
+  campaignId: campaignIdValidator,
+  operationId: operationIdValidator,
+  resourceIds: v.array(resourceIdValidator),
+})
+
+export const resourceAccessCommandResultValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    receipt: resourceAccessReceiptValidator,
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_command',
+      'ownership_mismatch',
+      'unauthorized',
+      'resource_missing',
+      'invalid_resource_kind',
+      'invalid_permission',
+      'operation_id_reused',
+    ),
+  }),
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
+  }),
+)
 const canonicalTargetValidator = v.union(
   v.object({ kind: v.literal('resource'), resourceId: resourceIdValidator }),
   v.object({
@@ -216,6 +281,7 @@ export const authorizedResourceSummaryValidator = v.object({
   icon: v.nullable(v.string()),
   color: v.nullable(v.string()),
   lifecycle: literals('active', 'trashed'),
+  permission: grantedResourcePermissionValidator,
   metadataVersion: versionStampValidator,
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -675,6 +741,48 @@ export const resourceTables = {
     .index('by_member', ['campaignUuid', 'memberUuid'])
     .index('by_member_and_resource', ['campaignUuid', 'memberUuid', 'resourceUuid'])
     .index('by_resource', ['campaignUuid', 'resourceUuid']),
+
+  resourceAccessPolicies: defineTable(
+    v.union(
+      v.object({
+        campaignUuid: campaignIdValidator,
+        resourceUuid: resourceIdValidator,
+        audiencePermission: resourcePermissionValidator,
+        subject: v.literal('folder'),
+        inheritance: folderAccessInheritanceValidator,
+      }),
+      v.object({
+        campaignUuid: campaignIdValidator,
+        resourceUuid: resourceIdValidator,
+        audiencePermission: resourcePermissionValidator,
+        subject: v.literal('resource'),
+      }),
+    ),
+  )
+    .index('by_campaign', ['campaignUuid'])
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
+
+  resourceMemberAccess: defineTable({
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
+    memberUuid: campaignMemberIdValidator,
+    permission: resourcePermissionValidator,
+  })
+    .index('by_campaign', ['campaignUuid'])
+    .index('by_resource', ['campaignUuid', 'resourceUuid'])
+    .index('by_resource_and_member', ['campaignUuid', 'resourceUuid', 'memberUuid'])
+    .index('by_member', ['campaignUuid', 'memberUuid']),
+
+  resourceAccessOperations: defineTable({
+    campaignUuid: campaignIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    operationUuid: operationIdValidator,
+    protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
+    fingerprint: v.string(),
+    receipt: resourceAccessReceiptValidator,
+  })
+    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
+    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
 
   resourceBookmarkOperations: defineTable({
     campaignUuid: campaignIdValidator,

@@ -8,6 +8,7 @@ import {
   userProfileValidator,
 } from '../users/schema'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
 
 export const campaignStatusValidator = literals('Active', 'Inactive', 'Deleted')
 
@@ -26,7 +27,12 @@ const campaignFields = {
   slug: v.string(),
   status: campaignStatusValidator,
   acceptedMemberCount: v.number(),
-  defaultFolderInheritShares: v.boolean(),
+  resourceAccessDefaults: v.object({
+    folderInheritance: v.union(
+      v.literal(FOLDER_ACCESS_INHERITANCE.disabled),
+      v.literal(FOLDER_ACCESS_INHERITANCE.enabled),
+    ),
+  }),
 }
 
 const campaignTableFields = {
@@ -84,7 +90,12 @@ const publicCampaignFields = {
   description: v.string(),
   slug: v.string(),
   status: campaignStatusValidator,
-  defaultFolderInheritShares: v.boolean(),
+  resourceAccessDefaults: v.object({
+    folderInheritance: v.union(
+      v.literal(FOLDER_ACCESS_INHERITANCE.disabled),
+      v.literal(FOLDER_ACCESS_INHERITANCE.enabled),
+    ),
+  }),
   dmUserProfile: userProfileSummaryValidator,
   myMembership: v.nullable(campaignMemberSummaryValidator),
   acceptedMemberCount: v.number(),

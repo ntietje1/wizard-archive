@@ -31,6 +31,7 @@ const snapshot: StoredProjection = {
       icon: null,
       color: null,
       lifecycle: 'active' as const,
+      permission: 'edit' as const,
       metadataVersion: {
         scheme: 'authoritative-revision-v1' as const,
         revision: 1,

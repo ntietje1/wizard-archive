@@ -1,6 +1,8 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
+import type { ResourceAccessDefaults } from '@wizard-archive/editor/resources/access-policy'
 import { assertCampaignSlug } from '../campaigns/validation'
 import { assertUsername } from '../users/validation'
 import type { TestConvex } from 'convex-test'
@@ -67,7 +69,7 @@ export async function createCampaignWithDm(
     slug: string
     status: 'Active' | 'Inactive'
     currentSessionId: Id<'sessions'> | null
-    defaultFolderInheritShares: boolean
+    resourceAccessDefaults: ResourceAccessDefaults
   }>,
 ) {
   const n = nextId()
@@ -81,7 +83,7 @@ export async function createCampaignWithDm(
     status: 'Active' as const,
     acceptedMemberCount: 1,
     currentSessionId: null,
-    defaultFolderInheritShares: false,
+    resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS,
     ...rest,
   }
   const campaignId = await t.run(async (ctx) => await ctx.db.insert('campaigns', campaignData))

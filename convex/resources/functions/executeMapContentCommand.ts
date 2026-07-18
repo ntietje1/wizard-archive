@@ -123,7 +123,7 @@ export async function executeMapContentCommand(
 }
 
 async function loadMapCommandState(ctx: CampaignMutationCtx, resourceId: ResourceId) {
-  const authorization = await authorizeResourceContent(ctx, resourceId, 'map')
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'map', 'edit')
   if (authorization.status !== 'authorized') {
     return { ready: false as const, result: rejected('unauthorized') }
   }

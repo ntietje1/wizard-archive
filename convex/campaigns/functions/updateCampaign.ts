@@ -8,6 +8,7 @@ import type { Doc } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceAccessDefaults } from '@wizard-archive/editor/resources/access-policy'
 
 export async function updateCampaign(
   ctx: DmMutationCtx,
@@ -15,12 +16,12 @@ export async function updateCampaign(
     name,
     description,
     slug,
-    defaultFolderInheritShares,
+    resourceAccessDefaults,
   }: {
     name?: string
     description?: string
     slug?: CampaignSlug
-    defaultFolderInheritShares?: boolean
+    resourceAccessDefaults?: ResourceAccessDefaults
   },
 ): Promise<CampaignId> {
   const campaign = ctx.campaign
@@ -34,8 +35,8 @@ export async function updateCampaign(
   if (description !== undefined) {
     updates.description = prepareCampaignDescription(description) ?? ''
   }
-  if (defaultFolderInheritShares !== undefined) {
-    updates.defaultFolderInheritShares = defaultFolderInheritShares
+  if (resourceAccessDefaults !== undefined) {
+    updates.resourceAccessDefaults = resourceAccessDefaults
   }
 
   if (slug !== undefined && slug !== campaign.slug) {

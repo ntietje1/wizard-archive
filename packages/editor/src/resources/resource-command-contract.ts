@@ -1,4 +1,5 @@
 import type { VersionStamp } from './component-version'
+import type { FolderAccessInheritance, ResourcePermission } from './resource-access-policy'
 import type {
   CampaignId,
   CampaignMemberId,
@@ -64,8 +65,6 @@ export type ResourceStructureCommand =
   | PermanentlyDeleteResourcesCommand
   | DeepCopyResourcesCommand
 
-export type ResourcePermission = 'none' | 'view' | 'edit'
-
 export type ResourceAccessCommand =
   | Readonly<{
       type: 'setAudienceAccess'
@@ -86,7 +85,7 @@ export type ResourceAccessCommand =
   | Readonly<{
       type: 'setFolderAccessInheritance'
       folderId: ResourceId
-      inherited: boolean
+      inheritance: FolderAccessInheritance
     }>
 
 export type ResourceBookmarkCommand = Readonly<{

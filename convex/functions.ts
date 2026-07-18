@@ -51,7 +51,6 @@ function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
   return {
     ...campaign,
     slug: assertCampaignSlug(campaign.slug),
-    defaultFolderInheritShares: campaign.defaultFolderInheritShares ?? false,
   }
 }
 

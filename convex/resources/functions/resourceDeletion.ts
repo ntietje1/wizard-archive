@@ -15,6 +15,8 @@ type ResourceDeletionCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
 
 type ResourceDeletionPlan = {
   bookmarks: Array<Doc<'resourceBookmarks'>>
+  accessPolicies: Array<Doc<'resourceAccessPolicies'>>
+  memberAccess: Array<Doc<'resourceMemberAccess'>>
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
@@ -30,6 +32,8 @@ type ResourceDeletionPlan = {
 function createPlan(): ResourceDeletionPlan {
   return {
     bookmarks: [],
+    accessPolicies: [],
+    memberAccess: [],
     aliases: [],
     assetsFolders: [],
     noteContents: [],
@@ -50,6 +54,8 @@ function rowCount(plan: ResourceDeletionPlan): number {
 function rowGroups(plan: ResourceDeletionPlan) {
   return [
     plan.bookmarks,
+    plan.accessPolicies,
+    plan.memberAccess,
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
@@ -119,6 +125,21 @@ export async function planResourceDeletion(
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    const accessPolicy = await ctx.db
+      .query('resourceAccessPolicies')
+      .withIndex('by_campaign_and_resource', (query) =>
+        query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
+      )
+      .unique()
+    if (accessPolicy) plan.accessPolicies.push(accessPolicy)
+    plan.memberAccess.push(
+      ...(await ctx.db
+        .query('resourceMemberAccess')
+        .withIndex('by_resource', (query) =>
+          query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
+        )
+        .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+    )
     plan.aliases.push(
       // react-doctor-disable-next-line react-doctor/async-await-in-loop
       ...(await ctx.db
@@ -165,6 +186,9 @@ export async function applyResourceDeletion(
 const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'resources',
   'bookmarks',
+  'accessPolicies',
+  'memberAccess',
+  'accessOperations',
   'bookmarkOperations',
   'tombstones',
   'aliases',
@@ -185,6 +209,9 @@ export const FIRST_CAMPAIGN_RESOURCE_DELETION_STAGE: CampaignResourceDeletionSta
 type CampaignResourceRow =
   | Doc<'resources'>
   | Doc<'resourceBookmarks'>
+  | Doc<'resourceAccessPolicies'>
+  | Doc<'resourceMemberAccess'>
+  | Doc<'resourceAccessOperations'>
   | Doc<'resourceBookmarkOperations'>
   | Doc<'resourceTombstones'>
   | Doc<'resourceSourcePathAliases'>
@@ -236,6 +263,21 @@ async function loadCampaignResourceDeletionBatch(
       return await ctx.db
         .query('resourceBookmarks')
         .withIndex('by_member', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'accessPolicies':
+      return await ctx.db
+        .query('resourceAccessPolicies')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'memberAccess':
+      return await ctx.db
+        .query('resourceMemberAccess')
+        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'accessOperations':
+      return await ctx.db
+        .query('resourceAccessOperations')
+        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'bookmarkOperations':
       return await ctx.db

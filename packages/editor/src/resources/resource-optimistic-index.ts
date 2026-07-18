@@ -186,6 +186,7 @@ async function createOptimisticResource(
     icon: command.icon,
     color: command.color,
     lifecycle: 'active',
+    permission: 'edit',
     metadataVersion: await initialResourceMetadataVersion({
       parentId: command.parentId,
       kind: command.kind,

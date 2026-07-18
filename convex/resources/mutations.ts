@@ -3,6 +3,7 @@ import type { Infer } from 'convex/values'
 import type {
   ResourceCompensationResult,
   ResourceCommandReceipt,
+  ResourceAccessCommand,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
@@ -38,6 +39,8 @@ import {
   sourcePathAliasValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
+  resourceAccessCommandResultValidator,
+  resourceAccessCommandValidator,
   contentProviderSaveResultValidator,
   resourcePresenceHeartbeatResultValidator,
   resourcePresenceReleaseResultValidator,
@@ -53,6 +56,7 @@ import {
 } from './functions/resourcePresence'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
+import { executeResourceAccessCommand as executeResourceAccessCommandFn } from './functions/executeResourceAccessCommand'
 import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
 import { createMapContent } from './functions/mapContent'
 import { createCanvasContent } from './functions/canvasContent'
@@ -79,6 +83,7 @@ type StoredResourceCommandReceipt = Extract<
   { status: 'completed' }
 >['receipt']
 type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValidator>
+type StoredResourceAccessCommand = Infer<typeof resourceAccessCommandValidator>
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
 type StoredVersionStamp = Infer<typeof versionStampValidator>
 type StoredSourcePathAlias = Infer<typeof sourcePathAliasValidator>
@@ -264,6 +269,37 @@ function resourceStructureCommand(
   }
 }
 
+function resourceAccessCommand(command: StoredResourceAccessCommand): ResourceAccessCommand {
+  const resourceId = (value: string) => assertDomainId(DOMAIN_ID_KIND.resource, value)
+  switch (command.type) {
+    case 'setAudienceAccess':
+      return {
+        type: command.type,
+        resourceIds: command.resourceIds.map(resourceId),
+        permission: command.permission,
+      }
+    case 'setMemberAccess':
+      return {
+        type: command.type,
+        resourceIds: command.resourceIds.map(resourceId),
+        memberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, command.memberId),
+        permission: command.permission,
+      }
+    case 'clearMemberAccess':
+      return {
+        type: command.type,
+        resourceIds: command.resourceIds.map(resourceId),
+        memberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, command.memberId),
+      }
+    case 'setFolderAccessInheritance':
+      return {
+        type: command.type,
+        folderId: resourceId(command.folderId),
+        inheritance: command.inheritance,
+      }
+  }
+}
+
 export const executeStructureCommand = campaignMutation({
   args: {
     operationId: operationIdValidator,
@@ -312,6 +348,27 @@ export const executeBookmarkCommand = dmMutation({
         ),
         bookmarked: args.command.bookmarked,
       },
+    )
+    return result.status === 'completed'
+      ? {
+          status: 'completed' as const,
+          receipt: { ...result.receipt, resourceIds: [...result.receipt.resourceIds] },
+        }
+      : result
+  },
+})
+
+export const executeResourceAccessCommand = dmMutation({
+  args: {
+    operationId: operationIdValidator,
+    command: resourceAccessCommandValidator,
+  },
+  returns: resourceAccessCommandResultValidator,
+  handler: async (ctx, args) => {
+    const result = await executeResourceAccessCommandFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      resourceAccessCommand(args.command),
     )
     return result.status === 'completed'
       ? {
@@ -642,7 +699,7 @@ async function prepareFileContentReplacement(
   args: FileContentReplacementArgs,
 ): Promise<PreparedFileContentReplacement | StoredFileContentReplaceResult> {
   const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
-  const authorization = await authorizeResourceContent(ctx, resourceId, 'file')
+  const authorization = await authorizeResourceContent(ctx, resourceId, 'file', 'edit')
   if (authorization.status !== 'authorized') return rejectedFileReplacement('unauthorized')
   const content = await ctx.db
     .query('resourceFileContents')
