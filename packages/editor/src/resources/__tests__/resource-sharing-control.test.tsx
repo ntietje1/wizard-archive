@@ -1,20 +1,20 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vite-plus/test'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
-import { Popover } from '@wizard-archive/ui/shadcn/components/popover'
 import { assertVersionStamp } from '../component-version'
 import type { EditorRuntime, ResourceAccessGateway } from '../editor-runtime-contract'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import type { AuthorizedResourceSummary, ResourceProjectionScope } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceAccessPresentation } from '../resource-access-policy'
-import { ResourceSharingMenu } from '../workspace/resource-sharing-menu'
+import { ResourceSharingControl } from '../workspace/resource-sharing-control'
 import { MutableWorkspaceResourceIndex, indexRevision } from '../workspace-resource-index'
 
-const campaignId = testDomainId('campaign', 'sharing-menu')
+const campaignId = testDomainId('campaign', 'sharing-control')
 const actorId = testDomainId('campaignMember', 'sharing-menu')
 const participantId = testDomainId('campaignMember', 'sharing-menu-player')
+const defaultParticipantId = testDomainId('campaignMember', 'sharing-menu-default-player')
 const folderId = testDomainId('resource', 'sharing-menu-folder')
 const scope = {
   campaignId,
@@ -60,10 +60,23 @@ const presentation: ResourceAccessPresentation = {
         source: { type: 'member', resourceId: folderId },
       },
     },
+    {
+      id: defaultParticipantId,
+      displayName: 'Blake Player',
+      username: 'blake',
+      imageUrl: null,
+      access: { state: 'default' },
+      effectiveAccess: {
+        permission: 'none',
+        source: { type: 'none' },
+      },
+    },
   ],
 }
 
-describe('ResourceSharingMenu', () => {
+describe('ResourceSharingControl', () => {
+  beforeEach(() => localStorage.clear())
+
   it('presents canonical sharing state and submits one access command at a time', async () => {
     const user = userEvent.setup()
     let finish!: () => void
@@ -108,17 +121,22 @@ describe('ResourceSharingMenu', () => {
       },
     } as unknown as EditorRuntime
 
-    render(
-      <Popover open>
-        <ResourceSharingMenu resource={folder} runtime={runtime} />
-      </Popover>,
+    render(<ResourceSharingControl resource={folder} runtime={runtime} />)
+
+    expect(screen.getByRole('button', { name: 'Shared' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Shared' }))
+    expect(screen.getByRole('dialog', { name: 'Share Shared folder' })).toBeInTheDocument()
+    expect(screen.getByText('Other Players')).toBeInTheDocument()
+    expect(screen.getByText('Avery Player')).toBeInTheDocument()
+    expect(screen.getByText('@avery')).toBeInTheDocument()
+    expect(screen.queryByText('Blake Player')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Avery Player permission' })).toHaveTextContent(
+      'View',
     )
 
-    expect(screen.getByRole('dialog', { name: 'Share Shared folder' })).toBeInTheDocument()
-    expect(screen.getByText('All players')).toBeInTheDocument()
-    expect(screen.getByText('Avery Player')).toBeInTheDocument()
-    expect(screen.getByText('@avery · View · explicit member')).toBeInTheDocument()
-    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Default')
+    await user.click(screen.getByRole('button', { name: /Other Players/ }))
+    expect(screen.getByText('Blake Player')).toBeInTheDocument()
+    expect(screen.getByText('@blake')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('switch', { name: 'Share through descendants' }))
 
@@ -141,7 +159,7 @@ describe('ResourceSharingMenu', () => {
     finish()
     await waitFor(() => expect(screen.queryByLabelText('Updating sharing')).not.toBeInTheDocument())
 
-    await user.click(screen.getAllByRole('combobox')[0]!)
+    await user.click(screen.getByRole('combobox', { name: 'All Players permission' }))
     await user.click(await screen.findByRole('option', { name: 'None' }))
 
     expect(execute).toHaveBeenLastCalledWith({

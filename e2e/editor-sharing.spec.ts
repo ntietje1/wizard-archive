@@ -98,20 +98,36 @@ test.describe('canonical sharing and view-as', () => {
   test('round-trips all-player and member resource permissions', async ({ page }) => {
     await openResource(page, accessNoteId)
     let dialog = await openResourceSharing(page)
-    await setPermission(page, permissionRow(dialog, 'All players'), 'View')
-    await setPermission(page, permissionRow(dialog, playerDisplayName), 'None')
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: 'All Players permission' }),
+      'View',
+    )
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: `${playerDisplayName} permission` }),
+      'None',
+    )
     await page.keyboard.press('Escape')
 
     await expectPlayerSidebarResource(accessNoteTitle, false)
 
     dialog = await openResourceSharing(page)
-    await setPermission(page, permissionRow(dialog, playerDisplayName), 'Default')
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: `${playerDisplayName} permission` }),
+      'Default',
+    )
     await page.keyboard.press('Escape')
 
     await expectPlayerSidebarResource(accessNoteTitle, true)
 
     dialog = await openResourceSharing(page)
-    await setPermission(page, permissionRow(dialog, 'All players'), 'None')
+    await setPermission(
+      page,
+      dialog.getByRole('combobox', { name: 'All Players permission' }),
+      'None',
+    )
     await page.keyboard.press('Escape')
 
     await expectPlayerSidebarResource(accessNoteTitle, false)
@@ -122,7 +138,11 @@ test.describe('canonical sharing and view-as', () => {
   }) => {
     await openResource(page, sharedNoteId)
     let dialog = await openBlockSharing(page, visibleBlockText)
-    await setPermission(page, permissionRow(dialog, playerDisplayName), 'Visible')
+    await setPermission(
+      page,
+      permissionRow(dialog, playerDisplayName).getByRole('combobox'),
+      'Visible',
+    )
     await expect(dialog.getByText('This player cannot open the note.')).toBeVisible()
 
     await expectPlayerSidebarResource(sharedNoteTitle, false)
@@ -186,7 +206,7 @@ test.describe('canonical sharing and view-as', () => {
     await expect(editor.getByText(hiddenBlockText, { exact: true })).not.toBeVisible()
     await expect(editor).toHaveAttribute('contenteditable', 'false')
     await expect(page.getByRole('toolbar', { name: 'Note formatting toolbar' })).not.toBeVisible()
-    await expect(page.getByRole('button', { name: 'Share', exact: true })).not.toBeVisible()
+    await expect(page.getByRole('button', { name: /^(?:Private|Shared)$/ })).not.toBeVisible()
     expect(pageErrors.map((error) => error.message)).toEqual([])
 
     const exit = page.getByRole('button', { name: 'Exit' })
@@ -207,10 +227,14 @@ async function openResource(page: Page, resourceId: ResourceId) {
 }
 
 async function openResourceSharing(page: Page) {
-  await page.getByRole('button', { name: 'Share', exact: true }).click()
+  await page.getByRole('button', { name: /^(?:Private|Shared)$/ }).click()
   const dialog = page.getByRole('dialog', { name: /^Share / })
-  await expect(dialog.getByText('All players', { exact: true })).toBeVisible()
-  await expect(dialog.getByText(playerDisplayName, { exact: true })).toBeVisible()
+  await expect(dialog.getByText(/^(?:All|Other) Players$/, { exact: true })).toBeVisible()
+  const player = dialog.getByText(playerDisplayName, { exact: true })
+  if (!(await player.isVisible().catch(() => false))) {
+    await dialog.getByRole('button', { name: /Players$/ }).click()
+  }
+  await expect(player).toBeVisible()
   return dialog
 }
 
@@ -240,11 +264,18 @@ function permissionRow(dialog: Locator, label: string) {
   return dialog.getByText(label, { exact: true }).locator('..').locator('..')
 }
 
-async function setPermission(page: Page, row: Locator, permission: string) {
-  const select = row.getByRole('combobox')
+async function setPermission(page: Page, select: Locator, permission: string) {
   await select.click()
-  await page.getByRole('option', { name: new RegExp(`^${escapeRegExp(permission)}$`, 'i') }).click()
-  await expect(select).toContainText(new RegExp(permission, 'i'), { timeout: 10_000 })
+  const optionName =
+    permission === 'Default'
+      ? /^Default(?:\s|\()/i
+      : new RegExp(`^${escapeRegExp(permission)}$`, 'i')
+  await page.getByRole('option', { name: optionName }).click()
+  if (permission === 'Default') {
+    await expect(select).toBeEnabled({ timeout: 10_000 })
+  } else {
+    await expect(select).toContainText(new RegExp(permission, 'i'), { timeout: 10_000 })
+  }
 }
 
 async function expectPlayerSidebarResource(title: string, visible: boolean) {
