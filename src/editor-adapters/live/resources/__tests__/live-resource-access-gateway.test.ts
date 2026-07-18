@@ -8,6 +8,7 @@ import {
 } from '@wizard-archive/editor/resources/workspace-index'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import type { ResourceAccessPresentation } from '@wizard-archive/editor/resources/access-policy'
 import { createLiveResourceAccessGateway } from '../live-resource-access-gateway'
 
 const campaignId = testDomainId('campaign', 'live-access')
@@ -89,6 +90,45 @@ describe('createLiveResourceAccessGateway', () => {
       status: 'received',
       result: { status: 'rejected', reason: 'unauthorized' },
     })
+  })
+
+  it('starts one live sharing projection and disposes its source subscription', () => {
+    const dispose = vi.fn()
+    let apply: ((value: ResourceAccessPresentation | null) => void) | undefined
+    const watch = vi.fn((_resourceId, publish) => {
+      apply = publish
+      return dispose
+    })
+    const gateway = createLiveResourceAccessGateway(
+      campaignId,
+      resourceIndex('edit'),
+      vi.fn(),
+      watch,
+    )
+
+    const unknown = gateway.getPresentation(resourceId)
+    expect(unknown).toEqual({ state: 'unknown' })
+    expect(gateway.getPresentation(resourceId)).toBe(unknown)
+    gateway.loadPresentation(resourceId)
+    gateway.loadPresentation(resourceId)
+    apply?.({
+      policy: {
+        resourceId,
+        subject: 'resource',
+        audienceAccess: { state: 'default' },
+      },
+      defaultAccess: { permission: 'none', source: { type: 'none' } },
+      participants: [],
+    })
+
+    expect(watch).toHaveBeenCalledTimes(1)
+    expect(gateway.getPresentation(resourceId)).toMatchObject({
+      state: 'known',
+      value: { policy: { resourceId } },
+    })
+    expect(gateway.getPresentation(resourceId)).toBe(gateway.getPresentation(resourceId))
+    gateway.dispose()
+    expect(dispose).toHaveBeenCalledOnce()
   })
 })
 

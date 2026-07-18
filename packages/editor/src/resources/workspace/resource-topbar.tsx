@@ -11,10 +11,12 @@ import {
   Share2,
   Undo2,
 } from 'lucide-react'
+import { Popover, PopoverTrigger } from '@wizard-archive/ui/shadcn/components/popover'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspacePreferences } from '../workspace-preferences'
 import type { WorkspaceActions } from './resource-operations'
+import { ResourceSharingMenu } from './resource-sharing-menu'
 import { useResourceUndoSnapshot } from './resource-undo'
 
 export function ResourceTopbar({
@@ -44,6 +46,7 @@ export function ResourceTopbar({
 }) {
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sharingOpen, setSharingOpen] = useState(false)
   const ancestors = runtime.resources.index.getSnapshot().ancestors(resource.id)
   const breadcrumb = ancestors.state === 'known' ? ancestors.value : []
   const historyAvailable = runtime.history.status === 'available'
@@ -114,17 +117,25 @@ export function ResourceTopbar({
           <Eye className="size-3.5" /> Player view
         </span>
       )}
-      <TopbarIcon
-        disabled={runtime.resources.access.status !== 'available'}
-        label="Share"
-        title={
-          runtime.resources.access.status === 'available'
-            ? 'Share resource'
-            : 'Sharing is unavailable in this workspace'
-        }
-      >
-        <Share2 className="size-4" />
-      </TopbarIcon>
+      {runtime.scope.projection === 'dm' && (
+        <Popover modal={false} open={sharingOpen} onOpenChange={setSharingOpen}>
+          <PopoverTrigger
+            nativeButton
+            type="button"
+            aria-label="Share"
+            className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
+            disabled={runtime.resources.access.status !== 'available'}
+            title={
+              runtime.resources.access.status === 'available'
+                ? 'Share resource'
+                : 'Sharing is unavailable in this workspace'
+            }
+          >
+            <Share2 className="size-4" />
+          </PopoverTrigger>
+          {sharingOpen && <ResourceSharingMenu resource={resource} runtime={runtime} />}
+        </Popover>
+      )}
       <TopbarIcon label="Open resource panel" onClick={onOpenRightSidebar}>
         <PanelRightOpen className="size-4" />
       </TopbarIcon>

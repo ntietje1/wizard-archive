@@ -174,6 +174,11 @@ export function normalizeResourceAccessCommand(
         resourceIds: normalizeResourceIdSet(command.resourceIds),
         permission: normalizePermission(command.permission),
       }
+    case 'clearAudienceAccess':
+      return {
+        type: 'clearAudienceAccess',
+        resourceIds: normalizeResourceIdSet(command.resourceIds),
+      }
     case 'setMemberAccess':
       return {
         type: 'setMemberAccess',

@@ -278,6 +278,11 @@ function resourceAccessCommand(command: StoredResourceAccessCommand): ResourceAc
         resourceIds: command.resourceIds.map(resourceId),
         permission: command.permission,
       }
+    case 'clearAudienceAccess':
+      return {
+        type: command.type,
+        resourceIds: command.resourceIds.map(resourceId),
+      }
     case 'setMemberAccess':
       return {
         type: command.type,

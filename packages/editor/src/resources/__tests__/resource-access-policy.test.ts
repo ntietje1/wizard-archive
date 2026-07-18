@@ -37,6 +37,16 @@ describe('resource access policy', () => {
     expect(resolveResourcePermission(noteId, nodes)).toBe(RESOURCE_PERMISSION.view)
   })
 
+  it('distinguishes an explicit audience denial from inherited default access', () => {
+    const nodes = accessTree({
+      root: folderNode(rootId, null, 'edit', 'enabled'),
+      folder: folderNode(folderId, rootId, undefined, 'enabled'),
+      note: resourceNode(noteId, folderId, 'none'),
+    })
+
+    expect(resolveResourcePermission(noteId, nodes)).toBe(RESOURCE_PERMISSION.none)
+  })
+
   it('inherits from the nearest enabled folder with an applicable grant', () => {
     const nodes = accessTree({
       root: folderNode(rootId, null, 'edit', 'enabled'),
@@ -97,13 +107,16 @@ function accessTree(nodes: {
 function folderNode(
   resourceId: ResourceId,
   parentId: ResourceId | null,
-  audiencePermission: 'none' | 'view' | 'edit' = 'none',
+  audiencePermission?: 'none' | 'view' | 'edit',
   inheritance: 'disabled' | 'enabled' = 'disabled',
 ): ResourceAccessNode {
   return {
     policy: {
       resourceId,
-      audiencePermission,
+      audienceAccess:
+        audiencePermission === undefined
+          ? { state: 'default' }
+          : { state: 'explicit', permission: audiencePermission },
       subject: 'folder',
       inheritance:
         inheritance === 'enabled'
@@ -118,13 +131,16 @@ function folderNode(
 function resourceNode(
   resourceId: ResourceId,
   parentId: ResourceId | null,
-  audiencePermission: 'none' | 'view' | 'edit' = 'none',
+  audiencePermission?: 'none' | 'view' | 'edit',
   memberAccess: ResourceAccessNode['memberAccess'] = { state: 'default' },
 ): ResourceAccessNode {
   return {
     policy: {
       resourceId,
-      audiencePermission,
+      audienceAccess:
+        audiencePermission === undefined
+          ? { state: 'default' }
+          : { state: 'explicit', permission: audiencePermission },
       subject: 'resource',
     },
     parentId,

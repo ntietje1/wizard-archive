@@ -134,6 +134,12 @@ describe('separate command families', () => {
     expect(
       normalizeResourceAccessCommand({ ...access, resourceIds: [resourceB, resourceA, resourceB] }),
     ).toEqual({ ...access, resourceIds: [resourceA, resourceB] })
+    expect(
+      normalizeResourceAccessCommand({
+        type: 'clearAudienceAccess',
+        resourceIds: [resourceB, resourceA, resourceB],
+      }),
+    ).toEqual({ type: 'clearAudienceAccess', resourceIds: [resourceA, resourceB] })
     expect(normalizeResourceBookmarkCommand(bookmark)).toEqual(bookmark)
     expect(normalizeNoteBlockAccessCommand(blockAccess)).toEqual(blockAccess)
 

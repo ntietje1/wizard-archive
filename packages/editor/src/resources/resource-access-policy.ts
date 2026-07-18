@@ -28,15 +28,19 @@ export const DEFAULT_RESOURCE_ACCESS_DEFAULTS: ResourceAccessDefaults = {
 export type ResourceAccessPolicy =
   | Readonly<{
       resourceId: ResourceId
-      audiencePermission: ResourcePermission
+      audienceAccess: ResourceAudienceAccess
       subject: 'folder'
       inheritance: FolderAccessInheritance
     }>
   | Readonly<{
       resourceId: ResourceId
-      audiencePermission: ResourcePermission
+      audienceAccess: ResourceAudienceAccess
       subject: 'resource'
     }>
+
+export type ResourceAudienceAccess =
+  | Readonly<{ state: 'default' }>
+  | Readonly<{ state: 'explicit'; permission: ResourcePermission }>
 
 export type ResourceMemberAccess = Readonly<{
   resourceId: ResourceId
@@ -50,6 +54,31 @@ export type ResourceAccessNode = Readonly<{
   memberAccess:
     | Readonly<{ state: 'default' }>
     | Readonly<{ state: 'explicit'; permission: ResourcePermission }>
+}>
+
+export type ResourceAccessResolution = Readonly<{
+  permission: ResourcePermission
+  source:
+    | Readonly<{
+        type: 'audience' | 'member'
+        resourceId: ResourceId
+      }>
+    | Readonly<{ type: 'none' }>
+}>
+
+export type ResourceAccessParticipant = Readonly<{
+  id: CampaignMemberId
+  displayName: string
+  username: string
+  imageUrl: string | null
+  access: ResourceAccessNode['memberAccess']
+  effectiveAccess: ResourceAccessResolution
+}>
+
+export type ResourceAccessPresentation = Readonly<{
+  policy: ResourceAccessPolicy
+  defaultAccess: ResourceAccessResolution
+  participants: ReadonlyArray<ResourceAccessParticipant>
 }>
 
 const PERMISSION_RANK: Readonly<Record<ResourcePermission, number>> = {
@@ -69,17 +98,24 @@ export function resolveResourcePermission(
   resourceId: ResourceId,
   nodes: ReadonlyMap<ResourceId, ResourceAccessNode>,
 ): ResourcePermission {
+  return resolveResourceAccess(resourceId, nodes).permission
+}
+
+export function resolveResourceAccess(
+  resourceId: ResourceId,
+  nodes: ReadonlyMap<ResourceId, ResourceAccessNode>,
+): ResourceAccessResolution {
   const resource = nodes.get(resourceId)
-  if (!resource) return RESOURCE_PERMISSION.none
-  const direct = explicitOrAudiencePermission(resource)
-  if (direct !== RESOURCE_PERMISSION.none || resource.memberAccess.state === 'explicit') {
+  if (!resource) return noAccess()
+  const direct = explicitOrAudienceAccess(resource)
+  if (direct !== null) {
     return direct
   }
 
   const visited = new Set<ResourceId>([resourceId])
   let parentId = resource.parentId
   while (parentId !== null) {
-    if (visited.has(parentId)) return RESOURCE_PERMISSION.none
+    if (visited.has(parentId)) return noAccess()
     visited.add(parentId)
     const parent = nodes.get(parentId)
     if (
@@ -87,15 +123,15 @@ export function resolveResourcePermission(
       parent.policy.subject !== 'folder' ||
       parent.policy.inheritance === FOLDER_ACCESS_INHERITANCE.disabled
     ) {
-      return RESOURCE_PERMISSION.none
+      return noAccess()
     }
-    const inherited = explicitOrAudiencePermission(parent)
-    if (inherited !== RESOURCE_PERMISSION.none || parent.memberAccess.state === 'explicit') {
+    const inherited = explicitOrAudienceAccess(parent)
+    if (inherited !== null) {
       return inherited
     }
     parentId = parent.parentId
   }
-  return RESOURCE_PERMISSION.none
+  return noAccess()
 }
 
 export function canProjectResource(
@@ -122,8 +158,21 @@ export function canProjectResource(
   return true
 }
 
-function explicitOrAudiencePermission(node: ResourceAccessNode): ResourcePermission {
-  return node.memberAccess.state === 'explicit'
-    ? node.memberAccess.permission
-    : node.policy.audiencePermission
+function explicitOrAudienceAccess(node: ResourceAccessNode): ResourceAccessResolution | null {
+  if (node.memberAccess.state === 'explicit') {
+    return {
+      permission: node.memberAccess.permission,
+      source: { type: 'member', resourceId: node.policy.resourceId },
+    }
+  }
+  return node.policy.audienceAccess.state === 'explicit'
+    ? {
+        permission: node.policy.audienceAccess.permission,
+        source: { type: 'audience', resourceId: node.policy.resourceId },
+      }
+    : null
+}
+
+function noAccess(): ResourceAccessResolution {
+  return { permission: RESOURCE_PERMISSION.none, source: { type: 'none' } }
 }

@@ -2875,12 +2875,12 @@ describe('resource structure commands', () => {
         expect.objectContaining({
           subject: 'folder',
           inheritance: 'enabled',
-          audiencePermission: 'edit',
+          audienceAccess: { state: 'explicit', permission: 'edit' },
         }),
         expect.objectContaining({
           subject: 'folder',
           inheritance: 'enabled',
-          audiencePermission: 'none',
+          audienceAccess: { state: 'default' },
         }),
       ])
       const copiedMemberAccess = await ctx.db

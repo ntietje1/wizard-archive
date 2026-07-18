@@ -175,6 +175,34 @@ describe('authorized resource projection', () => {
       memberId: campaign.player.memberDomainId,
     })
     await executeAccess(campaign, campaignUuid, {
+      type: 'setAudienceAccess',
+      resourceIds: [noteId],
+      permission: 'none',
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResource, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toMatchObject({ resources: [], missingResourceIds: [noteId] })
+
+    await executeAccess(campaign, campaignUuid, {
+      type: 'clearAudienceAccess',
+      resourceIds: [noteId],
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResource, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toMatchObject({
+      resources: expect.arrayContaining([
+        expect.objectContaining({ id: noteId, permission: 'view' }),
+      ]),
+      missingResourceIds: [],
+    })
+
+    await executeAccess(campaign, campaignUuid, {
       type: 'setFolderAccessInheritance',
       folderId,
       inheritance: 'disabled',
@@ -205,6 +233,74 @@ describe('authorized resource projection', () => {
         resourceId: noteId,
       }),
     ).resolves.toMatchObject({ resources: [], missingResourceIds: [noteId] })
+  })
+
+  it('projects sharing presentation from the same policy resolver used for authorization', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const folderId = await createResource(campaign, campaignUuid, 'folder', null, 'Shared folder')
+    const noteId = await createResource(campaign, campaignUuid, 'note', folderId, 'Shared note')
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setAudienceAccess',
+      resourceIds: [folderId],
+      permission: 'view',
+    })
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setFolderAccessInheritance',
+      folderId,
+      inheritance: 'enabled',
+    })
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourceAccess, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toMatchObject({
+      policy: {
+        resourceId: noteId,
+        subject: 'resource',
+        audienceAccess: { state: 'default' },
+      },
+      defaultAccess: {
+        permission: 'view',
+        source: { type: 'audience', resourceId: folderId },
+      },
+      participants: [
+        {
+          id: campaign.player.memberDomainId,
+          access: { state: 'default' },
+          effectiveAccess: {
+            permission: 'view',
+            source: { type: 'audience', resourceId: folderId },
+          },
+        },
+      ],
+    })
+
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [noteId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'none',
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourceAccess, {
+        campaignId: campaignUuid,
+        resourceId: noteId,
+      }),
+    ).resolves.toMatchObject({
+      participants: [
+        {
+          id: campaign.player.memberDomainId,
+          access: { state: 'explicit', permission: 'none' },
+          effectiveAccess: {
+            permission: 'none',
+            source: { type: 'member', resourceId: noteId },
+          },
+        },
+      ],
+    })
   })
 
   it('loads normalized authorized collections without exposing unrelated resource kinds', async () => {

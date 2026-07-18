@@ -15,6 +15,7 @@ import {
   mapImageDownloadSnapshotValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
+  resourceAccessPresentationValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
 } from './schema'
@@ -29,6 +30,9 @@ import { searchResources as searchResourcesFn } from './functions/searchResource
 import { loadActorBookmarks } from './functions/resourceBookmarks'
 import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
 import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
+import { projectResourceAccess } from './functions/resourceAccess'
+import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
+import { CAMPAIGN_MEMBER_ROLE } from '../../shared/campaigns/types'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
@@ -112,6 +116,35 @@ export const loadCollection = campaignQuery({
       cursor: args.cursor ?? null,
     })
     return { snapshot: storedSnapshot(page.snapshot), cursor: page.cursor }
+  },
+})
+
+export const loadResourceAccess = dmQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: v.nullable(resourceAccessPresentationValidator),
+  handler: async (ctx, args) => {
+    const members = await getCampaignMembers(ctx)
+    const participants = []
+    for (const member of members) {
+      if (member.role !== CAMPAIGN_MEMBER_ROLE.Player) continue
+      participants.push({
+        id: member.id,
+        displayName: member.userProfile.name?.trim() || member.userProfile.username,
+        username: member.userProfile.username,
+        imageUrl: member.userProfile.imageUrl,
+      })
+    }
+    const presentation = await projectResourceAccess(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      participants,
+    )
+    return presentation
+      ? {
+          ...presentation,
+          participants: [...presentation.participants],
+        }
+      : null
   },
 })
 

@@ -43,6 +43,13 @@ const grantedResourcePermissionValidator = literals(
   RESOURCE_PERMISSION.view,
   RESOURCE_PERMISSION.edit,
 )
+const resourceAudienceAccessValidator = v.union(
+  v.object({ state: v.literal('default') }),
+  v.object({
+    state: v.literal('explicit'),
+    permission: resourcePermissionValidator,
+  }),
+)
 export const folderAccessInheritanceValidator = literals(
   ...Object.values(FOLDER_ACCESS_INHERITANCE),
 )
@@ -52,6 +59,10 @@ export const resourceAccessCommandValidator = v.union(
     type: v.literal('setAudienceAccess'),
     resourceIds: v.array(resourceIdValidator),
     permission: resourcePermissionValidator,
+  }),
+  v.object({
+    type: v.literal('clearAudienceAccess'),
+    resourceIds: v.array(resourceIdValidator),
   }),
   v.object({
     type: v.literal('setMemberAccess'),
@@ -99,6 +110,53 @@ export const resourceAccessCommandResultValidator = v.union(
     reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
   }),
 )
+
+const resourceAccessPolicyValidator = v.union(
+  v.object({
+    resourceId: resourceIdValidator,
+    audienceAccess: resourceAudienceAccessValidator,
+    subject: v.literal('folder'),
+    inheritance: folderAccessInheritanceValidator,
+  }),
+  v.object({
+    resourceId: resourceIdValidator,
+    audienceAccess: resourceAudienceAccessValidator,
+    subject: v.literal('resource'),
+  }),
+)
+
+const resourceAccessResolutionValidator = v.object({
+  permission: resourcePermissionValidator,
+  source: v.union(
+    v.object({
+      type: v.union(v.literal('audience'), v.literal('member')),
+      resourceId: resourceIdValidator,
+    }),
+    v.object({ type: v.literal('none') }),
+  ),
+})
+
+export const resourceAccessPresentationValidator = v.object({
+  policy: resourceAccessPolicyValidator,
+  defaultAccess: resourceAccessResolutionValidator,
+  participants: v.array(
+    v.object({
+      id: campaignMemberIdValidator,
+      displayName: v.string(),
+      username: v.string(),
+      imageUrl: v.nullable(v.string()),
+      access: v.union(
+        v.object({ state: v.literal('default') }),
+        v.object({
+          state: v.literal('explicit'),
+          permission: resourcePermissionValidator,
+        }),
+      ),
+      effectiveAccess: resourceAccessResolutionValidator,
+    }),
+  ),
+})
+
 const canonicalTargetValidator = v.union(
   v.object({ kind: v.literal('resource'), resourceId: resourceIdValidator }),
   v.object({
@@ -747,14 +805,14 @@ export const resourceTables = {
       v.object({
         campaignUuid: campaignIdValidator,
         resourceUuid: resourceIdValidator,
-        audiencePermission: resourcePermissionValidator,
+        audienceAccess: resourceAudienceAccessValidator,
         subject: v.literal('folder'),
         inheritance: folderAccessInheritanceValidator,
       }),
       v.object({
         campaignUuid: campaignIdValidator,
         resourceUuid: resourceIdValidator,
-        audiencePermission: resourcePermissionValidator,
+        audienceAccess: resourceAudienceAccessValidator,
         subject: v.literal('resource'),
       }),
     ),

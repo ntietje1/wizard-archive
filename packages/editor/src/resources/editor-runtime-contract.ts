@@ -10,7 +10,7 @@ import type {
   ResourceBookmarkCommandGateway,
   ResourceStructureCommandGateway,
 } from './resource-command-contract'
-import type { ResourcePermission } from './resource-access-policy'
+import type { ResourceAccessPresentation, ResourcePermission } from './resource-access-policy'
 import type {
   ResourceIndexLoader,
   ResourceKnowledge,
@@ -31,6 +31,8 @@ export type ResourceCapability<T> =
 
 export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
   get(resourceId: ResourceId): ResourceKnowledge<ResourcePermission>
+  getPresentation(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
+  loadPresentation(resourceId: ResourceId): void
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 

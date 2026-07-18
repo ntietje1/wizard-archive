@@ -135,7 +135,17 @@ async function applyAccessCommand(
       await Promise.all(
         resourceIds.map(async (resourceId) => {
           const policy = await requirePolicy(ctx, resourceId)
-          await ctx.db.patch(policy._id, { audiencePermission: command.permission })
+          await ctx.db.patch(policy._id, {
+            audienceAccess: { state: 'explicit', permission: command.permission },
+          })
+        }),
+      )
+      return
+    case 'clearAudienceAccess':
+      await Promise.all(
+        resourceIds.map(async (resourceId) => {
+          const policy = await requirePolicy(ctx, resourceId)
+          await ctx.db.patch(policy._id, { audienceAccess: { state: 'default' } })
         }),
       )
       return

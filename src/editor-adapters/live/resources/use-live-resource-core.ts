@@ -257,6 +257,15 @@ function createScopedLiveResourceRuntime(
     currentScope.projection === 'dm'
       ? (args) => convex.mutation(api.resources.mutations.executeResourceAccessCommand, args)
       : null,
+    currentScope.projection === 'dm'
+      ? (resourceId, apply) => {
+          const watch = convex.watchQuery(api.resources.queries.loadResourceAccess, {
+            campaignId: currentScope.campaignId,
+            resourceId,
+          })
+          return subscribeToWatch(watch, apply)
+        }
+      : null,
   )
 
   const unsupported = {
@@ -308,6 +317,7 @@ function createScopedLiveResourceRuntime(
       for (const source of Object.values(content)) source.dispose()
       preferences.dispose()
       bookmarks.dispose()
+      access.dispose()
       optimistic.dispose()
     },
   }

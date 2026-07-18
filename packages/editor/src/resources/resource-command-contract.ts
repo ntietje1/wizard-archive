@@ -72,6 +72,10 @@ export type ResourceAccessCommand =
       permission: ResourcePermission
     }>
   | Readonly<{
+      type: 'clearAudienceAccess'
+      resourceIds: ReadonlyArray<ResourceId>
+    }>
+  | Readonly<{
       type: 'setMemberAccess'
       resourceIds: ReadonlyArray<ResourceId>
       memberId: CampaignMemberId
