@@ -45,7 +45,6 @@ export function ResourceHistoryPreview({
     (listener) => source.subscribe(resource.id, listener),
     () => source.get(resource.id),
   )
-  const canRestore = resource.permission === 'edit'
   return (
     <>
       {state.preview.status === 'closed' ? (
@@ -53,7 +52,6 @@ export function ResourceHistoryPreview({
       ) : (
         <OpenHistoryPreview
           actions={actions}
-          canRestore={canRestore}
           resource={resource}
           runtime={runtime}
           source={source}
@@ -67,14 +65,12 @@ export function ResourceHistoryPreview({
 
 function OpenHistoryPreview({
   actions,
-  canRestore,
   resource,
   runtime,
   source,
   state,
 }: {
   actions: WorkspaceActions
-  canRestore: boolean
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   source: ItemHistoryController
@@ -86,12 +82,10 @@ function OpenHistoryPreview({
         icon={<History className="size-3.5" />}
         actions={
           <>
-            {canRestore ? (
-              <BannerButton onClick={() => source.requestRestore(resource.id, state.entryId)}>
-                <RotateCcw className="mr-0.5 size-3" />
-                Restore
-              </BannerButton>
-            ) : null}
+            <BannerButton onClick={() => source.requestRestore(resource.id, state.entryId)}>
+              <RotateCcw className="mr-0.5 size-3" />
+              Restore
+            </BannerButton>
             <BannerButton onClick={() => source.selectPreview(resource.id, null)}>
               <X className="mr-0.5 size-3" />
               Exit

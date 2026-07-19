@@ -314,7 +314,7 @@ describe('ResourceRightSidebar item history', () => {
       history: { status: 'available' as const, value: history },
     }
 
-    render(
+    const view = render(
       <ResourceRightSidebar
         actions={createWorkspaceActions(runtime, vi.fn())}
         activePanel="history"
@@ -336,6 +336,21 @@ describe('ResourceRightSidebar item history', () => {
     expect(requestRestore).toHaveBeenCalledWith(resourceId, checkpointEntryId)
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
     expect(loadMore).toHaveBeenCalledWith(resourceId)
+
+    view.rerender(
+      <ResourceRightSidebar
+        actions={createWorkspaceActions(runtime, vi.fn())}
+        activePanel="history"
+        noteHeadingNavigation={{ current: null }}
+        resource={authorizedResourceSummaryFromRecord(resource, 'view')}
+        runtime={runtime}
+        onActivePanelChange={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'History' })).toBeDisabled()
+    expect(screen.getByRole('heading', { name: 'Details' })).toBeVisible()
+    expect(screen.queryByRole('list', { name: 'Item history' })).not.toBeInTheDocument()
 
     core.dispose()
   })

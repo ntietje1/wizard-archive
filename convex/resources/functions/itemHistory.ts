@@ -228,7 +228,10 @@ export async function restoreItemHistoryCheckpoint(
   if (authorization.status !== 'authorized') {
     return {
       status: 'rejected',
-      reason: authorization.reason === 'unauthorized' ? 'unauthorized' : 'resource_unavailable',
+      reason:
+        authorization.reason === 'unauthorized' && ctx.resourceScope.projection !== 'dm'
+          ? 'unauthorized'
+          : 'resource_unavailable',
     }
   }
 

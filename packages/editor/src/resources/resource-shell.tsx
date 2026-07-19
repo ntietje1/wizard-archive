@@ -542,7 +542,7 @@ function SelectedResource({
           {mode === 'viewer' ? 'Viewer mode — editing is disabled' : 'Read only'}
         </div>
       )}
-      {runtime.history.status === 'available' ? (
+      {runtime.history.status === 'available' && resource.permission === 'edit' ? (
         <ResourceHistoryPreview
           actions={actions}
           resource={resource}

@@ -446,24 +446,16 @@ function ResourceHistoryPanel({
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  if (runtime.history.status !== 'available') {
+  if (runtime.history.status !== 'available' || resource.permission !== 'edit') {
     return <p className="p-3 text-sm text-muted-foreground">History is unavailable.</p>
   }
-  return (
-    <AvailableResourceHistoryPanel
-      canEdit={resource.permission === 'edit'}
-      resourceId={resource.id}
-      source={runtime.history.value}
-    />
-  )
+  return <AvailableResourceHistoryPanel resourceId={resource.id} source={runtime.history.value} />
 }
 
 function AvailableResourceHistoryPanel({
-  canEdit,
   resourceId,
   source,
 }: {
-  canEdit: boolean
   resourceId: AuthorizedResourceSummary['id']
   source: ItemHistoryController
 }) {
@@ -494,7 +486,6 @@ function AvailableResourceHistoryPanel({
               {group.entries.map((entry) => (
                 <HistoryEntryRow
                   key={entry.id}
-                  canEdit={canEdit}
                   entry={entry}
                   onPreview={() =>
                     source.selectPreview(
@@ -532,13 +523,11 @@ function AvailableResourceHistoryPanel({
 }
 
 function HistoryEntryRow({
-  canEdit,
   entry,
   onPreview,
   onRestore,
   selected,
 }: {
-  canEdit: boolean
   entry: ItemHistoryEntry
   onPreview: () => void
   onRestore: () => void
@@ -582,16 +571,14 @@ function HistoryEntryRow({
       >
         {content}
       </button>
-      {canEdit ? (
-        <button
-          type="button"
-          aria-label="Restore this version"
-          className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={onRestore}
-        >
-          <RotateCcw className="size-3.5" aria-hidden="true" />
-        </button>
-      ) : null}
+      <button
+        type="button"
+        aria-label="Restore this version"
+        className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        onClick={onRestore}
+      >
+        <RotateCcw className="size-3.5" aria-hidden="true" />
+      </button>
     </li>
   )
 }

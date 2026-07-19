@@ -762,17 +762,176 @@ describe('item history checkpoints', () => {
           .collect()
         expect(restoredEntries).toHaveLength(2)
       })
+
+      if (sequentialContent.status !== 'ready') {
+        throw new TypeError('Expected sequentially restored note content')
+      }
+      const concurrentRestores = await Promise.all(
+        Array.from({ length: 2 }, () =>
+          asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+            campaignId: campaign.campaignDomainId,
+            resourceId,
+            entryId: historicalEntryId,
+            expectedVersion: sequentialContent.version,
+          }),
+        ),
+      )
+      expect(concurrentRestores).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ status: 'restored' }),
+          { status: 'rejected', reason: 'content_changed' },
+        ]),
+      )
+      await t.run(async (ctx) => {
+        const restoredEntries = await ctx.db
+          .query('itemHistoryEntries')
+          .withIndex('by_resource_action_history', (query) =>
+            query
+              .eq('campaignUuid', campaign.campaignDomainId)
+              .eq('resourceUuid', resourceId)
+              .eq('action', ITEM_HISTORY_ACTION.contentRestored),
+          )
+          .collect()
+        expect(restoredEntries).toHaveLength(3)
+      })
     } finally {
       historicalDocument.destroy()
     }
   })
 
+  it('returns neutral previews and explicit restore failures for invalid or deleted targets', async () => {
+    vi.useFakeTimers()
+    const campaign = await setupCampaignContext(t)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const document = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Current' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const update = encodeUpdate(document)
+    document.destroy()
+    await createNote(campaign, resourceId, update)
+    const content = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+    })
+    if (content.status !== 'ready') throw new TypeError('Expected current note content')
+
+    const missingEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const missingSnapshotEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const missingSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+    const incompatibleEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const incompatibleSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+    await t.run(async (ctx) => {
+      await ctx.db.insert('itemHistoryEntries', {
+        historyEntryUuid: missingSnapshotEntryId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: resourceId,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        action: ITEM_HISTORY_ACTION.contentEdited,
+        metadata: null,
+        checkpoint: { kind: 'note', snapshotId: missingSnapshotId, version: content.version },
+        createdAt: Date.now(),
+      })
+      await ctx.db.insert('itemHistoryCheckpoints', {
+        snapshotUuid: incompatibleSnapshotId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: resourceId,
+        kind: 'canvas',
+        update,
+        version: content.version,
+      })
+      await ctx.db.insert('itemHistoryEntries', {
+        historyEntryUuid: incompatibleEntryId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: resourceId,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        action: ITEM_HISTORY_ACTION.contentEdited,
+        metadata: null,
+        checkpoint: {
+          kind: 'note',
+          snapshotId: incompatibleSnapshotId,
+          version: content.version,
+        },
+        createdAt: Date.now() + 1,
+      })
+    })
+
+    for (const [entryId, reason] of [
+      [missingEntryId, 'history_entry_unavailable'],
+      [missingSnapshotEntryId, 'snapshot_unavailable'],
+      [incompatibleEntryId, 'snapshot_incompatible'],
+    ] as const) {
+      await expect(
+        asDm(campaign).query(api.resources.queries.loadItemHistoryCheckpoint, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId,
+        }),
+      ).resolves.toEqual({ status: 'unavailable' })
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId,
+          expectedVersion: content.version,
+        }),
+      ).resolves.toEqual({ status: 'rejected', reason })
+    }
+
+    await expect(
+      executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'trash',
+        resourceIds: [resourceId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+        entryId: incompatibleEntryId,
+        expectedVersion: content.version,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'resource_unavailable' })
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+        entryId: incompatibleEntryId,
+        expectedVersion: content.version,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+
+    await expect(
+      executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'permanentlyDelete',
+        resourceIds: [resourceId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+        entryId: incompatibleEntryId,
+        expectedVersion: content.version,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'resource_unavailable' })
+  })
+
   it('restores canvas and map checkpoints through their canonical content owners', async () => {
+    vi.useFakeTimers()
     const campaign = await setupCampaignContext(t)
     const canvasId = generateDomainId(DOMAIN_ID_KIND.resource)
     const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const deletedTargetId = generateDomainId(DOMAIN_ID_KIND.resource)
     await createCanvas(campaign, canvasId)
     await createMap(campaign, mapId)
+    const deletedTargetDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    await createNote(campaign, deletedTargetId, encodeUpdate(deletedTargetDocument))
+    deletedTargetDocument.destroy()
 
     const canvasDocument = createCanvasDocumentDoc({
       nodes: [
@@ -793,8 +952,8 @@ describe('item history checkpoints', () => {
 
     const mapPinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
     const mapDestination = parseAuthoredDestination({
-      kind: 'externalUrl',
-      url: 'https://example.com',
+      kind: 'internal',
+      target: { kind: 'resource', resourceId: deletedTargetId },
     })
     if (!mapDestination) throw new TypeError('Expected map destination')
     const mapContent = {
@@ -863,6 +1022,19 @@ describe('item history checkpoints', () => {
         createdAt: Date.now(),
       })
     })
+    await expect(
+      executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'trash',
+        resourceIds: [deletedTargetId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await expect(
+      executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'permanentlyDelete',
+        resourceIds: [deletedTargetId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     const [canvasBefore, mapBefore] = await Promise.all([
       asDm(campaign).query(api.resources.queries.loadCanvasContent, {
@@ -937,6 +1109,18 @@ describe('item history checkpoints', () => {
       status: 'ready',
       content: mapContent,
       version: { revision: mapBefore.version.revision + 1 },
+    })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceReferenceEdges')
+          .withIndex('by_campaign_and_target', (query) =>
+            query
+              .eq('campaignUuid', campaign.campaignDomainId)
+              .eq('targetResourceUuid', deletedTargetId),
+          )
+          .unique(),
+      ).resolves.toMatchObject({ sourceResourceUuid: mapId })
     })
   })
 
