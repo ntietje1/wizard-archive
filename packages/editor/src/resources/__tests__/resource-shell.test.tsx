@@ -519,6 +519,42 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('imports an external file dropped on an empty folder dashboard', async () => {
+    const { core, navigation, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell ariaLabel="Folder import" runtime={core.runtime} workspaceName="DM view" />,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Create New' })).toBeInTheDocument()
+    const dropZone = screen.getByLabelText(`${resource.title} resource drop zone`)
+    const dataTransfer = {
+      dropEffect: 'none',
+      files: [new File(['external'], 'External.bin')],
+      getData: () => '',
+      items: [],
+      types: ['Files'],
+    }
+
+    fireEvent.dragOver(dropZone, { dataTransfer })
+    fireEvent.drop(dropZone, { dataTransfer })
+
+    expect(await screen.findByText('Imported 1 file')).toBeInTheDocument()
+    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
+    const importedId = navigation.current()?.resourceId
+    expect(importedId).toBeDefined()
+    const imported = importedId
+      ? core.runtime.resources.index.getSnapshot().lookup(importedId)
+      : null
+    expect(imported?.state).toBe('known')
+    if (imported?.state !== 'known') throw new Error('Expected imported file')
+    expect(imported.value).toMatchObject({
+      displayParentId: resource.id,
+      kind: 'file',
+      title: 'External.bin',
+    })
+    core.dispose()
+  })
+
   it('does not navigate when the invoking creation surface unmounts', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
     if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')

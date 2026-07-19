@@ -125,6 +125,23 @@ describe('plain transfer inventory', () => {
     })
   })
 
+  it('materializes an empty directory source as its destination container', async () => {
+    const sources = [directorySource('empty', 'Empty')]
+    const entries: ReadonlyArray<PlainTransferSourceEntry> = []
+
+    const result = await buildPlainTransferInventory({
+      request: await plainRequest('plain_resources', sources, entries),
+      entries,
+    })
+
+    expect(paths(result)).toEqual(['Empty'])
+    expect(result.status === 'ready' ? result.inventory.resources[0] : result).toMatchObject({
+      kind: 'folder',
+      parentId: null,
+      title: 'Empty',
+    })
+  })
+
   it('strips a sole ZIP wrapper only for a new plain workspace', async () => {
     const sources = [zipSource('zip', 'campaign.zip')]
     const entries: Array<PlainTransferSourceEntry> = [

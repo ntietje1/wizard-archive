@@ -6,7 +6,7 @@ import type { WorkspaceResourceIndexSnapshot } from '../resource-index-contract'
 import type { WorkspaceSort } from '../workspace-preferences'
 import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import {
-  allowWorkspaceResourceDrop,
+  allowWorkspaceInternalResourceDrop,
   finishWorkspaceTrashDrop,
   leaveWorkspaceResourceDrop,
 } from '../workspace-resource-drag'
@@ -77,7 +77,7 @@ export function ResourceTrashControl({
         aria-pressed={view === 'trash'}
         className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-destructive"
         onClick={() => setOpen((value) => !value)}
-        onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
+        onDragOver={canEdit ? allowWorkspaceInternalResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
         onDrop={canEdit ? (event) => void finishWorkspaceTrashDrop(event, actions) : undefined}
       >

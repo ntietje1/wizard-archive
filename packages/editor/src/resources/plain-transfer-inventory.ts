@@ -498,8 +498,8 @@ function placeEntries(
   request: PlainTransferJobRequest,
   entries: ReadonlyArray<CanonicalEntry>,
 ): ReadonlyArray<PlacedEntry> {
-  return entries.map((entry) => {
-    if (request.mode === 'plain_workspace') {
+  if (request.mode === 'plain_workspace') {
+    return entries.map((entry) => {
       const wrapper =
         entry.source.kind === 'zip' ? soleTopLevelDirectory(entries, entry.source) : null
       return {
@@ -511,14 +511,30 @@ function placeEntries(
               ? entry.path.slice(wrapper.length + 1)
               : entry.path,
       }
-    }
-    if (entry.source.kind === 'file') return { ...entry, placedPath: entry.path }
-    const container =
-      entry.source.kind === 'zip'
-        ? entry.source.name.replace(/\.zip$/i, '') || entry.source.name
-        : entry.source.name
-    return { ...entry, placedPath: `${normalizeSourcePath(container)}/${entry.path}` }
+    })
+  }
+  const sourceContainers = request.sources.flatMap((source): ReadonlyArray<PlacedEntry> => {
+    if (source.kind === 'file') return []
+    const path = plainTransferSourceContainer(source)
+    return [{ source, path, placedPath: path, type: 'directory', bytes: null }]
   })
+  return [
+    ...sourceContainers,
+    ...entries.map((entry) =>
+      entry.source.kind === 'file'
+        ? { ...entry, placedPath: entry.path }
+        : {
+            ...entry,
+            placedPath: `${plainTransferSourceContainer(entry.source)}/${entry.path}`,
+          },
+    ),
+  ]
+}
+
+function plainTransferSourceContainer(source: TransferSourceDescriptor): string {
+  const name =
+    source.kind === 'zip' ? source.name.replace(/\.zip$/i, '') || source.name : source.name
+  return normalizeSourcePath(name)
 }
 
 function ordinaryCanonicalEntries(

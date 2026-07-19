@@ -251,6 +251,7 @@ export function ResourceSidebar({
       </div>
       <div
         aria-label={`${view} resource drop zone`}
+        data-external-file-drop-disabled={view === 'trash' ? 'true' : undefined}
         className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:bg-muted/40"
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
@@ -616,6 +617,7 @@ function ResourceTreeButton({
       type="button"
       aria-current={selectedResourceId === resource.id ? 'page' : undefined}
       data-resource-id={resource.id}
+      data-resource-kind={resource.kind}
       data-selected={selected}
       {...workspaceResourceInteractionProps({
         actions,

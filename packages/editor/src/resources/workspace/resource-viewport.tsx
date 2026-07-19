@@ -325,14 +325,34 @@ function FolderViewport({
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, folder.id)
   const load = useEnsureResourceCollection(runtime.resources.loader, query)
   const collection = snapshot.list(query)
-  if (collection.state === 'unknown') return <FolderLoadingState load={load} />
+  if (collection.state === 'unknown') {
+    return (
+      <FolderViewportSurface
+        actions={actions}
+        canEdit={canEdit}
+        folderId={folder.id}
+        folderTitle={folder.title}
+      >
+        <FolderLoadingState load={load} />
+      </FolderViewportSurface>
+    )
+  }
 
   const resources = sortAuthorizedResourceSummaries(collection.items, sort.by, sort.direction)
   if (resources.length === 0 && collection.complete) {
-    return canEdit ? (
-      <CreateNewDashboard actions={actions} creation={creation} folder={folder} />
-    ) : (
-      <ViewportState icon={Folder} title="This folder is empty" />
+    return (
+      <FolderViewportSurface
+        actions={actions}
+        canEdit={canEdit}
+        folderId={folder.id}
+        folderTitle={folder.title}
+      >
+        {canEdit ? (
+          <CreateNewDashboard actions={actions} creation={creation} folder={folder} />
+        ) : (
+          <ViewportState icon={Folder} title="This folder is empty" />
+        )}
+      </FolderViewportSurface>
     )
   }
 
@@ -340,13 +360,12 @@ function FolderViewport({
   const selectedIds = new Set(selection.selectedIds)
   const visibleIds = resources.map((resource) => resource.id)
   return (
-    <div
-      className="min-h-0 flex-1 overflow-y-auto data-[drop-target=true]:bg-muted/40"
-      onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
-      onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
-      onDrop={
-        canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, folder.id) : undefined
-      }
+    <FolderViewportSurface
+      actions={actions}
+      canEdit={canEdit}
+      className="overflow-y-auto"
+      folderId={folder.id}
+      folderTitle={folder.title}
     >
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 p-6">
         {resources.map((resource) => (
@@ -384,6 +403,36 @@ function FolderViewport({
           {load.result?.status === 'failed' ? 'Try loading resources again' : 'Load more resources'}
         </button>
       )}
+    </FolderViewportSurface>
+  )
+}
+
+function FolderViewportSurface({
+  actions,
+  canEdit,
+  children,
+  className = '',
+  folderId,
+  folderTitle,
+}: {
+  actions: WorkspaceActions
+  canEdit: boolean
+  children: ReactNode
+  className?: string
+  folderId: AuthorizedResourceSummary['id']
+  folderTitle: string
+}) {
+  return (
+    <div
+      aria-label={`${folderTitle} resource drop zone`}
+      className={`flex min-h-0 flex-1 flex-col data-[drop-target=true]:bg-muted/40 ${className}`}
+      onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
+      onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
+      onDrop={
+        canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, folderId) : undefined
+      }
+    >
+      {children}
     </div>
   )
 }

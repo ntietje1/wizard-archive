@@ -6,9 +6,26 @@ import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-s
 import { resourceContextMenuRequest } from './workspace/resource-context-menu-request'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
 import type { WorkspaceActions } from './workspace/resource-operations'
+import { hasBrowserPlainTransfer } from './workspace/browser-plain-transfer'
+import type { BrowserPlainTransferData } from './workspace/browser-plain-transfer'
 
 const WORKSPACE_RESOURCE_DRAG_TYPE = 'application/x-wizard-archive-resource-ids'
 const WORKSPACE_RESOURCE_DRAG_SCHEMA = 'resource-drag-v1'
+
+type WorkspaceDataTransfer = BrowserPlainTransferData &
+  Pick<DataTransfer, 'getData' | 'types'> & { dropEffect: DataTransfer['dropEffect'] }
+
+type WorkspaceDropEvent = Pick<
+  DragEvent<HTMLElement>,
+  | 'altKey'
+  | 'ctrlKey'
+  | 'currentTarget'
+  | 'metaKey'
+  | 'preventDefault'
+  | 'stopPropagation'
+  | 'target'
+> &
+  Readonly<{ dataTransfer: WorkspaceDataTransfer }>
 
 function beginWorkspaceResourceDrag(
   event: DragEvent<HTMLElement>,
@@ -70,11 +87,23 @@ export function workspaceResourceInteractionProps({
   }
 }
 
-export function allowWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
+export function allowWorkspaceResourceDrop(event: WorkspaceDropEvent) {
+  const resourceDrag = hasWorkspaceResourceDrag(event.dataTransfer)
+  const fileDrop = hasBrowserPlainTransfer(event.dataTransfer)
+  if (!resourceDrag && !fileDrop) return
   event.preventDefault()
   event.stopPropagation()
-  event.dataTransfer.dropEffect = copyDragRequested(event) ? 'copy' : 'move'
+  if (fileDrop && browserPlainTransferBlocked(event)) {
+    event.dataTransfer.dropEffect = 'none'
+    return
+  }
+  event.dataTransfer.dropEffect = fileDrop || copyDragRequested(event) ? 'copy' : 'move'
   event.currentTarget.dataset.dropTarget = 'true'
+}
+
+export function allowWorkspaceInternalResourceDrop(event: WorkspaceDropEvent) {
+  if (!hasWorkspaceResourceDrag(event.dataTransfer)) return
+  allowWorkspaceResourceDrop(event)
 }
 
 export function leaveWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
@@ -84,13 +113,27 @@ export function leaveWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
 }
 
 export async function finishWorkspaceResourceDrop(
-  event: DragEvent<HTMLElement>,
-  actions: WorkspaceActions,
+  event: WorkspaceDropEvent,
+  actions: Pick<
+    WorkspaceActions,
+    'changeLifecycle' | 'duplicate' | 'importExternal' | 'move' | 'report'
+  >,
   destinationParentId: ResourceId | null,
 ) {
   delete event.currentTarget.dataset.dropTarget
   const drag = readWorkspaceResourceDrag(event.dataTransfer)
-  if (!drag || (destinationParentId && drag.resourceIds.includes(destinationParentId))) return
+  if (!drag) {
+    if (!hasBrowserPlainTransfer(event.dataTransfer)) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (browserPlainTransferBlocked(event)) {
+      actions.report('Drop files on a folder or empty resource area')
+      return
+    }
+    await actions.importExternal(destinationParentId, event.dataTransfer)
+    return
+  }
+  if (destinationParentId && drag.resourceIds.includes(destinationParentId)) return
   event.preventDefault()
   event.stopPropagation()
   if (drag.lifecycle === 'trashed') {
@@ -159,8 +202,17 @@ function parseWorkspaceResourceDrag(value: string): Readonly<{
   return { resourceIds: Array.from(new Set(resourceIds)), lifecycle: decoded.lifecycle }
 }
 
-function copyDragRequested(event: DragEvent<HTMLElement>) {
+function copyDragRequested(event: Pick<WorkspaceDropEvent, 'altKey' | 'ctrlKey' | 'metaKey'>) {
   return event.altKey || event.ctrlKey || event.metaKey
+}
+
+function browserPlainTransferBlocked(
+  event: Pick<WorkspaceDropEvent, 'currentTarget' | 'target'>,
+): boolean {
+  if (event.currentTarget.dataset.externalFileDropDisabled === 'true') return true
+  if (!(event.target instanceof Element)) return false
+  const resource = event.target.closest<HTMLElement>('[data-resource-kind]')
+  return resource?.dataset.resourceKind !== undefined && resource.dataset.resourceKind !== 'folder'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -126,6 +126,72 @@ describe('resource application workflows', () => {
     core.dispose()
   })
 
+  it('imports nested browser directories through one transfer and opens the created folder', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const open = vi.fn()
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation: { ...navigation(generateDomainId(DOMAIN_ID_KIND.resource)), open },
+    })
+    const report = vi.fn()
+    const directory = browserDirectory('Campaign', [
+      [
+        browserFileEntry('Readme.md', '# Campaign'),
+        browserDirectory('Maps', [[browserFileEntry('Map.bin', 'map')], []]),
+      ],
+      [],
+    ])
+
+    await createWorkspaceActions(core.runtime, report).importExternal(
+      null,
+      browserDataTransfer(directory),
+    )
+
+    const rootQuery = { parentId: null, lifecycle: 'active' as const }
+    await core.runtime.resources.loader.ensureCollection(rootQuery)
+    let snapshot = core.runtime.resources.index.getSnapshot()
+    const roots = snapshot.list(rootQuery)
+    expect(roots).toMatchObject({
+      state: 'known',
+      complete: true,
+      items: [{ kind: 'folder', title: 'Campaign' }],
+    })
+    if (roots.state !== 'known' || !roots.items[0]) throw new Error('Expected imported root')
+    const childQuery = { parentId: roots.items[0].id, lifecycle: 'active' as const }
+    await core.runtime.resources.loader.ensureCollection(childQuery)
+    snapshot = core.runtime.resources.index.getSnapshot()
+    const children = snapshot.list(childQuery)
+    expect(children).toMatchObject({
+      state: 'known',
+      complete: true,
+      items: expect.arrayContaining([
+        expect.objectContaining({ kind: 'note', title: 'Readme.md' }),
+        expect.objectContaining({ kind: 'folder', title: 'Maps' }),
+      ]),
+    })
+    expect(open).toHaveBeenLastCalledWith({
+      kind: 'resource',
+      resourceId: roots.items[0].id,
+    })
+    expect(report.mock.calls.at(-1)?.[0]).toBe('Imported 2 folders, 1 note, 1 file')
+    expect(
+      report.mock.calls.some(
+        ([message, , progress]) =>
+          typeof message === 'string' && message.startsWith('Importing resources') && progress,
+      ),
+    ).toBe(true)
+    core.dispose()
+  })
+
   it('replays a committed transfer after response loss even when the initiating surface aborts', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
@@ -231,4 +297,53 @@ function navigation(initialResourceId: ResourceRecord['id']): ResourceNavigation
     open: () => {},
     subscribe: () => () => {},
   }
+}
+
+function browserDataTransfer(
+  entry: FileSystemEntry,
+): Parameters<ReturnType<typeof createWorkspaceActions>['importExternal']>[1] {
+  const item = {
+    kind: 'file',
+    type: '',
+    getAsFile: () => new File([], entry.name),
+    getAsString: () => {},
+    webkitGetAsEntry: () => entry,
+  } as DataTransferItem
+  return { files: [], items: [item] }
+}
+
+function browserFileEntry(name: string, content: string): FileSystemFileEntry {
+  return {
+    filesystem: {} as FileSystem,
+    fullPath: `/${name}`,
+    isDirectory: false,
+    isFile: true,
+    name,
+    file: (resolve) => resolve(new File([content], name)),
+    getParent: () => {},
+  } as FileSystemFileEntry
+}
+
+function browserDirectory(
+  name: string,
+  batches: ReadonlyArray<ReadonlyArray<FileSystemEntry>>,
+): FileSystemDirectoryEntry {
+  let index = 0
+  return {
+    filesystem: {} as FileSystem,
+    fullPath: `/${name}`,
+    isDirectory: true,
+    isFile: false,
+    name,
+    createReader: () =>
+      ({
+        readEntries: (resolve) => {
+          resolve([...(batches[index] ?? [])])
+          index += 1
+        },
+      }) as FileSystemDirectoryReader,
+    getDirectory: () => {},
+    getFile: () => {},
+    getParent: () => {},
+  } as FileSystemDirectoryEntry
 }

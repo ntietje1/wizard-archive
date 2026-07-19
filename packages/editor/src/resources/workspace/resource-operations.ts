@@ -14,8 +14,22 @@ import type { ResourceUndoHistory } from '../resource-undo-history'
 import { EMPTY_WORKSPACE_CLIPBOARD } from '../workspace-clipboard'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 import { validateFileUploadSize } from '../../../../../shared/storage/validation'
+import type {
+  PlainTransferExecutionResult,
+  PlainTransferEntryOutcome,
+  PlainTransferInputEntry,
+  PlainTransferIntent,
+  PlainTransferProgress,
+  PlainTransferSourceDescriptor,
+} from '../transfer-job-contract'
+import { readBrowserPlainTransfer } from './browser-plain-transfer'
+import type { BrowserPlainTransferData } from './browser-plain-transfer'
 
-export type WorkspaceReport = (message: string, retry?: () => void) => void
+export type WorkspaceReport = (
+  message: string,
+  retry?: () => void,
+  progress?: PlainTransferProgress,
+) => void
 
 export type WorkspaceCreationSettlement =
   | Readonly<{ status: 'completed'; resourceId: ResourceId }>
@@ -63,6 +77,10 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
       duplicateWorkspaceResources(runtime, resourceIds, destinationParentId, report),
     emptyTrash: (resourceIds: ReadonlyArray<ResourceId>) =>
       emptyWorkspaceTrash(runtime, resourceIds, report),
+    importExternal: (
+      destinationParentId: ResourceId | null,
+      dataTransfer: BrowserPlainTransferData,
+    ) => importWorkspaceDataTransfer(runtime, destinationParentId, dataTransfer, report),
     move: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
       moveWorkspaceResources(runtime, resourceIds, destinationParentId, report),
     open: (resourceId: ResourceId) => runtime.navigation.open({ kind: 'resource', resourceId }),
@@ -183,16 +201,139 @@ async function createWorkspaceFile(
     destinationParentId: parentId,
   }
   const sourceId = 'selected-file'
-  const deliver = (attemptSignal?: AbortSignal) =>
+  const deliver = createWorkspaceTransferDelivery(
+    runtime,
+    intent,
+    [{ id: sourceId, kind: 'file', name: file.name }],
+    [{ sourceId, path: file.name, type: 'file', bytes }],
+  )
+  return await completeWorkspaceTransfer(deliver, report, signal)
+}
+
+async function importWorkspaceDataTransfer(
+  runtime: EditorRuntime,
+  destinationParentId: ResourceId | null,
+  dataTransfer: BrowserPlainTransferData,
+  report: WorkspaceReport,
+): Promise<void> {
+  if (
+    runtime.resources.structure.status !== 'available' ||
+    runtime.transfers.status !== 'available'
+  ) {
+    report('Files cannot be imported in this workspace')
+    return
+  }
+  report('Reading dropped files…')
+  let transfer
+  try {
+    transfer = await readBrowserPlainTransfer(dataTransfer)
+  } catch {
+    report('Could not read the dropped files')
+    return
+  }
+  if (transfer.sources.length === 0) {
+    report('No files were found in the drop')
+    return
+  }
+  const deliver = createWorkspaceTransferDelivery(
+    runtime,
+    {
+      campaignId: runtime.scope.campaignId,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      destinationParentId,
+    },
+    transfer.sources,
+    transfer.entries,
+  )
+  await settleWorkspaceDropTransfer(runtime, deliver, report)
+}
+
+type WorkspaceTransferDelivery = (
+  signal?: AbortSignal,
+  onProgress?: (progress: PlainTransferProgress) => void,
+) => Promise<PlainTransferExecutionResult>
+
+function createWorkspaceTransferDelivery(
+  runtime: EditorRuntime,
+  intent: PlainTransferIntent,
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>,
+  entries: ReadonlyArray<PlainTransferInputEntry>,
+): WorkspaceTransferDelivery {
+  return (signal, onProgress) =>
     runtime.transfers.status === 'available'
       ? runtime.transfers.value.execute(
           intent,
-          [{ id: sourceId, kind: 'file', name: file.name }],
-          [{ sourceId, path: file.name, type: 'file', bytes }],
-          attemptSignal ? { signal: attemptSignal } : undefined,
+          sources,
+          entries,
+          signal || onProgress
+            ? {
+                ...(signal ? { signal } : {}),
+                ...(onProgress ? { onProgress } : {}),
+              }
+            : undefined,
         )
-      : Promise.resolve({ status: 'rejected' as const, reason: runtime.transfers.reason })
-  return await completeWorkspaceTransfer(deliver, report, signal)
+      : Promise.resolve({ status: 'rejected', reason: runtime.transfers.reason })
+}
+
+async function settleWorkspaceDropTransfer(
+  runtime: EditorRuntime,
+  deliver: WorkspaceTransferDelivery,
+  report: WorkspaceReport,
+): Promise<void> {
+  let result: PlainTransferExecutionResult
+  try {
+    result = await deliver(undefined, (progress) => {
+      const current = progress.currentPath ? `: ${progress.currentPath}` : ''
+      report(`Importing resources${current}`, undefined, progress)
+    })
+  } catch {
+    report('Import failed', () => void settleWorkspaceDropTransfer(runtime, deliver, report))
+    return
+  }
+  if (result.status === 'indeterminate') {
+    report(
+      `Import status is unresolved: ${result.reason}`,
+      () => void settleWorkspaceDropTransfer(runtime, deliver, report),
+    )
+    return
+  }
+  if (result.status === 'cancelled') {
+    report('Import cancelled')
+    return
+  }
+  if (result.status === 'rejected') {
+    report(`Import rejected: ${result.reason}`)
+    return
+  }
+  const completed = result.entries.filter((entry) => entry.status === 'completed')
+  const rejected = result.entries.filter((entry) => entry.status === 'rejected')
+  report(workspaceTransferSummary(completed, rejected))
+  const opened = completed.find((entry) => entry.kind === 'folder') ?? completed[0]
+  if (opened) runtime.navigation.open({ kind: 'resource', resourceId: opened.resourceId })
+}
+
+function workspaceTransferSummary(
+  completed: ReadonlyArray<Extract<PlainTransferEntryOutcome, { status: 'completed' }>>,
+  rejected: ReadonlyArray<Extract<PlainTransferEntryOutcome, { status: 'rejected' }>>,
+): string {
+  const folders = completed.filter((entry) => entry.kind === 'folder').length
+  const notes = completed.filter((entry) => entry.kind === 'note').length
+  const files = completed.length - folders - notes
+  const imported = [
+    folders > 0 ? `${folders} folder${folders === 1 ? '' : 's'}` : '',
+    notes > 0 ? `${notes} note${notes === 1 ? '' : 's'}` : '',
+    files > 0 ? `${files} file${files === 1 ? '' : 's'}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ')
+  if (!imported && rejected.length === 0) return 'Nothing was imported'
+  if (rejected.length === 0) return `Imported ${imported}`
+  const reasons = rejected
+    .slice(0, 3)
+    .map((entry) => `${entry.sourcePath}: ${entry.reason}`)
+    .join('; ')
+  return `${imported ? `Imported ${imported}. ` : ''}${rejected.length} skipped: ${reasons}`
 }
 
 async function createWorkspaceAssetFile(

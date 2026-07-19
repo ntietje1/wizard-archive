@@ -36,6 +36,7 @@ import type {
   NoteHeadingNavigation,
   NoteHeadingNavigationRef,
 } from '../notes/note-heading-navigation'
+import type { PlainTransferProgress } from './transfer-job-contract'
 
 const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
@@ -90,11 +91,19 @@ export function ResourceShell({
         resourceIds: ReadonlyArray<ResourceId>
       }>
   >({ status: 'closed' })
-  const [notice, setNotice] = useState<{ message: string; retry?: () => void } | null>(null)
+  const [notice, setNotice] = useState<{
+    message: string
+    retry?: () => void
+    progress?: PlainTransferProgress
+  } | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const noteHeadingNavigation = useRef<NoteHeadingNavigation | null>(null)
-  const report: WorkspaceReport = (message, retry) =>
-    setNotice({ message, ...(retry ? { retry } : {}) })
+  const report: WorkspaceReport = (message, retry, progress) =>
+    setNotice({
+      message,
+      ...(retry ? { retry } : {}),
+      ...(progress ? { progress } : {}),
+    })
   const actions = createWorkspaceActions(runtime, report)
   const leftVisible = showResourcePanel && preferences.panels.left.visible
   const rightVisible = selected.state === 'known' && preferences.panels.right.visible
@@ -300,25 +309,47 @@ export function ResourceShell({
       {notice && (
         <div
           role="status"
-          className="absolute bottom-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-md border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg"
+          className="absolute bottom-3 left-1/2 z-50 min-w-72 -translate-x-1/2 rounded-md border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg"
         >
-          <span>{notice.message}</span>
-          {notice.retry && (
-            <button type="button" className="font-medium underline" onClick={notice.retry}>
-              Retry
+          <div className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate">{notice.message}</span>
+            {notice.retry && (
+              <button type="button" className="font-medium underline" onClick={notice.retry}>
+                Retry
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              className="text-muted-foreground"
+              onClick={() => setNotice(null)}
+            >
+              ×
             </button>
-          )}
-          <button
-            type="button"
-            aria-label="Dismiss notification"
-            className="text-muted-foreground"
-            onClick={() => setNotice(null)}
-          >
-            ×
-          </button>
+          </div>
+          {notice.progress && <WorkspaceTransferProgress progress={notice.progress} />}
         </div>
       )}
     </section>
+  )
+}
+
+function WorkspaceTransferProgress({ progress }: { progress: PlainTransferProgress }) {
+  const useBytes = progress.totalBytes > 0
+  const value = useBytes ? progress.uploadedBytes : progress.completedEntries
+  const maximum = useBytes ? progress.totalBytes : progress.totalEntries
+  return (
+    <div className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+      <progress
+        aria-label="Import progress"
+        className="h-1.5 w-full accent-primary"
+        max={Math.max(1, maximum)}
+        value={Math.min(value, maximum)}
+      />
+      <p>
+        {progress.completedEntries}/{progress.totalEntries} resources
+      </p>
+    </div>
   )
 }
 
