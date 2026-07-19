@@ -86,7 +86,7 @@ describe('live plain transfer gateway', () => {
     expect(execute).toHaveBeenCalledTimes(2)
     expect(execute.mock.calls[1]?.[0].entries).toEqual(execute.mock.calls[0]?.[0].entries)
     expect(refresh).toHaveBeenCalledWith(resource.id, null)
-    expect(discard).toHaveBeenCalledWith(sessionId)
+    expect(discard).not.toHaveBeenCalled()
   })
 
   it('persists cancellation with the immutable planned entry identity', async () => {
@@ -187,9 +187,10 @@ describe('live plain transfer gateway', () => {
         })),
       }),
     )
+    const discard = vi.fn(() => Promise.resolve())
     const gateway = createLivePlainTransferGateway(campaignId, actorId, {
       cancel: vi.fn(() => Promise.resolve()),
-      discard: vi.fn(() => Promise.resolve()),
+      discard,
       execute,
       refresh: vi.fn(() => Promise.resolve()),
       upload: vi.fn(() => Promise.resolve('markdown-session' as Id<'fileStorage'>)),
@@ -207,6 +208,7 @@ describe('live plain transfer gateway', () => {
       { type: 'heading', content: [{ type: 'text', text: 'Session' }] },
       { type: 'paragraph', content: [{ type: 'text', text: 'Arrival notes' }] },
     ])
+    expect(discard).toHaveBeenCalledWith('markdown-session')
   })
 })
 

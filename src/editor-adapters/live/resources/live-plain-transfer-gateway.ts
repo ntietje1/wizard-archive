@@ -104,8 +104,11 @@ export function createLivePlainTransferGateway(
         })
         if (result.status === 'indeterminate') return result
         pending.delete(intent.jobId)
-        await discardSessions(backend, transfer.sessions)
-        if (result.status !== 'completed') return result
+        if (result.status !== 'completed') {
+          await discardSessions(backend, transfer.sessions)
+          return result
+        }
+        await discardRejectedSessions(backend, transfer.sessions, result.entries)
         const completed = await completeLivePlainTransfer(
           planned.inventory.resources,
           result,
@@ -222,6 +225,22 @@ async function discardSessions(
 ): Promise<void> {
   await Promise.all(
     [...sessions.values()].map((sessionId) => backend.discard(sessionId).catch(() => undefined)),
+  )
+}
+
+async function discardRejectedSessions(
+  backend: Pick<LivePlainTransferBackend, 'discard'>,
+  sessions: ReadonlyMap<string, Id<'fileStorage'>>,
+  entries: Extract<ExecuteResult, { status: 'completed' }>['entries'],
+): Promise<void> {
+  await Promise.all(
+    entries.flatMap((entry) => {
+      if (entry.status !== 'rejected') return []
+      const sessionId = sessions.get(
+        transferEntryKey({ sourceId: entry.sourceId, path: entry.sourcePath }),
+      )
+      return sessionId ? [backend.discard(sessionId).catch(() => undefined)] : []
+    }),
   )
 }
 
