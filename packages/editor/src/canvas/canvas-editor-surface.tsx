@@ -402,7 +402,11 @@ export function CanvasEditorSurface({
           if (interactionController.commitPan(event.pointerId)) return
           commitAreaSelection(event.pointerId, interactionController)
         }}
-        onPointerCancel={() => interactionController.cancelInteraction()}
+        onPointerCancel={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            interactionController.cancelInteraction()
+          }
+        }}
         onPointerLeave={() => setCanvasCollaborationCursor(collaboration, null)}
       >
         <CanvasScene

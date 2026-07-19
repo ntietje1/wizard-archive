@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 test.describe('canvas rich text', () => {
   test('keeps embedded and canvas-text block controls inside the active editor', async ({
@@ -33,23 +34,76 @@ test.describe('canvas rich text', () => {
     await expect(page.locator('.bn-drag-preview')).toBeVisible()
     await noteDragHandle.dispatchEvent('dragend', { dataTransfer: noteTransfer })
 
-    await canvas.getByRole('button', { name: 'Text', exact: true }).click()
-    const surfaceBox = await surface.boundingBox()
+    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
+    const freshCanvas = page.getByRole('application', {
+      name: 'Harbor Heist Board canvas editor',
+    })
+    await expect(freshCanvas).toBeVisible()
+    const freshSurface = freshCanvas.getByRole('region', { name: 'Canvas surface' })
+    await freshCanvas.getByRole('button', { name: 'Text', exact: true }).click()
+    const surfaceBox = await freshSurface.boundingBox()
     if (!surfaceBox) throw new Error('Canvas surface is not visible')
     await page.mouse.click(surfaceBox.x + 700, surfaceBox.y + 420)
-    const textEditor = canvas.getByRole('textbox', { name: 'Canvas text' }).last()
+    const textEditor = freshCanvas.getByRole('textbox', { name: 'Canvas text' }).last()
     await textEditor.fill('Canvas block controls')
     const textBlock = textEditor.locator('[data-node-type="blockContainer"]').first()
     await textBlock.hover()
     const textDragHandle = page.locator('[data-block-drag-actions="canvas-text"]')
     await expect(textDragHandle).toBeVisible()
-    await textDragHandle.dispatchEvent('mousedown', { button: 0 })
     await textDragHandle.click()
     await expect(textDragHandle).toHaveAttribute('aria-expanded', 'true')
     await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: 'Comment' })).toHaveCount(0)
+  })
+
+  test('reorders blocks within embedded note and canvas text editors', async ({ page }) => {
+    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
+    let canvas = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
+    await expect(canvas).toBeVisible()
+    let surface = canvas.getByRole('region', { name: 'Canvas surface' })
+
+    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'The Lantern Market', exact: true })
+      .dragTo(surface, { targetPosition: { x: 420, y: 280 } })
+    const noteEditor = canvas
+      .getByRole('textbox', { name: 'The Lantern Market embedded note' })
+      .last()
+    const noteBlocks = noteEditor.locator('[data-node-type="blockContainer"]')
+    const secondNoteBlockText = await noteBlocks.nth(1).textContent()
+    await noteBlocks.first().dblclick()
+    await expect(canvas.getByTestId('canvas-selection-resize-wrapper')).toHaveCount(0)
+    await noteBlocks.nth(1).hover()
+    const noteDragHandle = page.locator('[data-block-drag-actions="note"]')
+    await expect(noteDragHandle).toBeVisible()
+    await dispatchBlockDrag(page, noteDragHandle, noteBlocks.first())
+    await expect(noteBlocks.first()).toHaveText(secondNoteBlockText ?? '')
+    await expect(noteEditor).toHaveAttribute('contenteditable', 'true')
+
+    await page.goto('/demo?scenario=connected-canvas', { waitUntil: 'commit' })
+    canvas = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
+    await expect(canvas).toBeVisible()
+    surface = canvas.getByRole('region', { name: 'Canvas surface' })
+    await canvas.getByRole('button', { name: 'Text', exact: true }).click()
+    const surfaceBox = await surface.boundingBox()
+    if (!surfaceBox) throw new Error('Canvas surface is not visible')
+    await page.mouse.click(surfaceBox.x + 700, surfaceBox.y + 420)
+    const textEditor = canvas.getByRole('textbox', { name: 'Canvas text' }).last()
+    await expect(canvas.getByTestId('canvas-selection-resize-wrapper')).toHaveCount(0)
+    await textEditor.fill('First block')
+    await textEditor.press('Enter')
+    await page.keyboard.type('Second block')
+    const textBlocks = textEditor.locator('[data-node-type="blockContainer"]')
+    const firstTextBlock = textBlocks.filter({ hasText: 'First block' }).first()
+    const secondTextBlock = textBlocks.filter({ hasText: 'Second block' }).first()
+    await secondTextBlock.hover()
+    const textDragHandle = page.locator('[data-block-drag-actions="canvas-text"]')
+    await expect(textDragHandle).toBeVisible()
+    await dispatchBlockDrag(page, textDragHandle, firstTextBlock)
+    await expect(textBlocks.first()).toContainText('Second block')
+    await expect(textEditor).toHaveAttribute('contenteditable', 'true')
   })
 
   test('places text and embedded-note carets at the double-click point', async ({ page }) => {
@@ -193,3 +247,27 @@ test.describe('canvas rich text', () => {
     await expect(page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()
   })
 })
+
+async function dispatchBlockDrag(page: Page, handle: Locator, target: Locator) {
+  const sourceBox = await handle.boundingBox()
+  const targetBox = await target.boundingBox()
+  const nodeBox = await target
+    .locator('xpath=ancestor::*[@data-testid="canvas-node"][1]')
+    .boundingBox()
+  if (!sourceBox || !targetBox || !nodeBox) {
+    throw new Error('Block drag source, target, or canvas node is not visible')
+  }
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
+  await page.mouse.down()
+  try {
+    await page.mouse.move(targetBox.x + 16, Math.max(targetBox.y + 1, nodeBox.y + 2), {
+      steps: 18,
+    })
+  } finally {
+    await page.mouse.up()
+  }
+  const settledNodeBox = await target
+    .locator('xpath=ancestor::*[@data-testid="canvas-node"][1]')
+    .boundingBox()
+  expect(settledNodeBox).toMatchObject({ x: nodeBox.x, y: nodeBox.y })
+}

@@ -58,7 +58,9 @@ export function CanvasSelectionBounds({
       />
     )
   }
-  if (interaction.interaction.type === 'dragging') return null
+  if (interaction.interaction.type === 'dragging' || interaction.interaction.type === 'editing') {
+    return null
+  }
   const selectedNodes = getSelectedNodes(nodes, interaction.selection)
   const bounds = canvasBoundsUnion(selectedNodes.map(canvasNodeBounds))
   if (!bounds) return null

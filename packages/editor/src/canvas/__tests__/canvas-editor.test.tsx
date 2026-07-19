@@ -625,6 +625,7 @@ describe('CanvasEditor', () => {
       'contenteditable',
       'true',
     )
+    expect(screen.queryByTestId('canvas-selection-resize-wrapper')).not.toBeInTheDocument()
     expect(nodes[0]).toHaveAttribute('data-selected', 'false')
     expect(nodes[1]).toHaveAttribute('data-selected', 'true')
 
@@ -710,6 +711,7 @@ describe('CanvasEditor', () => {
     expect(node).toHaveAttribute('data-selected', 'true')
     expect(embeddedNote).toHaveAttribute('data-editing', 'true')
     expect(embeddedNote.closest('.nowheel')).not.toBeNull()
+    expect(screen.queryByTestId('canvas-selection-resize-wrapper')).not.toBeInTheDocument()
 
     view.unmount()
     session.dispose()

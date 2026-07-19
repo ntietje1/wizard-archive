@@ -331,7 +331,11 @@ function CanvasNode({
       onPointerUp={(event) =>
         commitNodeDrag(canEdit, event, documentController, interactionController, node.id, surface)
       }
-      onPointerCancel={() => interactionController.cancelInteraction()}
+      onPointerCancel={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          interactionController.cancelInteraction()
+        }
+      }}
     >
       <CanvasNodeVisual
         {...(editing

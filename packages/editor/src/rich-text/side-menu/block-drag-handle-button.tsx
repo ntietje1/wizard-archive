@@ -105,8 +105,8 @@ export function BlockDragHandleButton({
         <TooltipTrigger
           render={
             <DropdownMenuTrigger
-              onClick={noteActions ? () => onMenuOpenChange(!menuOpen) : undefined}
-              onMouseDown={noteActions ? (event) => event.preventBaseUIHandler() : undefined}
+              onClick={() => onMenuOpenChange(!menuOpen)}
+              onMouseDown={(event) => event.preventBaseUIHandler()}
               render={
                 <Components.SideMenu.Button
                   label="Drag block"
