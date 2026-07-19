@@ -60,6 +60,10 @@ import {
   syncResourceSearchProjection,
 } from './resourceSearchProjection'
 import { copyResourceAccessPolicy, createInitialResourceAccessPolicy } from './resourceAccess'
+import {
+  recordResourceCopyHistory,
+  recordResourceGraphTransitionHistory,
+} from './itemHistoryStructure'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -418,6 +422,7 @@ async function deepCopyResources(
   await Promise.all(
     copies.map(({ source, destination }) => copyResourceSearchBody(ctx, source.id, destination)),
   )
+  await recordResourceCopyHistory(ctx, copies)
 
   return {
     status: 'completed',
@@ -662,6 +667,7 @@ async function applyCommand(
   })
   const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
   await persistTransition(ctx, graph, transition)
+  await recordResourceGraphTransitionHistory(ctx, graph, transition)
   return { result: { status: 'completed', receipt: transition.receipt }, compensation }
 }
 
@@ -775,6 +781,7 @@ export async function compensateResourceOperation(
     })
     if (!applied) return { status: 'rejected', reason: 'history_conflict' }
     await persistTransition(ctx, graph, applied.transition)
+    await recordResourceGraphTransitionHistory(ctx, graph, applied.transition)
     await ctx.db.insert('resourceOperations', {
       campaignUuid: campaignId,
       actorMemberUuid: actorId,

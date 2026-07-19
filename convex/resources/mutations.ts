@@ -89,6 +89,8 @@ import {
   validatePlainFileTransferCommit,
 } from './functions/plainFileTransfer'
 import type { PlainFileTransferStartResult } from './functions/plainFileTransfer'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { recordItemHistoryEvent } from './functions/itemHistory'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -968,6 +970,10 @@ async function commitPreparedFileContentReplacement(
     state: 'ready',
     ...args.metadata,
     version: prepared.version,
+  })
+  await recordItemHistoryEvent(ctx, prepared.resourceId, {
+    action: ITEM_HISTORY_ACTION.fileReplaced,
+    metadata: null,
   })
   if (prepared.previousOwner) await ctx.db.delete(prepared.previousOwner._id)
   if (prepared.previousAssetId) {

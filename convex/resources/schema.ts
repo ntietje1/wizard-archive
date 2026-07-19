@@ -426,8 +426,8 @@ const itemHistoryEntryValidator = v.union(
   nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.fileRemoved),
   objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.accessChanged, {
     subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
-    from: resourcePermissionValidator,
-    to: resourcePermissionValidator,
+    from: v.union(resourcePermissionValidator, v.literal('default')),
+    to: v.union(resourcePermissionValidator, v.literal('default')),
   }),
   objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.blockVisibilityChanged, {
     blockCount: v.number(),

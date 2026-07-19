@@ -1,13 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { FunctionArgs } from 'convex/server'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '@wizard-archive/editor/notes/document-yjs'
 import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
+
+type StoredStructureCommand = FunctionArgs<
+  typeof api.resources.mutations.executeStructureCommand
+>['command']
+type StoredAccessCommand = FunctionArgs<
+  typeof api.resources.mutations.executeResourceAccessCommand
+>['command']
+type StoredBlockAccessCommand = FunctionArgs<
+  typeof api.resources.mutations.executeNoteBlockAccessCommand
+>['command']
 
 describe('item history checkpoints', () => {
   const t = createTestContext()
@@ -202,10 +213,252 @@ describe('item history checkpoints', () => {
     })
   })
 
+  it('records structure transitions and compensation from canonical graph changes', async () => {
+    const campaign = await setupCampaignContext(t)
+    const sourceFolderId = await createFolder(campaign, 'Source')
+    const destinationFolderId = await createFolder(campaign, 'Destination')
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const document = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    try {
+      await createNote(campaign, resourceId, encodeUpdate(document), {
+        parentId: sourceFolderId,
+        title: 'Original',
+      })
+    } finally {
+      document.destroy()
+    }
+
+    const metadataOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const metadataCommand = {
+      type: 'updateMetadata' as const,
+      resourceId,
+      changes: { title: 'Renamed', icon: 'BookOpen', color: 'blue' },
+    }
+    const metadataResult = await executeStructure(campaign, metadataOperationId, metadataCommand)
+    await expect(executeStructure(campaign, metadataOperationId, metadataCommand)).resolves.toEqual(
+      metadataResult,
+    )
+
+    const moveOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await executeStructure(campaign, moveOperationId, {
+      type: 'move',
+      resourceIds: [resourceId],
+      destinationParentId: destinationFolderId,
+    })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.compensateResourceOperation, {
+        campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        originalOperationId: moveOperationId,
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'move',
+      resourceIds: [resourceId],
+      destinationParentId: destinationFolderId,
+    })
+    await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'trash',
+      resourceIds: [resourceId],
+    })
+    await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'restore',
+      resourceIds: [resourceId],
+    })
+    const copied = await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'deepCopy',
+      sourceRootIds: [resourceId],
+      destinationParentId: null,
+    })
+    if (copied.status !== 'completed' || copied.receipt.result.type !== 'deepCopied') {
+      throw new TypeError('Expected copied resource')
+    }
+    const copiedId = copied.receipt.result.roots[0]!.destinationRootId
+
+    await t.run(async (ctx) => {
+      const sourceEntries = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_history', (query) =>
+          query.eq('campaignUuid', campaign.campaignDomainId).eq('resourceUuid', resourceId),
+        )
+        .collect()
+      expect(sourceEntries.map((entry) => entry.action)).toEqual(
+        expect.arrayContaining([
+          ITEM_HISTORY_ACTION.created,
+          ITEM_HISTORY_ACTION.renamed,
+          ITEM_HISTORY_ACTION.iconChanged,
+          ITEM_HISTORY_ACTION.colorChanged,
+          ITEM_HISTORY_ACTION.trashed,
+          ITEM_HISTORY_ACTION.restored,
+        ]),
+      )
+      expect(
+        sourceEntries.filter((entry) => entry.action === ITEM_HISTORY_ACTION.moved),
+      ).toHaveLength(3)
+      expect(sourceEntries).toHaveLength(9)
+      expect(sourceEntries.map((entry) => entry.metadata)).toEqual(
+        expect.arrayContaining([
+          { from: 'Original', to: 'Renamed' },
+          { from: null, to: 'BookOpen' },
+          { from: null, to: 'blue' },
+          { from: 'Source', to: 'Destination' },
+          { from: 'Destination', to: 'Source' },
+        ]),
+      )
+
+      const copiedEntries = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_history', (query) =>
+          query.eq('campaignUuid', campaign.campaignDomainId).eq('resourceUuid', copiedId),
+        )
+        .collect()
+      expect(copiedEntries).toEqual([
+        expect.objectContaining({
+          action: ITEM_HISTORY_ACTION.copied,
+          metadata: { sourceResourceId: resourceId, sourceTitle: 'Renamed' },
+        }),
+      ])
+    })
+  })
+
+  it('records only effective resource and block access changes', async () => {
+    const campaign = await setupCampaignContext(t)
+    const folderId = await createFolder(campaign, 'Shared folder')
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const blockIds = [
+      generateDomainId(DOMAIN_ID_KIND.noteBlock),
+      generateDomainId(DOMAIN_ID_KIND.noteBlock),
+    ]
+    const document = noteBlocksToYDoc(
+      blockIds.map((id) => ({ id, type: 'paragraph' })),
+      NOTE_YJS_FRAGMENT,
+    )
+    try {
+      await createNote(campaign, resourceId, encodeUpdate(document))
+    } finally {
+      document.destroy()
+    }
+
+    const audienceOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const audienceCommand = {
+      type: 'setAudienceAccess' as const,
+      resourceIds: [resourceId],
+      permission: 'view' as const,
+    }
+    await executeAccess(campaign, audienceOperationId, audienceCommand)
+    await executeAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), audienceCommand)
+    await executeAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'setMemberAccess',
+      resourceIds: [resourceId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'edit',
+    })
+    await executeAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'clearMemberAccess',
+      resourceIds: [resourceId],
+      memberId: campaign.player.memberDomainId,
+    })
+    await executeAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'clearAudienceAccess',
+      resourceIds: [resourceId],
+    })
+    await executeAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'setFolderAccessInheritance',
+      folderId,
+      inheritance: 'enabled',
+    })
+
+    const blockAudienceOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const blockAudienceCommand = {
+      type: 'setNoteBlockAudienceAccess' as const,
+      noteId: resourceId,
+      blockIds,
+      shared: true,
+    }
+    await executeBlockAccess(campaign, blockAudienceOperationId, blockAudienceCommand)
+    await executeBlockAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'setNoteBlockMemberAccess',
+      noteId: resourceId,
+      blockIds,
+      memberId: campaign.player.memberDomainId,
+      permission: 'none',
+    })
+    await executeBlockAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'clearNoteBlockMemberAccess',
+      noteId: resourceId,
+      blockIds,
+      memberId: campaign.player.memberDomainId,
+    })
+    await expect(
+      executeBlockAccess(campaign, blockAudienceOperationId, blockAudienceCommand),
+    ).resolves.toMatchObject({ status: 'completed' })
+
+    await t.run(async (ctx) => {
+      const entries = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_history', (query) =>
+          query.eq('campaignUuid', campaign.campaignDomainId).eq('resourceUuid', resourceId),
+        )
+        .collect()
+      const accessEntries = entries.filter(
+        (entry) => entry.action === ITEM_HISTORY_ACTION.accessChanged,
+      )
+      expect(accessEntries).toHaveLength(4)
+      expect(accessEntries.map((entry) => entry.metadata)).toEqual(
+        expect.arrayContaining([
+          { subject: 'all_players', from: 'default', to: 'view' },
+          {
+            subject: campaign.player.memberDomainId,
+            from: 'default',
+            to: 'edit',
+          },
+          {
+            subject: campaign.player.memberDomainId,
+            from: 'edit',
+            to: 'default',
+          },
+          { subject: 'all_players', from: 'view', to: 'default' },
+        ]),
+      )
+      const blockEntries = entries.filter(
+        (entry) => entry.action === ITEM_HISTORY_ACTION.blockVisibilityChanged,
+      )
+      expect(blockEntries).toHaveLength(3)
+      expect(blockEntries.map((entry) => entry.metadata)).toEqual(
+        expect.arrayContaining([
+          { subject: 'all_players', blockCount: 2, visible: true },
+          {
+            subject: campaign.player.memberDomainId,
+            blockCount: 2,
+            visible: false,
+          },
+          {
+            subject: campaign.player.memberDomainId,
+            blockCount: 2,
+            visible: true,
+          },
+        ]),
+      )
+      const folderEntries = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_action_history', (query) =>
+          query
+            .eq('campaignUuid', campaign.campaignDomainId)
+            .eq('resourceUuid', folderId)
+            .eq('action', ITEM_HISTORY_ACTION.inheritanceChanged),
+        )
+        .collect()
+      expect(folderEntries).toEqual([
+        expect.objectContaining({ metadata: { from: 'disabled', to: 'enabled' } }),
+      ])
+    })
+  })
+
   async function createNote(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     resourceId: ResourceId,
     update: ArrayBuffer,
+    options: { parentId?: ResourceId; title?: string } = {},
   ) {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
@@ -215,14 +468,67 @@ describe('item history checkpoints', () => {
           type: 'create',
           resourceId,
           kind: 'note',
-          parentId: null,
-          title: 'History note',
+          parentId: options.parentId ?? null,
+          title: options.title ?? 'History note',
           icon: null,
           color: null,
         },
         update,
       }),
     ).resolves.toMatchObject({ status: 'completed' })
+  }
+
+  async function createFolder(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    title: string,
+  ) {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+      type: 'create',
+      resourceId,
+      kind: 'folder',
+      parentId: null,
+      title,
+      icon: null,
+      color: null,
+    })
+    return resourceId
+  }
+
+  async function executeStructure(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    operationId: OperationId,
+    command: StoredStructureCommand,
+  ) {
+    return await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaign.campaignDomainId,
+      operationId,
+      command,
+    })
+  }
+
+  async function executeAccess(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    operationId: OperationId,
+    command: StoredAccessCommand,
+  ) {
+    return await asDm(campaign).mutation(api.resources.mutations.executeResourceAccessCommand, {
+      campaignId: campaign.campaignDomainId,
+      operationId,
+      command,
+    })
+  }
+
+  async function executeBlockAccess(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    operationId: OperationId,
+    command: StoredBlockAccessCommand,
+  ) {
+    return await asDm(campaign).mutation(api.resources.mutations.executeNoteBlockAccessCommand, {
+      campaignId: campaign.campaignDomainId,
+      operationId,
+      command,
+    })
   }
 
   async function createCanvas(

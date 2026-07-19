@@ -17,6 +17,7 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import type { NoteBlockId, OperationId } from '@wizard-archive/editor/resources/domain-id'
 import { NOTE_BLOCK_VISIBILITY } from '@wizard-archive/editor/resources/note-block-access-policy'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
@@ -24,6 +25,7 @@ import { findNoteContent } from './noteContent'
 import { flattenNoteBlockIds } from './noteBlockAccess'
 import { isAcceptedCampaignPlayer } from './campaignPlayer'
 import { accessOperationWasReused, findAccessOperation } from './accessOperation'
+import { recordItemHistoryEvent } from './itemHistory'
 
 type PlannedWrite =
   | { type: 'insertAudience'; blockId: NoteBlockId }
@@ -67,6 +69,7 @@ export async function executeNoteBlockAccessCommand(
   if (target.status === 'rejected') return target
   const writes = await planWrites(ctx, command)
   await Promise.all(writes.map((write) => applyWrite(ctx, command.noteId, write)))
+  await recordBlockAccessHistory(ctx, command, writes)
 
   const receipt: NoteBlockAccessReceipt = {
     campaignId: ctx.resourceScope.campaignId,
@@ -83,6 +86,71 @@ export async function executeNoteBlockAccessCommand(
     receipt: storedReceipt(receipt),
   })
   return { status: 'completed', receipt }
+}
+
+async function recordBlockAccessHistory(
+  ctx: CampaignMutationCtx,
+  command: NoteBlockAccessCommand,
+  writes: ReadonlyArray<PlannedWrite>,
+): Promise<void> {
+  if (writes.length === 0) return
+  const subject = command.type === 'setNoteBlockAudienceAccess' ? 'all_players' : command.memberId
+  if (command.type === 'setNoteBlockAudienceAccess') {
+    await recordBlockVisibility(ctx, command.noteId, writes.length, subject, command.shared)
+    return
+  }
+  if (command.type === 'setNoteBlockMemberAccess') {
+    await recordBlockVisibility(
+      ctx,
+      command.noteId,
+      writes.length,
+      subject,
+      command.permission === 'view',
+    )
+    return
+  }
+  const visible = await Promise.all(
+    writes.map(async (write) => {
+      if (write.type !== 'deleteMember') {
+        throw new TypeError('Cleared block access plan is corrupt')
+      }
+      return (
+        (await ctx.db
+          .query('noteBlockAudienceAccess')
+          .withIndex('by_note_and_block', (query) =>
+            query
+              .eq('campaignUuid', ctx.resourceScope.campaignId)
+              .eq('noteUuid', command.noteId)
+              .eq('blockUuid', write.row.blockUuid),
+          )
+          .unique()) !== null
+      )
+    }),
+  )
+  const visibleCount = visible.filter(Boolean).length
+  await Promise.all([
+    ...(visibleCount === 0
+      ? []
+      : [recordBlockVisibility(ctx, command.noteId, visibleCount, subject, true)]),
+    ...(visibleCount === writes.length
+      ? []
+      : [recordBlockVisibility(ctx, command.noteId, writes.length - visibleCount, subject, false)]),
+  ])
+}
+
+async function recordBlockVisibility(
+  ctx: CampaignMutationCtx,
+  noteId: NoteBlockAccessCommand['noteId'],
+  blockCount: number,
+  subject:
+    | 'all_players'
+    | Extract<NoteBlockAccessCommand, { type: 'setNoteBlockMemberAccess' }>['memberId'],
+  visible: boolean,
+) {
+  await recordItemHistoryEvent(ctx, noteId, {
+    action: ITEM_HISTORY_ACTION.blockVisibilityChanged,
+    metadata: { blockCount, subject, visible },
+  })
 }
 
 function normalizeCommand(command: NoteBlockAccessCommand) {

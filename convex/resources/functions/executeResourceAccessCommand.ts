@@ -17,12 +17,14 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 import { loadResourceAccessPolicy } from './resourceAccess'
 import { isAcceptedCampaignPlayer } from './campaignPlayer'
 import { accessOperationWasReused, findAccessOperation } from './accessOperation'
+import { recordItemHistoryEvent } from './itemHistory'
 
 export async function executeResourceAccessCommand(
   ctx: CampaignMutationCtx,
@@ -118,8 +120,21 @@ async function applyAccessCommand(
       await Promise.all(
         resourceIds.map(async (resourceId) => {
           const policy = await requirePolicy(ctx, resourceId)
+          const previous =
+            policy.audienceAccess.state === 'explicit'
+              ? policy.audienceAccess.permission
+              : 'default'
+          if (previous === command.permission) return
           await ctx.db.patch(policy._id, {
             audienceAccess: { state: 'explicit', permission: command.permission },
+          })
+          await recordItemHistoryEvent(ctx, resourceId, {
+            action: ITEM_HISTORY_ACTION.accessChanged,
+            metadata: {
+              subject: 'all_players',
+              from: previous,
+              to: command.permission,
+            },
           })
         }),
       )
@@ -128,7 +143,16 @@ async function applyAccessCommand(
       await Promise.all(
         resourceIds.map(async (resourceId) => {
           const policy = await requirePolicy(ctx, resourceId)
+          if (policy.audienceAccess.state === 'default') return
           await ctx.db.patch(policy._id, { audienceAccess: { state: 'default' } })
+          await recordItemHistoryEvent(ctx, resourceId, {
+            action: ITEM_HISTORY_ACTION.accessChanged,
+            metadata: {
+              subject: 'all_players',
+              from: policy.audienceAccess.permission,
+              to: 'default',
+            },
+          })
         }),
       )
       return
@@ -137,6 +161,7 @@ async function applyAccessCommand(
         resourceIds.map(async (resourceId) => {
           await requirePolicy(ctx, resourceId)
           const existing = await loadMemberAccess(ctx, resourceId, command.memberId)
+          if (existing?.permission === command.permission) return
           if (existing) {
             await ctx.db.patch(existing._id, { permission: command.permission })
           } else {
@@ -147,6 +172,14 @@ async function applyAccessCommand(
               permission: command.permission,
             })
           }
+          await recordItemHistoryEvent(ctx, resourceId, {
+            action: ITEM_HISTORY_ACTION.accessChanged,
+            metadata: {
+              subject: command.memberId,
+              from: existing?.permission ?? 'default',
+              to: command.permission,
+            },
+          })
         }),
       )
       return
@@ -155,14 +188,28 @@ async function applyAccessCommand(
         resourceIds.map(async (resourceId) => {
           await requirePolicy(ctx, resourceId)
           const existing = await loadMemberAccess(ctx, resourceId, command.memberId)
-          if (existing) await ctx.db.delete(existing._id)
+          if (!existing) return
+          await ctx.db.delete(existing._id)
+          await recordItemHistoryEvent(ctx, resourceId, {
+            action: ITEM_HISTORY_ACTION.accessChanged,
+            metadata: {
+              subject: command.memberId,
+              from: existing.permission,
+              to: 'default',
+            },
+          })
         }),
       )
       return
     case 'setFolderAccessInheritance': {
       const policy = await requirePolicy(ctx, command.folderId)
       if (policy.subject !== 'folder') throw new TypeError('Folder access policy is corrupt')
+      if (policy.inheritance === command.inheritance) return
       await ctx.db.patch(policy._id, { inheritance: command.inheritance })
+      await recordItemHistoryEvent(ctx, command.folderId, {
+        action: ITEM_HISTORY_ACTION.inheritanceChanged,
+        metadata: { from: policy.inheritance, to: command.inheritance },
+      })
     }
   }
 }

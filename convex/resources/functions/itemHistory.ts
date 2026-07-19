@@ -2,7 +2,10 @@ import { internal } from '../../_generated/api'
 import type { Doc } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
-import type { ItemHistoryMapEvent } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type {
+  ItemHistoryMapEvent,
+  ItemHistoryTimelineEvent,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { AuthoredDestination } from '@wizard-archive/editor/resources/authored-destination-contract'
 import type {
   MapContentCommand,
@@ -162,6 +165,21 @@ export async function recordMapHistoryCheckpoint(
     ...event,
     checkpoint: { kind: 'map', snapshotId, version },
     createdAt,
+  })
+}
+
+export async function recordItemHistoryEvent(
+  ctx: CampaignMutationCtx,
+  resourceId: ResourceId,
+  event: ItemHistoryTimelineEvent,
+): Promise<void> {
+  await ctx.db.insert('itemHistoryEntries', {
+    historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+    campaignUuid: ctx.resourceScope.campaignId,
+    resourceUuid: resourceId,
+    actorMemberUuid: ctx.resourceScope.actorId,
+    ...event,
+    createdAt: Date.now(),
   })
 }
 

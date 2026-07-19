@@ -563,6 +563,16 @@ describe('resource structure commands', () => {
         .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
         .unique()
       expect(candidate).toMatchObject({ status: 'pending' })
+      const history = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_action_history', (query) =>
+          query
+            .eq('campaignUuid', campaignUuid)
+            .eq('resourceUuid', resourceId)
+            .eq('action', ITEM_HISTORY_ACTION.fileReplaced),
+        )
+        .collect()
+      expect(history).toHaveLength(1)
       return candidate!._id
     })
 
@@ -1405,7 +1415,7 @@ describe('resource structure commands', () => {
           query.eq('campaignUuid', campaignUuid).eq('resourceUuid', mapId),
         )
         .collect()
-      expect(entries).toHaveLength(38)
+      expect(entries).toHaveLength(39)
       expect(checkpoints).toHaveLength(38)
       expect(
         entries.filter((entry) => entry.action === ITEM_HISTORY_ACTION.mapPinVisibilityChanged),

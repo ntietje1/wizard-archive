@@ -188,8 +188,8 @@ type ItemHistoryTimelineMetadata = {
   file_removed: null
   access_changed: Readonly<{
     subject: 'all_players' | CampaignMemberId
-    from: ResourcePermission
-    to: ResourcePermission
+    from: ResourcePermission | 'default'
+    to: ResourcePermission | 'default'
   }>
   block_visibility_changed: Readonly<{
     blockCount: number
@@ -198,6 +198,13 @@ type ItemHistoryTimelineMetadata = {
   }>
   inheritance_changed: Readonly<{ from: 'enabled' | 'disabled'; to: 'enabled' | 'disabled' }>
 }
+
+export type ItemHistoryTimelineEvent = {
+  [TAction in keyof ItemHistoryTimelineMetadata]: Readonly<{
+    action: TAction
+    metadata: ItemHistoryTimelineMetadata[TAction]
+  }>
+}[keyof ItemHistoryTimelineMetadata]
 
 type ItemHistoryTimelineEntry = {
   [TAction in keyof ItemHistoryTimelineMetadata]: ItemHistoryEntryBase<
