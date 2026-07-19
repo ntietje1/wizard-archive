@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import { LocalWorkspaceRuntimeHost } from '../local-workspace-runtime-host'
 import { SAMPLE_LOCAL_RESOURCE_IDS } from '../sample-local-workspace'
 
-describe('local note history', () => {
+describe('local note undo', () => {
   it('undoes and redoes canonical note commands through the packaged runtime', async () => {
     render(
       <StrictMode>
