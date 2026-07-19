@@ -19,6 +19,23 @@ import { replaceResourceReferenceProjection } from './resources/functions/resour
 
 const migrations = new Migrations<DataModel>(components.migrations)
 
+export const addNoteContentGeneration = migrations.define({
+  table: 'resourceNoteContents',
+  migrateOne: (ctx, content) =>
+    content.generation === undefined ? ctx.db.patch(content._id, { generation: 1 }) : undefined,
+})
+
+export const addCanvasContentGeneration = migrations.define({
+  table: 'resourceCanvasContents',
+  migrateOne: (ctx, content) =>
+    content.generation === undefined ? ctx.db.patch(content._id, { generation: 1 }) : undefined,
+})
+
+export const addContentGeneration = migrations.runner([
+  internal.migrations.addNoteContentGeneration,
+  internal.migrations.addCanvasContentGeneration,
+])
+
 export const projectNoteReferences = migrations.define({
   table: 'resourceNoteContents',
   batchSize: 1,

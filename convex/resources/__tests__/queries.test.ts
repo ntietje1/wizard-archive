@@ -547,7 +547,12 @@ describe('authorized resource projection', () => {
         campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
         resourceId,
       }),
-    ).resolves.toEqual({ status: 'ready', update, version: expect.any(Object) })
+    ).resolves.toEqual({
+      status: 'ready',
+      generation: 1,
+      update,
+      version: expect.any(Object),
+    })
     await expect(
       asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
         campaignId: campaignUuid,

@@ -3,6 +3,7 @@ import type { Doc } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type {
+  ItemHistoryRestoreResult,
   ItemHistoryMapEvent,
   ItemHistoryTimelineEvent,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
@@ -12,7 +13,12 @@ import type {
   MapResourceContent,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignMemberId,
+  HistoryEntryId,
+  ResourceId,
+  SnapshotId,
+} from '@wizard-archive/editor/resources/domain-id'
 import {
   assertVersionStamp,
   versionStampEquals,
@@ -22,9 +28,18 @@ import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 import { mapAssetIds } from './assetContent'
 import { loadValidMapContentRows } from './mapContent'
+import { authorizeResourceContentKinds } from './authorizeResourceContent'
+import { replaceNoteContent } from './replaceNoteContent'
+import { replaceCanvasContent } from './replaceCanvasContent'
+import { replaceMapContent } from './replaceMapContent'
+import { findItemHistoryCheckpoint } from './findItemHistoryCheckpoint'
 
 const YJS_CHECKPOINT_IDLE_MS = 10_000
 const YJS_CHECKPOINT_MIN_INTERVAL_MS = 5 * 60_000
+type MapHistoryCheckpointContent = Pick<
+  Extract<Doc<'itemHistoryCheckpoints'>, { kind: 'map' }>,
+  'image' | 'layers' | 'pins' | 'version'
+>
 
 export async function queueYjsHistoryCheckpoint(
   ctx: CampaignMutationCtx,
@@ -195,6 +210,226 @@ export async function recordMapCommandHistoryCheckpoint(
     resourceId,
     version,
     await mapCommandHistoryEvent(ctx, previousContent, command),
+  )
+}
+
+export async function restoreItemHistoryCheckpoint(
+  ctx: CampaignMutationCtx,
+  resourceId: ResourceId,
+  entryId: HistoryEntryId,
+  expectedVersion: VersionStamp,
+): Promise<ItemHistoryRestoreResult> {
+  const authorization = await authorizeResourceContentKinds(
+    ctx,
+    resourceId,
+    ['note', 'canvas', 'map'],
+    'edit',
+  )
+  if (authorization.status !== 'authorized') {
+    return {
+      status: 'rejected',
+      reason: authorization.reason === 'unauthorized' ? 'unauthorized' : 'resource_unavailable',
+    }
+  }
+
+  const lookup = await findItemHistoryCheckpoint(
+    ctx.db,
+    ctx.resourceScope.campaignId,
+    resourceId,
+    entryId,
+    authorization.resource.kind,
+  )
+  if (lookup.status !== 'ready') return { status: 'rejected', reason: lookup.status }
+
+  const preservedSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+  const restoredSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+  const historyEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+  const restoration = await restoreHistoryContent(ctx, {
+    resourceId,
+    expectedVersion,
+    checkpoint: lookup.checkpoint,
+    preservedSnapshotId,
+    restoredSnapshotId,
+  })
+  if (restoration.status !== 'completed') {
+    return { status: 'rejected', reason: restoration.status }
+  }
+  await recordRestoredHistoryEntry(ctx, {
+    resourceId,
+    entryId,
+    historyEntryId,
+    preservedSnapshotId,
+    restoredSnapshotId,
+    kind: restoration.kind,
+    version: restoration.version,
+  })
+  const intent = await ctx.db
+    .query('itemHistoryCaptureIntents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+  if (intent) await ctx.db.delete('itemHistoryCaptureIntents', intent._id)
+  return {
+    status: 'restored',
+    historyEntryId,
+    preservedSnapshotId,
+    restoredFromEntryId: entryId,
+  }
+}
+
+async function restoreHistoryContent(
+  ctx: CampaignMutationCtx,
+  args: Readonly<{
+    resourceId: ResourceId
+    expectedVersion: VersionStamp
+    checkpoint: Doc<'itemHistoryCheckpoints'>
+    preservedSnapshotId: SnapshotId
+    restoredSnapshotId: SnapshotId
+  }>,
+) {
+  return args.checkpoint.kind === 'map'
+    ? await restoreMapHistoryContent(ctx, {
+        ...args,
+        checkpoint: args.checkpoint,
+      })
+    : await restoreYjsHistoryContent(ctx, {
+        ...args,
+        checkpoint: args.checkpoint,
+      })
+}
+
+async function restoreMapHistoryContent(
+  ctx: CampaignMutationCtx,
+  args: Readonly<{
+    resourceId: ResourceId
+    expectedVersion: VersionStamp
+    checkpoint: Extract<Doc<'itemHistoryCheckpoints'>, { kind: 'map' }>
+    preservedSnapshotId: SnapshotId
+    restoredSnapshotId: SnapshotId
+  }>,
+) {
+  const replacement = await replaceMapContent(ctx, args)
+  if (replacement.status !== 'completed') return replacement
+  await insertMapCheckpoint(ctx, args.resourceId, args.preservedSnapshotId, replacement.previous)
+  await insertMapCheckpoint(ctx, args.resourceId, args.restoredSnapshotId, {
+    image: args.checkpoint.image,
+    layers: args.checkpoint.layers,
+    pins: args.checkpoint.pins,
+    version: replacement.version,
+  })
+  return { status: 'completed' as const, kind: 'map' as const, version: replacement.version }
+}
+
+async function restoreYjsHistoryContent(
+  ctx: CampaignMutationCtx,
+  args: Readonly<{
+    resourceId: ResourceId
+    expectedVersion: VersionStamp
+    checkpoint: Extract<Doc<'itemHistoryCheckpoints'>, { kind: 'note' | 'canvas' }>
+    preservedSnapshotId: SnapshotId
+    restoredSnapshotId: SnapshotId
+  }>,
+) {
+  const replacement =
+    args.checkpoint.kind === 'note'
+      ? await replaceNoteContent(ctx, {
+          resourceId: args.resourceId,
+          expectedVersion: args.expectedVersion,
+          snapshotUpdate: args.checkpoint.update,
+          snapshotVersion: args.checkpoint.version,
+        })
+      : await replaceCanvasContent(ctx, {
+          resourceId: args.resourceId,
+          expectedVersion: args.expectedVersion,
+          snapshotUpdate: args.checkpoint.update,
+          snapshotVersion: args.checkpoint.version,
+        })
+  if (replacement.status !== 'completed') return replacement
+  await insertYjsCheckpoint(ctx, args.resourceId, args.preservedSnapshotId, {
+    kind: args.checkpoint.kind,
+    update: replacement.previous.update,
+    version: replacement.previous.version,
+  })
+  await insertYjsCheckpoint(ctx, args.resourceId, args.restoredSnapshotId, {
+    kind: args.checkpoint.kind,
+    update: args.checkpoint.update,
+    version: replacement.version,
+  })
+  return {
+    status: 'completed' as const,
+    kind: args.checkpoint.kind,
+    version: replacement.version,
+  }
+}
+
+async function insertYjsCheckpoint(
+  ctx: CampaignMutationCtx,
+  resourceId: ResourceId,
+  snapshotId: SnapshotId,
+  content: Readonly<{
+    kind: 'note' | 'canvas'
+    update: ArrayBuffer
+    version: VersionStamp
+  }>,
+): Promise<void> {
+  await ctx.db.insert('itemHistoryCheckpoints', {
+    snapshotUuid: snapshotId,
+    campaignUuid: ctx.resourceScope.campaignId,
+    resourceUuid: resourceId,
+    ...content,
+  })
+}
+
+async function recordRestoredHistoryEntry(
+  ctx: CampaignMutationCtx,
+  args: Readonly<{
+    resourceId: ResourceId
+    entryId: HistoryEntryId
+    historyEntryId: HistoryEntryId
+    preservedSnapshotId: SnapshotId
+    restoredSnapshotId: SnapshotId
+    kind: 'note' | 'canvas' | 'map'
+    version: VersionStamp
+  }>,
+): Promise<void> {
+  await ctx.db.insert('itemHistoryEntries', {
+    historyEntryUuid: args.historyEntryId,
+    campaignUuid: ctx.resourceScope.campaignId,
+    resourceUuid: args.resourceId,
+    actorMemberUuid: ctx.resourceScope.actorId,
+    action: ITEM_HISTORY_ACTION.contentRestored,
+    metadata: {
+      restoredFromEntryId: args.entryId,
+      preservedSnapshotId: args.preservedSnapshotId,
+    },
+    checkpoint: {
+      kind: args.kind,
+      snapshotId: args.restoredSnapshotId,
+      version: args.version,
+    },
+    createdAt: Date.now(),
+  })
+}
+
+async function insertMapCheckpoint(
+  ctx: CampaignMutationCtx,
+  resourceId: ResourceId,
+  snapshotId: SnapshotId,
+  content: MapHistoryCheckpointContent,
+): Promise<void> {
+  await ctx.db.insert('itemHistoryCheckpoints', {
+    snapshotUuid: snapshotId,
+    campaignUuid: ctx.resourceScope.campaignId,
+    resourceUuid: resourceId,
+    kind: 'map',
+    ...content,
+  })
+  await Promise.all(
+    [...new Set(mapAssetIds(content))].map((assetUuid) =>
+      ctx.db.insert('itemHistoryCheckpointAssets', {
+        snapshotUuid: snapshotId,
+        assetUuid,
+      }),
+    ),
   )
 }
 

@@ -45,6 +45,7 @@ import {
   noteBlockAccessCommandResultValidator,
   noteBlockAccessCommandValidator,
   contentProviderSaveResultValidator,
+  itemHistoryRestoreResultValidator,
   resourcePresenceHeartbeatResultValidator,
   resourcePresenceReleaseResultValidator,
   resourcePresenceUpdateResultValidator,
@@ -58,7 +59,12 @@ import {
   heartbeatResourcePresence as heartbeatResourcePresenceFn,
   updateResourcePresence as updateResourcePresenceFn,
 } from './functions/resourcePresence'
-import { importJobIdValidator, operationIdValidator, resourceIdValidator } from './validators'
+import {
+  historyEntryIdValidator,
+  importJobIdValidator,
+  operationIdValidator,
+  resourceIdValidator,
+} from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { executeResourceAccessCommand as executeResourceAccessCommandFn } from './functions/executeResourceAccessCommand'
 import { executeNoteBlockAccessCommand as executeNoteBlockAccessCommandFn } from './functions/executeNoteBlockAccessCommand'
@@ -90,7 +96,10 @@ import {
 } from './functions/plainFileTransfer'
 import type { PlainFileTransferStartResult } from './functions/plainFileTransfer'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
-import { recordItemHistoryEvent } from './functions/itemHistory'
+import {
+  recordItemHistoryEvent,
+  restoreItemHistoryCheckpoint as restoreItemHistoryCheckpointFn,
+} from './functions/itemHistory'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -541,6 +550,22 @@ export const saveCanvasContent = campaignMutation({
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       update: args.update,
     }),
+})
+
+export const restoreItemHistoryCheckpoint = campaignMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    entryId: historyEntryIdValidator,
+    expectedVersion: versionStampValidator,
+  },
+  returns: itemHistoryRestoreResultValidator,
+  handler: async (ctx, args) =>
+    await restoreItemHistoryCheckpointFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      assertDomainId(DOMAIN_ID_KIND.historyEntry, args.entryId),
+      assertVersionStamp(args.expectedVersion),
+    ),
 })
 
 export const heartbeatResourcePresence = campaignMutation({

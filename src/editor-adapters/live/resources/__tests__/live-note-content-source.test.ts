@@ -7,6 +7,10 @@ import {
 } from '@wizard-archive/editor/resources/domain-id'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
+  advanceContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
+import {
   advanceNoteContentVersion,
   initialNoteContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
@@ -144,6 +148,7 @@ function backend() {
     watchPresence: vi.fn(() => () => {}),
     emit(resourceId: ResourceId, snapshot: unknown) {
       const candidate = snapshot as {
+        generation?: number
         status?: string
         update?: ArrayBuffer
         version?: VersionStamp
@@ -152,12 +157,67 @@ function backend() {
         updates.set(resourceId, [new Uint8Array(candidate.update)])
         versions.set(resourceId, candidate.version)
       }
-      for (const listener of listeners.get(resourceId) ?? []) listener(snapshot as never)
+      const delivered =
+        candidate.status === 'ready' && candidate.generation === undefined
+          ? { ...candidate, generation: 1 }
+          : snapshot
+      for (const listener of listeners.get(resourceId) ?? []) listener(delivered as never)
     },
   }
 }
 
 describe('LiveNoteContentSource', () => {
+  it('replaces an editable document when its authoritative generation advances', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const firstDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'First' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const secondDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Second' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const firstUpdate = arrayBuffer(Y.encodeStateAsUpdate(firstDocument))
+    const secondUpdate = arrayBuffer(Y.encodeStateAsUpdate(secondDocument))
+    const firstVersion = await versionFor(firstUpdate)
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update: firstUpdate,
+      version: firstVersion,
+    })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected editable note')
+
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: advanceContentGeneration(INITIAL_CONTENT_GENERATION),
+      update: secondUpdate,
+      version: {
+        ...firstVersion,
+        revision: firstVersion.revision + 1,
+        digest: (await versionFor(secondUpdate)).digest,
+      },
+    })
+    const replaced = source.get(resourceId)
+    if (replaced.status !== 'ready') throw new TypeError('Expected replaced note')
+    expect(replaced.session).toBe(ready.session)
+    expect(noteTextType(replaced.session.document).toString()).toBe('Second')
+    expect(provider.save).not.toHaveBeenCalled()
+    firstDocument.destroy()
+    secondDocument.destroy()
+    source.dispose()
+  })
+
   it('replaces readonly projections so hidden blocks cannot survive a Yjs merge', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
@@ -275,6 +335,7 @@ describe('LiveNoteContentSource', () => {
     const editableUpdate = arrayBuffer(Y.encodeStateAsUpdate(editableProjection))
     provider.load.mockResolvedValueOnce({
       status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
       update: editableUpdate,
       version,
     })
@@ -372,7 +433,12 @@ describe('LiveNoteContentSource', () => {
       NOTE_YJS_FRAGMENT,
     )
     const update = arrayBuffer(Y.encodeStateAsUpdate(document))
-    provider.load.mockResolvedValue({ status: 'ready', update, version: await versionFor(update) })
+    provider.load.mockResolvedValue({
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update,
+      version: await versionFor(update),
+    })
     const source = createLiveNoteContentSource(
       campaignId,
       memberId,

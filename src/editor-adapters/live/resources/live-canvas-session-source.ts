@@ -7,6 +7,11 @@ import {
 } from '@wizard-archive/editor/canvas/document-contract'
 import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import {
+  assertContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
+import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type {
   CanvasSession,
   CanvasPreviewState,
@@ -104,6 +109,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   readonly #store: CanvasStore
   readonly #previewStore: CanvasPreviewStore
   readonly #previewDocuments = new Map<ResourceId, Y.Doc>()
+  readonly #generations = new Map<ResourceId, ContentGeneration>()
   readonly #sessions = new Map<ResourceId, LiveCanvasSession | ReadonlyYjsSession>()
   readonly #authorityBinding: YjsSessionAuthorityBinding
   readonly previews = {
@@ -140,6 +146,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
             resourceId,
             transition.document,
             transition.version,
+            this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION,
             transition.collaboration,
           )
           return
@@ -148,6 +155,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
           resourceId,
           transition.document,
           transition.version,
+          this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION,
           transition.collaboration,
         )
       },
@@ -186,6 +194,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     for (const session of this.#sessions.values()) session.dispose()
     for (const document of this.#previewDocuments.values()) document.destroy()
     this.#sessions.clear()
+    this.#generations.clear()
     this.#previewDocuments.clear()
   }
 
@@ -195,31 +204,38 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       this.#replaceState(resourceId, decoded)
       return
     }
-    const { document, version } = decoded
+    const { document, generation, version } = decoded
     this.#authorityBinding.reconcile(resourceId)
     if (!this.authority.canEdit(resourceId)) {
-      this.#applyReadonly(resourceId, document, version)
+      this.#applyReadonly(resourceId, document, version, generation)
       return
     }
-    this.#applyEditable(resourceId, document, version)
+    this.#applyEditable(resourceId, document, version, generation)
   }
 
   #applyReadonly(
     resourceId: ResourceId,
     document: Y.Doc,
     version: CanvasSession['version'],
+    generation: ContentGeneration,
     collaboration?: ContentCollaboration,
   ): void {
     const existing = this.#sessions.get(resourceId)
     if (!existing) {
       const session = createReadonlyYjsSession(document, version, this.user, collaboration)
       this.#sessions.set(resourceId, session)
+      this.#generations.set(resourceId, generation)
       this.#store.set(resourceId, { status: 'ready', session })
       return
     }
     if (!isReadonlyYjsSession(existing)) {
       document.destroy()
       throw new TypeError('Readonly canvas source owns an editable session')
+    }
+    const currentGeneration = this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION
+    if (generation < currentGeneration) {
+      document.destroy()
+      return
     }
     if (version.revision < existing.version.revision) {
       document.destroy()
@@ -238,6 +254,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       replaceCanvasDocumentContent(existing.document, content, existing),
     )
     document.destroy()
+    this.#generations.set(resourceId, generation)
     this.#store.set(resourceId, { status: 'ready', session: existing })
   }
 
@@ -245,6 +262,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     resourceId: ResourceId,
     document: Y.Doc,
     version: CanvasSession['version'],
+    generation: ContentGeneration,
     collaboration?: ContentCollaboration,
   ): void {
     const existing = this.#sessions.get(resourceId)
@@ -252,10 +270,22 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       if (isReadonlyYjsSession(existing)) {
         throw new TypeError('Editable canvas source owns a readonly session')
       }
+      const currentGeneration = this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION
+      if (generation < currentGeneration) {
+        document.destroy()
+        return
+      }
+      const content = readCanvasDocumentContent(document)
       const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
       document.destroy()
-      const decision = existing.apply(update, version)
+      const decision =
+        generation === currentGeneration
+          ? existing.apply(update, version)
+          : existing.replace(version, (origin) =>
+              replaceCanvasDocumentContent(existing.document, content, origin),
+            )
       if (decision !== 'conflict' && this.#sessions.get(resourceId) === existing) {
+        this.#generations.set(resourceId, generation)
         this.#store.set(resourceId, { status: 'ready', session: existing })
       }
       return
@@ -285,6 +315,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       return
     }
     this.#sessions.set(resourceId, session)
+    this.#generations.set(resourceId, generation)
     this.#store.set(resourceId, { status: 'ready', session })
   }
 
@@ -295,12 +326,14 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   #fail(resourceId: ResourceId, session: LiveCanvasSession, result: RejectedYjsSave): void {
     if (this.#sessions.get(resourceId) !== session) return
     this.#sessions.delete(resourceId)
+    this.#generations.delete(resourceId)
     this.#store.set(resourceId, failedYjsSessionState(result))
   }
 
   #replaceState(resourceId: ResourceId, state: CanvasSessionState): void {
     this.#sessions.get(resourceId)?.dispose()
     this.#sessions.delete(resourceId)
+    this.#generations.delete(resourceId)
     this.#store.set(resourceId, state)
   }
 
@@ -312,7 +345,11 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   }
 }
 
-function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): CanvasPreviewState {
+type DecodedCanvasSnapshot =
+  | Exclude<CanvasPreviewState, { status: 'ready' }>
+  | (Extract<CanvasPreviewState, { status: 'ready' }> & Readonly<{ generation: ContentGeneration }>)
+
+function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): DecodedCanvasSnapshot {
   if (snapshot.status !== 'ready') {
     const pending = liveContentPendingState(snapshot)
     return pending.status === 'initializing' ? { status: 'loading' } : pending
@@ -320,13 +357,14 @@ function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): CanvasPreviewSta
   const document = new Y.Doc()
   try {
     const version = assertVersionStamp(snapshot.version)
+    const generation = assertContentGeneration(snapshot.generation)
     if (!canvasEncodedBytesWithinWorkload(snapshot.update)) {
       document.destroy()
       return { status: 'integrity_error', issue: 'content_limit_exceeded' }
     }
     Y.applyUpdate(document, new Uint8Array(snapshot.update))
     if (!parseCanvasDocumentContent(document)) throw new TypeError('Invalid canvas document')
-    return { status: 'ready', document, version }
+    return { status: 'ready', document, generation, version }
   } catch {
     document.destroy()
     return { status: 'integrity_error', issue: 'content_corrupt' }

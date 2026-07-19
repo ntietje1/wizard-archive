@@ -4,6 +4,10 @@ import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
+  advanceContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
+import {
   canonicalizeCanvasDocumentContent,
   createCanvasDocumentDoc,
   readCanvasDocumentContent,
@@ -42,6 +46,8 @@ const version = {
   revision: 1,
   digest: 'a'.repeat(64),
 }
+const generation = INITIAL_CONTENT_GENERATION
+const replacementGeneration = advanceContentGeneration(generation)
 
 const collaborationUser = { name: 'Canvas collaborator', color: '#61afef' }
 
@@ -103,7 +109,7 @@ describe('LiveCanvasSessionSource', () => {
       true,
     )
     source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', update, version })
+    apply({ status: 'ready', generation, update, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new TypeError('Expected readonly projection')
 
@@ -122,7 +128,12 @@ describe('LiveCanvasSessionSource', () => {
       revision: 2,
       digest: 'b'.repeat(64),
     }
-    apply({ status: 'ready', update: replacementUpdate, version: replacementVersion })
+    apply({
+      status: 'ready',
+      generation: replacementGeneration,
+      update: replacementUpdate,
+      version: replacementVersion,
+    })
     const replaced = source.get(resourceId)
     if (replaced.status !== 'ready') throw new TypeError('Expected replacement projection')
 
@@ -137,6 +148,64 @@ describe('LiveCanvasSessionSource', () => {
     expect(save).not.toHaveBeenCalled()
     expect(heartbeatPresence).not.toHaveBeenCalled()
     expect(watchPresence).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
+  it('replaces an editable document when its authoritative generation advances', () => {
+    const campaignId = testDomainId('campaign', 'canvas-restore-campaign')
+    const memberId = testDomainId('campaignMember', 'canvas-restore-member')
+    const resourceId = testDomainId('resource', 'canvas-restore-resource')
+    const firstNodeId = testDomainId('canvasNode', 'canvas-restore-first')
+    const secondNodeId = testDomainId('canvasNode', 'canvas-restore-second')
+    const first = createCanvasDocumentDoc({
+      nodes: [{ id: firstNodeId, type: 'text', position: { x: 10, y: 10 }, data: {} }],
+      edges: [],
+    })
+    const second = createCanvasDocumentDoc({
+      nodes: [{ id: secondNodeId, type: 'text', position: { x: 20, y: 20 }, data: {} }],
+      edges: [],
+    })
+    const firstUpdate = Uint8Array.from(Y.encodeStateAsUpdate(first)).buffer
+    const secondUpdate = Uint8Array.from(Y.encodeStateAsUpdate(second)).buffer
+    first.destroy()
+    second.destroy()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const save = vi.fn()
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      memberId,
+      collaborationUser,
+      {
+        ...presenceBackend(),
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, updateSnapshot) => {
+          apply = updateSnapshot
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+    source.subscribe(resourceId, () => {})
+    apply({ status: 'ready', generation, update: firstUpdate, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected editable canvas')
+
+    apply({
+      status: 'ready',
+      generation: replacementGeneration,
+      update: secondUpdate,
+      version: { ...version, revision: 2, digest: 'b'.repeat(64) },
+    })
+    const replaced = source.get(resourceId)
+    if (replaced.status !== 'ready') throw new TypeError('Expected replaced canvas')
+    expect(replaced.session).toBe(ready.session)
+    expect(readCanvasDocumentContent(replaced.session.document).nodes).toEqual([
+      expect.objectContaining({ id: secondNodeId }),
+    ])
+    expect(save).not.toHaveBeenCalled()
     source.dispose()
   })
 
@@ -177,7 +246,7 @@ describe('LiveCanvasSessionSource', () => {
       fixture.authority,
     )
     source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', update, version })
+    apply({ status: 'ready', generation, update, version })
     const readonly = source.get(resourceId)
     if (readonly.status !== 'ready') throw new TypeError('Expected readonly canvas')
 
@@ -216,7 +285,7 @@ describe('LiveCanvasSessionSource', () => {
       {
         ...presenceBackend(),
         create: vi.fn(),
-        load: () => Promise.resolve({ status: 'ready', update, version }),
+        load: () => Promise.resolve({ status: 'ready', generation, update, version }),
         refresh: vi.fn(),
         save: vi.fn(),
         watch,
@@ -267,7 +336,12 @@ describe('LiveCanvasSessionSource', () => {
     const update = Y.encodeStateAsUpdate(new Y.Doc())
 
     const unsubscribe = source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', update: update.buffer as ArrayBuffer, version })
+    apply({
+      status: 'ready',
+      generation,
+      update: update.buffer as ArrayBuffer,
+      version,
+    })
     expect(source.get(resourceId)).toEqual({
       status: 'ready',
       session: expect.objectContaining({
@@ -282,6 +356,7 @@ describe('LiveCanvasSessionSource', () => {
     expect(heartbeatPresence).toHaveBeenCalledOnce()
     apply({
       status: 'ready',
+      generation,
       update: new Uint8Array([255]).buffer,
       version,
     })
@@ -291,6 +366,7 @@ describe('LiveCanvasSessionSource', () => {
     })
     apply({
       status: 'ready',
+      generation,
       update: new Uint8Array(CANVAS_WORKLOAD_LIMITS.encodedBytes + 1).buffer,
       version,
     })
@@ -342,7 +418,7 @@ describe('LiveCanvasSessionSource', () => {
     )
 
     source.previews.subscribe(resourceId, () => {})
-    apply({ status: 'ready', update, version })
+    apply({ status: 'ready', generation, update, version })
 
     const preview = source.previews.get(resourceId)
     expect(preview.status).toBe('ready')
@@ -406,6 +482,7 @@ describe('LiveCanvasSessionSource', () => {
         load: () =>
           Promise.resolve({
             status: 'ready' as const,
+            generation,
             update: persistedUpdate,
             version: persistedVersion,
           }),
@@ -420,7 +497,7 @@ describe('LiveCanvasSessionSource', () => {
     )
 
     source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', update: persistedUpdate, version })
+    apply({ status: 'ready', generation, update: persistedUpdate, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas')
     applyCanvasContentUpdate(ready.session.document, {
@@ -439,6 +516,7 @@ describe('LiveCanvasSessionSource', () => {
     persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
     apply({
       status: 'ready',
+      generation,
       update: persistedUpdate,
       version: persistedVersion,
     })
@@ -450,6 +528,7 @@ describe('LiveCanvasSessionSource', () => {
     expect(save).toHaveBeenCalledOnce()
     apply({
       status: 'ready',
+      generation,
       update: persistedUpdate,
       version: persistedVersion,
     })
@@ -530,6 +609,7 @@ describe('LiveCanvasSessionSource', () => {
     source.subscribe(resourceId, () => {})
     apply({
       status: 'ready',
+      generation,
       update: persistedUpdate,
       version: persistedVersion,
     })
@@ -605,7 +685,7 @@ describe('LiveCanvasSessionSource', () => {
         () => ({ abandon: vi.fn(), completed: vi.fn() }),
       )
       source.subscribe(resourceId, () => {})
-      apply({ status: 'ready', update: initialUpdate, version })
+      apply({ status: 'ready', generation, update: initialUpdate, version })
       const ready = source.get(resourceId)
       if (ready.status !== 'ready') throw new Error('Expected ready canvas')
       applyCanvasContentUpdate(ready.session.document, {
@@ -677,7 +757,7 @@ describe('LiveCanvasSessionSource', () => {
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
     )
     source.subscribe(resourceId, () => {})
-    apply({ status: 'ready', update: initialUpdate, version })
+    apply({ status: 'ready', generation, update: initialUpdate, version })
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready canvas')
     let destroyed = false
@@ -768,7 +848,7 @@ describe('LiveCanvasSessionSource', () => {
     })
 
     try {
-      apply({ status: 'ready', update, version })
+      apply({ status: 'ready', generation, update, version })
       expect(source.get(resourceId)).toEqual({
         status: 'unavailable',
         reason: 'scope_unavailable',

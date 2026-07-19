@@ -11,6 +11,8 @@ import {
   canvasContentSnapshotValidator,
   fileContentSnapshotValidator,
   fileDownloadSnapshotValidator,
+  itemHistoryPageValidator,
+  itemHistoryPreviewResultValidator,
   mapContentSnapshotValidator,
   mapImageDownloadSnapshotValidator,
   noteBlockAccessPresentationPageValidator,
@@ -28,7 +30,12 @@ import { loadResourcePresence as loadResourcePresenceFn } from './functions/reso
 import { loadCanvasContent as loadCanvasContentFn } from './functions/canvasContent'
 import { loadFileContent as loadFileContentFn } from './functions/fileContent'
 import { loadMapContent as loadMapContentFn } from './functions/mapContent'
-import { importJobIdValidator, noteBlockIdValidator, resourceIdValidator } from './validators'
+import {
+  historyEntryIdValidator,
+  importJobIdValidator,
+  noteBlockIdValidator,
+  resourceIdValidator,
+} from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
 import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
@@ -50,6 +57,10 @@ import { loadAuthoritativeResourcePreviewImageUrl } from './functions/resourcePr
 import { projectNoteSearchDocument } from './functions/resourceSearchProjection'
 import { createResourcePreview } from '@wizard-archive/editor/resources/preview'
 import type { ResourcePreview } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import {
+  loadItemHistoryCheckpoint as loadItemHistoryCheckpointFn,
+  loadItemHistoryPage as loadItemHistoryPageFn,
+} from './functions/itemHistoryQueries'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 type StoredResourceReferenceSnapshot = Infer<typeof resourceReferenceSnapshotValidator>
@@ -375,6 +386,34 @@ export const loadCanvasContent = resourceQuery({
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     return await loadCanvasContentFn(ctx, resourceId)
   },
+})
+
+export const loadItemHistoryPage = resourceQuery({
+  args: {
+    resourceId: resourceIdValidator,
+    cursor: v.nullable(v.string()),
+  },
+  returns: itemHistoryPageValidator,
+  handler: async (ctx, args) =>
+    await loadItemHistoryPageFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      args.cursor,
+    ),
+})
+
+export const loadItemHistoryCheckpoint = resourceQuery({
+  args: {
+    resourceId: resourceIdValidator,
+    entryId: historyEntryIdValidator,
+  },
+  returns: itemHistoryPreviewResultValidator,
+  handler: async (ctx, args) =>
+    await loadItemHistoryCheckpointFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      assertDomainId(DOMAIN_ID_KIND.historyEntry, args.entryId),
+    ),
 })
 
 export const loadResourceReferences = resourceQuery({

@@ -72,6 +72,8 @@ import type * as resources_functions_executeStructureCommand from "../resources/
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
 import type * as resources_functions_itemHistory from "../resources/functions/itemHistory.js";
+import type * as resources_functions_itemHistoryQueries from "../resources/functions/itemHistoryQueries.js";
+import type * as resources_functions_itemHistoryStructure from "../resources/functions/itemHistoryStructure.js";
 import type * as resources_functions_loadFileDownload from "../resources/functions/loadFileDownload.js";
 import type * as resources_functions_loadMapImage from "../resources/functions/loadMapImage.js";
 import type * as resources_functions_loadNoteContent from "../resources/functions/loadNoteContent.js";
@@ -82,7 +84,10 @@ import type * as resources_functions_noteContent from "../resources/functions/no
 import type * as resources_functions_plainFileTransfer from "../resources/functions/plainFileTransfer.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_functions_projectResourceReferences from "../resources/functions/projectResourceReferences.js";
+import type * as resources_functions_replaceCanvasContent from "../resources/functions/replaceCanvasContent.js";
+import type * as resources_functions_replaceMapContent from "../resources/functions/replaceMapContent.js";
 import type * as resources_functions_replaceMapImage from "../resources/functions/replaceMapImage.js";
+import type * as resources_functions_replaceNoteContent from "../resources/functions/replaceNoteContent.js";
 import type * as resources_functions_resourceAccess from "../resources/functions/resourceAccess.js";
 import type * as resources_functions_resourceBookmarks from "../resources/functions/resourceBookmarks.js";
 import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
@@ -210,6 +215,8 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/fileContent": typeof resources_functions_fileContent;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
   "resources/functions/itemHistory": typeof resources_functions_itemHistory;
+  "resources/functions/itemHistoryQueries": typeof resources_functions_itemHistoryQueries;
+  "resources/functions/itemHistoryStructure": typeof resources_functions_itemHistoryStructure;
   "resources/functions/loadFileDownload": typeof resources_functions_loadFileDownload;
   "resources/functions/loadMapImage": typeof resources_functions_loadMapImage;
   "resources/functions/loadNoteContent": typeof resources_functions_loadNoteContent;
@@ -220,7 +227,10 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/plainFileTransfer": typeof resources_functions_plainFileTransfer;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/functions/projectResourceReferences": typeof resources_functions_projectResourceReferences;
+  "resources/functions/replaceCanvasContent": typeof resources_functions_replaceCanvasContent;
+  "resources/functions/replaceMapContent": typeof resources_functions_replaceMapContent;
   "resources/functions/replaceMapImage": typeof resources_functions_replaceMapImage;
+  "resources/functions/replaceNoteContent": typeof resources_functions_replaceNoteContent;
   "resources/functions/resourceAccess": typeof resources_functions_resourceAccess;
   "resources/functions/resourceBookmarks": typeof resources_functions_resourceBookmarks;
   "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;

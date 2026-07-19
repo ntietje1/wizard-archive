@@ -27,6 +27,7 @@ import { initialNoteContentVersion } from '@wizard-archive/editor/resources/cont
 import type { AuthoredDestinationOccurrence } from '@wizard-archive/editor/resources/authored-destination'
 import { projectReferenceOccurrences } from '@wizard-archive/editor/resources/authored-destination'
 import { replaceResourceReferenceProjection } from './resourceReferences'
+import { INITIAL_CONTENT_GENERATION } from '@wizard-archive/editor/resources/content-generation'
 
 export async function findNoteContent(
   db: GenericDatabaseReader<DataModel>,
@@ -62,6 +63,7 @@ export async function createNoteContent(
     campaignUuid: campaignId,
     resourceUuid: resourceId,
     creationOperationUuid: operationId,
+    generation: INITIAL_CONTENT_GENERATION,
     update,
     version,
   })
@@ -181,6 +183,7 @@ export async function prepareNoteContentCopy(
             campaignUuid: campaignId,
             resourceUuid: destinationResourceId,
             creationOperationUuid: operationId,
+            generation: INITIAL_CONTENT_GENERATION,
             update,
             version,
           })

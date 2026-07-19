@@ -84,12 +84,8 @@ class LiveYjsDocumentSession {
   }
 
   apply(update: ArrayBuffer, version: VersionStamp): YjsVersionDecision {
-    if (version.revision < this.#version.revision) return 'stale'
-    if (version.revision === this.#version.revision) {
-      if (version.digest === this.#version.digest) return 'duplicate'
-      this.#fail({ status: 'rejected', reason: 'content_corrupt' })
-      return 'conflict'
-    }
+    const decision = this.#incomingVersionDecision(version)
+    if (decision) return decision
     if (this.#lifecycle === 'closing') {
       this.#version = version
       return 'applied'
@@ -109,6 +105,47 @@ class LiveYjsDocumentSession {
     if (canonicalization === 'changed') this.#scheduleSave()
     this.#changed()
     return 'applied'
+  }
+
+  replace(version: VersionStamp, replaceDocument: (origin: unknown) => void): YjsVersionDecision {
+    const decision = this.#incomingVersionDecision(version)
+    if (decision) return decision
+    if (this.#lifecycle === 'closing') {
+      this.#version = version
+      return 'applied'
+    }
+    if (this.#timer) clearTimeout(this.#timer)
+    this.#timer = null
+    this.#pendingUpdate = null
+    if (this.#outbox.clear().status === 'unavailable') {
+      this.#fail({ status: 'rejected', reason: 'scope_unavailable' })
+      return 'conflict'
+    }
+    try {
+      this.document.transact(() => replaceDocument(REMOTE_YJS_UPDATE), REMOTE_YJS_UPDATE)
+      const canonicalization = this.#canonicalizeDocument()
+      if (canonicalization === 'invalid' || canonicalization === 'unavailable') {
+        this.#fail({
+          status: 'rejected',
+          reason: canonicalization === 'invalid' ? 'content_corrupt' : 'scope_unavailable',
+        })
+        return 'conflict'
+      }
+    } catch {
+      this.#fail({ status: 'rejected', reason: 'content_corrupt' })
+      return 'conflict'
+    }
+    this.#version = version
+    this.#changed()
+    return 'applied'
+  }
+
+  #incomingVersionDecision(version: VersionStamp): Exclude<YjsVersionDecision, 'applied'> | null {
+    if (version.revision < this.#version.revision) return 'stale'
+    if (version.revision > this.#version.revision) return null
+    if (version.digest === this.#version.digest) return 'duplicate'
+    this.#fail({ status: 'rejected', reason: 'content_corrupt' })
+    return 'conflict'
   }
 
   readonly flush = (): Promise<ContentSessionSaveResult> => {

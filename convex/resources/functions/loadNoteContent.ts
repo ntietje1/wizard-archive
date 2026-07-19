@@ -3,6 +3,10 @@ import { assertVersionStamp } from '@wizard-archive/editor/resources/component-v
 import { noteContentProjectionVersion } from '@wizard-archive/editor/resources/content-version'
 import type { CampaignQueryCtx } from '../../functions'
 import { authorizeResourceContent } from './authorizeResourceContent'
+import {
+  assertContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
 import { findNoteContent } from './noteContent'
 import { filterNoteContentForMember } from './noteBlockAccess'
 
@@ -31,6 +35,7 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
     }
     return {
       status: 'ready' as const,
+      generation: assertContentGeneration(content.generation ?? INITIAL_CONTENT_GENERATION),
       update: projection.update,
       version: projection.complete
         ? canonicalVersion
@@ -39,6 +44,7 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
   }
   return {
     status: 'ready' as const,
+    generation: assertContentGeneration(content.generation ?? INITIAL_CONTENT_GENERATION),
     update: content.update,
     version: canonicalVersion,
   }

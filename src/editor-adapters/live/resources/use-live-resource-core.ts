@@ -31,6 +31,11 @@ import { createLiveResourceAssetsFolderGateway } from './live-resource-assets-fo
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createLiveResourceReferenceSource } from './live-resource-references'
 import { createLiveResourcePreviewSource } from './live-resource-preview-source'
+import {
+  createLiveItemHistory,
+  readLiveItemHistoryEntry,
+  readLiveItemHistoryPreview,
+} from './live-item-history'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -415,6 +420,61 @@ function createScopedLiveResourceRuntime(
       ? { status: 'unavailable', reason: 'unauthorized' }
       : { status: 'available', value: assets }
   const content = { notes, files, maps, canvases }
+  const history =
+    currentScope.projection === 'view_as_player'
+      ? null
+      : createLiveItemHistory(currentScope.campaignId, optimistic.index, content, {
+          watchPage: (resourceId, cursor, apply) => {
+            const watch = convex.watchQuery(api.resources.queries.loadItemHistoryPage, {
+              ...queryScope,
+              resourceId,
+              cursor,
+            })
+            return subscribeToWatch(watch, (result) =>
+              apply(
+                result.status === 'ready'
+                  ? {
+                      status: 'ready',
+                      entries: result.entries.map(readLiveItemHistoryEntry),
+                      nextCursor: result.nextCursor,
+                    }
+                  : { status: 'error' },
+              ),
+            )
+          },
+          loadCheckpoint: async (resourceId, entryId) => {
+            const result = await convex.query(api.resources.queries.loadItemHistoryCheckpoint, {
+              ...queryScope,
+              resourceId,
+              entryId,
+            })
+            return result.status === 'ready'
+              ? {
+                  status: 'ready',
+                  preview: readLiveItemHistoryPreview(result.preview),
+                }
+              : result
+          },
+          restore: (args) =>
+            write(() =>
+              convex.mutation(api.resources.mutations.restoreItemHistoryCheckpoint, args),
+            ),
+          loadNote: (resourceId) =>
+            convex.query(api.resources.queries.loadNoteContent, {
+              ...queryScope,
+              resourceId,
+            }),
+          loadCanvas: (resourceId) =>
+            convex.query(api.resources.queries.loadCanvasContent, {
+              ...queryScope,
+              resourceId,
+            }),
+          loadMap: (resourceId) =>
+            convex.query(api.resources.queries.loadMapContent, {
+              ...queryScope,
+              resourceId,
+            }),
+        })
   return {
     runtime: {
       scope: currentScope,
@@ -440,7 +500,10 @@ function createScopedLiveResourceRuntime(
         currentScope.projection === 'dm'
           ? ({ status: 'available', value: search } as const)
           : unsupported,
-      history: unsupported,
+      history:
+        history === null
+          ? { status: 'unavailable', reason: 'unauthorized' }
+          : { status: 'available', value: history.controller },
     } satisfies Omit<EditorRuntime, 'viewAs'>,
     start: () => {
       base.start()
@@ -455,6 +518,7 @@ function createScopedLiveResourceRuntime(
       noteBlockAccess.dispose()
       references.dispose()
       previews.dispose()
+      history?.dispose()
       optimistic.dispose()
       base.dispose()
     },

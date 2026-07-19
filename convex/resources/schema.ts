@@ -398,6 +398,23 @@ function objectTimelineHistoryEntry<TAction extends string, TMetadata extends Pr
   })
 }
 
+const accessChangedHistoryMetadata = {
+  subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
+  from: v.union(resourcePermissionValidator, v.literal('default')),
+  to: v.union(resourcePermissionValidator, v.literal('default')),
+}
+
+const blockVisibilityChangedHistoryMetadata = {
+  blockCount: v.number(),
+  subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
+  visible: v.boolean(),
+}
+
+const inheritanceChangedHistoryMetadata = {
+  from: folderAccessInheritanceValidator,
+  to: folderAccessInheritanceValidator,
+}
+
 const itemHistoryEntryValidator = v.union(
   nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.created),
   objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.copied, {
@@ -424,20 +441,15 @@ const itemHistoryEntryValidator = v.union(
   nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.restored),
   nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.fileReplaced),
   nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.fileRemoved),
-  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.accessChanged, {
-    subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
-    from: v.union(resourcePermissionValidator, v.literal('default')),
-    to: v.union(resourcePermissionValidator, v.literal('default')),
-  }),
-  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.blockVisibilityChanged, {
-    blockCount: v.number(),
-    subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
-    visible: v.boolean(),
-  }),
-  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.inheritanceChanged, {
-    from: folderAccessInheritanceValidator,
-    to: folderAccessInheritanceValidator,
-  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.accessChanged, accessChangedHistoryMetadata),
+  objectTimelineHistoryEntry(
+    ITEM_HISTORY_ACTION.blockVisibilityChanged,
+    blockVisibilityChangedHistoryMetadata,
+  ),
+  objectTimelineHistoryEntry(
+    ITEM_HISTORY_ACTION.inheritanceChanged,
+    inheritanceChangedHistoryMetadata,
+  ),
   v.object({
     ...itemHistoryEntryFields,
     action: v.literal(ITEM_HISTORY_ACTION.contentEdited),
@@ -548,6 +560,180 @@ const mapResourceContentValidator = v.object({
     }),
   ),
 })
+
+const itemHistoryActorValidator = v.object({
+  id: campaignMemberIdValidator,
+  displayName: v.string(),
+  imageUrl: v.nullable(v.string()),
+})
+
+const itemHistoryPresentationFields = {
+  id: historyEntryIdValidator,
+  resourceId: resourceIdValidator,
+  actor: itemHistoryActorValidator,
+  createdAt: v.number(),
+}
+
+function nullTimelineHistoryPresentation<TAction extends string>(action: TAction) {
+  return v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(action),
+    metadata: v.null(),
+  })
+}
+
+function objectTimelineHistoryPresentation<
+  TAction extends string,
+  TMetadata extends PropertyValidators,
+>(action: TAction, metadata: TMetadata) {
+  return v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(action),
+    metadata: v.object(metadata),
+  })
+}
+
+export const itemHistoryEntryPresentationValidator = v.union(
+  nullTimelineHistoryPresentation(ITEM_HISTORY_ACTION.created),
+  objectTimelineHistoryPresentation(ITEM_HISTORY_ACTION.copied, {
+    sourceResourceId: resourceIdValidator,
+    sourceTitle: v.string(),
+  }),
+  objectTimelineHistoryPresentation(ITEM_HISTORY_ACTION.renamed, {
+    from: v.string(),
+    to: v.string(),
+  }),
+  objectTimelineHistoryPresentation(ITEM_HISTORY_ACTION.moved, {
+    from: v.nullable(v.string()),
+    to: v.nullable(v.string()),
+  }),
+  objectTimelineHistoryPresentation(ITEM_HISTORY_ACTION.iconChanged, {
+    from: v.nullable(v.string()),
+    to: v.nullable(v.string()),
+  }),
+  objectTimelineHistoryPresentation(ITEM_HISTORY_ACTION.colorChanged, {
+    from: v.nullable(v.string()),
+    to: v.nullable(v.string()),
+  }),
+  nullTimelineHistoryPresentation(ITEM_HISTORY_ACTION.trashed),
+  nullTimelineHistoryPresentation(ITEM_HISTORY_ACTION.restored),
+  nullTimelineHistoryPresentation(ITEM_HISTORY_ACTION.fileReplaced),
+  nullTimelineHistoryPresentation(ITEM_HISTORY_ACTION.fileRemoved),
+  objectTimelineHistoryPresentation(
+    ITEM_HISTORY_ACTION.accessChanged,
+    accessChangedHistoryMetadata,
+  ),
+  objectTimelineHistoryPresentation(
+    ITEM_HISTORY_ACTION.blockVisibilityChanged,
+    blockVisibilityChangedHistoryMetadata,
+  ),
+  objectTimelineHistoryPresentation(
+    ITEM_HISTORY_ACTION.inheritanceChanged,
+    inheritanceChangedHistoryMetadata,
+  ),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.contentEdited),
+    metadata: v.null(),
+    checkpoint: yjsHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.contentRestored),
+    metadata: v.object({
+      restoredFromEntryId: historyEntryIdValidator,
+      preservedSnapshotId: snapshotIdValidator,
+    }),
+    checkpoint: itemHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapImageChanged),
+    metadata: v.object({ layerId: v.nullable(v.string()) }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapImageRemoved),
+    metadata: v.object({ layerId: v.nullable(v.string()) }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinAdded),
+    metadata: v.object({ pinLabel: v.string() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinMoved),
+    metadata: v.object({ pinLabel: v.string() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinRemoved),
+    metadata: v.object({ pinLabel: v.string() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryPresentationFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinVisibilityChanged),
+    metadata: v.object({ pinLabel: v.string(), visible: v.boolean() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+)
+
+export const itemHistoryPageValidator = v.union(
+  v.object({ status: v.literal('unavailable') }),
+  v.object({
+    status: v.literal('ready'),
+    entries: v.array(itemHistoryEntryPresentationValidator),
+    nextCursor: v.nullable(v.string()),
+  }),
+)
+
+export const itemHistoryPreviewResultValidator = v.union(
+  v.object({ status: v.literal('unavailable') }),
+  v.object({
+    status: v.literal('ready'),
+    preview: v.union(
+      v.object({
+        kind: literals(RESOURCE_KIND.note, RESOURCE_KIND.canvas),
+        snapshotId: snapshotIdValidator,
+        version: versionStampValidator,
+        update: v.bytes(),
+      }),
+      v.object({
+        kind: v.literal(RESOURCE_KIND.map),
+        snapshotId: snapshotIdValidator,
+        version: versionStampValidator,
+        content: mapResourceContentValidator,
+      }),
+    ),
+  }),
+)
+
+export const itemHistoryRestoreResultValidator = v.union(
+  v.object({
+    status: v.literal('restored'),
+    historyEntryId: historyEntryIdValidator,
+    preservedSnapshotId: snapshotIdValidator,
+    restoredFromEntryId: historyEntryIdValidator,
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'content_changed',
+      'history_entry_unavailable',
+      'resource_unavailable',
+      'snapshot_incompatible',
+      'snapshot_unavailable',
+      'unauthorized',
+    ),
+  }),
+  v.object({ status: literals('unavailable', 'failed') }),
+)
 
 const contentInitializingMutationResultValidator = v.object({
   status: v.literal('retryable'),
@@ -987,7 +1173,12 @@ export const mapImageDownloadSnapshotValidator = v.union(
 export const noteContentSnapshotValidator = v.union(
   v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({ status: v.literal('empty'), reason: v.literal('no_visible_blocks') }),
-  v.object({ status: v.literal('ready'), update: v.bytes(), version: versionStampValidator }),
+  v.object({
+    status: v.literal('ready'),
+    generation: v.number(),
+    update: v.bytes(),
+    version: versionStampValidator,
+  }),
   contentUnavailableSnapshotValidator,
   contentIntegritySnapshotValidator,
 )
@@ -1071,6 +1262,7 @@ export const mapContentSnapshotValidator = v.union(
 export const canvasContentSnapshotValidator = v.union(
   v.object({
     status: v.literal('ready'),
+    generation: v.number(),
     update: v.bytes(),
     version: versionStampValidator,
   }),
@@ -1347,6 +1539,7 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,
     creationOperationUuid: operationIdValidator,
+    generation: v.optional(v.number()),
     update: v.bytes(),
     version: versionStampValidator,
   })
@@ -1405,6 +1598,7 @@ export const resourceTables = {
   resourceCanvasContents: defineTable({
     campaignUuid: campaignIdValidator,
     resourceUuid: resourceIdValidator,
+    generation: v.optional(v.number()),
     update: v.bytes(),
     version: versionStampValidator,
   })

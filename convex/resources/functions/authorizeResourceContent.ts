@@ -13,10 +13,12 @@ export async function authorizeResourceContent(
   return authorizeResourceContentKinds(ctx, resourceId, [kind], required)
 }
 
-export async function authorizeResourceContentKinds(
+export async function authorizeResourceContentKinds<
+  const TKind extends Exclude<ResourceKind, 'folder'>,
+>(
   ctx: CampaignMutationCtx | CampaignQueryCtx,
   resourceId: ResourceId,
-  kinds: ReadonlyArray<Exclude<ResourceKind, 'folder'>>,
+  kinds: ReadonlyArray<TKind>,
   required: Exclude<ResourcePermission, 'none'> = 'view',
 ) {
   const authorization = await authorizeResourcePermission(ctx, resourceId, required)
@@ -24,12 +26,12 @@ export async function authorizeResourceContentKinds(
     return { status: 'unavailable' as const, reason: 'unauthorized' as const }
   }
   const resource = authorization.resource
-  if (resource.kind === 'folder' || !kinds.includes(resource.kind)) {
+  if (resource.kind === 'folder' || !kinds.some((kind) => kind === resource.kind)) {
     return { status: 'unavailable' as const, reason: 'capability_not_supported' as const }
   }
   return {
     status: 'authorized' as const,
-    resource,
+    resource: resource as typeof resource & { kind: TKind },
     permission: authorization.permission,
   }
 }

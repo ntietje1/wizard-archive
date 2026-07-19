@@ -8,6 +8,11 @@ import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
+import {
+  assertContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
+import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type {
   CampaignId,
@@ -164,6 +169,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
   readonly #awaitingEditable = new Set<ResourceId>()
   readonly #creates = new Map<ResourceId, LocalCreate>()
   readonly #editableLoads = new Map<ResourceId, symbol>()
+  readonly #generations = new Map<ResourceId, ContentGeneration>()
   readonly #sessions = new Map<ResourceId, LiveNoteSession | ReadonlyYjsSession>()
   readonly #authorityBinding: YjsSessionAuthorityBinding
 
@@ -192,7 +198,13 @@ class LiveNoteSessionSource implements NoteSessionSource {
         return
       }
       this.#editableLoads.delete(resourceId)
-      this.#setReady(resourceId, transition.document, transition.version, transition.collaboration)
+      this.#setReady(
+        resourceId,
+        transition.document,
+        transition.version,
+        this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION,
+        transition.collaboration,
+      )
     }
     this.#authorityBinding = createYjsSessionAuthorityBinding(
       authority,
@@ -283,7 +295,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
         local.destroy()
         return delivery
       }
-      this.#setReady(resourceId, local, version)
+      this.#setReady(resourceId, local, version, INITIAL_CONTENT_GENERATION)
       return delivery
     } catch {
       return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
@@ -301,6 +313,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
     this.#sessions.clear()
     this.#awaitingEditable.clear()
     this.#editableLoads.clear()
+    this.#generations.clear()
     this.#creates.clear()
   }
 
@@ -322,15 +335,22 @@ class LiveNoteSessionSource implements NoteSessionSource {
     snapshot: Extract<NoteSnapshot, { status: 'ready' }>,
   ) {
     const version = assertVersionStamp(snapshot.version)
+    const generation = assertContentGeneration(snapshot.generation)
     this.#authorityBinding.reconcile(resourceId)
     const session = this.#sessions.get(resourceId)
     if (session && isReadonlyYjsSession(session)) {
-      this.#applyReadonlyProjection(resourceId, snapshot, version, session)
+      this.#applyReadonlyProjection(resourceId, snapshot, version, generation, session)
       return
     }
     if (session) {
-      const decision = session.apply(snapshot.update, version)
+      const currentGeneration = this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION
+      if (generation < currentGeneration) return
+      const decision =
+        generation === currentGeneration
+          ? session.apply(snapshot.update, version)
+          : this.#replaceEditableProjection(session, snapshot.update, version)
       if (decision !== 'conflict' && this.#sessions.get(resourceId) === session) {
+        this.#generations.set(resourceId, generation)
         this.#setState(resourceId, { status: 'ready', session })
       }
       return
@@ -339,7 +359,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
     try {
       Y.applyUpdate(doc, new Uint8Array(snapshot.update))
       this.#awaitingEditable.delete(resourceId)
-      this.#setReady(resourceId, doc, version)
+      this.#setReady(resourceId, doc, version, generation)
     } catch {
       doc.destroy()
       this.#clearSession(resourceId)
@@ -354,11 +374,14 @@ class LiveNoteSessionSource implements NoteSessionSource {
     resourceId: ResourceId,
     snapshot: Extract<NoteSnapshot, { status: 'ready' }>,
     version: NoteSession['version'],
+    generation: ContentGeneration,
     session: NoteSession,
   ): void {
     if (!isReadonlyYjsSession(session)) {
       throw new TypeError('Readonly note source owns an editable session')
     }
+    const currentGeneration = this.#generations.get(resourceId) ?? INITIAL_CONTENT_GENERATION
+    if (generation < currentGeneration) return
     if (version.revision < session.version.revision) return
     if (
       version.revision === session.version.revision &&
@@ -373,6 +396,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       session.applyProjection(version, () =>
         replaceNoteYjsDocument(session.document, projection, NOTE_YJS_FRAGMENT, session),
       )
+      this.#generations.set(resourceId, generation)
       this.#setState(resourceId, { status: 'ready', session })
     } catch {
       this.#clearSession(resourceId)
@@ -423,12 +447,14 @@ class LiveNoteSessionSource implements NoteSessionSource {
     resourceId: ResourceId,
     document: Y.Doc,
     version: NoteSession['version'],
+    generation: ContentGeneration,
     collaboration?: ContentCollaboration,
   ): LiveNoteSession | ReadonlyYjsSession | null {
     this.#clearSession(resourceId)
     if (!this.authority.canEdit(resourceId)) {
       const session = createReadonlyYjsSession(document, version, this.user, collaboration)
       this.#sessions.set(resourceId, session)
+      this.#generations.set(resourceId, generation)
       this.#setState(resourceId, { status: 'ready', session })
       return session
     }
@@ -466,6 +492,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       return null
     }
     this.#sessions.set(resourceId, session)
+    this.#generations.set(resourceId, generation)
     this.#setState(resourceId, { status: 'ready', session })
     return session
   }
@@ -476,6 +503,25 @@ class LiveNoteSessionSource implements NoteSessionSource {
     this.#editableLoads.delete(resourceId)
     session?.dispose()
     this.#sessions.delete(resourceId)
+    this.#generations.delete(resourceId)
+  }
+
+  #replaceEditableProjection(
+    session: LiveNoteSession,
+    update: ArrayBuffer,
+    version: NoteSession['version'],
+  ) {
+    const projection = new Y.Doc()
+    try {
+      Y.applyUpdate(projection, new Uint8Array(update))
+      return session.replace(version, (origin) =>
+        replaceNoteYjsDocument(session.document, projection, NOTE_YJS_FRAGMENT, origin),
+      )
+    } catch {
+      return 'conflict' as const
+    } finally {
+      projection.destroy()
+    }
   }
 
   #setState(resourceId: ResourceId, state: NoteSessionState): void {

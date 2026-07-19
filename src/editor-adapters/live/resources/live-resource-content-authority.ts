@@ -46,6 +46,7 @@ export function createLiveAuthorityBoundYjsSession(
     readonly document: Y.Doc
     readonly version: VersionStamp
     apply(update: ArrayBuffer, version: VersionStamp): YjsVersionDecision
+    replace(version: VersionStamp, replaceDocument: (origin: unknown) => void): YjsVersionDecision
     detachDocument(): Y.Doc
     dispose(): void
     flush(): Promise<ContentSessionSaveResult>
@@ -66,6 +67,8 @@ export function createLiveAuthorityBoundYjsSession(
       return liveAwareness.collaboration
     },
     apply: (update: ArrayBuffer, version: VersionStamp) => session.apply(update, version),
+    replace: (version: VersionStamp, replaceDocument: (origin: unknown) => void) =>
+      session.replace(version, replaceDocument),
     flush: () => session.flush(),
     retain: () => session.retain(),
     dispose: () => session.dispose(),

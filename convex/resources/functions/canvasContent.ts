@@ -26,6 +26,10 @@ import { encodeYjsDocument, resourceReferencesAreValid } from './contentCopyType
 import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/workload'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { replaceResourceReferenceProjection } from './resourceReferences'
+import {
+  assertContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
 
@@ -45,6 +49,7 @@ export async function createCanvasContent(
   await ctx.db.insert('resourceCanvasContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,
+    generation: INITIAL_CONTENT_GENERATION,
     update: EMPTY_YJS_UPDATE,
     version: await initialBinaryContentVersion(EMPTY_YJS_UPDATE),
   })
@@ -68,6 +73,7 @@ export async function loadCanvasContent(ctx: CampaignQueryCtx, resourceId: Resou
   }
   return {
     status: 'ready' as const,
+    generation: assertContentGeneration(content.generation ?? INITIAL_CONTENT_GENERATION),
     update: content.update,
     version: content.version,
   }
@@ -126,6 +132,7 @@ export async function prepareCanvasContentCopy(
           await ctx.db.insert('resourceCanvasContents', {
             campaignUuid: campaignId,
             resourceUuid: destinationResourceId,
+            generation: INITIAL_CONTENT_GENERATION,
             update,
             version,
           })

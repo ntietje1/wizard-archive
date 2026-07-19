@@ -6,8 +6,12 @@ import type { FunctionArgs } from 'convex/server'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '@wizard-archive/editor/notes/document-yjs'
 import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { initialVersion, sha256Digest } from '@wizard-archive/editor/resources/component-version'
+import { initialMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
+import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import { api } from '../../_generated/api'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 
 type StoredStructureCommand = FunctionArgs<
@@ -454,6 +458,386 @@ describe('item history checkpoints', () => {
     })
   })
 
+  it('authorizes, paginates, previews, and restores note history atomically', async () => {
+    vi.useFakeTimers()
+    const campaign = await setupCampaignContext(t)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const historicalDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Historical' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const historicalUpdate = encodeUpdate(historicalDocument)
+    const historicalVersion = await initialNoteContentVersion(new Uint8Array(historicalUpdate))
+    const historicalEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const historicalSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+    try {
+      await createNote(campaign, resourceId, historicalUpdate)
+      const stateVector = Y.encodeStateVector(historicalDocument)
+      noteText(historicalDocument).insert(noteText(historicalDocument).length, ' current')
+      const current = await saveNote(
+        campaign,
+        resourceId,
+        encodeUpdate(historicalDocument, stateVector),
+      )
+      if (current.status !== 'completed') throw new TypeError('Expected saved note')
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert('itemHistoryCheckpoints', {
+          snapshotUuid: historicalSnapshotId,
+          campaignUuid: campaign.campaignDomainId,
+          resourceUuid: resourceId,
+          kind: 'note',
+          update: historicalUpdate,
+          version: historicalVersion,
+        })
+        await ctx.db.insert('itemHistoryEntries', {
+          historyEntryUuid: historicalEntryId,
+          campaignUuid: campaign.campaignDomainId,
+          resourceUuid: resourceId,
+          actorMemberUuid: campaign.dm.memberDomainId,
+          action: ITEM_HISTORY_ACTION.contentEdited,
+          metadata: null,
+          checkpoint: {
+            kind: 'note',
+            snapshotId: historicalSnapshotId,
+            version: historicalVersion,
+          },
+          createdAt: Date.now(),
+        })
+      })
+      await executeAccess(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'setAudienceAccess',
+        resourceIds: [resourceId],
+        permission: 'view',
+      })
+
+      await expect(
+        asPlayer(campaign).query(api.resources.queries.loadItemHistoryPage, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          cursor: null,
+        }),
+      ).resolves.toEqual({ status: 'unavailable' })
+      await expect(
+        asPlayer(campaign).query(api.resources.queries.loadItemHistoryCheckpoint, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId: historicalEntryId,
+        }),
+      ).resolves.toEqual({ status: 'unavailable' })
+      await expect(
+        asPlayer(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId: historicalEntryId,
+          expectedVersion: current.version,
+        }),
+      ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+
+      const preview = await asDm(campaign).query(api.resources.queries.loadItemHistoryCheckpoint, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+        entryId: historicalEntryId,
+      })
+      expect(preview).toMatchObject({
+        status: 'ready',
+        preview: {
+          kind: 'note',
+          snapshotId: historicalSnapshotId,
+          version: historicalVersion,
+        },
+      })
+      if (preview.status !== 'ready' || preview.preview.kind !== 'note') {
+        throw new TypeError('Expected note history preview')
+      }
+      expect(bytes(preview.preview.update)).toEqual(bytes(historicalUpdate))
+
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId: historicalEntryId,
+          expectedVersion: historicalVersion,
+        }),
+      ).resolves.toEqual({ status: 'rejected', reason: 'content_changed' })
+
+      const restored = await asDm(campaign).mutation(
+        api.resources.mutations.restoreItemHistoryCheckpoint,
+        {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId: historicalEntryId,
+          expectedVersion: current.version,
+        },
+      )
+      expect(restored).toMatchObject({
+        status: 'restored',
+        restoredFromEntryId: historicalEntryId,
+      })
+      if (restored.status !== 'restored') throw new TypeError('Expected restored note')
+
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+      const content = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+      })
+      expect(content).toMatchObject({
+        status: 'ready',
+        generation: 2,
+        version: {
+          revision: current.version.revision + 1,
+          digest: historicalVersion.digest,
+        },
+      })
+      if (content.status !== 'ready') throw new TypeError('Expected restored note content')
+      expect(bytes(content.update)).toEqual(bytes(historicalUpdate))
+
+      await t.run(async (ctx) => {
+        const [preserved, restoredCheckpoint, intent, restoredEntries] = await Promise.all([
+          ctx.db
+            .query('itemHistoryCheckpoints')
+            .withIndex('by_snapshotUuid', (query) =>
+              query.eq('snapshotUuid', restored.preservedSnapshotId),
+            )
+            .unique(),
+          ctx.db
+            .query('itemHistoryCheckpoints')
+            .withIndex('by_resource_snapshot', (query) =>
+              query.eq('campaignUuid', campaign.campaignDomainId).eq('resourceUuid', resourceId),
+            )
+            .filter((query) => query.eq(query.field('version.revision'), content.version.revision))
+            .unique(),
+          ctx.db
+            .query('itemHistoryCaptureIntents')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+          ctx.db
+            .query('itemHistoryEntries')
+            .withIndex('by_resource_action_history', (query) =>
+              query
+                .eq('campaignUuid', campaign.campaignDomainId)
+                .eq('resourceUuid', resourceId)
+                .eq('action', ITEM_HISTORY_ACTION.contentRestored),
+            )
+            .collect(),
+        ])
+        if (preserved?.kind !== 'note' || restoredCheckpoint?.kind !== 'note') {
+          throw new TypeError('Expected note restore checkpoints')
+        }
+        expect(bytes(preserved.update)).toEqual(bytes(encodeUpdate(historicalDocument)))
+        expect(bytes(restoredCheckpoint.update)).toEqual(bytes(historicalUpdate))
+        expect(intent).toBeNull()
+        expect(restoredEntries).toEqual([
+          expect.objectContaining({
+            historyEntryUuid: restored.historyEntryId,
+            metadata: {
+              restoredFromEntryId: historicalEntryId,
+              preservedSnapshotId: restored.preservedSnapshotId,
+            },
+          }),
+        ])
+      })
+
+      await t.run(async (ctx) => {
+        for (let index = 0; index < 26; index += 1) {
+          await ctx.db.insert('itemHistoryEntries', {
+            historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+            campaignUuid: campaign.campaignDomainId,
+            resourceUuid: resourceId,
+            actorMemberUuid: campaign.dm.memberDomainId,
+            action: ITEM_HISTORY_ACTION.renamed,
+            metadata: { from: `Before ${index}`, to: `After ${index}` },
+            createdAt: Date.now() + index,
+          })
+        }
+      })
+      const firstPage = await asDm(campaign).query(api.resources.queries.loadItemHistoryPage, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+        cursor: null,
+      })
+      expect(firstPage).toMatchObject({ status: 'ready', entries: { length: 25 } })
+      if (firstPage.status !== 'ready' || firstPage.nextCursor === null) {
+        throw new TypeError('Expected paginated item history')
+      }
+      expect(firstPage.entries[0]!.actor).toMatchObject({
+        id: campaign.dm.memberDomainId,
+        displayName: campaign.dm.profile.name,
+      })
+      const secondPage = await asDm(campaign).query(api.resources.queries.loadItemHistoryPage, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+        cursor: firstPage.nextCursor,
+      })
+      if (secondPage.status !== 'ready') throw new TypeError('Expected second history page')
+      expect(secondPage.nextCursor).toBeNull()
+      expect(
+        new Set([...firstPage.entries, ...secondPage.entries].map((entry) => entry.id)).size,
+      ).toBe(firstPage.entries.length + secondPage.entries.length)
+    } finally {
+      historicalDocument.destroy()
+    }
+  })
+
+  it('restores canvas and map checkpoints through their canonical content owners', async () => {
+    const campaign = await setupCampaignContext(t)
+    const canvasId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
+    await createCanvas(campaign, canvasId)
+    await createMap(campaign, mapId)
+
+    const canvasDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          type: 'text',
+          position: { x: 12, y: 34 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const canvasUpdate = encodeUpdate(canvasDocument)
+    canvasDocument.destroy()
+    const canvasVersion = initialVersion(await sha256Digest(new Uint8Array(canvasUpdate)))
+    const canvasEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const canvasSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+
+    const mapPinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
+    const mapDestination = parseAuthoredDestination({
+      kind: 'externalUrl',
+      url: 'https://example.com',
+    })
+    if (!mapDestination) throw new TypeError('Expected map destination')
+    const mapContent = {
+      image: { status: 'unattached' as const },
+      layers: [],
+      pins: [
+        {
+          id: mapPinId,
+          destination: mapDestination,
+          layerId: null,
+          visible: true,
+          x: 25,
+          y: 75,
+        },
+      ],
+    }
+    const mapVersion = await initialMapContentVersion(mapContent)
+    const mapEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const mapSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert('itemHistoryCheckpoints', {
+        snapshotUuid: canvasSnapshotId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: canvasId,
+        kind: 'canvas',
+        update: canvasUpdate,
+        version: canvasVersion,
+      })
+      await ctx.db.insert('itemHistoryEntries', {
+        historyEntryUuid: canvasEntryId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: canvasId,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        action: ITEM_HISTORY_ACTION.contentEdited,
+        metadata: null,
+        checkpoint: {
+          kind: 'canvas',
+          snapshotId: canvasSnapshotId,
+          version: canvasVersion,
+        },
+        createdAt: Date.now(),
+      })
+      await ctx.db.insert('itemHistoryCheckpoints', {
+        snapshotUuid: mapSnapshotId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: mapId,
+        kind: 'map',
+        image: null,
+        layers: [],
+        pins: mapContent.pins.map(({ id, ...pin }) => ({ mapPinUuid: id, ...pin })),
+        version: mapVersion,
+      })
+      await ctx.db.insert('itemHistoryEntries', {
+        historyEntryUuid: mapEntryId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: mapId,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        action: ITEM_HISTORY_ACTION.mapPinAdded,
+        metadata: { pinLabel: 'Example' },
+        checkpoint: {
+          kind: 'map',
+          snapshotId: mapSnapshotId,
+          version: mapVersion,
+        },
+        createdAt: Date.now(),
+      })
+    })
+
+    const [canvasBefore, mapBefore] = await Promise.all([
+      asDm(campaign).query(api.resources.queries.loadCanvasContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId: canvasId,
+      }),
+      asDm(campaign).query(api.resources.queries.loadMapContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId: mapId,
+      }),
+    ])
+    if (canvasBefore.status !== 'ready' || mapBefore.status !== 'ready') {
+      throw new TypeError('Expected current canvas and map content')
+    }
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+        campaignId: campaign.campaignDomainId,
+        resourceId: canvasId,
+        entryId: canvasEntryId,
+        expectedVersion: canvasBefore.version,
+      }),
+    ).resolves.toMatchObject({ status: 'restored', restoredFromEntryId: canvasEntryId })
+    const mapRestore = await asDm(campaign).mutation(
+      api.resources.mutations.restoreItemHistoryCheckpoint,
+      {
+        campaignId: campaign.campaignDomainId,
+        resourceId: mapId,
+        entryId: mapEntryId,
+        expectedVersion: mapBefore.version,
+      },
+    )
+    if (mapRestore.status !== 'restored') {
+      throw new TypeError(`Map restore failed: ${JSON.stringify(mapRestore)}`)
+    }
+    expect(mapRestore).toMatchObject({
+      status: 'restored',
+      restoredFromEntryId: mapEntryId,
+    })
+
+    const [canvasAfter, mapAfter] = await Promise.all([
+      asDm(campaign).query(api.resources.queries.loadCanvasContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId: canvasId,
+      }),
+      asDm(campaign).query(api.resources.queries.loadMapContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId: mapId,
+      }),
+    ])
+    expect(canvasAfter).toMatchObject({
+      status: 'ready',
+      generation: 2,
+      version: { revision: canvasBefore.version.revision + 1 },
+    })
+    expect(mapAfter).toMatchObject({
+      status: 'ready',
+      content: mapContent,
+      version: { revision: mapBefore.version.revision + 1 },
+    })
+  })
+
   async function createNote(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     resourceId: ResourceId,
@@ -545,6 +929,27 @@ describe('item history checkpoints', () => {
           kind: 'canvas',
           parentId: null,
           title: 'History canvas',
+          icon: null,
+          color: null,
+        },
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+  }
+
+  async function createMap(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    resourceId: ResourceId,
+  ) {
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.createMapResource, {
+        campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'map',
+          parentId: null,
+          title: 'History map',
           icon: null,
           color: null,
         },
