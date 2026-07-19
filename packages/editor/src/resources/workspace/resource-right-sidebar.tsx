@@ -1,12 +1,17 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { ChevronRight, Clock3, FileText, Link2, List, X } from 'lucide-react'
+import { ChevronRight, Clock3, FileText, Link2, List, Loader2, RotateCcw, X } from 'lucide-react'
+import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
+import { formatRelativeTime } from '@wizard-archive/ui/utils/format-relative-time'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
 import { noteDocumentOutline, noteOutlineTree } from '../../notes/document/outline'
 import type {
   EditorRuntime,
-  ResourceHistoryEntry,
+  ItemHistoryEntry,
+  ItemHistoryController,
   ResourceReferenceSource,
 } from '../editor-runtime-contract'
+import type { CampaignMemberId } from '../domain-id'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
 import type { NoteOutlineNode } from '../../notes/document/outline'
@@ -434,11 +439,6 @@ function FileDetails({
   )
 }
 
-type HistoryState =
-  | { status: 'loading' }
-  | { status: 'ready'; entries: ReadonlyArray<ResourceHistoryEntry> }
-  | { status: 'error' }
-
 function ResourceHistoryPanel({
   resource,
   runtime,
@@ -446,43 +446,228 @@ function ResourceHistoryPanel({
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  const [state, setState] = useState<HistoryState>({ status: 'loading' })
-  useEffect(() => {
-    let current = true
-    if (runtime.history.status !== 'available') return
-    void runtime.history.value
-      .list(resource.id)
-      .then((entries) => current && setState({ status: 'ready', entries }))
-      .catch(() => current && setState({ status: 'error' }))
-    return () => {
-      current = false
-    }
-  }, [resource.id, runtime.history])
-
-  if (state.status === 'loading') {
-    return <p className="p-3 text-sm text-muted-foreground">Loading history…</p>
-  }
-  if (state.status === 'error') {
-    return <p className="p-3 text-sm text-destructive">Could not load history.</p>
-  }
-  if (state.entries.length === 0) {
-    return <p className="p-3 text-sm text-muted-foreground">No history yet.</p>
+  if (runtime.history.status !== 'available') {
+    return <p className="p-3 text-sm text-muted-foreground">History is unavailable.</p>
   }
   return (
-    <div className="p-3">
-      <h2 className="mb-3 text-sm font-medium">History</h2>
-      <ol className="space-y-3">
-        {state.entries.map((entry) => (
-          <li key={entry.id} className="border-l border-border pl-3 text-xs">
-            <p>Resource updated</p>
-            <p className="mt-0.5 text-muted-foreground">
-              {formatResourceTimestamp(entry.createdAt)}
-            </p>
+    <AvailableResourceHistoryPanel
+      canEdit={resource.permission === 'edit'}
+      resourceId={resource.id}
+      source={runtime.history.value}
+    />
+  )
+}
+
+function AvailableResourceHistoryPanel({
+  canEdit,
+  resourceId,
+  source,
+}: {
+  canEdit: boolean
+  resourceId: AuthorizedResourceSummary['id']
+  source: ItemHistoryController
+}) {
+  const state = useSyncExternalStore(
+    (listener) => source.subscribe(resourceId, listener),
+    () => source.get(resourceId),
+  )
+  const list = state.list
+  if (list.status === 'loading') {
+    return <p className="p-3 text-sm text-muted-foreground">Loading history…</p>
+  }
+  if (list.status === 'error') {
+    return <p className="p-3 text-sm text-destructive">Could not load history.</p>
+  }
+  if (list.entries.length === 0) {
+    return <p className="p-3 text-sm text-muted-foreground">No history yet.</p>
+  }
+  const groups = groupHistoryEntriesByDay(list.entries)
+  return (
+    <ScrollArea className="h-full">
+      <ol aria-label="Item history">
+        {groups.map((group) => (
+          <li key={group.label}>
+            <h2 className="sticky top-0 z-10 border-b border-border/50 bg-background/95 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
+              {group.label}
+            </h2>
+            <ol>
+              {group.entries.map((entry) => (
+                <HistoryEntryRow
+                  key={entry.id}
+                  canEdit={canEdit}
+                  entry={entry}
+                  onPreview={() => source.selectPreview(resourceId, entry.id)}
+                  onRestore={() => source.requestRestore(resourceId, entry.id)}
+                  selected={state.preview.status !== 'closed' && state.preview.entryId === entry.id}
+                />
+              ))}
+            </ol>
           </li>
         ))}
       </ol>
-    </div>
+      {list.pagination !== 'complete' ? (
+        <div className="flex justify-center p-3">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+            disabled={list.pagination === 'loading_more'}
+            onClick={() => source.loadMore(resourceId)}
+          >
+            {list.pagination === 'loading_more' ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : null}
+            Load more
+          </button>
+        </div>
+      ) : null}
+    </ScrollArea>
   )
+}
+
+function HistoryEntryRow({
+  canEdit,
+  entry,
+  onPreview,
+  onRestore,
+  selected,
+}: {
+  canEdit: boolean
+  entry: ItemHistoryEntry
+  onPreview: () => void
+  onRestore: () => void
+  selected: boolean
+}) {
+  const content = (
+    <>
+      <UserProfileImage
+        className="mt-0.5 shrink-0"
+        imageUrl={entry.actor.imageUrl}
+        name={entry.actor.displayName}
+        size="sm"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm leading-snug">
+          <span className="font-medium">{entry.actor.displayName}</span>{' '}
+          <span className="text-muted-foreground">{historyEntryDescription(entry)}</span>
+        </span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">
+          {formatRelativeTime(entry.createdAt)}
+        </span>
+      </span>
+    </>
+  )
+  if (!('checkpoint' in entry)) {
+    return <li className="flex items-start gap-2.5 px-3 py-2">{content}</li>
+  }
+  return (
+    <li
+      className={
+        selected
+          ? 'flex items-start gap-2.5 bg-accent px-3 py-2'
+          : 'flex items-start gap-2.5 px-3 py-2 hover:bg-muted/50'
+      }
+    >
+      <button
+        type="button"
+        aria-pressed={selected}
+        className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
+        onClick={onPreview}
+      >
+        {content}
+      </button>
+      {canEdit ? (
+        <button
+          type="button"
+          aria-label="Restore this version"
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={onRestore}
+        >
+          <RotateCcw className="size-3.5" aria-hidden="true" />
+        </button>
+      ) : null}
+    </li>
+  )
+}
+
+function groupHistoryEntriesByDay(entries: ReadonlyArray<ItemHistoryEntry>) {
+  const groups = new Map<string, Array<ItemHistoryEntry>>()
+  for (const entry of entries) {
+    const label = new Date(entry.createdAt).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+    const group = groups.get(label)
+    if (group) group.push(entry)
+    else groups.set(label, [entry])
+  }
+  return [...groups].map(([label, groupedEntries]) => ({ label, entries: groupedEntries }))
+}
+
+function historyEntryDescription(entry: ItemHistoryEntry): string {
+  return (
+    SIMPLE_HISTORY_DESCRIPTIONS[entry.action] ??
+    structureHistoryDescription(entry) ??
+    accessAndMapHistoryDescription(entry)
+  )
+}
+
+const SIMPLE_HISTORY_DESCRIPTIONS: Partial<Record<ItemHistoryEntry['action'], string>> = {
+  created: 'created this item',
+  trashed: 'moved this item to trash',
+  restored: 'restored this item from trash',
+  file_replaced: 'replaced the file',
+  file_removed: 'removed the file',
+  content_edited: 'edited the content',
+  content_restored: 'restored a previous version',
+  map_image_changed: 'changed the map image',
+  map_image_removed: 'removed the map image',
+}
+
+function structureHistoryDescription(entry: ItemHistoryEntry): string | null {
+  switch (entry.action) {
+    case 'copied':
+      return `copied from “${entry.metadata.sourceTitle}”`
+    case 'renamed':
+      return `renamed “${entry.metadata.from}” to “${entry.metadata.to}”`
+    case 'moved':
+      return `moved from ${historyLocation(entry.metadata.from)} to ${historyLocation(entry.metadata.to)}`
+    case 'icon_changed':
+      return entry.metadata.to ? `changed the icon to “${entry.metadata.to}”` : 'removed the icon'
+    case 'color_changed':
+      return entry.metadata.to ? `changed the color to “${entry.metadata.to}”` : 'removed the color'
+    default:
+      return null
+  }
+}
+
+function accessAndMapHistoryDescription(entry: ItemHistoryEntry): string {
+  switch (entry.action) {
+    case 'access_changed':
+      return `changed ${historySubject(entry.metadata.subject)} access from ${entry.metadata.from} to ${entry.metadata.to}`
+    case 'block_visibility_changed':
+      return `${entry.metadata.visible ? 'showed' : 'hid'} ${entry.metadata.blockCount} ${entry.metadata.blockCount === 1 ? 'block' : 'blocks'} for ${historySubject(entry.metadata.subject)}`
+    case 'inheritance_changed':
+      return `${entry.metadata.to === 'enabled' ? 'enabled' : 'disabled'} share inheritance`
+    case 'map_pin_added':
+      return `added pin “${entry.metadata.pinLabel}”`
+    case 'map_pin_moved':
+      return `moved pin “${entry.metadata.pinLabel}”`
+    case 'map_pin_removed':
+      return `removed pin “${entry.metadata.pinLabel}”`
+    case 'map_pin_visibility_changed':
+      return `${entry.metadata.visible ? 'showed' : 'hid'} pin “${entry.metadata.pinLabel}”`
+    default:
+      throw new TypeError(`Missing item-history description for ${entry.action}`)
+  }
+}
+
+function historyLocation(value: string | null) {
+  return value ? `“${value}”` : 'the campaign root'
+}
+
+function historySubject(value: 'all_players' | CampaignMemberId) {
+  return value === 'all_players' ? 'all players’' : 'a player’s'
 }
 
 export type ResourceRightSidebarPanel = PanelId

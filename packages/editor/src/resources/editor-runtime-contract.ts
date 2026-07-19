@@ -1,10 +1,17 @@
 import type {
   CanvasSessionSource,
   FileContentSource,
+  MapResourceContent,
   MapSessionSource,
   NoteSessionSource,
 } from './content-session-contract'
-import type { CampaignMemberId, HistoryEntryId, NoteBlockId, ResourceId } from './domain-id'
+import type {
+  CampaignMemberId,
+  HistoryEntryId,
+  NoteBlockId,
+  ResourceId,
+  SnapshotId,
+} from './domain-id'
 import type { CanonicalTarget, SafeHttpsUrl } from './authored-destination-contract'
 import type {
   CapabilityUnavailableReason,
@@ -129,16 +136,175 @@ export interface WorkspaceSearch {
   recordOpened(resourceId: ResourceId): void
 }
 
-export type ResourceHistoryEntry = Readonly<{
-  id: HistoryEntryId
-  resourceId: ResourceId
-  actorId: CampaignMemberId
-  createdAt: number
-  version: VersionStamp
+export type ItemHistoryActor = Readonly<{
+  id: CampaignMemberId
+  displayName: string
+  imageUrl: string | null
 }>
 
-export interface ReadonlyResourceHistory {
-  list(resourceId: ResourceId): Promise<ReadonlyArray<ResourceHistoryEntry>>
+type ItemHistoryEntryBase<TAction extends string, TMetadata> = Readonly<{
+  id: HistoryEntryId
+  resourceId: ResourceId
+  actor: ItemHistoryActor
+  action: TAction
+  metadata: TMetadata
+  createdAt: number
+}>
+
+type ItemHistoryTimelineMetadata = {
+  created: null
+  copied: Readonly<{ sourceResourceId: ResourceId; sourceTitle: string }>
+  renamed: Readonly<{ from: string; to: string }>
+  moved: Readonly<{ from: string | null; to: string | null }>
+  icon_changed: Readonly<{ from: string | null; to: string | null }>
+  color_changed: Readonly<{ from: string | null; to: string | null }>
+  trashed: null
+  restored: null
+  file_replaced: null
+  file_removed: null
+  access_changed: Readonly<{
+    subject: 'all_players' | CampaignMemberId
+    from: ResourcePermission
+    to: ResourcePermission
+  }>
+  block_visibility_changed: Readonly<{
+    blockCount: number
+    subject: 'all_players' | CampaignMemberId
+    visible: boolean
+  }>
+  inheritance_changed: Readonly<{ from: 'enabled' | 'disabled'; to: 'enabled' | 'disabled' }>
+}
+
+type ItemHistoryTimelineEntry = {
+  [TAction in keyof ItemHistoryTimelineMetadata]: ItemHistoryEntryBase<
+    TAction,
+    ItemHistoryTimelineMetadata[TAction]
+  >
+}[keyof ItemHistoryTimelineMetadata]
+
+export type ItemHistoryCheckpoint =
+  | Readonly<{
+      kind: 'note' | 'canvas'
+      snapshotId: SnapshotId
+      version: VersionStamp
+    }>
+  | Readonly<{
+      kind: 'map'
+      snapshotId: SnapshotId
+      version: VersionStamp
+    }>
+
+type ItemHistoryMapActionMetadata = {
+  map_image_changed: Readonly<{ layerId: string | null }>
+  map_image_removed: Readonly<{ layerId: string | null }>
+  map_pin_added: Readonly<{ pinLabel: string }>
+  map_pin_moved: Readonly<{ pinLabel: string }>
+  map_pin_removed: Readonly<{ pinLabel: string }>
+  map_pin_visibility_changed: Readonly<{ pinLabel: string; visible: boolean }>
+}
+
+type ItemHistoryMapEntry = {
+  [TAction in keyof ItemHistoryMapActionMetadata]: ItemHistoryEntryBase<
+    TAction,
+    ItemHistoryMapActionMetadata[TAction]
+  > &
+    Readonly<{ checkpoint: Extract<ItemHistoryCheckpoint, { kind: 'map' }> }>
+}[keyof ItemHistoryMapActionMetadata]
+
+export type ItemHistoryEntry =
+  | ItemHistoryTimelineEntry
+  | (ItemHistoryEntryBase<'content_edited', null> &
+      Readonly<{
+        checkpoint: Extract<ItemHistoryCheckpoint, { kind: 'note' | 'canvas' }>
+      }>)
+  | (ItemHistoryEntryBase<
+      'content_restored',
+      Readonly<{
+        restoredFromEntryId: HistoryEntryId
+        preservedSnapshotId: SnapshotId
+      }>
+    > &
+      Readonly<{ checkpoint: ItemHistoryCheckpoint }>)
+  | ItemHistoryMapEntry
+
+export type ItemHistoryListState =
+  | Readonly<{ status: 'loading' }>
+  | Readonly<{ status: 'error' }>
+  | Readonly<{
+      status: 'ready'
+      entries: ReadonlyArray<ItemHistoryEntry>
+      pagination: 'complete' | 'more_available' | 'loading_more'
+    }>
+
+export type ItemHistoryPreview =
+  | Readonly<{
+      kind: 'note' | 'canvas'
+      snapshotId: SnapshotId
+      version: VersionStamp
+      update: Uint8Array
+    }>
+  | Readonly<{
+      kind: 'map'
+      snapshotId: SnapshotId
+      version: VersionStamp
+      content: MapResourceContent
+    }>
+
+export type ItemHistoryPreviewState =
+  | Readonly<{ status: 'closed' }>
+  | Readonly<{ status: 'loading'; entryId: HistoryEntryId; entryTime: number }>
+  | Readonly<{
+      status: 'unavailable' | 'error'
+      entryId: HistoryEntryId
+      entryTime: number
+    }>
+  | Readonly<{
+      status: 'ready'
+      entryId: HistoryEntryId
+      entryTime: number
+      preview: ItemHistoryPreview
+    }>
+
+export type ItemHistoryRestoreState =
+  | Readonly<{ status: 'closed' }>
+  | Readonly<{ status: 'loading'; entryId: HistoryEntryId }>
+  | Readonly<{ status: 'ready'; entryId: HistoryEntryId; entryTime: number }>
+  | Readonly<{ status: 'restoring'; entryId: HistoryEntryId; entryTime: number }>
+  | Readonly<{ status: 'error'; entryId: HistoryEntryId; entryTime: number }>
+
+export type ItemHistoryRestoreResult =
+  | Readonly<{
+      status: 'restored'
+      historyEntryId: HistoryEntryId
+      preservedSnapshotId: SnapshotId
+      restoredFromEntryId: HistoryEntryId
+    }>
+  | Readonly<{
+      status: 'rejected'
+      reason:
+        | 'content_changed'
+        | 'history_entry_unavailable'
+        | 'resource_unavailable'
+        | 'snapshot_incompatible'
+        | 'snapshot_unavailable'
+        | 'unauthorized'
+    }>
+  | Readonly<{ status: 'unavailable' | 'failed' }>
+
+export type ItemHistoryState = Readonly<{
+  list: ItemHistoryListState
+  preview: ItemHistoryPreviewState
+  restore: ItemHistoryRestoreState
+}>
+
+export interface ItemHistoryController {
+  get(resourceId: ResourceId): ItemHistoryState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+  loadMore(resourceId: ResourceId): void
+  selectPreview(resourceId: ResourceId, entryId: HistoryEntryId | null): void
+  requestRestore(resourceId: ResourceId, entryId: HistoryEntryId): void
+  cancelRestore(resourceId: ResourceId): void
+  confirmRestore(resourceId: ResourceId): Promise<ItemHistoryRestoreResult>
 }
 
 export type EditorViewAsParticipant = Readonly<{
@@ -178,6 +344,6 @@ export interface EditorRuntime {
   readonly navigation: ResourceNavigation
   readonly preferences: WorkspacePreferencesSource
   readonly search: ResourceCapability<WorkspaceSearch>
-  readonly history: ResourceCapability<ReadonlyResourceHistory>
+  readonly history: ResourceCapability<ItemHistoryController>
   readonly viewAs: ResourceCapability<EditorViewAsController>
 }

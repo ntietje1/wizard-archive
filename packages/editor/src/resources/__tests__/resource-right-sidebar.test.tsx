@@ -12,7 +12,11 @@ import {
 import { canonicalizeResourceTitle } from '../resource-record'
 import { ResourceRightSidebar } from '../workspace/resource-right-sidebar'
 import { createWorkspaceActions } from '../workspace/resource-operations'
-import type { ResourceNavigation } from '../editor-runtime-contract'
+import type {
+  ItemHistoryController,
+  ItemHistoryState,
+  ResourceNavigation,
+} from '../editor-runtime-contract'
 import type { ResourceRecord } from '../resource-record'
 
 describe('ResourceRightSidebar note outline', () => {
@@ -220,6 +224,118 @@ describe('ResourceRightSidebar references', () => {
     expect(screen.getByRole('navigation', { name: 'Outgoing links' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: /Hidden vault/ }))
     expect(openTarget).toHaveBeenCalledWith(target)
+
+    core.dispose()
+  })
+})
+
+describe('ResourceRightSidebar item history', () => {
+  it('renders typed actions and reserves preview and restore controls for checkpoints', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const version = initialVersion(await sha256Digest(new Uint8Array([11])))
+    const resource: ResourceRecord = {
+      id: resourceId,
+      campaignId,
+      parentId: null,
+      kind: 'note',
+      title: canonicalizeResourceTitle('Field notes'),
+      icon: null,
+      color: null,
+      lifecycle: { state: 'active' },
+      metadataVersion: version,
+      created: { at: 1, by: actorId },
+      updated: { at: 1, by: actorId },
+    }
+    const navigation: ResourceNavigation = {
+      current: () => ({ kind: 'resource', resourceId }),
+      open: vi.fn(),
+      subscribe: () => () => {},
+    }
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [resource],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation,
+    })
+    const checkpointEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const state: ItemHistoryState = {
+      list: {
+        status: 'ready',
+        pagination: 'more_available',
+        entries: [
+          {
+            id: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+            resourceId,
+            actor: { id: actorId, displayName: 'Mira', imageUrl: null },
+            action: 'renamed',
+            metadata: { from: 'Draft', to: 'Field notes' },
+            createdAt: Date.now() - 1_000,
+          },
+          {
+            id: checkpointEntryId,
+            resourceId,
+            actor: { id: actorId, displayName: 'Mira', imageUrl: null },
+            action: 'content_edited',
+            metadata: null,
+            createdAt: Date.now(),
+            checkpoint: {
+              kind: 'note',
+              snapshotId: generateDomainId(DOMAIN_ID_KIND.snapshot),
+              version,
+            },
+          },
+        ],
+      },
+      preview: { status: 'closed' },
+      restore: { status: 'closed' },
+    }
+    const selectPreview = vi.fn()
+    const requestRestore = vi.fn()
+    const loadMore = vi.fn()
+    const history: ItemHistoryController = {
+      get: () => state,
+      subscribe: () => () => {},
+      loadMore,
+      selectPreview,
+      requestRestore,
+      cancelRestore: vi.fn(),
+      confirmRestore: vi.fn(),
+    }
+    const runtime = {
+      ...core.runtime,
+      history: { status: 'available' as const, value: history },
+    }
+
+    render(
+      <ResourceRightSidebar
+        actions={createWorkspaceActions(runtime, vi.fn())}
+        activePanel="history"
+        noteHeadingNavigation={{ current: null }}
+        resource={authorizedResourceSummaryFromRecord(resource, 'edit')}
+        runtime={runtime}
+        onActivePanelChange={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('list', { name: 'Item history' })).toBeVisible()
+    expect(screen.getByText(/renamed “Draft” to “Field notes”/)).toBeVisible()
+    expect(screen.getAllByRole('button', { name: 'Restore this version' })).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: /Mira edited the content/ }))
+    expect(selectPreview).toHaveBeenCalledWith(resourceId, checkpointEntryId)
+    fireEvent.click(screen.getByRole('button', { name: 'Restore this version' }))
+    expect(requestRestore).toHaveBeenCalledWith(resourceId, checkpointEntryId)
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+    expect(loadMore).toHaveBeenCalledWith(resourceId)
 
     core.dispose()
   })
