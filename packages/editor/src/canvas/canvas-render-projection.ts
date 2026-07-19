@@ -26,11 +26,14 @@ export function projectCanvasRenderContent(
   const visibleNodes = nodes.filter(
     (node) => retained.has(node.id) || canvasBoundsIntersect(visibleBounds, canvasNodeBounds(node)),
   )
-  const nodeById = new Map(nodes.map((node) => [node.id, node]))
-  const visibleEdges = edges.filter((edge) => {
-    const bounds = canvasEdgeBounds(edge, nodeById)
-    return bounds ? canvasBoundsIntersect(visibleBounds, bounds) : false
-  })
+  let visibleEdges = edges
+  if (edges.length > 0) {
+    const nodeById = new Map(nodes.map((node) => [node.id, node]))
+    visibleEdges = edges.filter((edge) => {
+      const bounds = canvasEdgeBounds(edge, nodeById)
+      return bounds ? canvasBoundsIntersect(visibleBounds, bounds) : false
+    })
+  }
   return { nodes: visibleNodes, edges: visibleEdges }
 }
 
