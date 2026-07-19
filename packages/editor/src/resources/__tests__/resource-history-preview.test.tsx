@@ -58,9 +58,10 @@ async function historyPreviewFixture(state: ItemHistoryState) {
   const selectPreview = vi.fn()
   const requestRestore = vi.fn()
   const confirmRestore = vi.fn().mockResolvedValue({ status: 'unavailable' as const })
+  const subscribe = vi.fn(() => () => {})
   const source: ItemHistoryController = {
     get: () => state,
-    subscribe: () => () => {},
+    subscribe,
     loadMore: vi.fn(),
     selectPreview,
     requestRestore,
@@ -75,10 +76,43 @@ async function historyPreviewFixture(state: ItemHistoryState) {
     resource: authorizedResourceSummaryFromRecord(resource, 'edit'),
     selectPreview,
     source,
+    subscribe,
   }
 }
 
 describe('ResourceHistoryPreview', () => {
+  it('keeps one controller subscription across parent renders', async () => {
+    const fixture = await historyPreviewFixture({
+      list: { status: 'loading' },
+      preview: { status: 'closed' },
+      restore: { status: 'closed' },
+    })
+    const view = render(
+      <ResourceHistoryPreview
+        actions={fixture.actions}
+        resource={fixture.resource}
+        runtime={fixture.core.runtime}
+        source={fixture.source}
+      >
+        <span>Current viewport</span>
+      </ResourceHistoryPreview>,
+    )
+
+    view.rerender(
+      <ResourceHistoryPreview
+        actions={fixture.actions}
+        resource={fixture.resource}
+        runtime={fixture.core.runtime}
+        source={fixture.source}
+      >
+        <span>Current viewport</span>
+      </ResourceHistoryPreview>,
+    )
+
+    expect(fixture.subscribe).toHaveBeenCalledOnce()
+    fixture.core.dispose()
+  })
+
   it('replaces the viewport while loading and owns preview exit and restore confirmation', async () => {
     const entryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
     const fixture = await historyPreviewFixture({

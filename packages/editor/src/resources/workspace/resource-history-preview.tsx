@@ -1,6 +1,6 @@
 import * as Y from 'yjs'
 import { History, Loader2, RotateCcw, X } from 'lucide-react'
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { Banner, BannerButton } from '@wizard-archive/ui/components/banner'
 import { formatRelativeTime } from '@wizard-archive/ui/utils/format-relative-time'
@@ -41,10 +41,12 @@ export function ResourceHistoryPreview({
   runtime: EditorRuntime
   source: ItemHistoryController
 }) {
-  const state = useSyncExternalStore(
-    (listener) => source.subscribe(resource.id, listener),
-    () => source.get(resource.id),
+  const subscribe = useCallback(
+    (listener: () => void) => source.subscribe(resource.id, listener),
+    [resource.id, source],
   )
+  const getSnapshot = useCallback(() => source.get(resource.id), [resource.id, source])
+  const state = useSyncExternalStore(subscribe, getSnapshot)
   return (
     <>
       {state.preview.status === 'closed' ? (
