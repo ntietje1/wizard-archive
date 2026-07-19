@@ -32,7 +32,7 @@ export async function findAccessOperation(
 }
 
 export function accessOperationWasReused(
-  operation: Readonly<{ actorMemberUuid: CampaignMemberId; fingerprint: string }>,
+  operation: Readonly<{ actorMemberUuid: string; fingerprint: string }>,
   actorId: CampaignMemberId,
   fingerprint: string,
 ) {

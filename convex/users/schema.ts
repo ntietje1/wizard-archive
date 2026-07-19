@@ -1,10 +1,8 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import type { Validator } from 'convex/values'
-import type { UserProfileId } from '@wizard-archive/editor/resources/domain-id'
 import { literals } from 'convex-helpers/validators'
 
-export const userProfileIdValidator = v.string() as Validator<UserProfileId>
+export const userProfileIdValidator = v.string()
 
 const profileImageValidator = v.nullable(
   v.union(

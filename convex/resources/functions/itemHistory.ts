@@ -14,7 +14,6 @@ import type {
 } from '@wizard-archive/editor/resources/content-session-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
-  CampaignMemberId,
   HistoryEntryId,
   ResourceId,
   SnapshotId,
@@ -502,7 +501,7 @@ async function mapPinHistoryLabel(
 async function checkpointDelay(
   ctx: MutationCtx,
   resource: Doc<'resources'>,
-  intent: { actorMemberUuid: CampaignMemberId },
+  intent: { actorMemberUuid: string },
 ): Promise<number> {
   const previous = await ctx.db
     .query('itemHistoryEntries')

@@ -1,10 +1,8 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import type { Validator } from 'convex/values'
-import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignIdValidator } from '../campaigns/schema'
 
-export const sessionIdValidator = v.string() as Validator<SessionId>
+export const sessionIdValidator = v.string()
 
 const sessionTableFields = {
   sessionUuid: sessionIdValidator,

@@ -4,6 +4,7 @@ import {
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
 import { noteDocumentOutline } from '@wizard-archive/editor/notes/outline'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
 import { createResourcePreview } from '@wizard-archive/editor/resources/preview'
@@ -13,6 +14,7 @@ import {
   normalizeResourceSearchText,
 } from '@wizard-archive/editor/resources/search-policy'
 import type { CampaignMutationCtx } from '../../functions'
+import type { Doc } from '../../_generated/dataModel'
 import { findCanonicalResource } from './findCanonicalResource'
 import { resourceRecordFromRow } from './resourceRecordRow'
 
@@ -30,7 +32,7 @@ export async function syncResourceSearchProjection(
     resource.kind === 'note'
       ? (noteProjection ??
         (existing
-          ? { body: existing.body, preview: existing.preview }
+          ? { body: existing.body, preview: resourcePreviewFromRow(existing.preview) }
           : await loadNoteSearchProjection(ctx, resource.id)))
       : null
   const projectedBody = projectedNote?.body ?? ''
@@ -54,6 +56,18 @@ function storedPreview(preview: ResourcePreview) {
   }
 }
 
+function resourcePreviewFromRow(
+  preview: Doc<'resourceSearchDocuments'>['preview'],
+): ResourcePreview {
+  return {
+    ...preview,
+    outline: preview.outline.map((heading) => ({
+      ...heading,
+      blockId: assertDomainId(DOMAIN_ID_KIND.noteBlock, heading.blockId),
+    })),
+  }
+}
+
 export async function deleteResourceSearchProjection(
   ctx: CampaignMutationCtx,
   resourceId: ResourceId,
@@ -72,7 +86,7 @@ export async function copyResourceSearchBody(
     ctx,
     destination,
     source
-      ? { body: source.body, preview: source.preview }
+      ? { body: source.body, preview: resourcePreviewFromRow(source.preview) }
       : { body: '', preview: createResourcePreview('note', '', []) },
   )
 }

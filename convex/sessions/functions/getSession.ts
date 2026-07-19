@@ -3,13 +3,14 @@ import type { Session } from '../../../shared/sessions/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { CampaignId, SessionId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignQueryCtx } from '../../functions'
 
 export function toSession(session: Doc<'sessions'>, campaignId: CampaignId): Session {
   const { _id: _rowId, _creationTime, sessionUuid, campaignId: _campaignRowId, ...fields } = session
   return {
     ...fields,
-    id: sessionUuid,
+    id: assertDomainId(DOMAIN_ID_KIND.session, sessionUuid),
     createdAt: _creationTime,
     campaignId,
   }

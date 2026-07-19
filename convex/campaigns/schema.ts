@@ -1,13 +1,11 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import type { Validator } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import {
   userProfileIdValidator,
   userProfileSummaryValidator,
   userProfileValidator,
 } from '../users/schema'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
 
 export const campaignStatusValidator = literals('Active', 'Inactive', 'Deleted')
@@ -16,8 +14,8 @@ export const campaignMemberRoleValidator = literals('DM', 'Player')
 
 export const campaignMemberStatusValidator = literals('Pending', 'Accepted', 'Rejected', 'Removed')
 
-export const campaignIdValidator = v.string() as Validator<CampaignId>
-export const campaignMemberIdValidator = v.string() as Validator<CampaignMemberId>
+export const campaignIdValidator = v.string()
+export const campaignMemberIdValidator = v.string()
 
 const campaignFields = {
   campaignUuid: campaignIdValidator,

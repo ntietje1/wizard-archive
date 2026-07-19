@@ -1293,7 +1293,12 @@ describe('resource structure commands', () => {
       const stage: ItemHistoryCleanupStage = cleanupStage
       cleanupStage = await t.run(
         async (ctx): Promise<ItemHistoryCleanupStage | null> =>
-          await deleteResourceItemHistoryBatch(ctx, campaignUuid, resourceId, stage),
+          await deleteResourceItemHistoryBatch(
+            ctx,
+            assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
+            resourceId,
+            stage,
+          ),
       )
     }
     const originalRetirementCandidateId = await t.run(async (ctx) => {

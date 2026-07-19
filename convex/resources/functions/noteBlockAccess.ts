@@ -22,6 +22,7 @@ import type {
   NoteBlockId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignQueryCtx } from '../../functions'
 import { encodeYjsDocument } from './contentCopyTypes'
 import { findCanonicalResource } from './findCanonicalResource'
@@ -87,7 +88,14 @@ async function loadSelectedNoteBlockPolicies(
   ])
   const audienceVisibility = new Map<NoteBlockId, NoteBlockVisibility>(
     audienceRows.flatMap((row) =>
-      row ? [[row.blockUuid, NOTE_BLOCK_VISIBILITY.visible] as const] : [],
+      row
+        ? [
+            [
+              assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid),
+              NOTE_BLOCK_VISIBILITY.visible,
+            ] as const,
+          ]
+        : [],
     ),
   )
   const memberVisibility = new Map<
@@ -96,9 +104,11 @@ async function loadSelectedNoteBlockPolicies(
   >()
   for (const row of memberRows) {
     if (!row) continue
-    const entries = memberVisibility.get(row.blockUuid) ?? []
-    entries.push([row.memberUuid, row.visibility])
-    memberVisibility.set(row.blockUuid, entries)
+    const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid)
+    const memberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, row.memberUuid)
+    const entries = memberVisibility.get(blockId) ?? []
+    entries.push([memberId, row.visibility])
+    memberVisibility.set(blockId, entries)
   }
   return { audienceVisibility, memberVisibility }
 }
@@ -299,16 +309,21 @@ async function loadNoteBlockPolicies(ctx: CampaignQueryCtx, noteId: ResourceId) 
     .take(remaining + 1)
   if (memberRows.length > remaining) return { status: 'capacity_exceeded' as const }
   const audienceVisibility = new Map<NoteBlockId, NoteBlockVisibility>(
-    audienceRows.map((row) => [row.blockUuid, NOTE_BLOCK_VISIBILITY.visible]),
+    audienceRows.map((row) => [
+      assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid),
+      NOTE_BLOCK_VISIBILITY.visible,
+    ]),
   )
   const memberVisibility = new Map<
     NoteBlockId,
     Array<readonly [CampaignMemberId, NoteBlockVisibility]>
   >()
   for (const row of memberRows) {
-    const entries = memberVisibility.get(row.blockUuid) ?? []
-    entries.push([row.memberUuid, row.visibility])
-    memberVisibility.set(row.blockUuid, entries)
+    const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid)
+    const memberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, row.memberUuid)
+    const entries = memberVisibility.get(blockId) ?? []
+    entries.push([memberId, row.visibility])
+    memberVisibility.set(blockId, entries)
   }
   if (
     audienceVisibility.size !== audienceRows.length ||

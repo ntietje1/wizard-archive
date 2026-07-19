@@ -37,7 +37,13 @@ export async function loadItemHistoryPage(
     )
     .order('desc')
     .paginate({ cursor, numItems: ITEM_HISTORY_PAGE_SIZE })
-  const actorIds = [...new Set(page.page.map((entry) => entry.actorMemberUuid))]
+  const actorIds = [
+    ...new Set(
+      page.page.map((entry) =>
+        assertDomainId(DOMAIN_ID_KIND.campaignMember, entry.actorMemberUuid),
+      ),
+    ),
+  ]
   const actors = new Map(
     await Promise.all(
       actorIds.map(async (actorId) => [actorId, await loadHistoryActor(ctx, actorId)] as const),
@@ -46,7 +52,10 @@ export async function loadItemHistoryPage(
   return {
     status: 'ready',
     entries: page.page.map((entry) =>
-      presentHistoryEntry(entry, actors.get(entry.actorMemberUuid)!),
+      presentHistoryEntry(
+        entry,
+        actors.get(assertDomainId(DOMAIN_ID_KIND.campaignMember, entry.actorMemberUuid))!,
+      ),
     ),
     nextCursor: page.isDone ? null : page.continueCursor,
   }

@@ -11,7 +11,7 @@ type SessionContextValue = {
   sessions: UseQueryResult<Array<Session>, Error>
   startSession: UseMutationResult<SessionId, Error, { name?: string }>
   endCurrentSession: UseMutationResult<SessionId, Error, Record<string, never>>
-  setCurrentSession: UseMutationResult<SessionId, Error, { sessionId: SessionId }>
+  setCurrentSession: UseMutationResult<SessionId, Error, { sessionId: string }>
   nextSessionNumber: number
 }
 

@@ -54,7 +54,11 @@ export async function createInitialResourceAccessPolicy(
   ctx: CampaignMutationCtx,
   resource: AccessPolicyResource,
 ): Promise<void> {
-  const existing = await loadResourceAccessPolicy(ctx, resource.campaignUuid, resource.resourceUuid)
+  const existing = await loadResourceAccessPolicy(
+    ctx,
+    assertDomainId(DOMAIN_ID_KIND.campaign, resource.campaignUuid),
+    resource.resourceUuid,
+  )
   if (existing) throw new TypeError('Resource access policy already exists')
   await ctx.db.insert(
     'resourceAccessPolicies',
@@ -80,7 +84,11 @@ export async function copyResourceAccessPolicy(
   source: AccessPolicyResource,
   destination: AccessPolicyResource,
 ): Promise<void> {
-  const sourcePolicy = await loadResourceAccessPolicy(ctx, source.campaignUuid, source.resourceUuid)
+  const sourcePolicy = await loadResourceAccessPolicy(
+    ctx,
+    assertDomainId(DOMAIN_ID_KIND.campaign, source.campaignUuid),
+    source.resourceUuid,
+  )
   if (
     !sourcePolicy ||
     sourcePolicy.subject !== (source.kind === 'folder' ? 'folder' : 'resource') ||

@@ -8,7 +8,7 @@ import type { Doc } from '../../_generated/dataModel'
 export function resourceRecordFromRow(resource: Doc<'resources'>): ResourceRecord {
   return {
     id: assertDomainId(DOMAIN_ID_KIND.resource, resource.resourceUuid),
-    campaignId: resource.campaignUuid,
+    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, resource.campaignUuid),
     parentId:
       resource.parentResourceUuid === null
         ? null
@@ -23,11 +23,17 @@ export function resourceRecordFromRow(resource: Doc<'resources'>): ResourceRecor
         : {
             state: 'trashed',
             at: resource.trashedAt,
-            by: resource.trashedByMemberUuid,
+            by: assertDomainId(DOMAIN_ID_KIND.campaignMember, resource.trashedByMemberUuid),
           },
     metadataVersion: assertVersionStamp(resource.metadataVersion),
-    created: { at: resource.createdAt, by: resource.createdByMemberUuid },
-    updated: { at: resource.updatedAt, by: resource.updatedByMemberUuid },
+    created: {
+      at: resource.createdAt,
+      by: assertDomainId(DOMAIN_ID_KIND.campaignMember, resource.createdByMemberUuid),
+    },
+    updated: {
+      at: resource.updatedAt,
+      by: assertDomainId(DOMAIN_ID_KIND.campaignMember, resource.updatedByMemberUuid),
+    },
   }
 }
 

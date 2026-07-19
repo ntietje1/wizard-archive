@@ -312,7 +312,9 @@ export const loadNoteBlockAccess = dmQuery({
   },
   returns: noteBlockAccessPresentationPageValidator,
   handler: async (ctx, args) => {
-    const blockIds = normalizeNoteBlockAccessSelection(args.blockIds)
+    const blockIds = normalizeNoteBlockAccessSelection(
+      args.blockIds.map((blockId) => assertDomainId(DOMAIN_ID_KIND.noteBlock, blockId)),
+    )
     const page = await getAcceptedPlayerPresentationPage(
       ctx,
       args.cursor,

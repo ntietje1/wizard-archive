@@ -10,6 +10,7 @@ import type {
   HistoryEntryId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   deleteCampaignById,
   navigateToCampaignResource,
@@ -135,7 +136,7 @@ async function waitForHistoryEntry(
   resourceId: ResourceId,
   action: 'content_edited' | 'content_restored',
 ): Promise<HistoryEntryId> {
-  let entryId: HistoryEntryId | null = null
+  let entryId: string | null = null
   await expect
     .poll(
       async () => {
@@ -152,7 +153,7 @@ async function waitForHistoryEntry(
     )
     .not.toBeNull()
   if (!entryId) throw new Error(`History entry ${action} was not persisted`)
-  return entryId
+  return assertDomainId(DOMAIN_ID_KIND.historyEntry, entryId)
 }
 
 async function loadNoteText(

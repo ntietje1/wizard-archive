@@ -12,6 +12,7 @@ import {
 } from './schema'
 import type { CampaignMemberStatus } from '../../shared/campaigns/types'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
 
 export const createCampaign = authMutation({
@@ -34,7 +35,9 @@ export const joinCampaign = authMutation({
   },
   returns: campaignMemberStatusValidator,
   handler: async (ctx, args): Promise<CampaignMemberStatus> => {
-    return joinCampaignFn(ctx, { campaignId: args.campaignId })
+    return joinCampaignFn(ctx, {
+      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId),
+    })
   },
 })
 
@@ -79,7 +82,7 @@ export const updateCampaignMemberStatus = dmMutation({
   returns: campaignMemberIdValidator,
   handler: async (ctx, args): Promise<CampaignMemberId> => {
     return updateCampaignMemberStatusFn(ctx, {
-      memberId: args.memberId,
+      memberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, args.memberId),
       status: args.status,
     })
   },
