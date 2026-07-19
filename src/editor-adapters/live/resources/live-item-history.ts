@@ -18,12 +18,14 @@ import type { VersionStamp } from '@wizard-archive/editor/resources/component-ve
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
+import { mapImageAttachment } from '@wizard-archive/editor/resources/map-session-policy'
 import type {
   ItemHistoryEntry,
   ItemHistoryPreview,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { ItemHistoryBackend } from '@wizard-archive/editor/resources/item-history-controller'
 import { createItemHistoryController } from '@wizard-archive/editor/resources/item-history-controller'
+import { downloadMapImage } from './map-image-download'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
@@ -164,7 +166,7 @@ export function readLiveItemHistoryPreview(preview: StoredHistoryPreview): ItemH
     kind: 'map',
     snapshotId,
     version,
-    content: readHistoryMapContent(preview.content),
+    ...readHistoryMapPreview(preview),
   }
 }
 
@@ -186,6 +188,20 @@ function readHistoryMapContent(content: StoredMapPreview['content']): MapResourc
         destination,
       }
     }),
+  }
+}
+
+function readHistoryMapPreview(preview: StoredMapPreview) {
+  const content = readHistoryMapContent(preview.content)
+  return {
+    content,
+    loadImage: async (layerId: string | null) => {
+      const image = mapImageAttachment(content, layerId)
+      const source = preview.images.find((candidate) => candidate.layerId === layerId)
+      return source && image
+        ? await downloadMapImage(image, image, source.url)
+        : { status: 'integrity_error' as const, issue: 'content_missing' as const }
+    },
   }
 }
 

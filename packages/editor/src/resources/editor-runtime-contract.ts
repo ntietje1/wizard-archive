@@ -1,5 +1,6 @@
 import type {
   CanvasSessionSource,
+  ContentExportResult,
   FileContentSource,
   MapResourceContent,
   MapSessionSource,
@@ -286,6 +287,7 @@ export type ItemHistoryPreview =
       snapshotId: SnapshotId
       version: VersionStamp
       content: MapResourceContent
+      loadImage(layerId: string | null): Promise<ContentExportResult>
     }>
 
 export type ItemHistoryPreviewState =

@@ -709,6 +709,12 @@ export const itemHistoryPreviewResultValidator = v.union(
         snapshotId: snapshotIdValidator,
         version: versionStampValidator,
         content: mapResourceContentValidator,
+        images: v.array(
+          v.object({
+            layerId: v.nullable(v.string()),
+            url: v.string(),
+          }),
+        ),
       }),
     ),
   }),

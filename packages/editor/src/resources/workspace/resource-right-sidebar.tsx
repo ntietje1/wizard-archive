@@ -58,7 +58,7 @@ export function ResourceRightSidebar({
       id: 'history' as const,
       label: 'History',
       icon: Clock3,
-      available: runtime.history.status === 'available',
+      available: runtime.history.status === 'available' && resource.permission === 'edit',
     },
   ]
   const selected = panels.find((panel) => panel.id === activePanel && panel.available) ?? panels[0]
@@ -496,7 +496,14 @@ function AvailableResourceHistoryPanel({
                   key={entry.id}
                   canEdit={canEdit}
                   entry={entry}
-                  onPreview={() => source.selectPreview(resourceId, entry.id)}
+                  onPreview={() =>
+                    source.selectPreview(
+                      resourceId,
+                      state.preview.status !== 'closed' && state.preview.entryId === entry.id
+                        ? null
+                        : entry.id,
+                    )
+                  }
                   onRestore={() => source.requestRestore(resourceId, entry.id)}
                   selected={state.preview.status !== 'closed' && state.preview.entryId === entry.id}
                 />

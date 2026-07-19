@@ -71,6 +71,7 @@ import type * as resources_functions_executeResourceAccessCommand from "../resou
 import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
+import type * as resources_functions_findItemHistoryCheckpoint from "../resources/functions/findItemHistoryCheckpoint.js";
 import type * as resources_functions_itemHistory from "../resources/functions/itemHistory.js";
 import type * as resources_functions_itemHistoryQueries from "../resources/functions/itemHistoryQueries.js";
 import type * as resources_functions_itemHistoryStructure from "../resources/functions/itemHistoryStructure.js";
@@ -88,6 +89,7 @@ import type * as resources_functions_replaceCanvasContent from "../resources/fun
 import type * as resources_functions_replaceMapContent from "../resources/functions/replaceMapContent.js";
 import type * as resources_functions_replaceMapImage from "../resources/functions/replaceMapImage.js";
 import type * as resources_functions_replaceNoteContent from "../resources/functions/replaceNoteContent.js";
+import type * as resources_functions_replacementTarget from "../resources/functions/replacementTarget.js";
 import type * as resources_functions_resourceAccess from "../resources/functions/resourceAccess.js";
 import type * as resources_functions_resourceBookmarks from "../resources/functions/resourceBookmarks.js";
 import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
@@ -214,6 +216,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
   "resources/functions/fileContent": typeof resources_functions_fileContent;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
+  "resources/functions/findItemHistoryCheckpoint": typeof resources_functions_findItemHistoryCheckpoint;
   "resources/functions/itemHistory": typeof resources_functions_itemHistory;
   "resources/functions/itemHistoryQueries": typeof resources_functions_itemHistoryQueries;
   "resources/functions/itemHistoryStructure": typeof resources_functions_itemHistoryStructure;
@@ -231,6 +234,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/replaceMapContent": typeof resources_functions_replaceMapContent;
   "resources/functions/replaceMapImage": typeof resources_functions_replaceMapImage;
   "resources/functions/replaceNoteContent": typeof resources_functions_replaceNoteContent;
+  "resources/functions/replacementTarget": typeof resources_functions_replacementTarget;
   "resources/functions/resourceAccess": typeof resources_functions_resourceAccess;
   "resources/functions/resourceBookmarks": typeof resources_functions_resourceBookmarks;
   "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;

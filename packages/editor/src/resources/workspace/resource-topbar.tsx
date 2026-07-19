@@ -47,7 +47,7 @@ export function ResourceTopbar({
   const [menuOpen, setMenuOpen] = useState(false)
   const ancestors = runtime.resources.index.getSnapshot().ancestors(resource.id)
   const breadcrumb = ancestors.state === 'known' ? ancestors.value : []
-  const historyAvailable = runtime.history.status === 'available'
+  const historyAvailable = runtime.history.status === 'available' && resource.permission === 'edit'
 
   return (
     <header className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border px-1">

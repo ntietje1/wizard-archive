@@ -26,6 +26,7 @@ import { ResourceTopbar } from './workspace/resource-topbar'
 import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
 import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
 import { ResourceSearchDialog } from './workspace/resource-search-dialog'
+import { ResourceHistoryPreview } from './workspace/resource-history-preview'
 import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import { ResourceViewAsBanner } from './workspace/resource-view-as-banner'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
@@ -506,6 +507,21 @@ function SelectedResource({
     runtime.scope.projection !== 'view_as_player' &&
     resource.permission === 'edit'
   const canEditViewport = resource.kind === 'folder' ? canEditStructure : canEditContent
+  const viewport = (
+    <ResourceViewport
+      actions={actions}
+      canEdit={canEditViewport}
+      noteHeadingNavigation={noteHeadingNavigation}
+      resource={resource}
+      runtime={runtime}
+      selection={selection}
+      snapshot={snapshot}
+      sort={sort}
+      target={target}
+      onOpenContextMenu={onOpenContextMenu}
+      onSelectionChange={onSelectionChange}
+    />
+  )
   return (
     <>
       <ResourceTopbar
@@ -526,19 +542,18 @@ function SelectedResource({
           {mode === 'viewer' ? 'Viewer mode — editing is disabled' : 'Read only'}
         </div>
       )}
-      <ResourceViewport
-        actions={actions}
-        canEdit={canEditViewport}
-        noteHeadingNavigation={noteHeadingNavigation}
-        resource={resource}
-        runtime={runtime}
-        selection={selection}
-        snapshot={snapshot}
-        sort={sort}
-        target={target}
-        onOpenContextMenu={onOpenContextMenu}
-        onSelectionChange={onSelectionChange}
-      />
+      {runtime.history.status === 'available' ? (
+        <ResourceHistoryPreview
+          actions={actions}
+          resource={resource}
+          runtime={runtime}
+          source={runtime.history.value}
+        >
+          {viewport}
+        </ResourceHistoryPreview>
+      ) : (
+        viewport
+      )}
     </>
   )
 }

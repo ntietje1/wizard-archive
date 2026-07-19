@@ -790,6 +790,21 @@ describe('item history checkpoints', () => {
     if (canvasBefore.status !== 'ready' || mapBefore.status !== 'ready') {
       throw new TypeError('Expected current canvas and map content')
     }
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadItemHistoryCheckpoint, {
+        campaignId: campaign.campaignDomainId,
+        resourceId: mapId,
+        entryId: mapEntryId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      preview: {
+        kind: 'map',
+        snapshotId: mapSnapshotId,
+        content: mapContent,
+        images: [],
+      },
+    })
 
     await expect(
       asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {

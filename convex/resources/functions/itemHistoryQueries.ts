@@ -15,6 +15,7 @@ import { projectMapContent } from './mapContent'
 import { authorizeResourcePermission } from './resourceAccess'
 import { getUserProfileById } from '../../users/functions/getUserProfile'
 import { findItemHistoryCheckpoint } from './findItemHistoryCheckpoint'
+import { loadCommittedAssetUrl } from './assetContent'
 
 const ITEM_HISTORY_PAGE_SIZE = 25
 
@@ -75,28 +76,56 @@ export async function loadItemHistoryCheckpoint(
   const { checkpoint } = lookup
 
   try {
-    return checkpoint.kind === 'map'
-      ? {
-          status: 'ready',
-          preview: {
-            kind: 'map',
-            snapshotId: assertDomainId(DOMAIN_ID_KIND.snapshot, checkpoint.snapshotUuid),
-            version: assertVersionStamp(checkpoint.version),
-            content: projectMapContent(checkpoint, checkpoint.pins),
-          },
-        }
-      : {
-          status: 'ready',
-          preview: {
-            kind: checkpoint.kind,
-            snapshotId: assertDomainId(DOMAIN_ID_KIND.snapshot, checkpoint.snapshotUuid),
-            version: assertVersionStamp(checkpoint.version),
-            update: checkpoint.update,
-          },
-        }
+    if (checkpoint.kind !== 'map') {
+      return {
+        status: 'ready',
+        preview: {
+          kind: checkpoint.kind,
+          snapshotId: assertDomainId(DOMAIN_ID_KIND.snapshot, checkpoint.snapshotUuid),
+          version: assertVersionStamp(checkpoint.version),
+          update: checkpoint.update,
+        },
+      }
+    }
+    const images = await loadHistoryMapImages(ctx, checkpoint)
+    if (!images) return { status: 'unavailable' }
+    return {
+      status: 'ready',
+      preview: {
+        kind: 'map',
+        snapshotId: assertDomainId(DOMAIN_ID_KIND.snapshot, checkpoint.snapshotUuid),
+        version: assertVersionStamp(checkpoint.version),
+        content: projectMapContent(checkpoint, checkpoint.pins),
+        images,
+      },
+    }
   } catch {
     return { status: 'unavailable' }
   }
+}
+
+async function loadHistoryMapImages(
+  ctx: CampaignQueryCtx,
+  checkpoint: Extract<Doc<'itemHistoryCheckpoints'>, { kind: 'map' }>,
+) {
+  const stored = [
+    ...(checkpoint.image ? [{ layerId: null, assetUuid: checkpoint.image.assetUuid }] : []),
+    ...checkpoint.layers.flatMap((layer) =>
+      layer.image ? [{ layerId: layer.id, assetUuid: layer.image.assetUuid }] : [],
+    ),
+  ]
+  const images = await Promise.all(
+    stored.map(async ({ layerId, assetUuid }) => ({
+      layerId,
+      url: await loadCommittedAssetUrl(ctx, assertDomainId(DOMAIN_ID_KIND.asset, assetUuid)),
+    })),
+  )
+  const available: Array<{ layerId: string | null; url: string }> = []
+  for (const image of images) {
+    if (image.url === null) return null
+    available.push({ layerId: image.layerId, url: image.url })
+  }
+  return available
 }
 
 async function loadHistoryActor(

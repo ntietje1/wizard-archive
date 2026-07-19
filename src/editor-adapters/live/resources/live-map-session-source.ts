@@ -4,7 +4,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import {
   assertSha256Digest,
   assertVersionStamp,
-  sha256Digest,
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
@@ -37,6 +36,7 @@ import { liveContentPendingState } from './live-content-pending-state'
 import { createLiveFixedContentResource } from './live-fixed-content-create'
 import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
+import { downloadMapImage } from './map-image-download'
 
 type MapSnapshot = FunctionReturnType<typeof api.resources.queries.loadMapContent>
 type RawMapImage =
@@ -304,21 +304,7 @@ async function loadMapImage(
   if (download.status !== 'ready') return download
   assertVersionStamp(download.version)
   const image = readMapImage(download.image)
-  if (image.status !== 'attached' || !sameMapImage(expected, image)) {
-    return { status: 'integrity_error', issue: 'version_mismatch' }
-  }
-  const response = await fetch(download.url)
-  if (!response.ok) return { status: 'integrity_error', issue: 'content_missing' }
-  const bytes = new Uint8Array(await response.arrayBuffer())
-  if (bytes.byteLength !== image.byteSize || (await sha256Digest(bytes)) !== image.digest) {
-    return { status: 'integrity_error', issue: 'content_corrupt' }
-  }
-  return {
-    status: 'ready',
-    bytes,
-    extension: image.mediaType.split('/')[1] ?? 'bin',
-    mediaType: image.mediaType,
-  }
+  return await downloadMapImage(expected, image, download.url)
 }
 
 function storedMapCommand(command: MapContentCommand): ExecuteMapCommandArgs['command'] {
@@ -441,15 +427,4 @@ function readMapImage(image: RawMapImage | MapImageAttachment): MapImageAttachme
         digest: assertSha256Digest(image.digest),
         mediaType: image.mediaType,
       }
-}
-
-function sameMapImage(left: MapImageAttachment, right: MapImageAttachment): boolean {
-  return (
-    left.status === right.status &&
-    (left.status === 'unattached' ||
-      (right.status === 'attached' &&
-        left.byteSize === right.byteSize &&
-        left.digest === right.digest &&
-        left.mediaType === right.mediaType))
-  )
 }
