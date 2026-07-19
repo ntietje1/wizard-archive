@@ -51,7 +51,7 @@ test.describe.serial('canonical item history', () => {
     await expect(history).toContainText('created this item')
     const checkpointEntry = history
       .getByRole('button')
-      .filter({ hasText: 'edited the content' })
+      .filter({ hasText: 'edited content' })
       .first()
     await expect(checkpointEntry).toBeVisible()
     await attachScreenshot(page, testInfo, 'item-history-timeline')

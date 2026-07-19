@@ -327,10 +327,10 @@ describe('ResourceRightSidebar item history', () => {
     )
 
     expect(screen.getByRole('list', { name: 'Item history' })).toBeVisible()
-    expect(screen.getByText(/renamed “Draft” to “Field notes”/)).toBeVisible()
+    expect(screen.getByText(/renamed "Draft" to "Field notes"/)).toBeVisible()
     expect(screen.getAllByRole('button', { name: 'Restore this version' })).toHaveLength(1)
 
-    fireEvent.click(screen.getByRole('button', { name: /Mira edited the content/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Mira edited content/ }))
     expect(selectPreview).toHaveBeenCalledWith(resourceId, checkpointEntryId)
     fireEvent.click(screen.getByRole('button', { name: 'Restore this version' }))
     expect(requestRestore).toHaveBeenCalledWith(resourceId, checkpointEntryId)

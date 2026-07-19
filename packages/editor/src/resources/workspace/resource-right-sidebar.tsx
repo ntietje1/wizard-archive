@@ -553,13 +553,13 @@ function HistoryEntryRow({
     </>
   )
   if (!('checkpoint' in entry)) {
-    return <li className="flex items-start gap-2.5 px-3 py-2">{content}</li>
+    return <li className="flex items-start gap-2.5 px-3 py-2 hover:bg-muted/30">{content}</li>
   }
   return (
     <li
       className={
         selected
-          ? 'flex items-start gap-2.5 bg-accent px-3 py-2'
+          ? 'flex items-start gap-2.5 bg-accent px-3 py-2 shadow-[inset_2px_0_0_0_var(--primary)]'
           : 'flex items-start gap-2.5 px-3 py-2 hover:bg-muted/50'
       }
     >
@@ -608,11 +608,11 @@ function historyEntryDescription(entry: ItemHistoryEntry): string {
 
 const SIMPLE_HISTORY_DESCRIPTIONS: Partial<Record<ItemHistoryEntry['action'], string>> = {
   created: 'created this item',
-  trashed: 'moved this item to trash',
-  restored: 'restored this item from trash',
+  trashed: 'moved to trash',
+  restored: 'restored from trash',
   file_replaced: 'replaced the file',
   file_removed: 'removed the file',
-  content_edited: 'edited the content',
+  content_edited: 'edited content',
   content_restored: 'restored a previous version',
   map_image_changed: 'changed the map image',
   map_image_removed: 'removed the map image',
@@ -621,15 +621,15 @@ const SIMPLE_HISTORY_DESCRIPTIONS: Partial<Record<ItemHistoryEntry['action'], st
 function structureHistoryDescription(entry: ItemHistoryEntry): string | null {
   switch (entry.action) {
     case 'copied':
-      return `copied from “${entry.metadata.sourceTitle}”`
+      return `copied from "${entry.metadata.sourceTitle}"`
     case 'renamed':
-      return `renamed “${entry.metadata.from}” to “${entry.metadata.to}”`
+      return `renamed "${entry.metadata.from}" to "${entry.metadata.to}"`
     case 'moved':
       return `moved from ${historyLocation(entry.metadata.from)} to ${historyLocation(entry.metadata.to)}`
     case 'icon_changed':
-      return entry.metadata.to ? `changed the icon to “${entry.metadata.to}”` : 'removed the icon'
+      return entry.metadata.to ? `changed icon to "${entry.metadata.to}"` : 'removed the icon'
     case 'color_changed':
-      return entry.metadata.to ? `changed the color to “${entry.metadata.to}”` : 'removed the color'
+      return entry.metadata.to ? `changed color to "${entry.metadata.to}"` : 'removed the color'
     default:
       return null
   }
@@ -644,20 +644,20 @@ function accessAndMapHistoryDescription(entry: ItemHistoryEntry): string {
     case 'inheritance_changed':
       return `${entry.metadata.to === 'enabled' ? 'enabled' : 'disabled'} share inheritance`
     case 'map_pin_added':
-      return `added pin “${entry.metadata.pinLabel}”`
+      return `added pin "${entry.metadata.pinLabel}"`
     case 'map_pin_moved':
-      return `moved pin “${entry.metadata.pinLabel}”`
+      return `moved pin "${entry.metadata.pinLabel}"`
     case 'map_pin_removed':
-      return `removed pin “${entry.metadata.pinLabel}”`
+      return `removed pin "${entry.metadata.pinLabel}"`
     case 'map_pin_visibility_changed':
-      return `${entry.metadata.visible ? 'showed' : 'hid'} pin “${entry.metadata.pinLabel}”`
+      return `${entry.metadata.visible ? 'showed' : 'hid'} pin "${entry.metadata.pinLabel}"`
     default:
       throw new TypeError(`Missing item-history description for ${entry.action}`)
   }
 }
 
 function historyLocation(value: string | null) {
-  return value ? `“${value}”` : 'the campaign root'
+  return value ? `"${value}"` : 'root'
 }
 
 function historySubject(value: 'all_players' | CampaignMemberId) {
