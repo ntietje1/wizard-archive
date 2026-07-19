@@ -384,28 +384,23 @@ describe('createInMemoryEditorRuntime', () => {
     })
     const bytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
-    const delivery = await core.runtime.content.files.executeTransfer(
+    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
+    const delivery = await core.runtime.transfers.value.execute(
       {
         campaignId: snapshot.campaignId,
         jobId,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         destinationParentId: null,
       },
-      {
-        bytes,
-        fileName: 'image.png',
-      },
+      [{ id: 'selected-file', kind: 'file', name: 'image.png' }],
+      [{ sourceId: 'selected-file', path: 'image.png', type: 'file', bytes }],
     )
 
-    expect(delivery).toMatchObject({ status: 'received', result: { status: 'completed' } })
-    if (
-      delivery.status !== 'received' ||
-      delivery.result.status !== 'completed' ||
-      delivery.result.receipt.result.type !== 'created'
-    ) {
+    expect(delivery).toMatchObject({ status: 'completed' })
+    if (delivery.status !== 'completed' || delivery.entries[0]?.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
-    const resourceId = delivery.result.receipt.result.resourceId
+    const resourceId = delivery.entries[0].resourceId
     expect(core.runtime.content.files.get(resourceId)).toMatchObject({
       status: 'ready',
       content: {

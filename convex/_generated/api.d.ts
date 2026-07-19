@@ -82,7 +82,7 @@ import type * as resources_functions_mapContent from "../resources/functions/map
 import type * as resources_functions_noteBlockAccess from "../resources/functions/noteBlockAccess.js";
 import type * as resources_functions_noteBlockAccessCleanup from "../resources/functions/noteBlockAccessCleanup.js";
 import type * as resources_functions_noteContent from "../resources/functions/noteContent.js";
-import type * as resources_functions_plainFileTransfer from "../resources/functions/plainFileTransfer.js";
+import type * as resources_functions_plainTransfer from "../resources/functions/plainTransfer.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_functions_projectResourceReferences from "../resources/functions/projectResourceReferences.js";
 import type * as resources_functions_replaceCanvasContent from "../resources/functions/replaceCanvasContent.js";
@@ -227,7 +227,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/noteBlockAccess": typeof resources_functions_noteBlockAccess;
   "resources/functions/noteBlockAccessCleanup": typeof resources_functions_noteBlockAccessCleanup;
   "resources/functions/noteContent": typeof resources_functions_noteContent;
-  "resources/functions/plainFileTransfer": typeof resources_functions_plainFileTransfer;
+  "resources/functions/plainTransfer": typeof resources_functions_plainTransfer;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/functions/projectResourceReferences": typeof resources_functions_projectResourceReferences;
   "resources/functions/replaceCanvasContent": typeof resources_functions_replaceCanvasContent;

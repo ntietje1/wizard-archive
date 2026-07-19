@@ -1,6 +1,12 @@
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
-import { authQuery, dmQuery, resourceQuery } from '../functions'
+import {
+  authQuery,
+  campaignInternalQuery,
+  campaignUuidInternalQuery,
+  dmQuery,
+  resourceQuery,
+} from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
@@ -34,12 +40,13 @@ import {
   historyEntryIdValidator,
   importJobIdValidator,
   noteBlockIdValidator,
+  operationIdValidator,
   resourceIdValidator,
 } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
 import { loadActorBookmarks } from './functions/resourceBookmarks'
 import { loadFileDownload as loadFileDownloadFn } from './functions/loadFileDownload'
-import { loadPlainFileTransfer as loadPlainFileTransferFn } from './functions/plainFileTransfer'
+import { loadPlainTransfer as loadPlainTransferFn } from './functions/plainTransfer'
 import { loadMapImage as loadMapImageFn } from './functions/loadMapImage'
 import { projectResourceAccess } from './functions/resourceAccess'
 import { getAcceptedPlayerPresentationPage } from '../campaigns/functions/getCampaignMembers'
@@ -90,12 +97,13 @@ const authorizedResourceSearchValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
 })
 
-const plainFileTransferSnapshotValidator = v.union(
+const plainTransferSnapshotValidator = v.union(
   v.object({ status: v.literal('unavailable') }),
   v.object({
     status: v.union(
       v.literal('pending'),
       v.literal('completed'),
+      v.literal('completed_with_issues'),
       v.literal('cancelled'),
       v.literal('rejected'),
     ),
@@ -104,20 +112,24 @@ const plainFileTransferSnapshotValidator = v.union(
     destinationParentId: v.nullable(resourceIdValidator),
     sourceDigest: v.nullable(v.string()),
     rejectionReason: v.nullable(v.string()),
-    entry: v.object({
-      sourceRootId: v.string(),
-      rawPath: v.string(),
-      normalizedPath: v.string(),
-      sourceDigest: v.nullable(v.string()),
-      resourceId: v.nullable(resourceIdValidator),
-      status: v.union(
-        v.literal('pending'),
-        v.literal('completed'),
-        v.literal('cancelled'),
-        v.literal('rejected'),
-      ),
-      rejectionReason: v.nullable(v.string()),
-    }),
+    entries: v.array(
+      v.object({
+        sourceRootId: v.string(),
+        rawPath: v.string(),
+        normalizedPath: v.string(),
+        plannedResourceId: resourceIdValidator,
+        plannedOperationId: operationIdValidator,
+        resourceKind: v.union(v.literal('folder'), v.literal('note'), v.literal('file')),
+        resourceId: v.nullable(resourceIdValidator),
+        status: v.union(
+          v.literal('pending'),
+          v.literal('completed'),
+          v.literal('cancelled'),
+          v.literal('rejected'),
+        ),
+        rejectionReason: v.nullable(v.string()),
+      }),
+    ),
   }),
 )
 
@@ -278,11 +290,32 @@ export const loadResourceProjectionAvailability = authQuery({
   },
 })
 
-export const loadPlainFileTransfer = dmQuery({
+export const loadPlainTransfer = dmQuery({
   args: { jobId: importJobIdValidator },
-  returns: plainFileTransferSnapshotValidator,
+  returns: plainTransferSnapshotValidator,
   handler: async (ctx, args) =>
-    await loadPlainFileTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
+    await loadPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
+})
+
+export const loadPlainTransferScope = campaignUuidInternalQuery({
+  args: {},
+  returns: v.object({
+    campaignId: v.id('campaigns'),
+    campaignUuid: campaignIdValidator,
+    actorId: campaignMemberIdValidator,
+  }),
+  handler: (ctx) => ({
+    campaignId: ctx.campaign._id,
+    campaignUuid: ctx.resourceScope.campaignId,
+    actorId: ctx.resourceScope.actorId,
+  }),
+})
+
+export const loadPlainTransferInternal = campaignInternalQuery({
+  args: { jobId: importJobIdValidator },
+  returns: plainTransferSnapshotValidator,
+  handler: async (ctx, args) =>
+    await loadPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
 })
 
 export const loadResourceAccess = dmQuery({

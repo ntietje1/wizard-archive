@@ -92,24 +92,14 @@ describe('resource application workflows', () => {
       },
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
-    const files = core.runtime.content.files
-    const executeTransfer = vi.fn((...args: Parameters<typeof files.executeTransfer>) =>
-      files.executeTransfer(...args),
+    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
+    const transfers = core.runtime.transfers.value
+    const execute = vi.fn((...args: Parameters<typeof transfers.execute>) =>
+      transfers.execute(...args),
     )
     const runtime = {
       ...core.runtime,
-      content: {
-        ...core.runtime.content,
-        files: {
-          get: (resourceId) => files.get(resourceId),
-          subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
-          export: (resourceId) => files.export(resourceId),
-          executeTransfer,
-          replace: (resourceId, expectedVersion, source) =>
-            files.replace(resourceId, expectedVersion, source),
-          dispose: () => files.dispose(),
-        },
-      },
+      transfers: { status: 'available' as const, value: { execute } },
     } satisfies EditorRuntime
     const report = vi.fn()
 
@@ -119,15 +109,14 @@ describe('resource application workflows', () => {
     )
 
     expect(result).toMatchObject({ status: 'completed' })
-    expect(executeTransfer).toHaveBeenCalledOnce()
-    const [intent, source] = executeTransfer.mock.calls[0]!
+    expect(execute).toHaveBeenCalledOnce()
+    const [intent, sources, entries] = execute.mock.calls[0]!
     expect(intent).toMatchObject({
       campaignId,
       destinationParentId: null,
     })
-    expect(source).toMatchObject({
-      fileName: 'Session.md',
-    })
+    expect(sources).toEqual([{ id: 'selected-file', kind: 'file', name: 'Session.md' }])
+    expect(entries).toMatchObject([{ sourceId: 'selected-file', path: 'Session.md', type: 'file' }])
     if (result.status !== 'completed') throw new TypeError('Expected completed transfer')
     expect(runtime.resources.index.getSnapshot().lookup(result.resourceId)).toMatchObject({
       state: 'known',
@@ -152,36 +141,22 @@ describe('resource application workflows', () => {
       },
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
-    const files = core.runtime.content.files
+    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
+    const transfers = core.runtime.transfers.value
     let attempts = 0
-    let committedDelivery: Awaited<ReturnType<typeof files.executeTransfer>> | null = null
-    const commitTransfer = vi.fn((...args: Parameters<typeof files.executeTransfer>) =>
-      files.executeTransfer(...args),
+    let committedDelivery: Awaited<ReturnType<typeof transfers.execute>> | null = null
+    const commitTransfer = vi.fn((...args: Parameters<typeof transfers.execute>) =>
+      transfers.execute(...args),
     )
-    const executeTransfer = vi.fn(async (...args: Parameters<typeof files.executeTransfer>) => {
+    const execute = vi.fn(async (...args: Parameters<typeof transfers.execute>) => {
       attempts += 1
       if (attempts > 1 && committedDelivery) return committedDelivery
-      committedDelivery = await commitTransfer(args[0], args[1])
-      return {
-        status: 'indeterminate',
-        retryable: true,
-        reason: 'response_lost',
-      } as const
+      committedDelivery = await commitTransfer(...args)
+      return { status: 'indeterminate', reason: 'response_lost' } as const
     })
     const runtime = {
       ...core.runtime,
-      content: {
-        ...core.runtime.content,
-        files: {
-          get: (resourceId) => files.get(resourceId),
-          subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
-          export: (resourceId) => files.export(resourceId),
-          executeTransfer,
-          replace: (resourceId, expectedVersion, source) =>
-            files.replace(resourceId, expectedVersion, source),
-          dispose: () => files.dispose(),
-        },
-      },
+      transfers: { status: 'available' as const, value: { execute } },
     } satisfies EditorRuntime
     const controller = new AbortController()
     const settlement = await createWorkspaceActions(runtime, vi.fn()).createAssetFile(
@@ -196,10 +171,10 @@ describe('resource application workflows', () => {
     const replay = await settlement.retry()
 
     if (replay.status !== 'completed') throw new Error('Expected a completed replay')
-    expect(executeTransfer).toHaveBeenCalledTimes(2)
+    expect(execute).toHaveBeenCalledTimes(2)
     expect(commitTransfer).toHaveBeenCalledOnce()
-    expect(executeTransfer.mock.calls[1]?.[0]).toEqual(executeTransfer.mock.calls[0]?.[0])
-    expect(executeTransfer.mock.calls[1]?.[2]).toBeUndefined()
+    expect(execute.mock.calls[1]?.[0]).toEqual(execute.mock.calls[0]?.[0])
+    expect(execute.mock.calls[1]?.[3]).toBeUndefined()
     const file = runtime.resources.index.getSnapshot().lookup(replay.resourceId)
     expect(file).toMatchObject({ state: 'known', value: { kind: 'file', title: 'Once.txt' } })
     if (file.state !== 'known' || file.value.displayParentId === null) {

@@ -277,6 +277,11 @@ export const campaignInternalQuery = customQuery(authInternalQuery, {
   input: campaignRowScopeInput,
 })
 
+export const campaignUuidInternalQuery = customQuery(authInternalQuery, {
+  args: campaignArgs,
+  input: campaignScopeInput,
+})
+
 export const campaignInternalMutation = customMutation(authInternalMutation, {
   args: campaignRowArgs,
   input: campaignRowScopeInput,
@@ -309,6 +314,7 @@ export type AuthMutationCtx = CustomCtx<typeof authMutation>
 export type CampaignQueryCtx = CustomCtx<typeof campaignQuery>
 export type CampaignMutationCtx = CustomCtx<typeof campaignMutation>
 export type CampaignInternalQueryCtx = CustomCtx<typeof campaignInternalQuery>
+export type CampaignUuidInternalQueryCtx = CustomCtx<typeof campaignUuidInternalQuery>
 export type CampaignInternalMutationCtx = CustomCtx<typeof campaignInternalMutation>
 export type DmQueryCtx = CustomCtx<typeof dmQuery>
 export type DmMutationCtx = CustomCtx<typeof dmMutation>

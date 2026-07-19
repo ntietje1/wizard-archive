@@ -26,7 +26,7 @@ export type LiveFixedContentCreateBackend = Readonly<{
   refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
 }>
 
-export async function finalizeLiveContentCreate(
+async function finalizeLiveContentCreate(
   delivery: CommandDelivery<ResourceStructureCommandResult>,
   resourceId: ResourceId,
   parentId: ResourceId | null,

@@ -6,7 +6,7 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import type { FunctionArgs } from 'convex/server'
@@ -37,6 +37,11 @@ import {
   initialFileContentVersion,
   initialNoteContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
+import {
+  buildPlainTransferInventory,
+  digestPlainTransferSources,
+} from '@wizard-archive/editor/resources/plain-transfer-inventory'
+import { TRANSFER_JOB_REQUEST_VERSION } from '@wizard-archive/editor/resources/transfer-job-contract'
 import {
   parseSerializedAuthoredDestination,
   serializeAuthoredDestination,
@@ -378,25 +383,29 @@ describe('resource structure commands', () => {
       new Blob([bytes], { type: 'application/octet-stream' }),
       'payload.bin',
     )
-    const args = {
-      campaignId: campaignUuid,
-      jobId,
-      operationId,
-      destinationParentId: null,
-      uploadSessionId: upload.sessionId,
-    }
-    const result = await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, args)
+    const args = singleFileTransferArgs(
+      {
+        campaignId: campaignUuid,
+        jobId,
+        operationId,
+        destinationParentId: null,
+        uploadSessionId: upload.sessionId,
+      },
+      'payload.bin',
+    )
+    const result = await asDm(campaign).action(api.resources.actions.executePlainTransfer, args)
 
     expect(result).toMatchObject({
       status: 'completed',
-      receipt: { result: { type: 'created' } },
+      entries: [{ status: 'completed', kind: 'file' }],
     })
-    if (result.status !== 'completed' || result.receipt.result.type !== 'created') {
+    const createdEntry = result.status === 'completed' ? result.entries[0] : null
+    if (!createdEntry || createdEntry.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
-    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId)
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, createdEntry.resourceId)
     await expect(
-      asDm(campaign).query(api.resources.queries.loadPlainFileTransfer, {
+      asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId,
       }),
@@ -406,18 +415,19 @@ describe('resource structure commands', () => {
       operationId,
       sourceDigest: expect.any(String),
       rejectionReason: null,
-      entry: {
-        status: 'completed',
-        resourceId,
-        sourceRootId: 'selected-file',
-        rawPath: 'payload.bin',
-        normalizedPath: 'payload.bin',
-        sourceDigest: expect.any(String),
-        rejectionReason: null,
-      },
+      entries: [
+        {
+          status: 'completed',
+          resourceId,
+          sourceRootId: 'selected-file',
+          rawPath: 'payload.bin',
+          normalizedPath: 'payload.bin',
+          rejectionReason: null,
+        },
+      ],
     })
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, args),
+      asDm(campaign).action(api.resources.actions.executePlainTransfer, args),
     ).resolves.toMatchObject({ status: 'completed' })
     const conflictingUpload = await storeUncommittedTestUploadSession(
       t,
@@ -426,30 +436,51 @@ describe('resource structure commands', () => {
       'payload.bin',
     )
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
-        ...args,
-        uploadSessionId: conflictingUpload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+      asDm(campaign).action(
+        api.resources.actions.executePlainTransfer,
+        singleFileTransferArgs(
+          {
+            campaignId: campaignUuid,
+            jobId,
+            operationId,
+            destinationParentId: null,
+            uploadSessionId: conflictingUpload.sessionId,
+          },
+          'payload.bin',
+        ),
+      ),
+    ).resolves.toMatchObject({ status: 'completed' })
     await expect(
-      asDm(campaign).query(api.resources.queries.loadPlainFileTransfer, {
+      asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId,
       }),
     ).resolves.toMatchObject({
       status: 'completed',
       sourceDigest: expect.any(String),
-      entry: { status: 'completed', resourceId },
+      entries: [{ status: 'completed', resourceId }],
     })
-    await expect(
-      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
+    const rejectedArgs = singleFileTransferArgs(
+      {
         campaignId: campaignUuid,
         jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         destinationParentId: null,
         uploadSessionId: upload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+      },
+      'payload.bin',
+    )
+    const rejected = await asDm(campaign).action(
+      api.resources.actions.executePlainTransfer,
+      rejectedArgs,
+    )
+    expect(rejected).toMatchObject({
+      status: 'completed',
+      entries: [{ status: 'rejected' }],
+    })
+    await expect(
+      asDm(campaign).action(api.resources.actions.executePlainTransfer, rejectedArgs),
+    ).resolves.toEqual(rejected)
     await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
@@ -491,6 +522,177 @@ describe('resource structure commands', () => {
     ).resolves.toMatchObject({ status: 'ready', imageUrl: expect.any(String) })
   })
 
+  it('commits one nested folder, note, and file inventory as one replayable transfer job', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const markdownBytes = new TextEncoder().encode('# Session\n\nArrival notes')
+    const fileBytes = Uint8Array.from([0, 1, 2, 3])
+    const markdownUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([markdownBytes], { type: 'text/markdown' }),
+      'Session.md',
+    )
+    const fileUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([fileBytes], { type: 'application/octet-stream' }),
+      'evidence.bin',
+    )
+    const noteDocument = noteBlocksToYDoc(
+      [
+        {
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Session', styles: {} }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Arrival notes', styles: {} }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const noteUpdate = Uint8Array.from(Y.encodeStateAsUpdate(noteDocument)).buffer
+    noteDocument.destroy()
+    const args = {
+      campaignId: campaignUuid,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      destinationParentId: null,
+      sources: [{ id: 'campaign-directory', kind: 'directory' as const, name: 'Campaign' }],
+      entries: [
+        {
+          sourceId: 'campaign-directory',
+          path: 'Docs',
+          type: 'directory' as const,
+        },
+        {
+          sourceId: 'campaign-directory',
+          path: 'Docs/Session.md',
+          type: 'file' as const,
+          uploadSessionId: markdownUpload.sessionId,
+          noteUpdate,
+        },
+        {
+          sourceId: 'campaign-directory',
+          path: 'Docs/evidence.bin',
+          type: 'file' as const,
+          uploadSessionId: fileUpload.sessionId,
+        },
+      ],
+    }
+
+    const result = await asDm(campaign).action(api.resources.actions.executePlainTransfer, args)
+
+    if (result.status !== 'completed') throw new TypeError('Expected completed transfer')
+    expect(
+      result.entries.map((entry) => ({
+        status: entry.status,
+        sourcePath: entry.sourcePath,
+        kind: entry.status === 'completed' ? entry.kind : null,
+      })),
+    ).toEqual([
+      { status: 'completed', sourcePath: 'Campaign', kind: 'folder' },
+      { status: 'completed', sourcePath: 'Campaign/Docs', kind: 'folder' },
+      { status: 'completed', sourcePath: 'Campaign/Docs/Session.md', kind: 'note' },
+      { status: 'completed', sourcePath: 'Campaign/Docs/evidence.bin', kind: 'file' },
+    ])
+    const completed = result.entries.filter(
+      (entry): entry is Extract<(typeof result.entries)[number], { status: 'completed' }> =>
+        entry.status === 'completed',
+    )
+    const folder = completed.find((entry) => entry.sourcePath === 'Campaign/Docs')
+    const note = completed.find((entry) => entry.kind === 'note')
+    const file = completed.find((entry) => entry.kind === 'file')
+    if (!folder || !note || !file) throw new TypeError('Expected all imported resource kinds')
+    const folderId = assertDomainId(DOMAIN_ID_KIND.resource, folder.resourceId)
+    const noteId = assertDomainId(DOMAIN_ID_KIND.resource, note.resourceId)
+    const fileId = assertDomainId(DOMAIN_ID_KIND.resource, file.resourceId)
+    await expect(storedParentIds(noteId, fileId)).resolves.toEqual([folderId, folderId])
+    const noteSnapshot = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+    if (noteSnapshot.status !== 'ready') throw new TypeError('Expected imported note content')
+    expect(
+      decodeNoteYjsUpdatesToBlocks([{ update: noteSnapshot.update }], NOTE_YJS_FRAGMENT),
+    ).toMatchObject([
+      { type: 'heading', content: [{ type: 'text', text: 'Session' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Arrival notes' }] },
+    ])
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadFileContent, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      content: { attachment: 'attached', byteSize: fileBytes.byteLength, extension: 'bin' },
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId: args.jobId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'completed',
+      operationId: args.operationId,
+      entries: [
+        { status: 'completed' },
+        { status: 'completed' },
+        { status: 'completed' },
+        { status: 'completed' },
+      ],
+    })
+    await expect(
+      asDm(campaign).action(api.resources.actions.executePlainTransfer, args),
+    ).resolves.toEqual(result)
+    await t.run(async (ctx) => {
+      const aliases = await ctx.db
+        .query('resourceSourcePathAliases')
+        .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignUuid))
+        .collect()
+      expect(aliases.map((alias) => alias.rawPath).sort()).toEqual([
+        'Campaign',
+        'Campaign/Docs',
+        'Campaign/Docs/Session.md',
+        'Campaign/Docs/evidence.bin',
+      ])
+    })
+    const partialArgs = {
+      ...args,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      sources: [{ id: 'partial-directory', kind: 'directory' as const, name: 'Partial' }],
+      entries: [
+        {
+          sourceId: 'partial-directory',
+          path: 'evidence.bin',
+          type: 'file' as const,
+          uploadSessionId: fileUpload.sessionId,
+        },
+      ],
+    }
+    const partial = await asDm(campaign).action(
+      api.resources.actions.executePlainTransfer,
+      partialArgs,
+    )
+    expect(partial).toMatchObject({
+      status: 'completed',
+      entries: [{ status: 'completed', kind: 'folder' }, { status: 'rejected' }],
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId: partialArgs.jobId,
+      }),
+    ).resolves.toMatchObject({ status: 'completed_with_issues' })
+    await expect(
+      asDm(campaign).action(api.resources.actions.executePlainTransfer, partialArgs),
+    ).resolves.toEqual(partial)
+  })
+
   it('replaces file content once, advances its version, and retires the previous asset', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -501,17 +703,21 @@ describe('resource structure commands', () => {
       new Blob(['original'], { type: 'text/plain' }),
       'evidence.txt',
     )
-    const created = await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
-      campaignId: campaignUuid,
-      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-      operationId,
-      destinationParentId: null,
-      uploadSessionId: original.sessionId,
-    })
-    if (created.status !== 'completed' || created.receipt.result.type !== 'created') {
+    const created = await asDm(campaign).action(
+      api.resources.actions.executePlainTransfer,
+      singleFileTransferArgs({
+        campaignId: campaignUuid,
+        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+        operationId,
+        destinationParentId: null,
+        uploadSessionId: original.sessionId,
+      }),
+    )
+    const createdEntry = created.status === 'completed' ? created.entries[0] : null
+    if (!createdEntry || createdEntry.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
-    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, created.receipt.result.resourceId)
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, createdEntry.resourceId)
     const expectedVersion = await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
@@ -599,48 +805,52 @@ describe('resource structure commands', () => {
     )
     const ownerJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     const ownerOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
-    const ownerArgs = {
+    const ownerArgs = singleFileTransferArgs({
       campaignId: campaignUuid,
       jobId: ownerJobId,
       operationId: ownerOperationId,
       destinationParentId: null,
       uploadSessionId: upload.sessionId,
-    }
+    })
     const created = await asDm(campaign).action(
-      api.resources.actions.executePlainFileTransfer,
+      api.resources.actions.executePlainTransfer,
       ownerArgs,
     )
     expect(created).toMatchObject({ status: 'completed' })
-    if (created.status !== 'completed' || created.receipt.result.type !== 'created') {
+    const ownerEntry = created.status === 'completed' ? created.entries[0] : null
+    if (!ownerEntry || ownerEntry.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
-    const ownerResourceId = assertDomainId(
-      DOMAIN_ID_KIND.resource,
-      created.receipt.result.resourceId,
-    )
+    const ownerResourceId = assertDomainId(DOMAIN_ID_KIND.resource, ownerEntry.resourceId)
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, ownerArgs),
+      asDm(campaign).action(api.resources.actions.executePlainTransfer, ownerArgs),
     ).resolves.toEqual(created)
 
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
-        campaignId: campaignUuid,
-        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        destinationParentId: null,
-        uploadSessionId: upload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+      asDm(campaign).action(
+        api.resources.actions.executePlainTransfer,
+        singleFileTransferArgs({
+          campaignId: campaignUuid,
+          jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          destinationParentId: null,
+          uploadSessionId: upload.sessionId,
+        }),
+      ),
+    ).resolves.toMatchObject({ status: 'completed', entries: [{ status: 'rejected' }] })
 
     await expect(
-      campaign.dm.authed.action(api.resources.actions.executePlainFileTransfer, {
-        campaignId: otherCampaign.campaignDomainId,
-        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        destinationParentId: null,
-        uploadSessionId: upload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+      campaign.dm.authed.action(
+        api.resources.actions.executePlainTransfer,
+        singleFileTransferArgs({
+          campaignId: otherCampaign.campaignDomainId,
+          jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          destinationParentId: null,
+          uploadSessionId: upload.sessionId,
+        }),
+      ),
+    ).resolves.toMatchObject({ status: 'completed', entries: [{ status: 'rejected' }] })
 
     const ownerVersion = await storedFileVersion(ownerResourceId)
     await expect(
@@ -675,24 +885,23 @@ describe('resource structure commands', () => {
       'other.txt',
     )
     const crossCampaignCreated = await campaign.dm.authed.action(
-      api.resources.actions.executePlainFileTransfer,
-      {
+      api.resources.actions.executePlainTransfer,
+      singleFileTransferArgs({
         campaignId: otherCampaign.campaignDomainId,
         jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         destinationParentId: null,
         uploadSessionId: crossCampaignUpload.sessionId,
-      },
+      }),
     )
-    if (
-      crossCampaignCreated.status !== 'completed' ||
-      crossCampaignCreated.receipt.result.type !== 'created'
-    ) {
+    const crossCampaignEntry =
+      crossCampaignCreated.status === 'completed' ? crossCampaignCreated.entries[0] : null
+    if (!crossCampaignEntry || crossCampaignEntry.status !== 'completed') {
       throw new TypeError('Expected completed cross-campaign file transfer')
     }
     const crossCampaignTargetId = assertDomainId(
       DOMAIN_ID_KIND.resource,
-      crossCampaignCreated.receipt.result.resourceId,
+      crossCampaignEntry.resourceId,
     )
     await expect(
       campaign.dm.authed.action(api.resources.actions.replaceFileContent, {
@@ -765,17 +974,22 @@ describe('resource structure commands', () => {
     const results = await Promise.all(
       jobs.map(
         async (jobId) =>
-          await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
-            campaignId: campaignUuid,
-            jobId,
-            operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-            destinationParentId: null,
-            uploadSessionId: upload.sessionId,
-          }),
+          await asDm(campaign).action(
+            api.resources.actions.executePlainTransfer,
+            singleFileTransferArgs({
+              campaignId: campaignUuid,
+              jobId,
+              operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+              destinationParentId: null,
+              uploadSessionId: upload.sessionId,
+            }),
+          ),
       ),
     )
-    expect(results.map(({ status }) => status).sort()).toEqual(['completed', 'rejected'])
-    expect(results).toContainEqual({ status: 'rejected', reason: 'invalid_command' })
+    expect(results.map(({ status }) => status).sort()).toEqual(['completed', 'completed'])
+    expect(results).toContainEqual(
+      expect.objectContaining({ entries: [expect.objectContaining({ status: 'rejected' })] }),
+    )
 
     await t.run(async (ctx) => {
       const owners = await ctx.db
@@ -799,45 +1013,48 @@ describe('resource structure commands', () => {
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const bytes = new TextEncoder().encode('cancelled transfer')
     const upload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
-      new Blob(['cancelled transfer'], { type: 'text/plain' }),
+      new Blob([bytes], { type: 'text/plain' }),
       'cancelled.txt',
     )
+    const transferArgs = singleFileTransferArgs({
+      campaignId: campaignUuid,
+      jobId,
+      operationId,
+      destinationParentId: null,
+      uploadSessionId: upload.sessionId,
+    })
+    const cancellation = await plainTransferCancellationArgs(
+      campaignUuid,
+      campaign.dm.memberDomainId,
+      transferArgs,
+      bytes,
+    )
     await expect(
-      asDm(campaign).mutation(api.resources.mutations.cancelPlainFileTransfer, {
-        campaignId: campaignUuid,
-        jobId,
-        operationId,
-        destinationParentId: null,
-        uploadSessionId: upload.sessionId,
-      }),
+      asDm(campaign).mutation(api.resources.mutations.cancelPlainTransfer, cancellation),
     ).resolves.toEqual({ status: 'cancelled' })
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
-        campaignId: campaignUuid,
-        jobId,
-        operationId,
-        destinationParentId: null,
-        uploadSessionId: upload.sessionId,
-      }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+      asDm(campaign).action(api.resources.actions.executePlainTransfer, transferArgs),
+    ).resolves.toEqual({ status: 'cancelled' })
     await expect(
-      asDm(campaign).query(api.resources.queries.loadPlainFileTransfer, {
+      asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId,
       }),
     ).resolves.toMatchObject({
       status: 'cancelled',
-      sourceDigest: null,
+      sourceDigest: cancellation.sourceDigest,
       rejectionReason: null,
-      entry: {
-        status: 'cancelled',
-        resourceId: null,
-        sourceDigest: null,
-        rejectionReason: null,
-      },
+      entries: [
+        {
+          status: 'cancelled',
+          resourceId: null,
+          rejectionReason: null,
+        },
+      ],
     })
     await t.run(async (ctx) => {
       await expect(
@@ -3930,10 +4147,11 @@ describe('resource structure commands', () => {
     if (kind === 'file') {
       const result = await createEmptyFile(campaign, campaignUuid, operationId, parentId)
       expect(result.status).toBe('completed')
-      if (result.status !== 'completed' || result.receipt.result.type !== 'created') {
+      const entry = result.status === 'completed' ? result.entries[0] : null
+      if (!entry || entry.status !== 'completed') {
         throw new TypeError('Expected completed file transfer')
       }
-      return assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId)
+      return assertDomainId(DOMAIN_ID_KIND.resource, entry.resourceId)
     }
     const result =
       kind === 'folder'
@@ -3977,13 +4195,88 @@ describe('resource structure commands', () => {
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
-      campaignId: campaignUuid,
-      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-      operationId,
-      destinationParentId: parentId,
-      uploadSessionId: upload.sessionId,
+    return await asDm(campaign).action(
+      api.resources.actions.executePlainTransfer,
+      singleFileTransferArgs({
+        campaignId: campaignUuid,
+        jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+        operationId,
+        destinationParentId: parentId,
+        uploadSessionId: upload.sessionId,
+      }),
+    )
+  }
+
+  function singleFileTransferArgs(
+    args: Readonly<{
+      campaignId: string
+      jobId: string
+      operationId: string
+      destinationParentId: ResourceId | null
+      uploadSessionId: Id<'fileStorage'>
+    }>,
+    fileName = 'fixture.txt',
+  ) {
+    const { uploadSessionId, ...intent } = args
+    return {
+      ...intent,
+      sources: [{ id: 'selected-file', kind: 'file' as const, name: fileName }],
+      entries: [
+        {
+          sourceId: 'selected-file',
+          path: fileName,
+          type: 'file' as const,
+          uploadSessionId,
+        },
+      ],
+    }
+  }
+
+  async function plainTransferCancellationArgs(
+    campaignId: string,
+    actorId: CampaignMemberId,
+    transfer: ReturnType<typeof singleFileTransferArgs>,
+    bytes: Uint8Array,
+  ) {
+    const sources = transfer.sources
+    const entries = transfer.entries.map((entry) => ({
+      sourceId: entry.sourceId,
+      path: entry.path,
+      type: entry.type,
+      bytes,
+    }))
+    const sourceDigest = await digestPlainTransferSources(sources, entries)
+    const planned = await buildPlainTransferInventory({
+      request: {
+        version: TRANSFER_JOB_REQUEST_VERSION,
+        jobId: assertDomainId(DOMAIN_ID_KIND.importJob, transfer.jobId),
+        operationId: assertDomainId(DOMAIN_ID_KIND.operation, transfer.operationId),
+        actorId,
+        destinationCampaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignId),
+        destinationParentId: transfer.destinationParentId,
+        manifestHandling: 'reject',
+        mode: 'plain_resources',
+        sourceDigest,
+        sources,
+      },
+      entries,
     })
+    if (planned.status !== 'ready') throw new TypeError('Expected cancellable transfer inventory')
+    return {
+      campaignId,
+      jobId: transfer.jobId,
+      operationId: transfer.operationId,
+      destinationParentId: transfer.destinationParentId,
+      sourceDigest,
+      entries: planned.inventory.resources.map((resource) => ({
+        sourceRootId: resource.alias.sourceRootId,
+        rawPath: resource.alias.rawPath,
+        normalizedPath: resource.alias.normalizedPath,
+        plannedResourceId: resource.id,
+        plannedOperationId: resource.operationId,
+        resourceKind: resource.kind,
+      })),
+    }
   }
 
   async function execute(

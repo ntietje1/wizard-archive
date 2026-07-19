@@ -1677,10 +1677,11 @@ describe('authorized resource projection', () => {
     if (kind === 'file') {
       const result = await createEmptyFile(campaign, campaignUuid, operationId, parentId)
       expect(result.status).toBe('completed')
-      if (result.status !== 'completed' || result.receipt.result.type !== 'created') {
+      const entry = result.status === 'completed' ? result.entries[0] : null
+      if (!entry || entry.status !== 'completed') {
         throw new TypeError('Expected completed file transfer')
       }
-      return assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId)
+      return assertDomainId(DOMAIN_ID_KIND.resource, entry.resourceId)
     }
     const result =
       kind === 'folder'
@@ -1771,12 +1772,20 @@ describe('authorized resource projection', () => {
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).action(api.resources.actions.executePlainFileTransfer, {
+    return await asDm(campaign).action(api.resources.actions.executePlainTransfer, {
       campaignId: campaignUuid,
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId,
       destinationParentId: parentId,
-      uploadSessionId: upload.sessionId,
+      sources: [{ id: 'selected-file', kind: 'file', name: 'empty.txt' }],
+      entries: [
+        {
+          sourceId: 'selected-file',
+          path: 'empty.txt',
+          type: 'file',
+          uploadSessionId: upload.sessionId,
+        },
+      ],
     })
   }
 })

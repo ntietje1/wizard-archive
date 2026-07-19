@@ -287,7 +287,6 @@ describe('CanvasResourceEmbed', () => {
       get: () => fileState,
       subscribe: () => () => {},
       export: exportFile,
-      executeTransfer: () => Promise.reject(new Error('Not used')),
       replace: () => Promise.reject(new Error('Not used')),
       dispose: () => {},
     } satisfies FileContentSource
@@ -642,7 +641,6 @@ function previewRuntime({
         status: 'unavailable' as const,
         reason: 'capability_not_supported' as const,
       }),
-      executeTransfer: () => Promise.reject(new Error('Not used')),
       replace: () => Promise.reject(new Error('Not used')),
       dispose: () => {},
     } satisfies FileContentSource)
@@ -687,6 +685,7 @@ function previewRuntime({
     },
     search: unsupported,
     history: unsupported,
+    transfers: unsupported,
     viewAs: unsupported,
   }
 }

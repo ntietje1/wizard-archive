@@ -36,6 +36,7 @@ import {
   readLiveItemHistoryEntry,
   readLiveItemHistoryPreview,
 } from './live-item-history'
+import { createLivePlainTransferGateway } from './live-plain-transfer-gateway'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -230,23 +231,15 @@ function createScopedLiveResourceRuntime(
         })
         return subscribeToWatch(watch, apply)
       },
-      cancel: (args) =>
-        write(() => convex.mutation(api.resources.mutations.cancelPlainFileTransfer, args)).then(
-          () => undefined,
-        ),
-      create: (args) =>
-        write(() => convex.action(api.resources.actions.executePlainFileTransfer, args)),
       download: (resourceId) =>
         convex.query(api.resources.queries.loadFileDownload, {
           ...queryScope,
           resourceId,
         }),
       discard: discardUpload,
-      refresh,
       replace: (args) => write(() => convex.action(api.resources.actions.replaceFileContent, args)),
       upload: uploadFile,
     },
-    undo.beginRecording,
     contentAuthority,
   )
   const maps = createLiveMapSessionSource(
@@ -420,6 +413,20 @@ function createScopedLiveResourceRuntime(
       ? { status: 'unavailable', reason: 'unauthorized' }
       : { status: 'available', value: assets }
   const content = { notes, files, maps, canvases }
+  const transfers =
+    currentScope.projection === 'dm'
+      ? createLivePlainTransferGateway(currentScope.campaignId, currentScope.actorId, {
+          cancel: (args) =>
+            write(() => convex.mutation(api.resources.mutations.cancelPlainTransfer, args)).then(
+              () => undefined,
+            ),
+          discard: discardUpload,
+          execute: (args) =>
+            write(() => convex.action(api.resources.actions.executePlainTransfer, args)),
+          refresh,
+          upload: uploadFile,
+        })
+      : null
   const history =
     currentScope.projection === 'view_as_player'
       ? null
@@ -504,6 +511,10 @@ function createScopedLiveResourceRuntime(
         history === null
           ? { status: 'unavailable', reason: 'unauthorized' }
           : { status: 'available', value: history.controller },
+      transfers:
+        transfers === null
+          ? { status: 'unavailable', reason: 'unauthorized' }
+          : { status: 'available', value: transfers },
     } satisfies Omit<EditorRuntime, 'viewAs'>,
     start: () => {
       base.start()

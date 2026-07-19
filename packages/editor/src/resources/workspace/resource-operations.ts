@@ -21,7 +21,9 @@ export type WorkspaceCreationSettlement =
   | Readonly<{ status: 'completed'; resourceId: ResourceId }>
   | Readonly<{
       status: 'indeterminate'
-      reason: Extract<CommandDelivery<never>, { status: 'indeterminate' }>['reason']
+      reason:
+        | Extract<CommandDelivery<never>, { status: 'indeterminate' }>['reason']
+        | 'transport_unavailable'
       retry: () => Promise<WorkspaceCreationSettlement>
     }>
   | Readonly<{
@@ -157,6 +159,9 @@ async function createWorkspaceFile(
   if (runtime.resources.structure.status !== 'available') {
     return { status: 'rejected', reason: 'read_only' } as const
   }
+  if (runtime.transfers.status !== 'available') {
+    return { status: 'rejected', reason: runtime.transfers.reason } as const
+  }
   const validation = validateFileUploadSize(file.size)
   if (!validation.valid) {
     return { status: 'rejected', reason: validation.error } as const
@@ -177,14 +182,17 @@ async function createWorkspaceFile(
     operationId,
     destinationParentId: parentId,
   }
-  return await completeWorkspaceCreation(
-    { state: 'authoritative' },
-    (attemptSignal) =>
-      runtime.content.files.executeTransfer(intent, { bytes, fileName: file.name }, attemptSignal),
-    'File uploaded',
-    report,
-    signal,
-  )
+  const sourceId = 'selected-file'
+  const deliver = (attemptSignal?: AbortSignal) =>
+    runtime.transfers.status === 'available'
+      ? runtime.transfers.value.execute(
+          intent,
+          [{ id: sourceId, kind: 'file', name: file.name }],
+          [{ sourceId, path: file.name, type: 'file', bytes }],
+          attemptSignal ? { signal: attemptSignal } : undefined,
+        )
+      : Promise.resolve({ status: 'rejected' as const, reason: runtime.transfers.reason })
+  return await completeWorkspaceTransfer(deliver, report, signal)
 }
 
 async function createWorkspaceAssetFile(
@@ -318,6 +326,49 @@ async function completeWorkspaceCreation(
   }
   report(deliveryMessage(delivery))
   return { status: 'rejected', reason: delivery.result.reason }
+}
+
+async function completeWorkspaceTransfer(
+  deliver: (
+    signal?: AbortSignal,
+  ) => ReturnType<Extract<EditorRuntime['transfers'], { status: 'available' }>['value']['execute']>,
+  report: WorkspaceReport,
+  signal?: AbortSignal,
+): Promise<WorkspaceCreationSettlement> {
+  if (signal?.aborted) return { status: 'cancelled' }
+  let result
+  try {
+    result = await deliver(signal)
+  } catch {
+    return {
+      status: 'failed',
+      reason: 'provider_failure',
+      retry: () => completeWorkspaceTransfer(deliver, report),
+    }
+  }
+  if (result.status === 'cancelled') return { status: 'cancelled' }
+  if (result.status === 'indeterminate') {
+    return {
+      status: 'indeterminate',
+      reason: result.reason,
+      retry: () => completeWorkspaceTransfer(deliver, report),
+    }
+  }
+  if (result.status === 'rejected') {
+    return { status: 'rejected', reason: result.reason }
+  }
+  const completed = result.entries.filter((entry) => entry.status === 'completed')
+  const rejected = result.entries.filter((entry) => entry.status === 'rejected')
+  const created = completed[0]
+  if (completed.length !== 1 || rejected.length !== 0 || !created) {
+    return {
+      status: 'failed',
+      reason: rejected[0]?.reason ?? 'invalid_response',
+      retry: null,
+    }
+  }
+  report(created.kind === 'note' ? 'Note imported' : 'File uploaded')
+  return { status: 'completed', resourceId: created.resourceId }
 }
 
 async function updateWorkspaceResource(

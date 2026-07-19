@@ -75,7 +75,8 @@ function projectResourceCreationSettlement(
     case 'indeterminate':
       return {
         status: settlement.status,
-        reason: settlement.reason,
+        reason:
+          settlement.reason === 'transport_unavailable' ? 'connection_lost' : settlement.reason,
         retry: async () => projectResourceCreationSettlement(await settlement.retry()),
       }
     case 'failed': {

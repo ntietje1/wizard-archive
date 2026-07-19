@@ -1,7 +1,13 @@
 import type { Sha256Digest, VersionStamp } from './component-version'
 import { sha256Digest } from './component-version'
 import { DOMAIN_ID_KIND, assertDomainId, isUuidV7 } from './domain-id'
-import type { ResourceId } from './domain-id'
+import type {
+  CampaignMemberId,
+  DomainIdByKind,
+  DomainIdKind,
+  OperationId,
+  ResourceId,
+} from './domain-id'
 import type { FileOwnedMetadata } from './file-content-contract'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceKind, ResourceTitle } from './resource-record'
@@ -11,7 +17,14 @@ import type { ResourceSourceClassification } from './resource-source-classifier'
 import { createSourcePathAlias, normalizeSourcePath } from './source-path-alias'
 import type { SourcePathAlias } from './resource-catalog-contract'
 import { TRANSFER_JOB_REQUEST_VERSION } from './transfer-job-contract'
-import type { PlainTransferJobRequest, TransferSourceDescriptor } from './transfer-job-contract'
+import type {
+  PlainTransferInputEntry,
+  PlainTransferEntryIdentity,
+  PlainTransferIntent,
+  PlainTransferJobRequest,
+  PlainTransferSourceDescriptor,
+  TransferSourceDescriptor,
+} from './transfer-job-contract'
 
 export const PLAIN_TRANSFER_INVENTORY_VERSION = 'plain-transfer-inventory-v3' as const
 export const PLAIN_TRANSFER_LIMITS = {
@@ -21,14 +34,67 @@ export const PLAIN_TRANSFER_LIMITS = {
   maxTotalBytes: 500 * 1024 * 1024,
 } as const
 
-export type PlainTransferSourceEntry =
-  | Readonly<{ sourceId: string; path: string; type: 'directory' }>
-  | Readonly<{
-      sourceId: string
-      path: string
-      type: 'file'
-      bytes: Uint8Array
-    }>
+export type PlainTransferSourceEntry = PlainTransferInputEntry
+
+export function plainTransferEntryIdentities(
+  resources: ReadonlyArray<PlainTransferInventoryResource>,
+): ReadonlyArray<PlainTransferEntryIdentity> {
+  return resources.map((resource) => ({
+    sourceRootId: resource.alias.sourceRootId,
+    rawPath: resource.alias.rawPath,
+    normalizedPath: resource.alias.normalizedPath,
+    plannedResourceId: resource.id,
+    plannedOperationId: resource.operationId,
+    resourceKind: resource.kind,
+  }))
+}
+
+async function createPlainTransferRequest({
+  actorId,
+  entries,
+  intent,
+  sources,
+}: Readonly<{
+  actorId: CampaignMemberId
+  entries: ReadonlyArray<PlainTransferInputEntry>
+  intent: PlainTransferIntent
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>
+}>): Promise<PlainTransferJobRequest> {
+  return {
+    version: TRANSFER_JOB_REQUEST_VERSION,
+    jobId: intent.jobId,
+    operationId: intent.operationId,
+    actorId,
+    destinationCampaignId: intent.campaignId,
+    destinationParentId: intent.destinationParentId,
+    manifestHandling: 'reject',
+    mode: 'plain_resources',
+    sourceDigest: await digestPlainTransferSources(sources, entries),
+    sources,
+  }
+}
+
+export async function planPlainTransfer({
+  actorId,
+  campaignId,
+  entries,
+  intent,
+  sources,
+}: Readonly<{
+  actorId: CampaignMemberId
+  campaignId: PlainTransferIntent['campaignId']
+  entries: ReadonlyArray<PlainTransferInputEntry>
+  intent: PlainTransferIntent
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>
+}>): Promise<
+  PlainTransferInventoryResult | Readonly<{ status: 'rejected'; reason: 'invalid_campaign' }>
+> {
+  if (intent.campaignId !== campaignId) {
+    return { status: 'rejected', reason: 'invalid_campaign' }
+  }
+  const request = await createPlainTransferRequest({ actorId, entries, intent, sources })
+  return await buildPlainTransferInventory({ request, entries })
+}
 
 export type PlainTransferInventoryContent =
   | Readonly<{
@@ -44,17 +110,30 @@ export type PlainTransferInventoryContent =
       source: Readonly<{ bytes: Uint8Array; metadata: FileOwnedMetadata }>
     }>
 
-export type PlainTransferInventoryResource = Readonly<{
+type PlainTransferInventoryResourceBase = Readonly<{
   id: ResourceId
+  operationId: OperationId
   parentId: ResourceId | null
-  kind: ResourceKind
   title: ResourceTitle
+  sourceEntryPath: string
   sourcePath: string
   sourceDigest: Sha256Digest | null
   metadataVersion: VersionStamp
   alias: SourcePathAlias
-  content: PlainTransferInventoryContent | null
 }>
+
+export type PlainTransferInventoryResource = PlainTransferInventoryResourceBase &
+  (
+    | Readonly<{ kind: 'folder'; content: null }>
+    | Readonly<{
+        kind: 'note'
+        content: Extract<PlainTransferInventoryContent, { kind: 'note' }>
+      }>
+    | Readonly<{
+        kind: 'file'
+        content: Extract<PlainTransferInventoryContent, { kind: 'file' }>
+      }>
+  )
 
 export type PlainTransferInventory = Readonly<{
   version: typeof PLAIN_TRANSFER_INVENTORY_VERSION
@@ -94,7 +173,13 @@ type CanonicalEntry = Readonly<{
 
 type PlacedEntry = CanonicalEntry & Readonly<{ placedPath: string }>
 
-type PreparedEntry = PlacedEntry & Readonly<{ classification: ResourceSourceClassification | null }>
+type AcceptedResourceSourceClassification = Exclude<
+  ResourceSourceClassification,
+  { classification: 'rejected' }
+>
+
+type PreparedEntry = PlacedEntry &
+  Readonly<{ classification: AcceptedResourceSourceClassification | null }>
 
 type RejectedInventory = Extract<PlainTransferInventoryResult, { status: 'rejected' }>
 
@@ -277,24 +362,16 @@ async function materializePlainTransferResource(
   const parentId = parentPath
     ? (ids.get(resourceKey(entry, parentPath)) ?? request.destinationParentId)
     : request.destinationParentId
-  const kind = preparedResourceKind(entry)
   const title = canonicalizeResourceTitle(pathBasename(entry.placedPath))
   const bytes = entry.bytes
-  return {
+  const base = {
     id,
+    operationId: await derivePlannedOperationId(request, entry),
     parentId,
-    kind,
     title,
+    sourceEntryPath: entry.path,
     sourcePath: entry.placedPath,
     sourceDigest: bytes ? await sha256Digest(bytes) : null,
-    metadataVersion: await initialResourceMetadataVersion({
-      parentId,
-      kind,
-      title,
-      icon: null,
-      color: null,
-      lifecycle: 'active',
-    }),
     alias: createSourcePathAlias({
       campaignId: request.destinationCampaignId,
       importJobId: request.jobId,
@@ -302,13 +379,52 @@ async function materializePlainTransferResource(
       resourceId: id,
       sourceRootId: entry.source.id,
     }),
-    content: entry.classification ? inventoryContent(entry.classification, bytes) : null,
+  }
+  if (entry.classification === null) {
+    return {
+      ...base,
+      kind: 'folder',
+      metadataVersion: await transferMetadataVersion(parentId, 'folder', title),
+      content: null,
+    }
+  }
+  if (!bytes) throw new TypeError('Classified plain transfer entry has no bytes')
+  if (entry.classification.classification === 'note') {
+    return {
+      ...base,
+      kind: 'note',
+      metadataVersion: await transferMetadataVersion(parentId, 'note', title),
+      content: {
+        kind: 'note',
+        source: {
+          bytes,
+          removedUtf8Bom: entry.classification.removedUtf8Bom,
+          text: entry.classification.text,
+        },
+      },
+    }
+  }
+  return {
+    ...base,
+    kind: 'file',
+    metadataVersion: await transferMetadataVersion(parentId, 'file', title),
+    content: { kind: 'file', source: { bytes, metadata: entry.classification } },
   }
 }
 
-function preparedResourceKind(entry: PreparedEntry): ResourceKind {
-  if (entry.classification === null) return 'folder'
-  return entry.classification.classification === 'note' ? 'note' : 'file'
+async function transferMetadataVersion(
+  parentId: ResourceId | null,
+  kind: Extract<ResourceKind, 'file' | 'folder' | 'note'>,
+  title: ResourceTitle,
+): Promise<VersionStamp> {
+  return await initialResourceMetadataVersion({
+    parentId,
+    kind,
+    title,
+    icon: null,
+    color: null,
+    lifecycle: 'active',
+  })
 }
 
 function validRequest(request: PlainTransferJobRequest): boolean {
@@ -531,11 +647,29 @@ async function derivePlannedResourceId(
   request: PlainTransferJobRequest,
   entry: PreparedEntry,
 ): Promise<ResourceId> {
+  return await derivePlannedUuid(request, entry, DOMAIN_ID_KIND.resource, 'resource')
+}
+
+async function derivePlannedOperationId(
+  request: PlainTransferJobRequest,
+  entry: PreparedEntry,
+): Promise<OperationId> {
+  return await derivePlannedUuid(request, entry, DOMAIN_ID_KIND.operation, 'operation')
+}
+
+async function derivePlannedUuid<TKind extends DomainIdKind>(
+  request: PlainTransferJobRequest,
+  entry: PreparedEntry,
+  kind: TKind,
+  purpose: string,
+): Promise<DomainIdByKind[TKind]> {
   const digest = await sha256Digest(
     new TextEncoder().encode(
       [
         PLAIN_TRANSFER_INVENTORY_VERSION,
+        purpose,
         request.jobId,
+        request.operationId,
         request.sourceDigest,
         request.destinationCampaignId,
         request.destinationParentId ?? '',
@@ -546,7 +680,7 @@ async function derivePlannedResourceId(
   )
   const timestamp = request.jobId.replaceAll('-', '').slice(0, 12)
   return assertDomainId(
-    DOMAIN_ID_KIND.resource,
+    kind,
     `${timestamp.slice(0, 8)}-${timestamp.slice(8)}-7${digest.slice(0, 3)}-8${digest.slice(3, 6)}-${digest.slice(6, 18)}`,
   )
 }
@@ -572,25 +706,6 @@ function classifyEntry(entry: PlacedEntry): ResourceSourceClassification | null 
   return entry.source.kind === 'file'
     ? classifyFileResourceSource(source)
     : classifyResourceSource(source)
-}
-
-function inventoryContent(
-  classified: ResourceSourceClassification,
-  bytes: Uint8Array | null,
-): PlainTransferInventoryContent | null {
-  if (!bytes) return null
-  if (classified.classification === 'note') {
-    return {
-      kind: 'note',
-      source: {
-        bytes,
-        removedUtf8Bom: classified.removedUtf8Bom,
-        text: classified.text,
-      },
-    }
-  }
-  if (classified.classification === 'rejected') return null
-  return { kind: 'file', source: { bytes, metadata: classified } }
 }
 
 function pathParent(path: string): string | null {

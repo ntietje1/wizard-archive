@@ -8,7 +8,10 @@ import {
 import type { PlainTransferSourceEntry } from '../plain-transfer-inventory'
 import { MAX_RESOURCE_SOURCE_BYTES } from '../resource-source-classifier'
 import { TRANSFER_JOB_REQUEST_VERSION } from '../transfer-job-contract'
-import type { PlainTransferJobRequest, TransferSourceDescriptor } from '../transfer-job-contract'
+import type {
+  PlainTransferJobRequest,
+  PlainTransferSourceDescriptor,
+} from '../transfer-job-contract'
 
 const encoder = new TextEncoder()
 
@@ -91,7 +94,7 @@ describe('plain transfer inventory', () => {
   })
 
   it('preserves explicit file uploads while importing note files from containers as notes', async () => {
-    const directSources: ReadonlyArray<TransferSourceDescriptor> = [
+    const directSources: ReadonlyArray<PlainTransferSourceDescriptor> = [
       { id: 'selected-file', kind: 'file', name: 'Session.md' },
     ]
     const directEntries = [markdown('selected-file', 'Session.md', '# Session')]
@@ -396,7 +399,7 @@ function paths(result: Awaited<ReturnType<typeof buildPlainTransferInventory>>) 
 
 async function plainRequest(
   mode: PlainTransferJobRequest['mode'],
-  sources: ReadonlyArray<TransferSourceDescriptor>,
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>,
   entries: ReadonlyArray<PlainTransferSourceEntry>,
   manifestHandling: PlainTransferJobRequest['manifestHandling'] = 'reject',
 ): Promise<PlainTransferJobRequest> {
@@ -416,11 +419,11 @@ async function plainRequest(
     : { ...base, mode, destinationParentId: null }
 }
 
-function directorySource(id: string, name: string): TransferSourceDescriptor {
+function directorySource(id: string, name: string): PlainTransferSourceDescriptor {
   return { id, kind: 'directory', name }
 }
 
-function zipSource(id: string, name: string): TransferSourceDescriptor {
+function zipSource(id: string, name: string): PlainTransferSourceDescriptor {
   return { id, kind: 'zip', name }
 }
 

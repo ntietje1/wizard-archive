@@ -423,29 +423,21 @@ describe('ResourceShell', () => {
 
   it('keeps the upload control pending without projecting a transient file', async () => {
     const { core } = await shellRuntime(true)
-    const files = core.runtime.content.files
+    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
+    const transfers = core.runtime.transfers.value
     let release!: () => void
     const gate = new Promise<void>((resolve) => {
       release = resolve
     })
-    const controlledFiles: typeof files = {
-      get: (resourceId) => files.get(resourceId),
-      subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
-      export: (resourceId) => files.export(resourceId),
-      executeTransfer: async (...args) => {
+    const controlledTransfers: typeof transfers = {
+      execute: async (...args) => {
         await gate
-        return await files.executeTransfer(...args)
+        return await transfers.execute(...args)
       },
-      replace: (resourceId, expectedVersion, source) =>
-        files.replace(resourceId, expectedVersion, source),
-      dispose: () => files.dispose(),
     }
     const runtime = {
       ...core.runtime,
-      content: {
-        ...core.runtime.content,
-        files: controlledFiles,
-      },
+      transfers: { status: 'available' as const, value: controlledTransfers },
     }
     render(<ResourceShell ariaLabel="Pending upload" runtime={runtime} workspaceName="DM view" />)
 

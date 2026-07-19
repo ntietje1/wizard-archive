@@ -71,17 +71,17 @@ import {
   transitionMapContent,
 } from './map-session-policy'
 import type { MapImageBytes } from './map-session-policy'
-import { buildPlainTransferInventory, digestPlainTransferSources } from './plain-transfer-inventory'
-import type { PlainTransferSourceEntry } from './plain-transfer-inventory'
-import { TRANSFER_JOB_REQUEST_VERSION } from './transfer-job-contract'
+import { planPlainTransfer } from './plain-transfer-inventory'
+import type { PlainTransferInventoryResource } from './plain-transfer-inventory'
 import type {
-  PlainFileTransferIntent,
-  PlainTransferJobRequest,
-  TransferSourceDescriptor,
+  PlainTransferEntryOutcome,
+  PlainTransferGateway,
+  PlainTransferProgress,
 } from './transfer-job-contract'
 import { createInMemoryResourceAssetsFolderGateway } from './in-memory-resource-assets-folder'
 import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
 import { createInMemoryResourcePreviewSource } from './in-memory-resource-preview'
+import { markdownToNoteYDoc } from '../notes/document/headless-yjs'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -240,13 +240,7 @@ class InMemoryFileContentSource
 {
   readonly #bytes = new Map<ResourceId, Uint8Array>()
 
-  constructor(
-    ready: ReadonlyArray<ReadyFileContent>,
-    private readonly campaignId: CampaignId,
-    private readonly actorId: CampaignMemberId,
-    private readonly executeStructure: ResourceStructureCommandGateway['execute'],
-    private readonly appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>,
-  ) {
+  constructor(ready: ReadonlyArray<ReadyFileContent>) {
     super({ status: 'loading' })
     for (const entry of ready) {
       this.setReady(entry.resourceId, entry.content, entry.version, entry.bytes)
@@ -266,75 +260,6 @@ class InMemoryFileContentSource
       extension: state.content.extension ?? 'bin',
       mediaType: state.content.mediaType,
     }
-  }
-
-  async executeTransfer(
-    intent: PlainFileTransferIntent,
-    source: FileResourceSource,
-    signal?: AbortSignal,
-  ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
-    if (signal?.aborted) return invalidCreateDelivery()
-    if (intent.campaignId !== this.campaignId) return invalidCreateDelivery()
-    const sources: ReadonlyArray<TransferSourceDescriptor> = [
-      { id: 'selected-file', kind: 'file', name: source.fileName },
-    ]
-    const entries: ReadonlyArray<PlainTransferSourceEntry> = [
-      { sourceId: 'selected-file', path: source.fileName, type: 'file', bytes: source.bytes },
-    ]
-    const request: PlainTransferJobRequest = {
-      version: TRANSFER_JOB_REQUEST_VERSION,
-      jobId: intent.jobId,
-      operationId: intent.operationId,
-      actorId: this.actorId,
-      destinationCampaignId: this.campaignId,
-      destinationParentId: intent.destinationParentId,
-      manifestHandling: 'reject',
-      mode: 'plain_resources',
-      sourceDigest: await digestPlainTransferSources(sources, entries),
-      sources,
-    }
-    const planned = await buildPlainTransferInventory({ request, entries })
-    if (signal?.aborted) return invalidCreateDelivery()
-    if (planned.status === 'rejected') return invalidCreateDelivery()
-    const resource = planned.inventory.resources[0]
-    if (
-      planned.inventory.resources.length !== 1 ||
-      !resource ||
-      resource.kind !== 'file' ||
-      resource.content?.kind !== 'file'
-    ) {
-      return invalidCreateDelivery()
-    }
-    const envelope = {
-      campaignId: this.campaignId,
-      operationId: intent.operationId,
-      command: {
-        type: 'create' as const,
-        resourceId: resource.id,
-        kind: 'file' as const,
-        parentId: resource.parentId,
-        title: resource.title,
-        icon: null,
-        color: null,
-      },
-    }
-    const delivery = await this.executeStructure(envelope)
-    if (
-      delivery.status !== 'received' ||
-      delivery.result.status !== 'completed' ||
-      delivery.result.receipt.result.type !== 'created' ||
-      delivery.result.receipt.result.resourceId !== resource.id
-    ) {
-      return delivery
-    }
-    await this.appendAlias(resource.alias)
-    this.setReady(
-      resource.id,
-      { ...resource.content.source.metadata, attachment: 'attached' },
-      await initialFileContentVersion(source.bytes, resource.content.source.metadata),
-      source.bytes,
-    )
-    return delivery
   }
 
   async replace(
@@ -804,6 +729,195 @@ async function createOwnedContentResource(
   return delivery
 }
 
+function createInMemoryPlainTransferGateway({
+  actorId,
+  appendAlias,
+  campaignId,
+  executeStructure,
+  files,
+  notes,
+}: Readonly<{
+  actorId: CampaignMemberId
+  appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
+  campaignId: CampaignId
+  executeStructure: ResourceStructureCommandGateway['execute']
+  files: InMemoryFileContentSource
+  notes: InMemoryNoteSessionSource
+}>): PlainTransferGateway {
+  return {
+    execute: async (intent, sources, entries, options) => {
+      if (options?.signal?.aborted) return { status: 'cancelled' }
+      const planned = await planPlainTransfer({
+        campaignId,
+        actorId,
+        intent,
+        sources,
+        entries,
+      })
+      if (planned.status === 'rejected') {
+        return { status: 'rejected', reason: planned.reason }
+      }
+      const resources = planned.inventory.resources
+      const totalBytes = entries.reduce(
+        (total, entry) => total + (entry.type === 'file' ? entry.bytes.byteLength : 0),
+        0,
+      )
+      const outcomes = await executeInMemoryPlainTransferInventory({
+        appendAlias,
+        campaignId,
+        executeStructure,
+        files,
+        notes,
+        onProgress: options?.onProgress,
+        resources,
+        signal: options?.signal,
+        totalBytes,
+      })
+      const completed = outcomes.filter(
+        (outcome): outcome is PlainTransferEntryOutcome => outcome !== null,
+      )
+      if (completed.length !== outcomes.length) return { status: 'cancelled' }
+      options?.onProgress?.({
+        completedEntries: resources.length,
+        totalEntries: resources.length,
+        uploadedBytes: totalBytes,
+        totalBytes,
+        currentPath: null,
+      })
+      return { status: 'completed', entries: completed }
+    },
+  }
+}
+
+async function executeInMemoryPlainTransferInventory({
+  appendAlias,
+  campaignId,
+  executeStructure,
+  files,
+  notes,
+  onProgress,
+  resources,
+  signal,
+  totalBytes,
+}: Readonly<{
+  appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
+  campaignId: CampaignId
+  executeStructure: ResourceStructureCommandGateway['execute']
+  files: InMemoryFileContentSource
+  notes: InMemoryNoteSessionSource
+  onProgress: ((progress: PlainTransferProgress) => void) | undefined
+  resources: ReadonlyArray<PlainTransferInventoryResource>
+  signal: AbortSignal | undefined
+  totalBytes: number
+}>): Promise<ReadonlyArray<PlainTransferEntryOutcome | null>> {
+  const commits = new Map<ResourceId, Promise<PlainTransferEntryOutcome | null>>()
+  for (const [index, resource] of resources.entries()) {
+    const parentCommit = resource.parentId === null ? undefined : commits.get(resource.parentId)
+    const commit = (parentCommit ?? Promise.resolve(undefined)).then(async (parentOutcome) => {
+      if (signal?.aborted || (parentCommit && parentOutcome === null)) return null
+      onProgress?.({
+        completedEntries: index,
+        totalEntries: resources.length,
+        uploadedBytes: totalBytes,
+        totalBytes,
+        currentPath: resource.sourcePath,
+      })
+      return await executeInMemoryPlainTransferResource({
+        appendAlias,
+        campaignId,
+        executeStructure,
+        files,
+        notes,
+        resource,
+      })
+    })
+    commits.set(resource.id, commit)
+  }
+  return await Promise.all(commits.values())
+}
+
+async function executeInMemoryPlainTransferResource({
+  appendAlias,
+  campaignId,
+  executeStructure,
+  files,
+  notes,
+  resource,
+}: Readonly<{
+  appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
+  campaignId: CampaignId
+  executeStructure: ResourceStructureCommandGateway['execute']
+  files: InMemoryFileContentSource
+  notes: InMemoryNoteSessionSource
+  resource: PlainTransferInventoryResource
+}>): Promise<PlainTransferEntryOutcome> {
+  const delivery =
+    resource.kind === 'note'
+      ? await notes.create(
+          {
+            campaignId,
+            operationId: resource.operationId,
+            command: {
+              type: 'create',
+              resourceId: resource.id,
+              kind: 'note',
+              parentId: resource.parentId,
+              title: resource.title,
+              icon: null,
+              color: null,
+            },
+          },
+          markdownToNoteYDoc(resource.content.source.text),
+        )
+      : await executeStructure({
+          campaignId,
+          operationId: resource.operationId,
+          command: {
+            type: 'create',
+            resourceId: resource.id,
+            kind: resource.kind,
+            parentId: resource.parentId,
+            title: resource.title,
+            icon: null,
+            color: null,
+          },
+        })
+  if (!isCompletedCreate(delivery, resource.id)) {
+    return {
+      status: 'rejected',
+      sourceId: resource.alias.sourceRootId,
+      sourcePath: resource.sourcePath,
+      reason: inMemoryTransferRejection(delivery),
+    }
+  }
+  await appendAlias(resource.alias)
+  if (resource.kind === 'file') {
+    files.setReady(
+      resource.id,
+      { ...resource.content.source.metadata, attachment: 'attached' },
+      await initialFileContentVersion(
+        resource.content.source.bytes,
+        resource.content.source.metadata,
+      ),
+      resource.content.source.bytes,
+    )
+  }
+  return {
+    status: 'completed',
+    sourceId: resource.alias.sourceRootId,
+    sourcePath: resource.sourcePath,
+    resourceId: resource.id,
+    kind: resource.kind,
+  }
+}
+
+function inMemoryTransferRejection(
+  delivery: CommandDelivery<ResourceStructureCommandResult>,
+): string {
+  if (delivery.status !== 'received') return delivery.reason
+  return delivery.result.status === 'completed' ? 'invalid_response' : delivery.result.reason
+}
+
 export function createInMemoryEditorRuntime({
   authorize,
   canEdit: requestedCanEdit,
@@ -822,18 +936,10 @@ export function createInMemoryEditorRuntime({
       retryable: false,
       reason: 'transport_unavailable',
     })
-  let appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias> = (_alias) =>
-    Promise.reject(new TypeError('Resource aliases are unavailable'))
   const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const files = new InMemoryFileContentSource(
-    content.files ?? [],
-    scope.campaignId,
-    scope.actorId,
-    (envelope) => executeStructure(envelope),
-    (alias) => appendAlias(alias),
-  )
+  const files = new InMemoryFileContentSource(content.files ?? [])
   let currentCatalogSnapshot = () => snapshot
   const maps = new InMemoryMapSessionSource(
     { status: 'loading' },
@@ -864,7 +970,6 @@ export function createInMemoryEditorRuntime({
     ...(now ? { now } : {}),
   })
   currentCatalogSnapshot = resources.catalogSnapshot
-  appendAlias = resources.appendAlias
   const structureWithKindIndex: ResourceStructureCommandGateway = {
     execute: async (envelope) => {
       const createWasKnown =
@@ -934,6 +1039,14 @@ export function createInMemoryEditorRuntime({
     assign: (resourceId) => resources.assignAssetsFolder(resourceId),
   })
   const previews = createInMemoryResourcePreviewSource(snapshot.resources, content.notes ?? [])
+  const transfers = createInMemoryPlainTransferGateway({
+    actorId: scope.actorId,
+    appendAlias: resources.appendAlias,
+    campaignId: scope.campaignId,
+    executeStructure: (envelope) => executeStructure(envelope),
+    files,
+    notes,
+  })
 
   return {
     runtime: {
@@ -959,6 +1072,9 @@ export function createInMemoryEditorRuntime({
       preferences,
       search: { status: 'available', value: search.gateway },
       history: unsupported,
+      transfers: canEdit
+        ? { status: 'available', value: transfers }
+        : { status: 'unavailable', reason: 'unauthorized' },
       viewAs: unsupported,
     },
     dispose: () => {

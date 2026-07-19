@@ -22,6 +22,30 @@ export function createEmptyNoteYDoc(): Y.Doc {
   return noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
 }
 
+export function markdownToNoteYDoc(markdown: string): Y.Doc {
+  const editor = createHeadlessNoteEditor()
+  try {
+    return noteBlocksToYDoc(
+      parsePartialNoteBlocks(stripGeneratedBlockIds(editor.tryParseMarkdownToBlocks(markdown))),
+      NOTE_YJS_FRAGMENT,
+    )
+  } finally {
+    destroyHeadlessBlockNoteEditor(editor)
+  }
+}
+
+function stripGeneratedBlockIds(blocks: unknown): unknown {
+  if (!Array.isArray(blocks)) return blocks
+  return blocks.map((block) => {
+    if (!block || typeof block !== 'object') return block
+    const { id: _id, children, ...content } = block as Record<string, unknown>
+    return {
+      ...content,
+      ...(Array.isArray(children) ? { children: stripGeneratedBlockIds(children) } : {}),
+    }
+  })
+}
+
 export function noteBlocksToYDoc(blocks: Array<PartialNoteBlock>, fragment: string): Y.Doc {
   const parsedBlocks = allocateMissingNoteBlockIds(parsePartialNoteBlocks(blocks))
   const editor = createHeadlessNoteEditor()

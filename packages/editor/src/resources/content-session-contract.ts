@@ -10,7 +10,6 @@ import type {
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type { FileOwnedMetadata } from './file-content-contract'
-import type { PlainFileTransferIntent } from './transfer-job-contract'
 
 export type ContentUnavailableReason =
   | 'capability_not_supported'
@@ -308,11 +307,6 @@ export interface FileContentSource {
   get(resourceId: ResourceId): FileContentState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
-  executeTransfer(
-    intent: PlainFileTransferIntent,
-    source: FileResourceSource,
-    signal?: AbortSignal,
-  ): Promise<CommandDelivery<ResourceStructureCommandResult>>
   replace(
     resourceId: ResourceId,
     expectedVersion: VersionStamp,

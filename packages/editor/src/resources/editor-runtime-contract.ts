@@ -36,6 +36,7 @@ import type { ResourceUndoHistory } from './resource-undo-history'
 import type { WorkspaceSearchOutcome } from './resource-search-policy'
 import type { ReferenceGraphEdge } from './authored-destination'
 import type { ResourceKind } from './resource-record'
+import type { PlainTransferGateway } from './transfer-job-contract'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -389,5 +390,6 @@ export interface EditorRuntime {
   readonly preferences: WorkspacePreferencesSource
   readonly search: ResourceCapability<WorkspaceSearch>
   readonly history: ResourceCapability<ItemHistoryController>
+  readonly transfers: ResourceCapability<PlainTransferGateway>
   readonly viewAs: ResourceCapability<EditorViewAsController>
 }

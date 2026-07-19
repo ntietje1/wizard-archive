@@ -1056,19 +1056,26 @@ describe('deleteCampaign', () => {
       new Blob(['campaign deletion asset'], { type: 'text/plain' }),
       'campaign-deletion.txt',
     )
-    const fileCreation = await dmAuth.action(api.resources.actions.executePlainFileTransfer, {
+    const fileCreation = await dmAuth.action(api.resources.actions.executePlainTransfer, {
       campaignId: ctx.campaignDomainId,
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       destinationParentId: null,
-      uploadSessionId: upload.sessionId,
+      sources: [{ id: 'selected-file', kind: 'file', name: 'campaign-deletion.bin' }],
+      entries: [
+        {
+          sourceId: 'selected-file',
+          path: 'campaign-deletion.bin',
+          type: 'file',
+          uploadSessionId: upload.sessionId,
+        },
+      ],
     })
-    if (fileCreation.status !== 'completed' || fileCreation.receipt.result.type !== 'created') {
+    const fileEntry = fileCreation.status === 'completed' ? fileCreation.entries[0] : null
+    if (!fileEntry || fileEntry.status !== 'completed') {
       throw new TypeError('Expected campaign deletion file fixture')
     }
-    resourceIds.push(
-      assertDomainId(DOMAIN_ID_KIND.resource, fileCreation.receipt.result.resourceId),
-    )
+    resourceIds.push(assertDomainId(DOMAIN_ID_KIND.resource, fileEntry.resourceId))
     const transferJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('resourceTransferJobs', {
@@ -1090,6 +1097,9 @@ describe('deleteCampaign', () => {
         sourceRootId: 'selected-file',
         rawPath: 'pending.txt',
         normalizedPath: 'pending.txt',
+        plannedResourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
+        plannedOperationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
+        resourceKind: 'file',
         sourceDigest: null,
         resourceUuid: null,
         status: 'pending',
