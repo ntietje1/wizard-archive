@@ -24,18 +24,24 @@ const proseMirrorTestSchema = new Schema({
 
 export function createFormattingToolbarTestEditor({
   activeStyles = {},
+  canRedo = true,
+  canUndo = true,
   hasTextSelection = true,
   selectionSnapshot = null,
   selectedCutBlocks,
   selectedBlocks,
 }: {
   activeStyles?: Record<string, unknown>
+  canRedo?: boolean
+  canUndo?: boolean
   hasTextSelection?: boolean
   selectionSnapshot?: Record<string, unknown> | null
   selectedCutBlocks?: Array<TestBlock>
   selectedBlocks: Array<TestBlock>
 }) {
   let currentActiveStyles = activeStyles
+  let currentCanRedo = canRedo
+  let currentCanUndo = canUndo
   let currentSelectedBlocks = selectedBlocks
   let currentSelectedCutBlocks = selectedCutBlocks ?? selectedBlocks
   let currentSelectionSnapshot = selectionSnapshot
@@ -62,16 +68,27 @@ export function createFormattingToolbarTestEditor({
     },
   }
 
+  const undo = vi.fn(() => currentCanUndo)
+  const redo = vi.fn(() => currentCanRedo)
+  const undoCommand = vi.fn()
+  const redoCommand = vi.fn()
+
   return {
     _tiptapEditor: {
       view: prosemirrorView,
     },
     addStyles: vi.fn(),
+    canExec: vi.fn((command: unknown) => {
+      if (command === undoCommand) return currentCanUndo
+      if (command === redoCommand) return currentCanRedo
+      return false
+    }),
     get document() {
       return currentSelectedBlocks
     },
     focus,
     getActiveStyles: vi.fn(() => currentActiveStyles),
+    getExtension: vi.fn(() => ({ redoCommand, undoCommand })),
     getSelection: vi.fn(() => (hasTextSelection ? { blocks: currentSelectedBlocks } : undefined)),
     getSelectionCutBlocks: vi.fn(() => ({
       _meta: { endPos: 0, startPos: 0 },
@@ -102,7 +119,7 @@ export function createFormattingToolbarTestEditor({
     }),
     prosemirrorView,
     removeStyles: vi.fn(),
-    redo: vi.fn(),
+    redo,
     replaceBlocks: vi.fn(),
     schema: {
       blockSchema: {
@@ -157,6 +174,11 @@ export function createFormattingToolbarTestEditor({
       currentActiveStyles = nextActiveStyles
       changeListeners.forEach((listener) => listener())
     },
+    setHistoryState(next: { canRedo: boolean; canUndo: boolean }) {
+      currentCanRedo = next.canRedo
+      currentCanUndo = next.canUndo
+      changeListeners.forEach((listener) => listener())
+    },
     setSelection(nextSelectedBlocks: Array<TestBlock>) {
       currentSelectedBlocks = nextSelectedBlocks
       currentSelectedCutBlocks = nextSelectedBlocks
@@ -170,7 +192,7 @@ export function createFormattingToolbarTestEditor({
     },
     toggleStyles: vi.fn(),
     transact: vi.fn((callback: () => void) => callback()),
-    undo: vi.fn(),
+    undo,
     updateBlock: vi.fn(),
   }
 }

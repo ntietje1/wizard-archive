@@ -62,19 +62,30 @@ test.describe('note authoring mechanics', () => {
     ).toBeVisible()
   })
 
-  test('undoes and redoes canonical editor commands through keyboard history', async ({ page }) => {
+  test('undoes and redoes canonical editor commands through note history controls', async ({
+    page,
+  }) => {
     const editor = await openNoteEditor(page)
+    const toolbar = page.getByRole('toolbar', { name: 'Note formatting toolbar' })
+    const undo = toolbar.getByRole('button', { name: 'Undo note edit' })
+    const redo = toolbar.getByRole('button', { name: 'Redo note edit' })
+    await expect(undo).toBeDisabled()
+    await expect(redo).toBeDisabled()
 
     await appendParagraph(page, editor)
     await page.keyboard.type('/value')
     await page.getByRole('option', { name: /^Value/ }).click()
     const insertedValue = page.getByRole('button', { name: 'Value: 0' })
     await expect(insertedValue).toBeVisible()
+    await expect(undo).toBeEnabled()
+    await expect(redo).toBeDisabled()
     await expect(page.locator(':focus')).toHaveAttribute('contenteditable', 'true')
-    await page.keyboard.press('Control+z')
+    await undo.click()
     await expect(insertedValue).toHaveCount(0)
-    await page.keyboard.press('Control+Shift+z')
+    await expect(redo).toBeEnabled()
+    await redo.click()
     await expect(insertedValue).toBeVisible()
+    await expect(redo).toBeDisabled()
   })
 
   test('copies and pastes rich text while assigning copied Values new identities', async ({

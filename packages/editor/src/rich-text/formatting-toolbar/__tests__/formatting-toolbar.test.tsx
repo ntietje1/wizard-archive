@@ -34,6 +34,36 @@ describe('RichTextFormattingToolbar', () => {
     expect(editor.redo).toHaveBeenCalledOnce()
   })
 
+  it('disables note history controls when their native commands are unavailable', () => {
+    const editor = createEditor({
+      canRedo: false,
+      canUndo: false,
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+
+    render(
+      <RichTextFormattingToolbar
+        ariaLabel="Test formatting toolbar"
+        editor={editor as never}
+        mode="full"
+        visible
+      />,
+    )
+
+    const undo = screen.getByRole('button', { name: 'Undo note edit' })
+    const redo = screen.getByRole('button', { name: 'Redo note edit' })
+    expect(undo).toBeDisabled()
+    expect(redo).toBeDisabled()
+
+    act(() => editor.setHistoryState({ canRedo: false, canUndo: true }))
+    expect(undo).toBeEnabled()
+    expect(redo).toBeDisabled()
+
+    act(() => editor.setHistoryState({ canRedo: true, canUndo: false }))
+    expect(undo).toBeDisabled()
+    expect(redo).toBeEnabled()
+  })
+
   it('keeps the canvas toolbar aligned with the shared core formatting controls', () => {
     const editor = createEditor({
       selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],

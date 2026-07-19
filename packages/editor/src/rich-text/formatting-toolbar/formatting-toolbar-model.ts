@@ -1,4 +1,5 @@
 import type { BlockNoteEditor } from '@blocknote/core'
+import { HistoryExtension, YUndoExtension } from '@blocknote/core/extensions'
 import { paintColorValuesEqual } from '@wizard-archive/ui/utils/paint-color-values'
 import {
   AlignCenter,
@@ -46,11 +47,13 @@ export type FormattingToolbarMode = 'compact' | 'full'
 export type RichTextFormattingEditor = Pick<
   BlockNoteEditor<any, any, any>,
   | 'addStyles'
+  | 'canExec'
   | 'document'
   | 'focus'
   | 'getActiveStyles'
   | 'getSelection'
   | 'getSelectionCutBlocks'
+  | 'getExtension'
   | 'getTextCursorPosition'
   | 'isEditable'
   | 'onChange'
@@ -84,6 +87,8 @@ export interface ToolbarSnapshot {
   activeTextColor: { kind: 'value'; value: PaintColorValue } | { kind: 'mixed' }
   canAlign: boolean
   canFormatInline: boolean
+  canRedo: boolean
+  canUndo: boolean
   hasTextSelection: boolean
   supportedBlockTypes: Array<BlockTypeOption>
 }
@@ -220,6 +225,8 @@ export const EMPTY_TOOLBAR_SNAPSHOT: ToolbarSnapshot = {
   activeTextColor: { kind: 'value', value: DEFAULT_RICH_TEXT_COLOR_VALUE },
   canAlign: false,
   canFormatInline: false,
+  canRedo: false,
+  canUndo: false,
   hasTextSelection: false,
   supportedBlockTypes: [],
 }
@@ -249,6 +256,8 @@ export function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSna
     current.activeBlockTypeId !== next.activeBlockTypeId ||
     current.canAlign !== next.canAlign ||
     current.canFormatInline !== next.canFormatInline ||
+    current.canRedo !== next.canRedo ||
+    current.canUndo !== next.canUndo ||
     current.hasTextSelection !== next.hasTextSelection
   ) {
     return false
@@ -355,9 +364,19 @@ function getToolbarSnapshot(
     }),
     canAlign: alignableBlocks.length > 0,
     canFormatInline: selectedBlocks.some((block) => block.content !== undefined),
+    canRedo: mode === 'full' && canExecuteHistoryCommand(editor, 'redoCommand'),
+    canUndo: mode === 'full' && canExecuteHistoryCommand(editor, 'undoCommand'),
     hasTextSelection,
     supportedBlockTypes,
   }
+}
+
+function canExecuteHistoryCommand(
+  editor: RichTextFormattingEditor,
+  command: 'redoCommand' | 'undoCommand',
+) {
+  const history = editor.getExtension(YUndoExtension) ?? editor.getExtension(HistoryExtension)
+  return history ? editor.canExec(history[command]) : false
 }
 
 export function getSupportedBlockTypeOptions(

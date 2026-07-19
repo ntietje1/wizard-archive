@@ -214,6 +214,7 @@ function FormattingToolbarContent({
             size="icon-sm"
             aria-label="Undo note edit"
             title="Undo note edit (Ctrl+Z)"
+            disabled={!snapshot.canUndo}
             onClick={() => editor.undo()}
           >
             <Undo2 className="size-4" />
@@ -224,6 +225,7 @@ function FormattingToolbarContent({
             size="icon-sm"
             aria-label="Redo note edit"
             title="Redo note edit (Ctrl+Shift+Z)"
+            disabled={!snapshot.canRedo}
             onClick={() => editor.redo()}
           >
             <Redo2 className="size-4" />
