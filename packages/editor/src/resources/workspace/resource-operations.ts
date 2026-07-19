@@ -199,6 +199,7 @@ async function createWorkspaceFile(
     jobId,
     operationId,
     destinationParentId: parentId,
+    textFileHandling: 'files' as const,
   }
   const sourceId = 'selected-file'
   const deliver = createWorkspaceTransferDelivery(
@@ -242,6 +243,7 @@ async function importWorkspaceDataTransfer(
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       destinationParentId,
+      textFileHandling: 'notes',
     },
     transfer.sources,
     transfer.entries,

@@ -93,35 +93,39 @@ describe('plain transfer inventory', () => {
     )
   })
 
-  it('preserves explicit file uploads while importing note files from containers as notes', async () => {
+  it('uses the requested file classification independently of source container shape', async () => {
     const directSources: ReadonlyArray<PlainTransferSourceDescriptor> = [
       { id: 'selected-file', kind: 'file', name: 'Session.md' },
     ]
     const directEntries = [markdown('selected-file', 'Session.md', '# Session')]
-    const direct = await buildPlainTransferInventory({
+    const automatic = await buildPlainTransferInventory({
       request: await plainRequest('plain_resources', directSources, directEntries),
       entries: directEntries,
     })
-    const directorySources = [directorySource('upload', 'Campaign')]
-    const directoryEntries = [markdown('upload', 'Session.md', '# Session')]
-    const fromDirectory = await buildPlainTransferInventory({
-      request: await plainRequest('plain_resources', directorySources, directoryEntries),
-      entries: directoryEntries,
+    const filesOnly = await buildPlainTransferInventory({
+      request: await plainRequest(
+        'plain_resources',
+        directSources,
+        directEntries,
+        'reject',
+        'files',
+      ),
+      entries: directEntries,
     })
 
-    expect(direct.status === 'ready' ? direct.inventory.resources[0] : direct).toMatchObject({
-      kind: 'file',
-      title: 'Session.md',
-      content: { kind: 'file' },
-    })
     expect(
-      fromDirectory.status === 'ready'
-        ? fromDirectory.inventory.resources.find((resource) => resource.kind === 'note')
-        : fromDirectory,
+      automatic.status === 'ready' ? automatic.inventory.resources[0] : automatic,
     ).toMatchObject({
       kind: 'note',
       title: 'Session.md',
       content: { kind: 'note' },
+    })
+    expect(
+      filesOnly.status === 'ready' ? filesOnly.inventory.resources[0] : filesOnly,
+    ).toMatchObject({
+      kind: 'file',
+      title: 'Session.md',
+      content: { kind: 'file' },
     })
   })
 
@@ -419,6 +423,7 @@ async function plainRequest(
   sources: ReadonlyArray<PlainTransferSourceDescriptor>,
   entries: ReadonlyArray<PlainTransferSourceEntry>,
   manifestHandling: PlainTransferJobRequest['manifestHandling'] = 'reject',
+  textFileHandling: PlainTransferJobRequest['textFileHandling'] = 'notes',
 ): Promise<PlainTransferJobRequest> {
   const sourceDigest = await digestPlainTransferSources(sources, entries)
   const base = {
@@ -429,6 +434,7 @@ async function plainRequest(
     destinationCampaignId: generateDomainId(DOMAIN_ID_KIND.campaign),
     sourceDigest,
     sources,
+    textFileHandling,
     manifestHandling,
   }
   return mode === 'plain_workspace'

@@ -391,6 +391,7 @@ describe('createInMemoryEditorRuntime', () => {
         jobId,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         destinationParentId: null,
+        textFileHandling: 'notes',
       },
       [{ id: 'selected-file', kind: 'file', name: 'image.png' }],
       [{ sourceId: 'selected-file', path: 'image.png', type: 'file', bytes }],

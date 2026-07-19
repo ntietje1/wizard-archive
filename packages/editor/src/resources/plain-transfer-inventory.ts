@@ -67,6 +67,7 @@ async function createPlainTransferRequest({
     actorId,
     destinationCampaignId: intent.campaignId,
     destinationParentId: intent.destinationParentId,
+    textFileHandling: intent.textFileHandling,
     manifestHandling: 'reject',
     mode: 'plain_resources',
     sourceDigest: await digestPlainTransferSources(sources, entries),
@@ -281,7 +282,7 @@ async function preparePlainTransferInventory(
   }
   const preparedEntries = preparePlacedEntries(request, ordinary.entries)
   if ('status' in preparedEntries) return preparedEntries
-  return classifyPreparedEntries(preparedEntries, sourceDigest)
+  return classifyPreparedEntries(preparedEntries, sourceDigest, request.textFileHandling)
 }
 
 function preparePlacedEntries(
@@ -310,10 +311,11 @@ function preparePlacedEntries(
 function classifyPreparedEntries(
   entries: ReadonlyArray<PlacedEntry>,
   sourceDigest: Sha256Digest,
+  textFileHandling: PlainTransferJobRequest['textFileHandling'],
 ): PreparedInventory | RejectedInventory {
   const preparedEntries: Array<PreparedEntry> = []
   for (const entry of entries) {
-    const classification = classifyEntry(entry)
+    const classification = classifyEntry(entry, textFileHandling)
     if (classification?.classification === 'rejected') {
       return {
         status: 'rejected',
@@ -435,6 +437,7 @@ function validRequest(request: PlainTransferJobRequest): boolean {
     isUuidV7(request.actorId) &&
     isUuidV7(request.destinationCampaignId) &&
     (request.destinationParentId === null || isUuidV7(request.destinationParentId)) &&
+    (request.textFileHandling === 'notes' || request.textFileHandling === 'files') &&
     request.sources.length > 0 &&
     new Set(request.sources.map((source) => source.id)).size === request.sources.length &&
     request.sources.every(validPlainSourceDescriptor)
@@ -713,13 +716,16 @@ function sourcePathKey(entry: Pick<CanonicalEntry, 'source'>, path: string) {
   return `${entry.source.id}\0${path}`
 }
 
-function classifyEntry(entry: PlacedEntry): ResourceSourceClassification | null {
+function classifyEntry(
+  entry: PlacedEntry,
+  textFileHandling: PlainTransferJobRequest['textFileHandling'],
+): ResourceSourceClassification | null {
   if (entry.type === 'directory') return null
   const source = {
     bytes: entry.bytes!,
     fileName: pathBasename(entry.path),
   }
-  return entry.source.kind === 'file'
+  return textFileHandling === 'files'
     ? classifyFileResourceSource(source)
     : classifyResourceSource(source)
 }

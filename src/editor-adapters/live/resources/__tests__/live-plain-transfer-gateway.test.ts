@@ -23,6 +23,7 @@ describe('live plain transfer gateway', () => {
       jobId: testDomainId('importJob', 'plain-transfer'),
       operationId: testDomainId('operation', 'plain-transfer'),
       destinationParentId: null,
+      textFileHandling: 'files' as const,
     }
     const sources = [{ id: 'selected-file', kind: 'file' as const, name: 'evidence.bin' }]
     const entries = [
@@ -96,6 +97,7 @@ describe('live plain transfer gateway', () => {
       jobId: testDomainId('importJob', 'cancel-transfer'),
       operationId: testDomainId('operation', 'cancel-transfer'),
       destinationParentId: null,
+      textFileHandling: 'files' as const,
     }
     const sources = [{ id: 'selected-file', kind: 'file' as const, name: 'cancel.bin' }]
     const entries = [
@@ -162,11 +164,12 @@ describe('live plain transfer gateway', () => {
       jobId: testDomainId('importJob', 'markdown-transfer'),
       operationId: testDomainId('operation', 'markdown-transfer'),
       destinationParentId: null,
+      textFileHandling: 'notes' as const,
     }
-    const sources = [{ id: 'directory', kind: 'directory' as const, name: 'Notes' }]
+    const sources = [{ id: 'markdown-file', kind: 'file' as const, name: 'Session.md' }]
     const entries = [
       {
-        sourceId: 'directory',
+        sourceId: 'markdown-file',
         path: 'Session.md',
         type: 'file' as const,
         bytes: new TextEncoder().encode('# Session\n\nArrival notes'),
@@ -214,6 +217,7 @@ async function plannedInventory(
     jobId: ReturnType<typeof testDomainId<'importJob'>>
     operationId: ReturnType<typeof testDomainId<'operation'>>
     destinationParentId: null
+    textFileHandling: 'files' | 'notes'
   },
   sources: Parameters<ReturnType<typeof createLivePlainTransferGateway>['execute']>[1],
   entries: Parameters<ReturnType<typeof createLivePlainTransferGateway>['execute']>[2],
@@ -227,6 +231,7 @@ async function plannedInventory(
       actorId,
       destinationCampaignId: intent.campaignId,
       destinationParentId: intent.destinationParentId,
+      textFileHandling: intent.textFileHandling,
       manifestHandling: 'reject',
       mode: 'plain_resources',
       sourceDigest,

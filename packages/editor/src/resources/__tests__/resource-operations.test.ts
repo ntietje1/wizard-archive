@@ -114,6 +114,7 @@ describe('resource application workflows', () => {
     expect(intent).toMatchObject({
       campaignId,
       destinationParentId: null,
+      textFileHandling: 'files',
     })
     expect(sources).toEqual([{ id: 'selected-file', kind: 'file', name: 'Session.md' }])
     expect(entries).toMatchObject([{ sourceId: 'selected-file', path: 'Session.md', type: 'file' }])
@@ -189,6 +190,50 @@ describe('resource application workflows', () => {
           typeof message === 'string' && message.startsWith('Importing resources') && progress,
       ),
     ).toBe(true)
+    core.dispose()
+  })
+
+  it('classifies a standalone dropped text file as a note', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const navigationGateway = {
+      ...navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
+      open: vi.fn(),
+    }
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      navigation: navigationGateway,
+    })
+
+    await createWorkspaceActions(core.runtime, vi.fn()).importExternal(
+      null,
+      browserDataTransfer(browserFileEntry('Session.md', '# Session')),
+    )
+
+    await core.runtime.resources.loader.ensureCollection({
+      parentId: null,
+      lifecycle: 'active',
+    })
+    const roots = core.runtime.resources.index
+      .getSnapshot()
+      .list({ parentId: null, lifecycle: 'active' })
+    expect(roots).toMatchObject({
+      state: 'known',
+      items: [expect.objectContaining({ kind: 'note', title: 'Session.md' })],
+    })
+    if (roots.state !== 'known' || !roots.items[0]) throw new Error('Expected imported note')
+    expect(navigationGateway.open).toHaveBeenLastCalledWith({
+      kind: 'resource',
+      resourceId: roots.items[0].id,
+    })
     core.dispose()
   })
 

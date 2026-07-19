@@ -226,6 +226,7 @@ export const executePlainTransfer = action({
     jobId: importJobIdValidator,
     operationId: operationIdValidator,
     destinationParentId: v.nullable(resourceIdValidator),
+    textFileHandling: v.union(v.literal('files'), v.literal('notes')),
     sources: v.array(transferSourceDescriptorValidator),
     entries: v.array(transferInputEntryValidator),
   },
@@ -256,6 +257,7 @@ export const executePlainTransfer = action({
           args.destinationParentId === null
             ? null
             : assertDomainId(DOMAIN_ID_KIND.resource, args.destinationParentId),
+        textFileHandling: args.textFileHandling,
       },
       sources,
     })

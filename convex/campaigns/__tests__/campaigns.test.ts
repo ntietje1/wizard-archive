@@ -1061,6 +1061,7 @@ describe('deleteCampaign', () => {
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       destinationParentId: null,
+      textFileHandling: 'files',
       sources: [{ id: 'selected-file', kind: 'file', name: 'campaign-deletion.bin' }],
       entries: [
         {

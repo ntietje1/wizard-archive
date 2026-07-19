@@ -560,6 +560,7 @@ describe('resource structure commands', () => {
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       destinationParentId: null,
+      textFileHandling: 'notes' as const,
       sources: [{ id: 'campaign-directory', kind: 'directory' as const, name: 'Campaign' }],
       entries: [
         {
@@ -4220,6 +4221,7 @@ describe('resource structure commands', () => {
     const { uploadSessionId, ...intent } = args
     return {
       ...intent,
+      textFileHandling: 'files' as const,
       sources: [{ id: 'selected-file', kind: 'file' as const, name: fileName }],
       entries: [
         {
@@ -4254,6 +4256,7 @@ describe('resource structure commands', () => {
         actorId,
         destinationCampaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignId),
         destinationParentId: transfer.destinationParentId,
+        textFileHandling: transfer.textFileHandling,
         manifestHandling: 'reject',
         mode: 'plain_resources',
         sourceDigest,

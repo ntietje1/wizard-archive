@@ -24,6 +24,8 @@ export type PlainTransferSourceDescriptor = Readonly<{
   name: string
 }>
 
+export type PlainTransferTextFileHandling = 'files' | 'notes'
+
 type TransferJobRequestBase<TSource extends TransferSourceDescriptor> = Readonly<{
   version: typeof TRANSFER_JOB_REQUEST_VERSION
   jobId: ImportJobId
@@ -35,6 +37,7 @@ type TransferJobRequestBase<TSource extends TransferSourceDescriptor> = Readonly
 }>
 
 export type PlainTransferJobRequest = TransferJobRequestBase<PlainTransferSourceDescriptor> &
+  Readonly<{ textFileHandling: PlainTransferTextFileHandling }> &
   (
     | Readonly<{
         mode: 'plain_workspace'
@@ -53,6 +56,7 @@ export type PlainTransferIntent = Readonly<{
   jobId: ImportJobId
   operationId: OperationId
   destinationParentId: ResourceId | null
+  textFileHandling: PlainTransferTextFileHandling
 }>
 
 export type PlainTransferInputEntry =

@@ -1777,6 +1777,7 @@ describe('authorized resource projection', () => {
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
       operationId,
       destinationParentId: parentId,
+      textFileHandling: 'files',
       sources: [{ id: 'selected-file', kind: 'file', name: 'empty.txt' }],
       entries: [
         {

@@ -98,6 +98,7 @@ export function createLivePlainTransferGateway(
           jobId: intent.jobId,
           operationId: intent.operationId,
           destinationParentId: intent.destinationParentId,
+          textFileHandling: intent.textFileHandling,
           sources: [...sources],
           entries: entries.map((entry) => liveTransferEntry(entry, transfer.sessions, noteUpdates)),
         })
