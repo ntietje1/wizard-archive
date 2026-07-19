@@ -69,8 +69,10 @@ async function openScratchNote(page: Page, noteTitle: string) {
 async function insertEmptyEmbed(page: Page, editor: Locator) {
   const inline = editor.locator('.bn-inline-content').last()
   await inline.click()
-  await page.keyboard.press('Control+End')
-  if (await inline.textContent()) await page.keyboard.press('Enter')
+  if (await inline.textContent()) {
+    await page.keyboard.press('Control+End')
+    await page.keyboard.press('Enter')
+  }
   await page.keyboard.type('/')
   await page.getByRole('option', { name: /^Embed/ }).click()
   const embeds = editor.getByTestId('note-embed-block')
