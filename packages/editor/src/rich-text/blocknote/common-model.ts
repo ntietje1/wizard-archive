@@ -160,7 +160,7 @@ export function createRichTextBlockSchema<Block>(
   idSchema: z.ZodType<string>,
 ): z.ZodType<Block> {
   let blockSchema: z.ZodType<Block>
-  blockSchema = zod.lazy(() => {
+  blockSchema = zod.lazy<z.ZodType<Block>>(() => {
     const options = contentSchemas.map((schema) =>
       zod.strictObject({
         ...schema.shape,
@@ -169,7 +169,8 @@ export function createRichTextBlockSchema<Block>(
       }),
     )
     const [first, second, ...rest] = options
-    return zod.discriminatedUnion('type', [first, second, ...rest]) as unknown as z.ZodType<Block>
+    const schema = zod.discriminatedUnion('type', [first, second, ...rest])
+    return schema as typeof schema & z.ZodType<Block>
   })
   return blockSchema
 }
