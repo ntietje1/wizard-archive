@@ -4,6 +4,33 @@ import { FileContentPreview } from '../file-content-preview'
 import type { FileResourceContent } from '../../resources/content-session-contract'
 
 describe('embedded file content', () => {
+  it('opens inert viewport files from the verified content URL', () => {
+    render(
+      <FileContentPreview
+        content={fileContent({ classification: 'inert_file' })}
+        fileName="evidence.txt"
+        url="blob:verified-file"
+      />,
+    )
+
+    expect(
+      screen.getByRole('link', { name: /open file in new tab.*opens in a new tab/i }),
+    ).toHaveAttribute('href', 'blob:verified-file')
+  })
+
+  it('keeps inert embeds static', () => {
+    render(
+      <FileContentPreview
+        content={fileContent({ classification: 'inert_file' })}
+        fileName="evidence.txt"
+        mode="embed"
+        url="blob:verified-file"
+      />,
+    )
+
+    expect(screen.queryByRole('link', { name: /open file in new tab/i })).not.toBeInTheDocument()
+  })
+
   it('renders images as static media and reports their intrinsic ratio', () => {
     const onMediaLayout = vi.fn()
     render(

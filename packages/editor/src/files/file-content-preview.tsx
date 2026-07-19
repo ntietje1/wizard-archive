@@ -59,6 +59,19 @@ export function FileContentPreview(props: FileContentPreviewProps) {
         <FilePreviewState
           title={fileName}
           description={fileUnavailableDescription(content.viewerUnavailableReason)}
+          action={
+            mode === 'viewport' ? (
+              <a
+                className="mt-3 text-sm text-primary hover:underline"
+                href={url}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Open file in new tab
+                <span className="sr-only"> Opens in a new tab</span>
+              </a>
+            ) : undefined
+          }
         />
       )
   }
