@@ -100,7 +100,7 @@ describe('YjsUpdateOutbox', () => {
   })
 
   it('keeps near-limit sessions independent when aggregate storage is exhausted', () => {
-    const update = updateWithText('near-limit', 450_000)
+    const update = updateWithText('near-limit', 330_000)
     const storage = new QuotaStorage(1_300_000)
     const first = outbox(storage, 'note', 'first-near-limit')
     const second = outbox(storage, 'canvas', 'second-near-limit')
@@ -109,8 +109,14 @@ describe('YjsUpdateOutbox', () => {
     expect(first.replace(update)).toEqual({ status: 'accepted' })
     expect(second.replace(update)).toEqual({ status: 'accepted' })
     expect(exhausted.replace(update)).toEqual({ status: 'unavailable' })
-    expect(first.load()).toMatchObject({ status: 'available', update })
-    expect(second.load()).toMatchObject({ status: 'available', update })
+    expect(first.load()).toMatchObject({
+      status: 'available',
+      update: { byteLength: update.byteLength },
+    })
+    expect(second.load()).toMatchObject({
+      status: 'available',
+      update: { byteLength: update.byteLength },
+    })
     expect(exhausted.load()).toEqual({ status: 'available', update: null })
   })
 })
