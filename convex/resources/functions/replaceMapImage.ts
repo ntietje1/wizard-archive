@@ -22,6 +22,8 @@ import type { ResourceUploadClaim } from './assetContent'
 import { loadValidMapContentRows, projectMapContent } from './mapContent'
 import { replaceResourceReferenceProjection } from './resourceReferences'
 import { resourceAuthoredDestinationOccurrences } from '@wizard-archive/editor/resources/authored-destination'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { recordMapHistoryCheckpoint } from './itemHistory'
 
 type MapContentMutationResult = Infer<typeof mapContentMutationResultValidator>
 type ValidMapContentRows = Extract<
@@ -40,6 +42,7 @@ export type ReplaceMapImageArgs = Readonly<{
 type PreparedMapImageReplacement = Readonly<{
   status: 'prepared'
   resourceId: ResourceId
+  layerId: string | null
   contentId: Doc<'resourceMapContents'>['_id']
   claim: Extract<ResourceUploadClaim, { status: 'available' }>
   nextImage: Readonly<{ assetUuid: string; byteSize: number; digest: string; mediaType: string }>
@@ -106,6 +109,7 @@ async function prepareMapImageReplacement(
   }
   return await projectMapImageReplacement(
     resourceId,
+    args.layerId,
     rows,
     claim,
     nextImage,
@@ -160,6 +164,7 @@ async function loadMapImageReplacement(
 
 async function projectMapImageReplacement(
   resourceId: ResourceId,
+  layerId: string | null,
   rows: ValidMapContentRows,
   claim: Extract<ResourceUploadClaim, { status: 'available' }>,
   nextImage: PreparedMapImageReplacement['nextImage'],
@@ -172,6 +177,7 @@ async function projectMapImageReplacement(
     return {
       status: 'prepared',
       resourceId,
+      layerId,
       contentId: rows.content._id,
       claim,
       nextImage,
@@ -227,6 +233,10 @@ async function commitMapImageReplacement(
     image: prepared.nextContent.image,
     layers: prepared.nextContent.layers,
     version: prepared.version,
+  })
+  await recordMapHistoryCheckpoint(ctx, prepared.resourceId, prepared.version, {
+    action: ITEM_HISTORY_ACTION.mapImageChanged,
+    metadata: { layerId: prepared.layerId },
   })
   const remainingAssetIds = new Set(mapAssetIds(prepared.nextContent))
   const previousAssetStillReferenced =

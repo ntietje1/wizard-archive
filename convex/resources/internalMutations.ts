@@ -260,7 +260,11 @@ export const authorizeAssetRetirement = internalMutation({
       .query('resourceAssetOwners')
       .withIndex('by_assetUuid', (query) => query.eq('assetUuid', candidate.assetUuid))
       .first()
-    if (owner) {
+    const checkpoint = await ctx.db
+      .query('itemHistoryCheckpointAssets')
+      .withIndex('by_assetUuid', (query) => query.eq('assetUuid', candidate.assetUuid))
+      .first()
+    if (owner || checkpoint) {
       await ctx.db.delete(candidateId)
       return { status: 'completed' as const }
     }

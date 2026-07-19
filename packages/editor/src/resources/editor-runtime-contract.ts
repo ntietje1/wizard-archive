@@ -227,6 +227,13 @@ type ItemHistoryMapActionMetadata = {
   map_pin_visibility_changed: Readonly<{ pinLabel: string; visible: boolean }>
 }
 
+export type ItemHistoryMapEvent = {
+  [TAction in keyof ItemHistoryMapActionMetadata]: Readonly<{
+    action: TAction
+    metadata: ItemHistoryMapActionMetadata[TAction]
+  }>
+}[keyof ItemHistoryMapActionMetadata]
+
 type ItemHistoryMapEntry = {
   [TAction in keyof ItemHistoryMapActionMetadata]: ItemHistoryEntryBase<
     TAction,

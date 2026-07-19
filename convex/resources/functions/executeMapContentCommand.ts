@@ -29,6 +29,7 @@ import { findCanonicalResource } from './findCanonicalResource'
 import type { projectMapContent } from './mapContent'
 import { loadValidMapContentRows } from './mapContent'
 import { replaceResourceReferenceProjection } from './resourceReferences'
+import { recordMapCommandHistoryCheckpoint } from './itemHistory'
 
 const MAX_RECENT_MAP_OPERATIONS = 32
 
@@ -129,6 +130,13 @@ export async function executeMapContentCommand(
     ].slice(-MAX_RECENT_MAP_OPERATIONS),
     version: advanced.version,
   })
+  await recordMapCommandHistoryCheckpoint(
+    ctx,
+    resourceId,
+    advanced.version,
+    currentProjection,
+    command,
+  )
   return {
     status: 'completed' as const,
     content: {

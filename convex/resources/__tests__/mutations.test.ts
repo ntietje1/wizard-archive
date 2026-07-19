@@ -44,6 +44,7 @@ import {
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import presenceTest from '@convex-dev/presence/test'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
@@ -1093,7 +1094,7 @@ describe('resource structure commands', () => {
     ).resolves.toMatchObject({ status: 'ready', imageUrl: expect.any(String) })
   })
 
-  it('retains a shared map asset until concurrent replacement removes its final reference', async () => {
+  it('retains replaced map assets referenced by immutable history checkpoints', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = await createResource(campaign, campaignUuid, 'map', null, 'Shared map')
@@ -1237,8 +1238,33 @@ describe('resource structure commands', () => {
           .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
           .unique(),
       ).resolves.toBeNull()
-      await expect(ctx.db.get('fileStorage', original.sessionId)).resolves.toBeNull()
-      await expect(ctx.storage.get(original.storageId)).resolves.toBeNull()
+      await expect(
+        ctx.db
+          .query('itemHistoryCheckpointAssets')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .first(),
+      ).resolves.toMatchObject({ assetUuid: original.assetId })
+      await expect(ctx.db.get('fileStorage', original.sessionId)).resolves.toMatchObject({
+        status: 'committed',
+      })
+      await expect(ctx.storage.get(original.storageId)).resolves.toEqual(expect.any(Blob))
+      const imageEntries = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_action_history', (query) =>
+          query
+            .eq('campaignUuid', campaignUuid)
+            .eq('resourceUuid', resourceId)
+            .eq('action', ITEM_HISTORY_ACTION.mapImageChanged),
+        )
+        .collect()
+      expect(imageEntries).toHaveLength(3)
+      expect(imageEntries.map((entry) => entry.metadata)).toEqual(
+        expect.arrayContaining([
+          { layerId: null },
+          { layerId: attempts[winnerIndex]!.layerId },
+          { layerId: remainingLayerId },
+        ]),
+      )
     })
   })
 
@@ -1367,6 +1393,40 @@ describe('resource structure commands', () => {
           .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', mapId))
           .unique(),
       ).resolves.toBeNull()
+      const entries = await ctx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_history', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('resourceUuid', mapId),
+        )
+        .collect()
+      const checkpoints = await ctx.db
+        .query('itemHistoryCheckpoints')
+        .withIndex('by_resource_snapshot', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('resourceUuid', mapId),
+        )
+        .collect()
+      expect(entries).toHaveLength(38)
+      expect(checkpoints).toHaveLength(38)
+      expect(
+        entries.filter((entry) => entry.action === ITEM_HISTORY_ACTION.mapPinVisibilityChanged),
+      ).toHaveLength(35)
+      expect(
+        entries
+          .map((entry) => entry.metadata)
+          .filter((metadata) => metadata !== null && 'pinLabel' in metadata),
+      ).toEqual(Array.from({ length: 38 }, () => expect.objectContaining({ pinLabel: 'Target' })))
+      const removed = entries.find((entry) => entry.action === ITEM_HISTORY_ACTION.mapPinRemoved)
+      if (removed?.action !== ITEM_HISTORY_ACTION.mapPinRemoved) {
+        throw new TypeError('Expected removed pin history')
+      }
+      const removedCheckpoint = checkpoints.find(
+        (checkpoint) => checkpoint.snapshotUuid === removed.checkpoint.snapshotId,
+      )
+      expect(removedCheckpoint).toMatchObject({
+        kind: 'map',
+        pins: [],
+        version: removed.checkpoint.version,
+      })
     })
   })
 
