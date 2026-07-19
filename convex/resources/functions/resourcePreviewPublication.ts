@@ -227,6 +227,7 @@ async function loadResourceContent(
 export async function loadResourcePreviewImageUrl(
   ctx: CampaignQueryCtx,
   resource: Readonly<{ id: ResourceId; kind: ResourceKind }>,
+  projectedSourceVersion?: VersionStamp,
 ): Promise<string | null> {
   if (resource.kind === 'map') {
     const content = await ctx.db
@@ -254,9 +255,20 @@ export async function loadResourcePreviewImageUrl(
     }
   }
   const publication = await loadResourcePreviewPublication(ctx, resource.id)
-  return publication?.publication
-    ? await loadAssetUrl(ctx, publication.publication.assetUuid)
-    : null
+  if (!publication?.publication) return null
+  const currentSourceVersion = await loadResourceContentVersion(ctx, resource.id, resource.kind)
+  if (
+    !currentSourceVersion ||
+    !versionStampEquals(
+      assertVersionStamp(publication.publication.sourceVersion),
+      currentSourceVersion,
+    ) ||
+    (projectedSourceVersion !== undefined &&
+      !versionStampEquals(projectedSourceVersion, currentSourceVersion))
+  ) {
+    return null
+  }
+  return await loadAssetUrl(ctx, publication.publication.assetUuid)
 }
 
 async function loadAssetUrl(ctx: CampaignQueryCtx, assetUuid: string): Promise<string | null> {

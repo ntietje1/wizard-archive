@@ -130,7 +130,7 @@ export async function filterNoteContentForMember(
   memberId: CampaignMemberId,
   notePermission: ResourcePermission,
 ): Promise<
-  | { status: 'ready'; update: ArrayBuffer }
+  | { status: 'ready'; update: ArrayBuffer; complete: boolean }
   | { status: 'empty' }
   | { status: 'capacity_exceeded' }
   | { status: 'integrity_error' }
@@ -146,11 +146,12 @@ export async function filterNoteContentForMember(
   )
   if (visibleBlocks.length === 0) return { status: 'empty' }
   if (flattenNoteBlockIds(visibleBlocks).length === loaded.blockIds.length) {
-    return { status: 'ready', update: loaded.contentUpdate }
+    return { status: 'ready', update: loaded.contentUpdate, complete: true }
   }
   return {
     status: 'ready',
     update: encodeYjsDocument(noteBlocksToYDoc(visibleBlocks, NOTE_YJS_FRAGMENT)),
+    complete: false,
   }
 }
 

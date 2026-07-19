@@ -12,6 +12,7 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
 
   const content = await findNoteContent(ctx.db, resourceId)
   if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
+  const canonicalVersion = assertVersionStamp(content.version)
   if (ctx.resourceScope.projection !== 'dm' && authorization.permission !== 'edit') {
     const projection = await filterNoteContentForMember(
       ctx,
@@ -31,15 +32,14 @@ export async function loadNoteContent(ctx: CampaignQueryCtx, resourceId: Resourc
     return {
       status: 'ready' as const,
       update: projection.update,
-      version: await noteContentProjectionVersion(
-        assertVersionStamp(content.version),
-        new Uint8Array(projection.update),
-      ),
+      version: projection.complete
+        ? canonicalVersion
+        : await noteContentProjectionVersion(canonicalVersion, new Uint8Array(projection.update)),
     }
   }
   return {
     status: 'ready' as const,
     update: content.update,
-    version: content.version,
+    version: canonicalVersion,
   }
 }

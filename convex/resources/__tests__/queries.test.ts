@@ -653,6 +653,161 @@ describe('authorized resource projection', () => {
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
   })
 
+  it('projects note previews from current actor-visible content and never exposes stale images', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const visibleBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const hiddenBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    await asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Shared preview',
+        icon: null,
+        color: null,
+      },
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: visibleBlockId,
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Visible heading' }],
+        },
+        {
+          id: hiddenBlockId,
+          type: 'heading',
+          props: { level: 2 },
+          content: [{ type: 'text', text: 'Hidden heading' }],
+        },
+      ]),
+    })
+    const claim = await asDm(campaign).mutation(
+      api.resources.mutations.claimResourcePreviewGeneration,
+      { campaignId: campaignUuid, resourceId },
+    )
+    if (claim.status !== 'claimed') throw new TypeError('Expected preview claim')
+    const previewBytes = new Blob(['preview'], { type: 'image/webp' })
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      previewBytes,
+      'preview.webp',
+    )
+    await asDm(campaign).mutation(api.resources.mutations.publishResourcePreview, {
+      campaignId: campaignUuid,
+      resourceId,
+      claimToken: claim.claimToken,
+      uploadSessionId: upload.sessionId,
+      byteSize: previewBytes.size,
+    })
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [resourceId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'view',
+    })
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId: resourceId,
+      blockIds: [visibleBlockId, hiddenBlockId],
+      shared: true,
+    })
+
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      preview: {
+        excerpt: expect.stringContaining('Hidden heading'),
+        outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
+      },
+      imageUrl: expect.any(String),
+    })
+
+    await executeBlockAccess(campaign, campaignUuid, {
+      type: 'setNoteBlockAudienceAccess',
+      noteId: resourceId,
+      blockIds: [hiddenBlockId],
+      shared: false,
+    })
+    const playerPreview = await asPlayer(campaign).query(
+      api.resources.queries.loadResourcePreview,
+      { campaignId: campaignUuid, resourceId },
+    )
+    expect(playerPreview).toMatchObject({
+      status: 'ready',
+      preview: {
+        excerpt: expect.stringContaining('Visible heading'),
+        outline: [{ blockId: visibleBlockId }],
+      },
+      imageUrl: null,
+    })
+    if (playerPreview.status !== 'ready') throw new TypeError('Expected player preview')
+    expect(playerPreview.preview.excerpt).not.toContain('Hidden heading')
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        viewAsParticipantId: campaign.player.memberDomainId,
+        resourceId,
+      }),
+    ).resolves.toEqual(playerPreview)
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'ready',
+      preview: {
+        excerpt: expect.stringContaining('Hidden heading'),
+        outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
+      },
+      imageUrl: expect.any(String),
+    })
+
+    await executeAccess(campaign, campaignUuid, {
+      type: 'setMemberAccess',
+      resourceIds: [resourceId],
+      memberId: campaign.player.memberDomainId,
+      permission: 'none',
+    })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
+
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected note content')
+      await ctx.db.patch('resourceNoteContents', content._id, {
+        version: {
+          ...content.version,
+          revision: content.version.revision + 1,
+          digest: 'f'.repeat(64),
+        },
+      })
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toMatchObject({ status: 'ready', imageUrl: null })
+  })
+
   it('projects canonical block visibility with note access as the outer gate', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

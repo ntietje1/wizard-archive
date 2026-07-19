@@ -77,7 +77,7 @@ export async function copyResourceSearchBody(
   )
 }
 
-function noteSearchProjection(update: ArrayBuffer) {
+export function projectNoteSearchDocument(update: ArrayBuffer) {
   const blocks = decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
   const body = noteBlocksPlainText(blocks)
   return { body, preview: createResourcePreview('note', body, noteDocumentOutline(blocks)) }
@@ -95,7 +95,7 @@ export async function syncNoteSearchProjection(
   await syncResourceSearchProjection(
     ctx,
     resourceRecordFromRow(resource),
-    noteSearchProjection(update),
+    projectNoteSearchDocument(update),
   )
 }
 
@@ -112,6 +112,6 @@ async function loadNoteSearchProjection(ctx: CampaignMutationCtx, resourceId: Re
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
   return content
-    ? noteSearchProjection(content.update)
+    ? projectNoteSearchDocument(content.update)
     : { body: '', preview: createResourcePreview('note', '', []) }
 }
