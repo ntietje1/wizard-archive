@@ -5,6 +5,10 @@ export function createResourceWatchStore<TSnapshot, TState>(
   watch: (resourceId: ResourceId, apply: (snapshot: TSnapshot) => void) => () => void,
   apply: (resourceId: ResourceId, snapshot: TSnapshot) => void,
   initialState: TState,
+  initialLoad?: Readonly<{
+    load(resourceId: ResourceId): Promise<TSnapshot>
+    failed(resourceId: ResourceId): void
+  }>,
 ) {
   const source = new ResourceSessionStore(initialState)
   const watches = new Map<ResourceId, () => void>()
@@ -12,10 +16,29 @@ export function createResourceWatchStore<TSnapshot, TState>(
 
   const ensure = (resourceId: ResourceId) => {
     if (watches.has(resourceId)) return
-    watches.set(
-      resourceId,
-      watch(resourceId, (snapshot) => apply(resourceId, snapshot)),
-    )
+    let active = true
+    let initialized = false
+    const stop = watch(resourceId, (snapshot) => {
+      initialized = true
+      apply(resourceId, snapshot)
+    })
+    watches.set(resourceId, () => {
+      active = false
+      stop()
+    })
+    if (!initialLoad) return
+    void initialLoad
+      .load(resourceId)
+      .then((snapshot) => {
+        if (!active || initialized) return
+        initialized = true
+        apply(resourceId, snapshot)
+      })
+      .catch(() => {
+        if (!active || initialized) return
+        initialized = true
+        initialLoad.failed(resourceId)
+      })
   }
 
   return {

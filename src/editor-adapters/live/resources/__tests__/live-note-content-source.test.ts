@@ -167,6 +167,105 @@ function backend() {
 }
 
 describe('LiveNoteContentSource', () => {
+  it('initializes from an authoritative load when the watch has not emitted', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const document = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Loaded directly' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const update = arrayBuffer(Y.encodeStateAsUpdate(document))
+    const version = await versionFor(update)
+    provider.load.mockResolvedValue({
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update,
+      version,
+    })
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+
+    source.subscribe(resourceId, () => {})
+
+    await vi.waitFor(() => expect(source.get(resourceId).status).toBe('ready'))
+    expect(provider.load).toHaveBeenCalledWith(resourceId)
+
+    source.dispose()
+    document.destroy()
+  })
+
+  it('keeps the first watched snapshot when a concurrent initial load resolves later', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    let resolveLoad:
+      | ((snapshot: Awaited<ReturnType<LiveNoteContentBackend['load']>>) => void)
+      | undefined
+    provider.load.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveLoad = resolve
+        }),
+    )
+    const watchedDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Watched version' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const loadedDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Loaded version' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const watchedUpdate = arrayBuffer(Y.encodeStateAsUpdate(watchedDocument))
+    const loadedUpdate = arrayBuffer(Y.encodeStateAsUpdate(loadedDocument))
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update: watchedUpdate,
+      version: await versionFor(watchedUpdate),
+    })
+
+    resolveLoad?.({
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update: loadedUpdate,
+      version: await versionFor(loadedUpdate),
+    })
+    await Promise.resolve()
+
+    const state = source.get(resourceId)
+    if (state.status !== 'ready') throw new Error('Expected watched note')
+    expect(
+      decodeNoteYjsUpdatesToBlocks(
+        [{ update: Y.encodeStateAsUpdate(state.session.document) }],
+        NOTE_YJS_FRAGMENT,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          content: expect.arrayContaining([
+            expect.objectContaining({ type: 'text', text: 'Watched version' }),
+          ]),
+        }),
+      ]),
+    )
+
+    source.dispose()
+    watchedDocument.destroy()
+    loadedDocument.destroy()
+  })
+
   it('replaces an editable document when its authoritative generation advances', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()

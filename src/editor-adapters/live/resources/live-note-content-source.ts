@@ -185,6 +185,14 @@ class LiveNoteSessionSource implements NoteSessionSource {
       backend.watch,
       (resourceId, snapshot) => this.#apply(resourceId, snapshot),
       { status: 'loading' },
+      {
+        load: backend.load,
+        failed: (resourceId) =>
+          this.#setState(resourceId, {
+            status: 'unavailable',
+            reason: 'scope_unavailable',
+          }),
+      },
     )
     const applyAuthorityTransition = (
       resourceId: ResourceId,
