@@ -1,6 +1,7 @@
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { AssetId, CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
+import { internal } from '../../_generated/api'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { loadCanvasContentDeletion } from './canvasContent'
@@ -10,6 +11,11 @@ import { loadNoteContentDeletion } from './noteContent'
 import { fileAssetIds, mapAssetIds, queueAssetRetirements } from './assetContent'
 import { literals } from 'convex-helpers/validators'
 import { CAMPAIGN_DELETION_BATCH_SIZE } from '../../campaigns/constants'
+import {
+  deleteCampaignItemHistoryCheckpointBatch,
+  deleteCampaignItemHistoryEntriesBatch,
+  deleteItemHistoryCaptureIntents,
+} from './itemHistoryCleanup'
 
 type ResourceDeletionCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
 
@@ -20,6 +26,7 @@ type ResourceDeletionPlan = {
   noteBlockAudienceAccess: Array<Doc<'noteBlockAudienceAccess'>>
   noteBlockMemberAccess: Array<Doc<'noteBlockMemberAccess'>>
   noteBlockAccessCleanupIntents: Array<Doc<'noteBlockAccessCleanupIntents'>>
+  itemHistoryCaptureIntents: Array<Doc<'itemHistoryCaptureIntents'>>
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
@@ -31,9 +38,11 @@ type ResourceDeletionPlan = {
   assetOwners: Array<Doc<'resourceAssetOwners'>>
   referenceEdges: Array<Doc<'resourceReferenceEdges'>>
   retirementAssetUuids: Set<AssetId>
+  historyCampaignId: CampaignId
+  historyResourceIds: Array<ResourceId>
 }
 
-function createPlan(): ResourceDeletionPlan {
+function createPlan(campaignId: CampaignId): ResourceDeletionPlan {
   return {
     bookmarks: [],
     accessPolicies: [],
@@ -41,6 +50,7 @@ function createPlan(): ResourceDeletionPlan {
     noteBlockAudienceAccess: [],
     noteBlockMemberAccess: [],
     noteBlockAccessCleanupIntents: [],
+    itemHistoryCaptureIntents: [],
     aliases: [],
     assetsFolders: [],
     noteContents: [],
@@ -52,6 +62,8 @@ function createPlan(): ResourceDeletionPlan {
     assetOwners: [],
     referenceEdges: [],
     retirementAssetUuids: new Set(),
+    historyCampaignId: campaignId,
+    historyResourceIds: [],
   }
 }
 
@@ -67,6 +79,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.noteBlockAudienceAccess,
     plan.noteBlockMemberAccess,
     plan.noteBlockAccessCleanupIntents,
+    plan.itemHistoryCaptureIntents,
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
@@ -148,8 +161,10 @@ export async function planResourceDeletion(
   campaignId: CampaignId,
   resources: ReadonlyArray<Doc<'resources'>>,
 ): Promise<ResourceDeletionPlan | null> {
-  const plan = createPlan()
+  const plan = createPlan(campaignId)
   for (const resource of resources) {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, resource.resourceUuid)
+    plan.historyResourceIds.push(resourceId)
     // Each resource is accumulated and checked before the next read to keep the row cap strict.
     plan.bookmarks.push(
       // react-doctor-disable-next-line react-doctor/async-await-in-loop
@@ -212,6 +227,11 @@ export async function planResourceDeletion(
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    const historyCaptureIntent = await ctx.db
+      .query('itemHistoryCaptureIntents')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+      .unique()
+    if (historyCaptureIntent) plan.itemHistoryCaptureIntents.push(historyCaptureIntent)
     await addContent(ctx, plan, resource)
     if (rowCount(plan) > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) return null
   }
@@ -224,6 +244,18 @@ export async function applyResourceDeletion(
 ): Promise<void> {
   await Promise.all(rowGroups(plan).flatMap((rows) => rows.map((row) => ctx.db.delete(row._id))))
   await queueAssetRetirements(ctx, plan.retirementAssetUuids)
+  if (plan.historyResourceIds.length > 0) {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.resources.internalMutations.deleteResourceItemHistoryBatch,
+      {
+        campaignId: plan.historyCampaignId,
+        resourceIds: plan.historyResourceIds,
+        resourceIndex: 0,
+        stage: 'entries',
+      },
+    )
+  }
 }
 
 const CAMPAIGN_RESOURCE_DELETION_STAGES = [
@@ -246,6 +278,8 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'mapContents',
   'mapPins',
   'canvasContents',
+  'historyEntries',
+  'historyCheckpoints',
   'referenceEdges',
   'assetCopyIntents',
   'assetOwners',
@@ -284,6 +318,28 @@ export async function deleteCampaignResourceBatch(
   campaignId: CampaignId,
   stage: CampaignResourceDeletionStage,
 ): Promise<CampaignResourceDeletionStage | null> {
+  if (stage === 'resources') {
+    const resources = await ctx.db
+      .query('resources')
+      .withIndex('by_campaign_and_parent', (query) => query.eq('campaignUuid', campaignId))
+      .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    await deleteItemHistoryCaptureIntents(
+      ctx,
+      resources.map((resource) => assertDomainId(DOMAIN_ID_KIND.resource, resource.resourceUuid)),
+    )
+    await Promise.all(resources.map((resource) => ctx.db.delete(resource._id)))
+    return resources.length === CAMPAIGN_DELETION_BATCH_SIZE ? stage : 'bookmarks'
+  }
+  if (stage === 'historyEntries') {
+    return (await deleteCampaignItemHistoryEntriesBatch(ctx, campaignId))
+      ? stage
+      : 'historyCheckpoints'
+  }
+  if (stage === 'historyCheckpoints') {
+    return (await deleteCampaignItemHistoryCheckpointBatch(ctx, campaignId))
+      ? stage
+      : 'referenceEdges'
+  }
   if (stage === 'assetOwners') {
     const owners = await ctx.db
       .query('resourceAssetOwners')
@@ -312,16 +368,14 @@ export async function deleteCampaignResourceBatch(
 async function loadCampaignResourceDeletionBatch(
   ctx: ResourceDeletionCtx,
   campaignId: CampaignId,
-  stage: Exclude<CampaignResourceDeletionStage, 'assetOwners' | 'referenceEdges'>,
+  stage: Exclude<
+    CampaignResourceDeletionStage,
+    'assetOwners' | 'historyCheckpoints' | 'historyEntries' | 'referenceEdges' | 'resources'
+  >,
 ): Promise<Array<CampaignResourceRow>> {
   const accessRows = await loadCampaignAccessDeletionBatch(ctx, campaignId, stage)
   if (accessRows) return accessRows
   switch (stage) {
-    case 'resources':
-      return await ctx.db
-        .query('resources')
-        .withIndex('by_campaign_and_parent', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'bookmarks':
       return await ctx.db
         .query('resourceBookmarks')

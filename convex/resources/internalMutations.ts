@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { internal } from '../_generated/api'
 import { internalMutation } from '../_generated/server'
@@ -12,6 +13,10 @@ import { versionStampValidator } from './schema'
 import { resourceIdValidator } from './validators'
 import { cleanupNoteBlockAccess as cleanupNoteBlockAccessFn } from './functions/noteBlockAccessCleanup'
 import { captureYjsHistoryCheckpoint as captureYjsHistoryCheckpointFn } from './functions/itemHistory'
+import {
+  ITEM_HISTORY_CLEANUP_STAGES,
+  deleteResourceItemHistoryBatch as deleteResourceItemHistoryBatchFn,
+} from './functions/itemHistoryCleanup'
 
 const workResult = v.union(
   v.object({ status: v.literal('unavailable') }),
@@ -68,6 +73,41 @@ export const captureYjsHistoryCheckpoint = internalMutation({
       assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       args.expectedVersion,
     )
+    return null
+  },
+})
+
+export const deleteResourceItemHistoryBatch = internalMutation({
+  args: {
+    campaignId: campaignIdValidator,
+    resourceIds: v.array(resourceIdValidator),
+    resourceIndex: v.number(),
+    stage: literals(...ITEM_HISTORY_CLEANUP_STAGES),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const resourceId = args.resourceIds[args.resourceIndex]
+    if (!resourceId) return null
+    const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId)
+    const nextStage = await deleteResourceItemHistoryBatchFn(
+      ctx,
+      campaignId,
+      assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
+      args.stage,
+    )
+    const nextResourceIndex = nextStage ? args.resourceIndex : args.resourceIndex + 1
+    if (nextResourceIndex < args.resourceIds.length) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.resources.internalMutations.deleteResourceItemHistoryBatch,
+        {
+          campaignId,
+          resourceIds: args.resourceIds,
+          resourceIndex: nextResourceIndex,
+          stage: nextStage ?? 'entries',
+        },
+      )
+    }
     return null
   },
 })

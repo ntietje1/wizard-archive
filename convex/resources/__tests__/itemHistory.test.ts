@@ -146,7 +146,7 @@ describe('item history checkpoints', () => {
     }
   })
 
-  it('does not recreate history after a canvas is deleted before capture', async () => {
+  it('cleans item history in bounded work and does not recreate it after deletion', async () => {
     vi.useFakeTimers()
     const campaign = await setupCampaignContext(t)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -162,29 +162,81 @@ describe('item history checkpoints', () => {
       ],
       edges: [],
     })
-    try {
-      await expect(
-        asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
+    const update = encodeUpdate(document)
+    const saved = await (async () => {
+      try {
+        return await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
           campaignId: campaign.campaignDomainId,
           resourceId,
-          update: encodeUpdate(document),
-        }),
-      ).resolves.toMatchObject({ status: 'completed', version: { revision: 2 } })
-    } finally {
-      document.destroy()
-    }
+          update,
+        })
+      } finally {
+        document.destroy()
+      }
+    })()
+    expect(saved).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    if (saved.status !== 'completed') throw new TypeError('Expected saved canvas')
 
     await t.run(async (ctx) => {
-      const resource = await ctx.db
-        .query('resources')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-        .unique()
-      const content = await ctx.db
-        .query('resourceCanvasContents')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-        .unique()
-      await ctx.db.delete('resources', resource!._id)
-      await ctx.db.delete('resourceCanvasContents', content!._id)
+      const snapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+      await ctx.db.insert('itemHistoryCheckpoints', {
+        snapshotUuid: snapshotId,
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: resourceId,
+        kind: 'canvas',
+        update,
+        version: saved.version,
+      })
+      await ctx.db.insert('itemHistoryEntries', {
+        historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+        campaignUuid: campaign.campaignDomainId,
+        resourceUuid: resourceId,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        action: ITEM_HISTORY_ACTION.contentEdited,
+        metadata: null,
+        checkpoint: { kind: 'canvas', snapshotId, version: saved.version },
+        createdAt: Date.now(),
+      })
+      for (let index = 0; index < 40; index += 1) {
+        await ctx.db.insert('itemHistoryEntries', {
+          historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+          campaignUuid: campaign.campaignDomainId,
+          resourceUuid: resourceId,
+          actorMemberUuid: campaign.dm.memberDomainId,
+          action: ITEM_HISTORY_ACTION.renamed,
+          metadata: { from: `Before ${index}`, to: `After ${index}` },
+          createdAt: Date.now() + index + 1,
+        })
+      }
+    })
+    await expect(
+      executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'trash',
+        resourceIds: [resourceId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await expect(
+      executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+        type: 'permanentlyDelete',
+        resourceIds: [resourceId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('itemHistoryCaptureIntents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(
+        ctx.db
+          .query('itemHistoryEntries')
+          .withIndex('by_resource_history', (query) =>
+            query.eq('campaignUuid', campaign.campaignDomainId).eq('resourceUuid', resourceId),
+          )
+          .first(),
+      ).resolves.not.toBeNull()
     })
 
     await t.finishAllScheduledFunctions(vi.runAllTimers)
@@ -193,11 +245,8 @@ describe('item history checkpoints', () => {
       const [entries, checkpoints, intent] = await Promise.all([
         ctx.db
           .query('itemHistoryEntries')
-          .withIndex('by_resource_action_history', (query) =>
-            query
-              .eq('campaignUuid', campaign.campaignDomainId)
-              .eq('resourceUuid', resourceId)
-              .eq('action', ITEM_HISTORY_ACTION.contentEdited),
+          .withIndex('by_resource_history', (query) =>
+            query.eq('campaignUuid', campaign.campaignDomainId).eq('resourceUuid', resourceId),
           )
           .collect(),
         ctx.db
@@ -675,6 +724,44 @@ describe('item history checkpoints', () => {
       expect(
         new Set([...firstPage.entries, ...secondPage.entries].map((entry) => entry.id)).size,
       ).toBe(firstPage.entries.length + secondPage.entries.length)
+
+      const sequentialRestore = await asDm(campaign).mutation(
+        api.resources.mutations.restoreItemHistoryCheckpoint,
+        {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+          entryId: restored.historyEntryId,
+          expectedVersion: content.version,
+        },
+      )
+      expect(sequentialRestore).toMatchObject({
+        status: 'restored',
+        restoredFromEntryId: restored.historyEntryId,
+      })
+      const sequentialContent = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+      })
+      expect(sequentialContent).toMatchObject({
+        status: 'ready',
+        generation: 3,
+        version: {
+          revision: content.version.revision + 1,
+          digest: historicalVersion.digest,
+        },
+      })
+      await t.run(async (ctx) => {
+        const restoredEntries = await ctx.db
+          .query('itemHistoryEntries')
+          .withIndex('by_resource_action_history', (query) =>
+            query
+              .eq('campaignUuid', campaign.campaignDomainId)
+              .eq('resourceUuid', resourceId)
+              .eq('action', ITEM_HISTORY_ACTION.contentRestored),
+          )
+          .collect()
+        expect(restoredEntries).toHaveLength(2)
+      })
     } finally {
       historicalDocument.destroy()
     }

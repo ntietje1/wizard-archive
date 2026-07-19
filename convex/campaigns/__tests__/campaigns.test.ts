@@ -21,6 +21,7 @@ import {
   isUuidV7,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import type { Id } from '../../_generated/dataModel'
 
@@ -1181,6 +1182,23 @@ describe('deleteCampaign', () => {
         },
       })
     }
+    const historyResourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    resourceIds.push(historyResourceId)
+    await expect(
+      dmAuth.mutation(api.resources.mutations.createCanvasResource, {
+        campaignId: ctx.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId: historyResourceId,
+          kind: 'canvas',
+          parentId: null,
+          title: canonicalizeResourceTitle('History canvas'),
+          icon: null,
+          color: null,
+        },
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
     const transferJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('resourceTransferJobs', {
@@ -1215,6 +1233,46 @@ describe('deleteCampaign', () => {
         rawPath: 'pending.txt',
         normalizedPath: 'pending.txt',
       })
+      const content = await dbCtx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', historyResourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected canvas content')
+      await dbCtx.db.insert('itemHistoryCaptureIntents', {
+        resourceUuid: historyResourceId,
+        actorMemberUuid: ctx.dm.memberDomainId,
+        version: content.version,
+      })
+      const snapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+      await dbCtx.db.insert('itemHistoryCheckpoints', {
+        snapshotUuid: snapshotId,
+        campaignUuid: ctx.campaignDomainId,
+        resourceUuid: historyResourceId,
+        kind: 'canvas',
+        update: content.update,
+        version: content.version,
+      })
+      await dbCtx.db.insert('itemHistoryEntries', {
+        historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+        campaignUuid: ctx.campaignDomainId,
+        resourceUuid: historyResourceId,
+        actorMemberUuid: ctx.dm.memberDomainId,
+        action: ITEM_HISTORY_ACTION.contentEdited,
+        metadata: null,
+        checkpoint: { kind: 'canvas', snapshotId, version: content.version },
+        createdAt: Date.now(),
+      })
+      for (let index = 0; index < 40; index += 1) {
+        await dbCtx.db.insert('itemHistoryEntries', {
+          historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+          campaignUuid: ctx.campaignDomainId,
+          resourceUuid: historyResourceId,
+          actorMemberUuid: ctx.dm.memberDomainId,
+          action: ITEM_HISTORY_ACTION.renamed,
+          metadata: { from: `Before ${index}`, to: `After ${index}` },
+          createdAt: Date.now() + index + 1,
+        })
+      }
     })
     await createSession(t, ctx.campaignId)
     await Promise.all(
@@ -1276,6 +1334,24 @@ describe('deleteCampaign', () => {
         .withIndex('by_campaignUuid', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
       expect(canvasContents).toHaveLength(0)
+
+      const historyEntries = await dbCtx.db
+        .query('itemHistoryEntries')
+        .withIndex('by_resource_history', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(historyEntries).toHaveLength(0)
+
+      const historyCheckpoints = await dbCtx.db
+        .query('itemHistoryCheckpoints')
+        .withIndex('by_resource_snapshot', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(historyCheckpoints).toHaveLength(0)
+
+      const historyCaptureIntent = await dbCtx.db
+        .query('itemHistoryCaptureIntents')
+        .withIndex('by_resourceUuid', (q) => q.eq('resourceUuid', historyResourceId))
+        .unique()
+      expect(historyCaptureIntent).toBeNull()
 
       const transferJobs = await dbCtx.db
         .query('resourceTransferJobs')

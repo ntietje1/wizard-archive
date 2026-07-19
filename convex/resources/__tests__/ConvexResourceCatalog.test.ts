@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import {
   DOMAIN_ID_KIND,
   assertDomainId,
@@ -65,20 +65,34 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
         envelope: CommandEnvelope<ResourceStructureCommand>,
       ) => {
         const authorized = await authorize(actorId, envelope.campaignId)
-        return await test.run(
-          async (ctx) =>
-            await executeStructureCommand(
-              {
-                ...ctx,
-                campaign: { resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS },
-                membership: {
-                  role: authorized ? CAMPAIGN_MEMBER_ROLE.DM : CAMPAIGN_MEMBER_ROLE.Player,
-                },
-                resourceScope: { campaignId: envelope.campaignId, actorId },
-              } as unknown as CampaignMutationCtx,
-              { operationId: envelope.operationId, command: envelope.command },
-            ),
-        )
+        const permanentlyDeleting = envelope.command.type === 'permanentlyDelete'
+        if (permanentlyDeleting) {
+          vi.useFakeTimers()
+        }
+        try {
+          const result = await test.run(
+            async (ctx) =>
+              await executeStructureCommand(
+                {
+                  ...ctx,
+                  campaign: { resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS },
+                  membership: {
+                    role: authorized ? CAMPAIGN_MEMBER_ROLE.DM : CAMPAIGN_MEMBER_ROLE.Player,
+                  },
+                  resourceScope: { campaignId: envelope.campaignId, actorId },
+                } as unknown as CampaignMutationCtx,
+                { operationId: envelope.operationId, command: envelope.command },
+              ),
+          )
+          if (permanentlyDeleting) {
+            await test.finishAllScheduledFunctions(vi.runAllTimers)
+          }
+          return result
+        } finally {
+          if (permanentlyDeleting) {
+            vi.useRealTimers()
+          }
+        }
       },
       appendAlias: async (alias: Parameters<typeof appendResourceSourcePathAlias>[1]) =>
         await test.run(async (ctx) => await appendResourceSourcePathAlias(ctx, alias)),

@@ -50,6 +50,8 @@ import { assertVersionStamp } from '@wizard-archive/editor/resources/component-v
 import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import { projectMapContent } from '../functions/mapContent'
 import { replaceResourceReferenceProjection } from '../functions/resourceReferences'
+import { deleteResourceItemHistoryBatch } from '../functions/itemHistoryCleanup'
+import type { ItemHistoryCleanupStage } from '../functions/itemHistoryCleanup'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -1104,7 +1106,7 @@ describe('resource structure commands', () => {
     ).resolves.toMatchObject({ status: 'ready', imageUrl: expect.any(String) })
   })
 
-  it('retains replaced map assets referenced by immutable history checkpoints', async () => {
+  it('retains replaced map assets until bounded history cleanup releases them', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = await createResource(campaign, campaignUuid, 'map', null, 'Shared map')
@@ -1275,6 +1277,45 @@ describe('resource structure commands', () => {
           { layerId: remainingLayerId },
         ]),
       )
+    })
+
+    await expect(
+      execute(campaign, campaignUuid, { type: 'trash', resourceIds: [resourceId] }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'permanentlyDelete',
+        resourceIds: [resourceId],
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    let cleanupStage: ItemHistoryCleanupStage | null = 'entries'
+    while (cleanupStage) {
+      const stage: ItemHistoryCleanupStage = cleanupStage
+      cleanupStage = await t.run(
+        async (ctx): Promise<ItemHistoryCleanupStage | null> =>
+          await deleteResourceItemHistoryBatch(ctx, campaignUuid, resourceId, stage),
+      )
+    }
+    const originalRetirementCandidateId = await t.run(async (ctx) => {
+      const candidate = await ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+        .unique()
+      if (!candidate) throw new TypeError('Expected original asset retirement candidate')
+      return candidate._id
+    })
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: originalRetirementCandidateId,
+    })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('itemHistoryCheckpointAssets')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', original.assetId))
+          .first(),
+      ).resolves.toBeNull()
+      await expect(ctx.db.get('fileStorage', original.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(original.storageId)).resolves.toBeNull()
     })
   })
 

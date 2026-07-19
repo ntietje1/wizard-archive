@@ -73,6 +73,7 @@ import type * as resources_functions_fileContent from "../resources/functions/fi
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
 import type * as resources_functions_findItemHistoryCheckpoint from "../resources/functions/findItemHistoryCheckpoint.js";
 import type * as resources_functions_itemHistory from "../resources/functions/itemHistory.js";
+import type * as resources_functions_itemHistoryCleanup from "../resources/functions/itemHistoryCleanup.js";
 import type * as resources_functions_itemHistoryQueries from "../resources/functions/itemHistoryQueries.js";
 import type * as resources_functions_itemHistoryStructure from "../resources/functions/itemHistoryStructure.js";
 import type * as resources_functions_loadFileDownload from "../resources/functions/loadFileDownload.js";
@@ -218,6 +219,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
   "resources/functions/findItemHistoryCheckpoint": typeof resources_functions_findItemHistoryCheckpoint;
   "resources/functions/itemHistory": typeof resources_functions_itemHistory;
+  "resources/functions/itemHistoryCleanup": typeof resources_functions_itemHistoryCleanup;
   "resources/functions/itemHistoryQueries": typeof resources_functions_itemHistoryQueries;
   "resources/functions/itemHistoryStructure": typeof resources_functions_itemHistoryStructure;
   "resources/functions/loadFileDownload": typeof resources_functions_loadFileDownload;
