@@ -16,6 +16,7 @@ import {
 import { api } from '../../_generated/api'
 import {
   DOMAIN_ID_KIND,
+  assertDomainId,
   generateDomainId,
   isUuidV7,
 } from '@wizard-archive/editor/resources/domain-id'
@@ -23,6 +24,7 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import type { Id } from '../../_generated/dataModel'
+import { storeUncommittedTestUploadSession } from '../../_test/storage.helper'
 
 afterEach(() => vi.useRealTimers())
 
@@ -1048,6 +1050,25 @@ describe('deleteCampaign', () => {
         },
       }),
     ).resolves.toMatchObject({ status: 'completed' })
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      ctx.dm.profile._id,
+      new Blob(['campaign deletion asset'], { type: 'text/plain' }),
+      'campaign-deletion.txt',
+    )
+    const fileCreation = await dmAuth.action(api.resources.actions.executePlainFileTransfer, {
+      campaignId: ctx.campaignDomainId,
+      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      destinationParentId: null,
+      uploadSessionId: upload.sessionId,
+    })
+    if (fileCreation.status !== 'completed' || fileCreation.receipt.result.type !== 'created') {
+      throw new TypeError('Expected campaign deletion file fixture')
+    }
+    resourceIds.push(
+      assertDomainId(DOMAIN_ID_KIND.resource, fileCreation.receipt.result.resourceId),
+    )
     const transferJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('resourceTransferJobs', {
@@ -1227,6 +1248,20 @@ describe('deleteCampaign', () => {
         .withIndex('by_campaign_and_resource', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
       expect(sourceAliases).toHaveLength(0)
+
+      const assetOwners = await dbCtx.db
+        .query('resourceAssetOwners')
+        .withIndex('by_assetUuid', (q) => q.eq('assetUuid', upload.assetId))
+        .collect()
+      expect(assetOwners).toHaveLength(0)
+
+      const retirementCandidate = await dbCtx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (q) => q.eq('assetUuid', upload.assetId))
+        .unique()
+      expect(retirementCandidate).toBeNull()
+      await expect(dbCtx.db.get('fileStorage', upload.sessionId)).resolves.toBeNull()
+      await expect(dbCtx.storage.get(upload.storageId)).resolves.toBeNull()
 
       const sessions = await dbCtx.db
         .query('sessions')
