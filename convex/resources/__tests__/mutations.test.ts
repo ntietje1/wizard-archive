@@ -3207,6 +3207,14 @@ describe('resource structure commands', () => {
           .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
           .take(1),
       ).toHaveLength(0)
+      for (const resourceId of [deleteRootId, deleteChildId]) {
+        expect(
+          await ctx.db
+            .query('resourceSearchDocuments')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ).toBeNull()
+      }
     })
   })
 

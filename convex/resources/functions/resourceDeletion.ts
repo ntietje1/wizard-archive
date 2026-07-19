@@ -34,6 +34,7 @@ type ResourceDeletionPlan = {
   mapContents: Array<Doc<'resourceMapContents'>>
   mapPins: Array<Doc<'resourceMapPins'>>
   canvasContents: Array<Doc<'resourceCanvasContents'>>
+  searchDocuments: Array<Doc<'resourceSearchDocuments'>>
   assetCopyIntents: Array<Doc<'resourceAssetCopyIntents'>>
   assetOwners: Array<Doc<'resourceAssetOwners'>>
   referenceEdges: Array<Doc<'resourceReferenceEdges'>>
@@ -58,6 +59,7 @@ function createPlan(campaignId: CampaignId): ResourceDeletionPlan {
     mapContents: [],
     mapPins: [],
     canvasContents: [],
+    searchDocuments: [],
     assetCopyIntents: [],
     assetOwners: [],
     referenceEdges: [],
@@ -87,6 +89,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.mapContents,
     plan.mapPins,
     plan.canvasContents,
+    plan.searchDocuments,
     plan.assetCopyIntents,
     plan.assetOwners,
     plan.referenceEdges,
@@ -227,6 +230,11 @@ export async function planResourceDeletion(
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    const searchDocument = await ctx.db
+      .query('resourceSearchDocuments')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resource.resourceUuid))
+      .unique()
+    if (searchDocument) plan.searchDocuments.push(searchDocument)
     const historyCaptureIntent = await ctx.db
       .query('itemHistoryCaptureIntents')
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
@@ -278,6 +286,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'mapContents',
   'mapPins',
   'canvasContents',
+  'searchDocuments',
   'historyEntries',
   'historyCheckpoints',
   'referenceEdges',
@@ -310,6 +319,7 @@ type CampaignResourceRow =
   | Doc<'resourceMapContents'>
   | Doc<'resourceMapPins'>
   | Doc<'resourceCanvasContents'>
+  | Doc<'resourceSearchDocuments'>
   | Doc<'resourceReferenceEdges'>
   | Doc<'resourceAssetCopyIntents'>
 
@@ -437,6 +447,11 @@ async function loadCampaignResourceDeletionBatch(
       return await ctx.db
         .query('resourceCanvasContents')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'searchDocuments':
+      return await ctx.db
+        .query('resourceSearchDocuments')
+        .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'assetCopyIntents':
       return await ctx.db

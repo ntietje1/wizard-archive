@@ -1184,6 +1184,12 @@ describe('deleteCampaign', () => {
         .collect()
       expect(canvasContents).toHaveLength(0)
 
+      const searchDocuments = await dbCtx.db
+        .query('resourceSearchDocuments')
+        .withIndex('by_campaign_and_resource', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(searchDocuments).toHaveLength(0)
+
       const historyEntries = await dbCtx.db
         .query('itemHistoryEntries')
         .withIndex('by_resource_history', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
