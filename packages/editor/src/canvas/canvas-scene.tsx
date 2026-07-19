@@ -169,8 +169,10 @@ export function CanvasScene({
               onOpenContextMenu={onOpenContextMenu}
               renderEmbed={renderEmbed}
               exclusivelySelected={
-                visualSelection.nodeIds.size === 1 && visualSelection.nodeIds.has(node.id)
+                interaction.selection.nodeIds.size === 1 &&
+                interaction.selection.nodeIds.has(node.id)
               }
+              committedSelected={interaction.selection.nodeIds.has(node.id)}
               selected={visualSelection.nodeIds.has(node.id)}
               showSelectionIndicator={
                 visualSelection.nodeIds.has(node.id) &&
@@ -240,6 +242,7 @@ function canvasVisualNode(
 
 function CanvasNode({
   canEdit,
+  committedSelected,
   content,
   documentController,
   editing,
@@ -259,6 +262,7 @@ function CanvasNode({
   zIndex,
 }: {
   canEdit: boolean
+  committedSelected: boolean
   content: CanvasDocumentContent
   documentController: CanvasDocumentController
   editing: boolean
@@ -289,6 +293,7 @@ function CanvasNode({
       data-selected={selected}
       data-testid="canvas-node"
       style={{
+        contain: 'layout style',
         width: size.width,
         height: size.height,
         transform: `translate(${position.x}px, ${position.y}px)`,
@@ -337,59 +342,17 @@ function CanvasNode({
         }
       }}
     >
-      <CanvasNodeVisual
-        {...(editing
-          ? {
-              editing: true,
-              onDefaultTextColorChange: (textColor: string) =>
-                saveTextNodeData(canEdit, documentController, node.id, { textColor }),
-            }
-          : { editing: false })}
+      <CanvasNodeContent
+        canEdit={canEdit}
+        committedSelected={committedSelected}
+        documentController={documentController}
+        editing={editing}
+        editingActivation={editingActivation}
         exclusivelySelected={exclusivelySelected}
-        embed={
-          node.type === 'embed'
-            ? renderEmbed({
-                activation: editing
-                  ? editingActivation
-                    ? { kind: 'point', point: editingActivation }
-                    : { kind: 'end' }
-                  : null,
-                editing,
-                node,
-                onDefaultTextColorChange: (textColor) =>
-                  saveNodeTextColor(canEdit, documentController, node.id, textColor),
-                onMediaLayout: (layout) => {
-                  if (!canEdit) return
-                  const latest = documentController
-                    .read()
-                    .nodes.find(
-                      (candidate): candidate is Extract<CanvasDocumentNode, { type: 'embed' }> =>
-                        candidate.id === node.id && candidate.type === 'embed',
-                    )
-                  if (!latest) return
-                  const update = canvasEmbedMediaLayoutUpdate(latest, layout)
-                  if (update) {
-                    documentController.apply({ type: 'update', nodes: [update], edges: [] })
-                  }
-                },
-                zoom: viewport.zoom,
-              })
-            : undefined
-        }
+        interactionController={interactionController}
         node={node}
-        activation={
-          editing
-            ? editingActivation
-              ? { kind: 'point', point: editingActivation }
-              : { kind: 'end' }
-            : null
-        }
-        selected={selected}
-        zoom={viewport.zoom}
-        onFinishEditing={() => interactionController.finishEditing()}
-        onSaveContent={(nextContent) =>
-          saveTextNodeData(canEdit, documentController, node.id, { content: nextContent })
-        }
+        renderEmbed={renderEmbed}
+        viewport={viewport}
       />
       {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={viewport.zoom} />}
       {canEdit && tool === 'edge' && node.type !== 'stroke' && (
@@ -401,6 +364,87 @@ function CanvasNode({
         />
       )}
     </div>
+  )
+}
+
+function CanvasNodeContent({
+  canEdit,
+  committedSelected,
+  documentController,
+  editing,
+  editingActivation,
+  exclusivelySelected,
+  interactionController,
+  node,
+  renderEmbed,
+  viewport,
+}: {
+  canEdit: boolean
+  committedSelected: boolean
+  documentController: CanvasDocumentController
+  editing: boolean
+  editingActivation: Readonly<{ x: number; y: number }> | null
+  exclusivelySelected: boolean
+  interactionController: CanvasInteractionController
+  node: CanvasDocumentNode
+  renderEmbed: CanvasEmbedRenderer
+  viewport: CanvasInteractionSnapshot['viewport']
+}) {
+  return (
+    <CanvasNodeVisual
+      {...(editing
+        ? {
+            editing: true,
+            onDefaultTextColorChange: (textColor: string) =>
+              saveTextNodeData(canEdit, documentController, node.id, { textColor }),
+          }
+        : { editing: false })}
+      exclusivelySelected={exclusivelySelected}
+      embed={
+        node.type === 'embed'
+          ? renderEmbed({
+              activation: editing
+                ? editingActivation
+                  ? { kind: 'point', point: editingActivation }
+                  : { kind: 'end' }
+                : null,
+              editing,
+              node,
+              onDefaultTextColorChange: (textColor) =>
+                saveNodeTextColor(canEdit, documentController, node.id, textColor),
+              onMediaLayout: (layout) => {
+                if (!canEdit) return
+                const latest = documentController
+                  .read()
+                  .nodes.find(
+                    (candidate): candidate is Extract<CanvasDocumentNode, { type: 'embed' }> =>
+                      candidate.id === node.id && candidate.type === 'embed',
+                  )
+                if (!latest) return
+                const update = canvasEmbedMediaLayoutUpdate(latest, layout)
+                if (update) {
+                  documentController.apply({ type: 'update', nodes: [update], edges: [] })
+                }
+              },
+              zoom: viewport.zoom,
+            })
+          : undefined
+      }
+      node={node}
+      activation={
+        editing
+          ? editingActivation
+            ? { kind: 'point', point: editingActivation }
+            : { kind: 'end' }
+          : null
+      }
+      selected={committedSelected}
+      zoom={viewport.zoom}
+      onFinishEditing={() => interactionController.finishEditing()}
+      onSaveContent={(nextContent) =>
+        saveTextNodeData(canEdit, documentController, node.id, { content: nextContent })
+      }
+    />
   )
 }
 

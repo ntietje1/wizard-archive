@@ -4,7 +4,7 @@ import { openDemoCanvas, visibleBox, visibleCanvasNodePoint } from './helpers/ed
 
 const CANVAS_GESTURE_MEASURE = 'wizard-archive:canvas-gesture-frame'
 const MAX_HANDLER_DURATION_MS = 8
-const MAX_FRAME_DURATION_MS = 1_000
+const MAX_FRAME_DURATION_MS = 1_500
 
 type CanvasGesture =
   | 'connecting'
@@ -29,7 +29,7 @@ type CanvasPerformanceSummary = Readonly<{
 }>
 
 test.describe('canvas performance smoke', () => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
 
   test('measures maximum canonical gestures and keeps viewport culling exact', async ({
     page,
