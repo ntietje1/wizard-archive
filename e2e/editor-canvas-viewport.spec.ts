@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
-import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
+import {
+  dragPointer,
+  openDemoCanvas,
+  visibleBox,
+  visibleCanvasNodePoint,
+} from './helpers/editor-canvas-helpers'
 
 test.describe('canvas viewport parity', () => {
   test('routes zoom, wheel, hand, middle-button, fit, coordinate, and persistence behavior', async ({
@@ -17,9 +22,9 @@ test.describe('canvas viewport parity', () => {
     await expect.poll(gridSize).not.toBe(initialGridSize)
 
     const nodeBox = await visibleBox(nodes.first())
-    await nodes.first().dragTo(surface, {
-      sourcePosition: { x: 30, y: 30 },
-      targetPosition: { x: 360, y: 260 },
+    await dragPointer(page, visibleCanvasNodePoint(nodeBox, surfaceBox), {
+      x: surfaceBox.x + 360,
+      y: surfaceBox.y + 260,
     })
     await expect
       .poll(async () => {

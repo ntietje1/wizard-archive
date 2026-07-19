@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
+import { openDemoCanvas, visibleBox, visibleCanvasNodePoint } from './helpers/editor-canvas-helpers'
 
 const CANVAS_GESTURE_MEASURE = 'wizard-archive:canvas-gesture-frame'
 const MAX_HANDLER_DURATION_MS = 8
@@ -61,14 +61,15 @@ test.describe('canvas performance smoke', () => {
     const firstNode = nodes.first()
     const firstNodeBox = await visibleBox(firstNode)
     const surfaceBox = await visibleBox(surface)
+    const firstNodePoint = visibleCanvasNodePoint(firstNodeBox, surfaceBox)
     evidence.push(
       await measureCanvasGesture(page, 'dragging', async () => {
-        await page.mouse.move(firstNodeBox.x + 20, firstNodeBox.y + 20)
+        await page.mouse.move(firstNodePoint.x, firstNodePoint.y)
         await page.mouse.down()
         await page.keyboard.down('Control')
         await movePointerOnFrames(
           page,
-          { x: firstNodeBox.x + 20, y: firstNodeBox.y + 20 },
+          firstNodePoint,
           {
             x: surfaceBox.x + Math.min(600, surfaceBox.width - 40),
             y: surfaceBox.y + Math.min(400, surfaceBox.height - 40),
