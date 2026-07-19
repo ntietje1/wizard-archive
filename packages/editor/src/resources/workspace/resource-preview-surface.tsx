@@ -112,7 +112,11 @@ function CardResourcePreview({
     )
   }
   return runtime.resources.previews.status === 'available' ? (
-    <PublishedResourceCardPreview resource={resource} source={runtime.resources.previews.value} />
+    <PublishedResourceCardPreview
+      resource={resource}
+      runtime={runtime}
+      source={runtime.resources.previews.value}
+    />
   ) : (
     <ResourceCardPreviewFallback resource={resource} />
   )
@@ -120,9 +124,11 @@ function CardResourcePreview({
 
 function PublishedResourceCardPreview({
   resource,
+  runtime,
   source,
 }: {
   resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
   source: ResourcePreviewSource
 }) {
   const state = useResourceStoreSnapshot(source, resource.id)
@@ -152,6 +158,15 @@ function PublishedResourceCardPreview({
       <p className="size-full overflow-hidden whitespace-pre-wrap p-2 text-xs leading-relaxed text-muted-foreground">
         {state.preview.excerpt}
       </p>
+    )
+  }
+  if (resource.kind === 'canvas') {
+    return (
+      <CanvasResourcePreview
+        resource={resource}
+        runtime={runtime}
+        target={{ kind: 'resource', resourceId: resource.id }}
+      />
     )
   }
   return <ResourceCardPreviewFallback resource={resource} />

@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { createCanvasDocumentDoc } from '../canvas/document-contract'
 import { encodeWizardCanvasDocument } from '../canvas/native-document'
 import { noteDocumentToMarkdown } from '../notes/document/markdown'
 import {
@@ -643,7 +644,7 @@ class InMemoryCanvasSessionSource
     envelope: CommandEnvelope<CreateCanvasResourceCommand>,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
     return await this.createContent(envelope, async () => {
-      const document = new Y.Doc()
+      const document = createCanvasDocumentDoc({ nodes: [], edges: [] })
       this.setReady(
         envelope.command.resourceId,
         document,

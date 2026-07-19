@@ -18,10 +18,12 @@ export function useLocalWorkspaceRuntime({
 }) {
   return useCommittedRuntime(() => {
     const workspace = initialWorkspace ?? createSampleLocalWorkspaceFixture()
+    const editable = canEdit && workspace.scope.projection === 'dm'
     const core = createInMemoryEditorRuntime({
       ...workspace,
       navigation: createLocalResourceNavigation(initialResourceId ?? null),
-      canEdit: canEdit && workspace.scope.projection === 'dm',
+      canEdit: editable,
+      permission: editable ? 'edit' : 'view',
     })
     return { ...core, start: () => {} }
   })

@@ -239,6 +239,45 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
+  it('creates a valid empty canvas and publishes its readonly preview', async () => {
+    const snapshot = emptySnapshot()
+    const canvasId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const core = createInMemoryEditorRuntime({
+      scope: {
+        campaignId: snapshot.campaignId,
+        actorId: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+        projection: 'dm',
+        schema: RESOURCE_INDEX_SCHEMA,
+      },
+      snapshot,
+      navigation: navigation(),
+    })
+
+    await core.runtime.content.canvases.create({
+      campaignId: snapshot.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId: canvasId,
+        kind: 'canvas',
+        parentId: null,
+        title: canonicalizeResourceTitle('Canvas'),
+        icon: null,
+        color: null,
+      },
+    })
+
+    expect(core.runtime.content.canvases.get(canvasId)).toMatchObject({
+      status: 'ready',
+      session: { version: { revision: 1 } },
+    })
+    expect(core.runtime.content.canvases.previews.get(canvasId)).toMatchObject({
+      status: 'ready',
+      version: { revision: 1 },
+    })
+    core.dispose()
+  })
+
   it('uses current catalog targets and preserves opaque bytes for local map mutations', async () => {
     const empty = emptySnapshot()
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)

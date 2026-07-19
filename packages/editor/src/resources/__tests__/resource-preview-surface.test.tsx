@@ -175,6 +175,7 @@ describe('ResourcePreviewSurface', () => {
     const canvas = resource('canvas', 'Canvas')
     const imageUrl = parseSafeHttpsUrl('https://example.com/image.png')
     if (!imageUrl) throw new TypeError('Expected a safe test URL')
+    const canvasPreviewState = { status: 'ready' as const, document: {}, version: {} }
     const previews = new Map([
       [
         note.id,
@@ -219,6 +220,14 @@ describe('ResourcePreviewSurface', () => {
           },
         },
       },
+      content: {
+        canvases: {
+          previews: {
+            get: () => canvasPreviewState,
+            subscribe: () => () => undefined,
+          },
+        },
+      },
     } as unknown as EditorRuntime
 
     const view = render(<ResourcePreviewSurface mode="card" resource={note} runtime={runtime} />)
@@ -237,7 +246,7 @@ describe('ResourcePreviewSurface', () => {
     expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
 
     view.rerender(<ResourcePreviewSurface mode="card" resource={canvas} runtime={runtime} />)
-    expect(screen.getByText('Canvas preview unavailable')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-preview')).toBeInTheDocument()
   })
 
   it('keeps unauthorized card previews content-free', () => {
