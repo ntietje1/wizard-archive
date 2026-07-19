@@ -183,10 +183,55 @@ describe('NoteEmbedBlock', () => {
     )
     fireEvent.pointerMove(window, { clientX: 520, clientY: 312, pointerId: 1 })
     fireEvent.pointerUp(window, { pointerId: 1 })
+    fireEvent.pointerUp(window, { pointerId: 1 })
 
-    expect(editor.updateBlock).toHaveBeenLastCalledWith(expect.anything(), {
+    expect(editor.updateBlock).toHaveBeenCalledOnce()
+    expect(editor.updateBlock).toHaveBeenCalledWith(expect.anything(), {
       props: { previewHeight: 312, previewWidth: 520 },
     })
+    expect(document.querySelector('[data-note-embed-resize-overlay="true"]')).toBeNull()
+  })
+
+  it('cancels pointer resize when the selection controls unmount', () => {
+    const { body, editor, root } = beginPointerResize()
+
+    fireEvent.pointerDown(document.body)
+
+    expectCancelledPointerResize({ body, editor, root })
+  })
+
+  it('cancels pointer resize when the embed block is deleted', () => {
+    const { body, editor, root, view } = beginPointerResize()
+
+    view.rerender(<NoteResourceRuntimeProvider editable>{null}</NoteResourceRuntimeProvider>)
+
+    expectCancelledPointerResize({ body, editor, root })
+  })
+
+  it('cancels pointer resize when the note becomes readonly', () => {
+    const { block, body, editor, root, view } = beginPointerResize()
+
+    view.rerender(noteEmbedTree(editor, block, false))
+
+    expectCancelledPointerResize({ body, editor, root })
+  })
+
+  it('cancels pointer resize when pointer capture is lost', () => {
+    const { body, editor, handle, root } = beginPointerResize()
+
+    fireEvent(handle, new Event('lostpointercapture'))
+
+    expectCancelledPointerResize({ body, editor, root })
+  })
+
+  it('cancels pointer resize when the window loses focus', () => {
+    document.body.style.userSelect = 'text'
+    const { body, editor, root } = beginPointerResize()
+
+    fireEvent(window, new Event('blur'))
+
+    expectCancelledPointerResize({ body, editor, root, userSelect: 'text' })
+    document.body.style.userSelect = ''
   })
 
   it('uses the shared drop resolver and rejects recursive resource destinations', async () => {
@@ -573,15 +618,76 @@ function renderNoteEmbed(
   destination: string,
   editable = true,
 ) {
-  return render(
+  return render(noteEmbedTree(editor, embedBlock(destination), editable))
+}
+
+function noteEmbedTree(
+  editor: {
+    domElement?: HTMLElement | null
+    setTextCursorPosition?: ReturnType<typeof vi.fn>
+    updateBlock: ReturnType<typeof vi.fn>
+  },
+  block: ReturnType<typeof embedBlock>,
+  editable: boolean,
+) {
+  return (
     <NoteResourceRuntimeProvider editable={editable}>
-      <NoteEmbedBlock
-        block={embedBlock(destination) as never}
-        contentRef={() => {}}
-        editor={editor as never}
-      />
-    </NoteResourceRuntimeProvider>,
+      <NoteEmbedBlock block={block as never} contentRef={() => {}} editor={editor as never} />
+    </NoteResourceRuntimeProvider>
   )
+}
+
+function beginPointerResize() {
+  const url = parseSafeHttpsUrl('https://example.com/maps/harbor.png')
+  if (!url) throw new Error('Expected a safe URL')
+  const destination = serializeAuthoredDestination({ kind: 'externalUrl' as const, url })
+  const block = embedBlock(destination)
+  const editor = {
+    domElement: null,
+    setTextCursorPosition: vi.fn(),
+    updateBlock: vi.fn(),
+  }
+  const view = render(noteEmbedTree(editor, block, true))
+  const root = screen.getByTestId('note-embed-block')
+  const body = root.querySelector<HTMLElement>('[data-note-embed-body="true"]')
+  if (!body) throw new Error('Expected an embed body')
+  vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(rect(480, 328))
+  vi.spyOn(body, 'getBoundingClientRect').mockReturnValue(rect(480, 288))
+  fireEvent.pointerDown(root, { button: 0 })
+  const handle = screen.getByRole('button', { name: 'Resize embedded resource bottom right' })
+  fireEvent.pointerDown(handle, {
+    clientX: 480,
+    clientY: 288,
+    pointerId: 1,
+  })
+  fireEvent.pointerMove(window, { clientX: 520, clientY: 312, pointerId: 1 })
+  expect(root).toHaveStyle({ width: '520px' })
+  expect(body).toHaveStyle({ height: '312px' })
+  expect(document.querySelector('[data-note-embed-resize-overlay="true"]')).not.toBeNull()
+  return { block, body, editor, handle, root, view }
+}
+
+function expectCancelledPointerResize({
+  body,
+  editor,
+  root,
+  userSelect = '',
+}: {
+  body: HTMLElement
+  editor: { updateBlock: ReturnType<typeof vi.fn> }
+  root: HTMLElement
+  userSelect?: string
+}) {
+  expect(root).toHaveStyle({ width: '480px' })
+  expect(body.style.height).toBe('')
+  expect(editor.updateBlock).not.toHaveBeenCalled()
+  expect(document.querySelector('[data-note-embed-resize-overlay="true"]')).toBeNull()
+  expect(document.body.style.userSelect).toBe(userSelect)
+  fireEvent.pointerMove(window, { clientX: 560, clientY: 340, pointerId: 1 })
+  fireEvent.pointerUp(window, { pointerId: 1 })
+  expect(root).toHaveStyle({ width: '480px' })
+  expect(body.style.height).toBe('')
+  expect(editor.updateBlock).not.toHaveBeenCalled()
 }
 
 function embedBlock(destination: string, id = generateDomainId(DOMAIN_ID_KIND.noteBlock)) {

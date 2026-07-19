@@ -8,6 +8,8 @@ const KEYBOARD_STEP = 16
 
 type NoteEmbedSize = Readonly<{ width: number; height: number }>
 
+export type NoteEmbedResizeGesture = Readonly<{ cancel: () => void }>
+
 export function startNoteEmbedResize({
   aspectRatio,
   editorElement,
@@ -22,14 +24,18 @@ export function startNoteEmbedResize({
   handle: ResizeHandle
   onCommit: (size: NoteEmbedSize) => void
   root: HTMLElement | null
-}) {
-  if (!root) return
+}): NoteEmbedResizeGesture | null {
+  if (!root) return null
+  const body = root.querySelector<HTMLElement>('[data-note-embed-body="true"]')
+  if (!body) return null
+  const ownerDocument = root.ownerDocument
+  const ownerWindow = ownerDocument.defaultView
+  if (!ownerWindow) return null
   event.preventDefault()
   event.stopPropagation()
-  event.currentTarget.setPointerCapture?.(event.pointerId)
+  const handleElement = event.currentTarget
+  handleElement.setPointerCapture?.(event.pointerId)
 
-  const body = root.querySelector<HTMLElement>('[data-note-embed-body="true"]')
-  if (!body) return
   const rootBounds = root.getBoundingClientRect()
   const bodyBounds = body.getBoundingClientRect()
   const start = {
@@ -37,12 +43,12 @@ export function startNoteEmbedResize({
     height: positive(bodyBounds.height) ?? positive(body.clientHeight) ?? MIN_HEIGHT,
   }
   const startPoint = { x: event.clientX, y: event.clientY }
-  const ownerDocument = root.ownerDocument
-  const ownerWindow = ownerDocument.defaultView
-  if (!ownerWindow) return
   const previousUserSelect = ownerDocument.body.style.userSelect
+  const previousRootWidth = root.style.width
+  const previousBodyHeight = body.style.height
   const overlay = ownerDocument.createElement('div')
   overlay.setAttribute('aria-hidden', 'true')
+  overlay.dataset.noteEmbedResizeOverlay = 'true'
   Object.assign(overlay.style, {
     cursor: resizeHandleCursor(handle),
     inset: '0',
@@ -55,14 +61,29 @@ export function startNoteEmbedResize({
 
   let latest = start
   let moved = false
-  const cleanup = () => {
+  let active = true
+  const settle = (commit: boolean) => {
+    if (!active) return
+    active = false
     ownerWindow.removeEventListener('pointermove', move)
     ownerWindow.removeEventListener('pointerup', finish)
-    ownerWindow.removeEventListener('pointercancel', cancel)
+    ownerWindow.removeEventListener('pointercancel', cancelPointer)
+    ownerWindow.removeEventListener('blur', cancel)
+    handleElement.removeEventListener('lostpointercapture', cancel)
+    if (handleElement.hasPointerCapture?.(event.pointerId)) {
+      handleElement.releasePointerCapture(event.pointerId)
+    }
     overlay.remove()
     ownerDocument.body.style.userSelect = previousUserSelect
+    if (commit) {
+      if (moved) onCommit(latest)
+      return
+    }
+    root.style.width = previousRootWidth
+    body.style.height = previousBodyHeight
   }
   const move = (moveEvent: PointerEvent) => {
+    if (moveEvent.pointerId !== event.pointerId) return
     moved = true
     latest = resizeNoteEmbed({
       aspectRatio,
@@ -75,18 +96,23 @@ export function startNoteEmbedResize({
     root.style.width = `${latest.width}px`
     body.style.height = `${latest.height}px`
   }
-  const finish = () => {
-    cleanup()
-    if (moved) onCommit(latest)
+  const finish = (finishEvent: PointerEvent) => {
+    if (finishEvent.pointerId !== event.pointerId) return
+    settle(true)
   }
   const cancel = () => {
-    cleanup()
-    root.style.width = `${start.width}px`
-    body.style.height = `${start.height}px`
+    settle(false)
+  }
+  const cancelPointer = (cancelEvent: PointerEvent) => {
+    if (cancelEvent.pointerId !== event.pointerId) return
+    cancel()
   }
   ownerWindow.addEventListener('pointermove', move)
   ownerWindow.addEventListener('pointerup', finish)
-  ownerWindow.addEventListener('pointercancel', cancel)
+  ownerWindow.addEventListener('pointercancel', cancelPointer)
+  ownerWindow.addEventListener('blur', cancel)
+  handleElement.addEventListener('lostpointercapture', cancel)
+  return { cancel }
 }
 
 export function keyboardResizeNoteEmbed({

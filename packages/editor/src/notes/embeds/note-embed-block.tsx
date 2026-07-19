@@ -1,5 +1,5 @@
 import { File as FileIcon, Link, Loader2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { DragEvent, KeyboardEvent, ReactNode, RefObject } from 'react'
 import type { ReactCustomBlockRenderProps } from '@blocknote/react'
 import type { embedBlockConfig } from '../document/schema-factory'
@@ -36,6 +36,7 @@ import {
   noteEmbedResizeLabel,
   startNoteEmbedResize,
 } from './note-embed-resize'
+import type { NoteEmbedResizeGesture } from './note-embed-resize'
 
 type NoteEmbedRenderProps = ReactCustomBlockRenderProps<
   'embed',
@@ -686,8 +687,24 @@ function NoteEmbedSelectionControls({
   root: RefObject<HTMLElement | null>
   width?: number
 }) {
+  const activeResize = useRef<NoteEmbedResizeGesture | null>(null)
+  const resizeOwner = useRef({ commit: onCommit, valid: resizable })
   const resizeHandles =
     mediaLayout?.kind === 'fixedHeight' ? (['left', 'right'] as const) : RESIZE_HANDLES
+  useEffect(
+    () => () => {
+      resizeOwner.current.valid = false
+      activeResize.current?.cancel()
+      activeResize.current = null
+    },
+    [],
+  )
+  useLayoutEffect(() => {
+    resizeOwner.current = { commit: onCommit, valid: resizable }
+    if (resizable) return
+    activeResize.current?.cancel()
+    activeResize.current = null
+  }, [onCommit, resizable])
   return (
     <div
       className="pointer-events-none absolute inset-0 z-30"
@@ -724,16 +741,20 @@ function NoteEmbedSelectionControls({
                 width,
               })
             }
-            onPointerDown={(event) =>
-              startNoteEmbedResize({
+            onPointerDown={(event) => {
+              activeResize.current?.cancel()
+              activeResize.current = startNoteEmbedResize({
                 editorElement,
                 event,
                 handle,
                 aspectRatio: mediaLayoutAspectRatio(mediaLayout),
-                onCommit,
+                onCommit: (size) => {
+                  const owner = resizeOwner.current
+                  if (owner.valid) owner.commit(size)
+                },
                 root: root.current,
               })
-            }
+            }}
             style={{
               ...resizeHandleZoneStyle(handle, 18),
               cursor: resizeHandleCursor(handle),
