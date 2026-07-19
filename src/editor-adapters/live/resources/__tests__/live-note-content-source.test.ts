@@ -8,6 +8,7 @@ import {
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
   advanceContentGeneration,
+  assertContentGeneration,
   INITIAL_CONTENT_GENERATION,
 } from '@wizard-archive/editor/resources/content-generation'
 import {
@@ -22,6 +23,7 @@ import {
   noteBlocksToYDoc,
 } from '@wizard-archive/editor/notes/document-yjs'
 import { createLiveNoteContentSource as createSource } from '../live-note-content-source'
+import { createYjsUpdateOutbox } from '../yjs-update-outbox'
 import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
 
 function createLiveNoteContentSource(
@@ -102,7 +104,7 @@ function backend() {
   const listeners = new Map<ResourceId, Set<(snapshot: never) => void>>()
   const updates = new Map<ResourceId, Array<Uint8Array>>()
   const versions = new Map<ResourceId, VersionStamp>()
-  const save: LiveNoteContentBackend['save'] = async ({ resourceId, update }) => {
+  const save: LiveNoteContentBackend['save'] = async ({ generation, resourceId, update }) => {
     const id = assertDomainId(DOMAIN_ID_KIND.resource, resourceId)
     const merged = Y.mergeUpdates([...(updates.get(id) ?? []), new Uint8Array(update)])
     const canonicalUpdate = arrayBuffer(merged)
@@ -110,7 +112,13 @@ function backend() {
     const version = await advanceNoteContentVersion(currentVersion, merged)
     updates.set(id, [merged])
     versions.set(id, version)
-    return { status: 'completed', resourceId: id, update: canonicalUpdate, version }
+    return {
+      status: 'completed',
+      generation: assertContentGeneration(generation),
+      resourceId: id,
+      update: canonicalUpdate,
+      version,
+    }
   }
   const create: LiveNoteContentBackend['create'] = async ({ operationId, command, update }) => {
     if (command.type !== 'create') throw new Error('Expected create command')
@@ -315,6 +323,95 @@ describe('LiveNoteContentSource', () => {
     firstDocument.destroy()
     secondDocument.destroy()
     source.dispose()
+  })
+
+  it('preserves generation-scoped pending edits when an authoritative restore arrives', async () => {
+    sessionStorage.clear()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const initialDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Before restore' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const restoredDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Restored state' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const initialUpdate = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+    const restoredUpdate = arrayBuffer(Y.encodeStateAsUpdate(restoredDocument))
+    const initialVersion = await versionFor(initialUpdate)
+    const restoredGeneration = advanceContentGeneration(INITIAL_CONTENT_GENERATION)
+    const restoredVersion = {
+      ...(await versionFor(restoredUpdate)),
+      revision: initialVersion.revision + 1,
+    }
+    const outbox = createYjsUpdateOutbox('note', campaignId, resourceId, memberId)
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update: initialUpdate,
+      version: initialVersion,
+    })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected editable note')
+    noteTextType(ready.session.document).insert(14, ' with pending work')
+    expect(outbox.load()).toMatchObject({
+      status: 'available',
+      entry: { generation: INITIAL_CONTENT_GENERATION },
+    })
+
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    expect(source.get(resourceId)).toEqual({
+      status: 'integrity_error',
+      issue: 'version_mismatch',
+    })
+    expect(outbox.load()).toMatchObject({
+      status: 'available',
+      entry: { generation: INITIAL_CONTENT_GENERATION },
+    })
+    expect(provider.save).not.toHaveBeenCalled()
+
+    const reloaded = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    reloaded.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    expect(reloaded.get(resourceId)).toEqual({
+      status: 'integrity_error',
+      issue: 'version_mismatch',
+    })
+    expect(outbox.load()).toMatchObject({
+      status: 'available',
+      entry: { generation: INITIAL_CONTENT_GENERATION },
+    })
+    expect(provider.save).not.toHaveBeenCalled()
+
+    initialDocument.destroy()
+    restoredDocument.destroy()
+    source.dispose()
+    reloaded.dispose()
   })
 
   it('replaces readonly projections so hidden blocks cannot survive a Yjs merge', async () => {
@@ -1001,7 +1098,7 @@ describe('LiveNoteContentSource', () => {
     let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
-      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v1:')) {
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v2:')) {
         return
       }
       outboxKey = key

@@ -19,6 +19,7 @@ import {
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { FileOwnedMetadata } from '@wizard-archive/editor/resources/file-content-contract'
+import { assertContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type { SourcePathAlias } from '@wizard-archive/editor/resources/catalog-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
@@ -535,12 +536,14 @@ export const createCanvasResource = campaignMutation({
 
 export const saveNoteContent = campaignMutation({
   args: {
+    generation: v.number(),
     resourceId: resourceIdValidator,
     update: v.bytes(),
   },
   returns: contentProviderSaveResultValidator,
   handler: async (ctx, args) =>
     await saveNoteContentFn(ctx, {
+      generation: assertContentGeneration(args.generation),
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       update: args.update,
     }),
@@ -548,12 +551,14 @@ export const saveNoteContent = campaignMutation({
 
 export const saveCanvasContent = campaignMutation({
   args: {
+    generation: v.number(),
     resourceId: resourceIdValidator,
     update: v.bytes(),
   },
   returns: contentProviderSaveResultValidator,
   handler: async (ctx, args) =>
     await saveCanvasContentFn(ctx, {
+      generation: assertContentGeneration(args.generation),
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       update: args.update,
     }),

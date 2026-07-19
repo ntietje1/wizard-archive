@@ -34,8 +34,8 @@ import { createLiveFixedContentResource } from './live-fixed-content-create'
 import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 import {
   createBackendYjsPersistence,
+  failedYjsSessionConstructionState,
   failedYjsSessionState,
-  YjsUpdateOutboxUnavailableError,
 } from './live-yjs-document-session'
 import type { RejectedYjsSave } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
@@ -74,6 +74,7 @@ type CanvasPreviewStore = ReturnType<
 function createLiveCanvasSession(
   document: Y.Doc,
   version: CanvasSession['version'],
+  generation: ContentGeneration,
   campaignId: CampaignId,
   resourceId: ResourceId,
   memberId: CampaignMemberId,
@@ -86,6 +87,7 @@ function createLiveCanvasSession(
   const collaborative = createLiveCollaborativeYjsSession({
     presenceBackend: backend,
     document,
+    generation,
     version,
     resourceId,
     memberId,
@@ -281,7 +283,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       const decision =
         generation === currentGeneration
           ? existing.apply(update, version)
-          : existing.replace(version, (origin) =>
+          : existing.replace(generation, version, (origin) =>
               replaceCanvasDocumentContent(existing.document, content, origin),
             )
       if (decision !== 'conflict' && this.#sessions.get(resourceId) === existing) {
@@ -295,6 +297,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       session = createLiveCanvasSession(
         document,
         version,
+        generation,
         this.campaignId,
         resourceId,
         this.memberId,
@@ -306,12 +309,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       )
     } catch (error) {
       document.destroy()
-      this.#store.set(
-        resourceId,
-        error instanceof YjsUpdateOutboxUnavailableError
-          ? { status: 'unavailable', reason: 'scope_unavailable' }
-          : { status: 'integrity_error', issue: 'content_corrupt' },
-      )
+      this.#store.set(resourceId, failedYjsSessionConstructionState(error))
       return
     }
     this.#sessions.set(resourceId, session)

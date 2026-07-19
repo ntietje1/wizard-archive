@@ -1,5 +1,10 @@
 import * as Y from 'yjs'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  assertContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
+import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import { advanceNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
@@ -26,6 +31,7 @@ import { queueYjsHistoryCheckpoint } from './itemHistory'
 export type SaveNoteContentResult =
   | {
       status: 'completed'
+      generation: ContentGeneration
       resourceId: ResourceId
       update: ArrayBuffer
       version: Awaited<ReturnType<typeof advanceNoteContentVersion>>
@@ -36,6 +42,7 @@ export type SaveNoteContentResult =
         | 'unauthorized'
         | 'content_missing'
         | 'content_corrupt'
+        | 'content_generation_conflict'
         | 'content_limit_exceeded'
         | 'version_exhausted'
     }
@@ -43,7 +50,7 @@ export type SaveNoteContentResult =
 
 export async function saveNoteContent(
   ctx: CampaignMutationCtx,
-  args: { resourceId: ResourceId; update: ArrayBuffer },
+  args: { generation: ContentGeneration; resourceId: ResourceId; update: ArrayBuffer },
 ): Promise<SaveNoteContentResult> {
   const authorization = await authorizeResourceContent(ctx, args.resourceId, 'note', 'edit')
   const rejection = contentWriteAuthorizationRejection(authorization)
@@ -52,6 +59,10 @@ export async function saveNoteContent(
   const content = await findNoteContent(ctx.db, resourceId)
   if (!content) {
     return { status: 'rejected', reason: 'content_missing' }
+  }
+  const generation = assertContentGeneration(content.generation ?? INITIAL_CONTENT_GENERATION)
+  if (args.generation !== generation) {
+    return { status: 'rejected', reason: 'content_generation_conflict' }
   }
 
   const merged = await mergeNoteUpdate(
@@ -64,7 +75,13 @@ export async function saveNoteContent(
   if (merged.status !== 'completed') return merged
   if (merged.version.digest === content.version.digest) {
     await syncNoteSearchProjection(ctx, resourceId, merged.update)
-    return { status: 'completed', resourceId, update: merged.update, version: merged.version }
+    return {
+      status: 'completed',
+      generation,
+      resourceId,
+      update: merged.update,
+      version: merged.version,
+    }
   }
   const projection = await replaceResourceReferenceProjection(ctx, merged.references)
   if (projection.status === 'rejected') return projection
@@ -75,7 +92,13 @@ export async function saveNoteContent(
   await queueNoteBlockAccessCleanup(ctx, resourceId, merged.version, merged.removedBlocks)
   await syncNoteSearchProjection(ctx, resourceId, merged.update)
   await queueYjsHistoryCheckpoint(ctx, resourceId, merged.version)
-  return { status: 'completed', resourceId, update: merged.update, version: merged.version }
+  return {
+    status: 'completed',
+    generation,
+    resourceId,
+    update: merged.update,
+    version: merged.version,
+  }
 }
 
 async function mergeNoteUpdate(

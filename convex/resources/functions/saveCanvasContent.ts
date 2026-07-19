@@ -10,6 +10,11 @@ import {
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  assertContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
+import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type { CampaignMutationCtx } from '../../functions'
 import {
   authorizeResourceContent,
@@ -27,6 +32,7 @@ import { queueYjsHistoryCheckpoint } from './itemHistory'
 export type SaveCanvasContentResult =
   | Readonly<{
       status: 'completed'
+      generation: ContentGeneration
       resourceId: ResourceId
       update: ArrayBuffer
       version: VersionStamp
@@ -37,6 +43,7 @@ export type SaveCanvasContentResult =
         | 'unauthorized'
         | 'content_missing'
         | 'content_corrupt'
+        | 'content_generation_conflict'
         | 'content_limit_exceeded'
         | 'version_exhausted'
     }>
@@ -44,7 +51,7 @@ export type SaveCanvasContentResult =
 
 export async function saveCanvasContent(
   ctx: CampaignMutationCtx,
-  args: { resourceId: ResourceId; update: ArrayBuffer },
+  args: { generation: ContentGeneration; resourceId: ResourceId; update: ArrayBuffer },
 ): Promise<SaveCanvasContentResult> {
   const authorization = await authorizeResourceContent(ctx, args.resourceId, 'canvas', 'edit')
   const rejection = contentWriteAuthorizationRejection(authorization)
@@ -52,6 +59,10 @@ export async function saveCanvasContent(
   const resourceId = args.resourceId
   const content = await loadCanvasContentDeletion(ctx, resourceId)
   if (!content) return { status: 'rejected', reason: 'content_missing' }
+  const generation = assertContentGeneration(content.generation ?? INITIAL_CONTENT_GENERATION)
+  if (args.generation !== generation) {
+    return { status: 'rejected', reason: 'content_generation_conflict' }
+  }
 
   const merged = await mergeCanvasUpdate(
     ctx.resourceScope.campaignId,
@@ -70,7 +81,13 @@ export async function saveCanvasContent(
     })
     await queueYjsHistoryCheckpoint(ctx, resourceId, merged.version)
   }
-  return { status: 'completed', resourceId, update: merged.update, version: merged.version }
+  return {
+    status: 'completed',
+    generation,
+    resourceId,
+    update: merged.update,
+    version: merged.version,
+  }
 }
 
 async function mergeCanvasUpdate(

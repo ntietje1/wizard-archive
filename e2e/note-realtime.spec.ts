@@ -7,6 +7,7 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { INITIAL_CONTENT_GENERATION } from '@wizard-archive/editor/resources/content-generation'
 import {
   deleteCampaignById,
   navigateToCampaignResource,
@@ -41,12 +42,17 @@ test.describe.serial('canonical note collaboration', () => {
     await page.keyboard.insertText('Recovered across immediate reload')
     const pendingOutbox = await page.evaluate(() => {
       const key = Object.keys(sessionStorage).find((candidate) =>
-        candidate.startsWith('wizard-archive:note-update-outbox:v1:'),
+        candidate.startsWith('wizard-archive:note-update-outbox:v2:'),
       )
       return key ? sessionStorage.getItem(key) : null
     })
     expect(pendingOutbox).not.toBeNull()
-    const pendingUpdate = Uint8Array.from(Buffer.from(pendingOutbox!, 'base64'))
+    const generationSeparator = pendingOutbox!.indexOf(':')
+    expect(generationSeparator).toBeGreaterThan(0)
+    expect(Number(pendingOutbox!.slice(0, generationSeparator))).toBe(INITIAL_CONTENT_GENERATION)
+    const pendingUpdate = Uint8Array.from(
+      Buffer.from(pendingOutbox!.slice(generationSeparator + 1), 'base64'),
+    )
     decodeNoteYjsUpdatesToBlocks(
       [{ update: created.update }, { update: pendingUpdate.buffer }],
       NOTE_YJS_FRAGMENT,

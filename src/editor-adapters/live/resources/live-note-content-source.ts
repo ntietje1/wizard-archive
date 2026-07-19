@@ -45,9 +45,9 @@ import type { LiveResourcePresenceBackend } from './live-resource-presence'
 import { createLiveCollaborativeYjsSession } from './live-collaborative-yjs-session'
 import {
   createBackendYjsPersistence,
+  failedYjsSessionConstructionState,
   failedYjsSessionState,
   yjsUpdateArrayBuffer,
-  YjsUpdateOutboxUnavailableError,
 } from './live-yjs-document-session'
 import type { RejectedYjsSave } from './live-yjs-document-session'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
@@ -129,6 +129,7 @@ function exportNoteSnapshot(snapshot: NoteSnapshot): ContentExportResult {
 function createLiveNoteSession(
   document: Y.Doc,
   version: NoteSession['version'],
+  generation: ContentGeneration,
   campaignId: CampaignId,
   resourceId: ResourceId,
   backend: LiveNoteContentBackend,
@@ -141,6 +142,7 @@ function createLiveNoteSession(
   const collaborative = createLiveCollaborativeYjsSession({
     presenceBackend: backend,
     document,
+    generation,
     version,
     resourceId,
     memberId,
@@ -356,7 +358,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       const decision =
         generation === currentGeneration
           ? session.apply(snapshot.update, version)
-          : this.#replaceEditableProjection(session, snapshot.update, version)
+          : this.#replaceEditableProjection(session, snapshot.update, version, generation)
       if (decision !== 'conflict' && this.#sessions.get(resourceId) === session) {
         this.#generations.set(resourceId, generation)
         this.#setState(resourceId, { status: 'ready', session })
@@ -471,6 +473,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       session = createLiveNoteSession(
         document,
         version,
+        generation,
         this.campaignId,
         resourceId,
         this.backend,
@@ -491,12 +494,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       )
     } catch (error) {
       document.destroy()
-      this.#setState(
-        resourceId,
-        error instanceof YjsUpdateOutboxUnavailableError
-          ? { status: 'unavailable', reason: 'scope_unavailable' }
-          : { status: 'integrity_error', issue: 'content_corrupt' },
-      )
+      this.#setState(resourceId, failedYjsSessionConstructionState(error))
       return null
     }
     this.#sessions.set(resourceId, session)
@@ -518,11 +516,12 @@ class LiveNoteSessionSource implements NoteSessionSource {
     session: LiveNoteSession,
     update: ArrayBuffer,
     version: NoteSession['version'],
+    generation: ContentGeneration,
   ) {
     const projection = new Y.Doc()
     try {
       Y.applyUpdate(projection, new Uint8Array(update))
-      return session.replace(version, (origin) =>
+      return session.replace(generation, version, (origin) =>
         replaceNoteYjsDocument(session.document, projection, NOTE_YJS_FRAGMENT, origin),
       )
     } catch {
@@ -548,7 +547,10 @@ class LiveNoteSessionSource implements NoteSessionSource {
     }
     const initialUpdate = Y.encodeStateAsUpdate(doc)
     try {
-      if (recovered.update) Y.applyUpdate(doc, recovered.update)
+      if (recovered.entry && recovered.entry.generation !== INITIAL_CONTENT_GENERATION) {
+        return { status: 'unavailable', issue: 'content_corrupt' }
+      }
+      if (recovered.entry) Y.applyUpdate(doc, recovered.entry.update)
     } catch {
       return { status: 'unavailable', issue: 'content_corrupt' }
     }
@@ -561,7 +563,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
       stop: () => doc.off('update', onUpdate),
     }
     const onUpdate = (update: Uint8Array) => {
-      if (outbox.merge(update).status === 'accepted') return
+      if (outbox.merge(INITIAL_CONTENT_GENERATION, update).status === 'accepted') return
       create.storageAvailable = false
       create.stop()
       this.#setState(resourceId, { status: 'unavailable', reason: 'scope_unavailable' })

@@ -1128,6 +1128,7 @@ export const resourceCompensationResultValidator = v.union(
 export const contentProviderSaveResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
+    generation: v.number(),
     resourceId: resourceIdValidator,
     update: v.bytes(),
     version: versionStampValidator,
@@ -1143,6 +1144,7 @@ export const contentProviderSaveResultValidator = v.union(
       'unauthorized',
       'content_missing',
       'content_corrupt',
+      'content_generation_conflict',
       'content_limit_exceeded',
       'version_exhausted',
     ),

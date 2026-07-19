@@ -1,6 +1,10 @@
 import * as Y from 'yjs'
 import { describe, expect, it } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
+import {
+  advanceContentGeneration,
+  INITIAL_CONTENT_GENERATION,
+} from '@wizard-archive/editor/resources/content-generation'
 import { createYjsUpdateOutbox } from '../yjs-update-outbox'
 
 class QuotaStorage {
@@ -55,25 +59,44 @@ describe('YjsUpdateOutbox', () => {
     const second = updateWithText('second', 10)
     const ledger = outbox(storage, 'note', 'note')
 
-    expect(ledger.load()).toEqual({ status: 'available', update: null })
-    expect(ledger.merge(first)).toMatchObject({ status: 'accepted' })
-    expect(ledger.merge(second)).toMatchObject({ status: 'accepted' })
+    expect(ledger.load()).toEqual({ status: 'available', entry: null })
+    expect(ledger.merge(INITIAL_CONTENT_GENERATION, first)).toMatchObject({
+      status: 'accepted',
+    })
+    expect(ledger.merge(INITIAL_CONTENT_GENERATION, second)).toMatchObject({
+      status: 'accepted',
+    })
 
     const recovered = outbox(storage, 'note', 'note').load()
-    if (recovered.status !== 'available' || !recovered.update) {
+    if (recovered.status !== 'available' || !recovered.entry) {
       throw new Error('Expected a recovered update')
     }
     const document = new Y.Doc()
-    Y.applyUpdate(document, recovered.update)
+    Y.applyUpdate(document, recovered.entry.update)
     expect(document.getMap('content').toJSON()).toEqual({
       first: 'x'.repeat(10),
       second: 'x'.repeat(10),
     })
     document.destroy()
 
-    expect(ledger.replace(first)).toEqual({ status: 'accepted' })
+    expect(ledger.replace(INITIAL_CONTENT_GENERATION, first)).toEqual({ status: 'accepted' })
     expect(ledger.clear()).toEqual({ status: 'accepted' })
-    expect(ledger.load()).toEqual({ status: 'available', update: null })
+    expect(ledger.load()).toEqual({ status: 'available', entry: null })
+  })
+
+  it('keeps accepted updates isolated to their observed content generation', () => {
+    const storage = new QuotaStorage()
+    const ledger = outbox(storage, 'note', 'generation')
+    const update = updateWithText('pending', 10)
+
+    expect(ledger.merge(INITIAL_CONTENT_GENERATION, update)).toEqual({ status: 'accepted' })
+    expect(ledger.merge(advanceContentGeneration(INITIAL_CONTENT_GENERATION), update)).toEqual({
+      status: 'generation_conflict',
+    })
+    expect(ledger.load()).toMatchObject({
+      status: 'available',
+      entry: { generation: INITIAL_CONTENT_GENERATION },
+    })
   })
 
   it('reports storage and malformed-update failures instead of throwing', () => {
@@ -91,10 +114,14 @@ describe('YjsUpdateOutbox', () => {
     const ledger = outbox(unavailable, 'canvas', 'unavailable')
 
     expect(ledger.load()).toEqual({ status: 'unavailable' })
-    expect(ledger.replace(updateWithText('value', 1))).toEqual({ status: 'unavailable' })
-    expect(ledger.merge(new Uint8Array([255]))).toEqual({ status: 'unavailable' })
+    expect(ledger.replace(INITIAL_CONTENT_GENERATION, updateWithText('value', 1))).toEqual({
+      status: 'unavailable',
+    })
+    expect(ledger.merge(INITIAL_CONTENT_GENERATION, new Uint8Array([255]))).toEqual({
+      status: 'unavailable',
+    })
     expect(ledger.clear()).toEqual({ status: 'unavailable' })
-    expect(ledger.replace(new Uint8Array(600_000))).toEqual({
+    expect(ledger.replace(INITIAL_CONTENT_GENERATION, new Uint8Array(600_000))).toEqual({
       status: 'unavailable',
     })
   })
@@ -106,17 +133,19 @@ describe('YjsUpdateOutbox', () => {
     const second = outbox(storage, 'canvas', 'second-near-limit')
     const exhausted = outbox(storage, 'note', 'exhausted-near-limit')
 
-    expect(first.replace(update)).toEqual({ status: 'accepted' })
-    expect(second.replace(update)).toEqual({ status: 'accepted' })
-    expect(exhausted.replace(update)).toEqual({ status: 'unavailable' })
+    expect(first.replace(INITIAL_CONTENT_GENERATION, update)).toEqual({ status: 'accepted' })
+    expect(second.replace(INITIAL_CONTENT_GENERATION, update)).toEqual({ status: 'accepted' })
+    expect(exhausted.replace(INITIAL_CONTENT_GENERATION, update)).toEqual({
+      status: 'unavailable',
+    })
     expect(first.load()).toMatchObject({
       status: 'available',
-      update: { byteLength: update.byteLength },
+      entry: { generation: INITIAL_CONTENT_GENERATION, update: { byteLength: update.byteLength } },
     })
     expect(second.load()).toMatchObject({
       status: 'available',
-      update: { byteLength: update.byteLength },
+      entry: { generation: INITIAL_CONTENT_GENERATION, update: { byteLength: update.byteLength } },
     })
-    expect(exhausted.load()).toEqual({ status: 'available', update: null })
+    expect(exhausted.load()).toEqual({ status: 'available', entry: null })
   })
 })

@@ -52,6 +52,7 @@ import { collaborationColor } from '../../../shared/resources/collaboration-user
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import presenceTest from '@convex-dev/presence/test'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import { INITIAL_CONTENT_GENERATION } from '@wizard-archive/editor/resources/content-generation'
 import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import { projectMapContent } from '../functions/mapContent'
 import { replaceResourceReferenceProjection } from '../functions/resourceReferences'
@@ -1844,11 +1845,13 @@ describe('resource structure commands', () => {
     const results = await Promise.all([
       asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId,
         update: firstUpdate,
       }),
       asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId,
         update: secondUpdate,
       }),
@@ -1984,6 +1987,7 @@ describe('resource structure commands', () => {
     document.destroy()
     const saved = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId: sourceId,
       update: removeLink,
     })
@@ -2123,6 +2127,7 @@ describe('resource structure commands', () => {
 
     const pending = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update: dependent,
     })
@@ -2137,6 +2142,7 @@ describe('resource structure commands', () => {
     )
     const completed = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update: repair,
     })
@@ -2219,11 +2225,13 @@ describe('resource structure commands', () => {
     }
     const first = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update: updateIdentity(0),
     })
     const second = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update: updateIdentity(1),
     })
@@ -2280,6 +2288,7 @@ describe('resource structure commands', () => {
     await expect(
       asPlayer(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: noteId,
         update: noteUpdate,
       }),
@@ -2287,6 +2296,7 @@ describe('resource structure commands', () => {
     await expect(
       asPlayer(campaign).mutation(api.resources.mutations.saveCanvasContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: canvasId,
         update: canvasUpdate,
       }),
@@ -2294,6 +2304,7 @@ describe('resource structure commands', () => {
     await expect(
       asPlayer(campaign).mutation(api.resources.mutations.saveCanvasContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: guessedId,
         update: canvasUpdate,
       }),
@@ -2303,6 +2314,7 @@ describe('resource structure commands', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: canvasId,
         update: canvasUpdate,
       }),
@@ -2317,6 +2329,7 @@ describe('resource structure commands', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: noteId,
         update: noteUpdate,
       }),
@@ -2332,6 +2345,7 @@ describe('resource structure commands', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: noteId,
         update: noteUpdate,
       }),
@@ -2376,11 +2390,13 @@ describe('resource structure commands', () => {
 
     const first = await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update: Uint8Array.from(Y.encodeStateAsUpdate(firstDocument)).buffer,
     })
     const second = await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update: Uint8Array.from(Y.encodeStateAsUpdate(secondDocument)).buffer,
     })
@@ -2422,6 +2438,7 @@ describe('resource structure commands', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId,
         update: Uint8Array.from(Y.encodeStateAsUpdate(invalid)).buffer,
       }),
@@ -2431,6 +2448,7 @@ describe('resource structure commands', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId,
         update: new Uint8Array(CANVAS_WORKLOAD_LIMITS.encodedBytes + 1).buffer,
       }),
@@ -3657,6 +3675,7 @@ describe('resource structure commands', () => {
     await expect(
       asPlayer(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: noteId,
         update,
       }),
@@ -3671,6 +3690,7 @@ describe('resource structure commands', () => {
     await expect(
       asPlayer(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: noteId,
         update,
       }),
@@ -3840,6 +3860,7 @@ describe('resource structure commands', () => {
       }),
       asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
         campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
         resourceId: noteId,
         update,
       }),
@@ -3987,6 +4008,7 @@ describe('resource structure commands', () => {
 
     const saved = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaignUuid,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId: noteId,
       update: delta,
     })

@@ -9,6 +9,7 @@ import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-run
 import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { initialVersion, sha256Digest } from '@wizard-archive/editor/resources/component-version'
 import { initialMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
+import { INITIAL_CONTENT_GENERATION } from '@wizard-archive/editor/resources/content-generation'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import { api } from '../../_generated/api'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
@@ -167,6 +168,7 @@ describe('item history checkpoints', () => {
       try {
         return await asDm(campaign).mutation(api.resources.mutations.saveCanvasContent, {
           campaignId: campaign.campaignDomainId,
+          generation: INITIAL_CONTENT_GENERATION,
           resourceId,
           update,
         })
@@ -641,6 +643,18 @@ describe('item history checkpoints', () => {
       })
       if (content.status !== 'ready') throw new TypeError('Expected restored note content')
       expect(bytes(content.update)).toEqual(bytes(historicalUpdate))
+      await expect(
+        saveNote(campaign, resourceId, encodeUpdate(historicalDocument)),
+      ).resolves.toEqual({
+        status: 'rejected',
+        reason: 'content_generation_conflict',
+      })
+      await expect(
+        asDm(campaign).query(api.resources.queries.loadNoteContent, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+        }),
+      ).resolves.toEqual(content)
 
       await t.run(async (ctx) => {
         const [preserved, restoredCheckpoint, intent, restoredEntries] = await Promise.all([
@@ -1250,6 +1264,7 @@ describe('item history checkpoints', () => {
   ) {
     return await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
       campaignId: campaign.campaignDomainId,
+      generation: INITIAL_CONTENT_GENERATION,
       resourceId,
       update,
     })

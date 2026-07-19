@@ -6,11 +6,18 @@ import type {
   ContentUnavailableState,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { assertContentGeneration } from '@wizard-archive/editor/resources/content-generation'
+import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type { YjsUpdateOutbox } from './yjs-update-outbox'
 
 export type RejectedYjsSave = Extract<ContentSessionSaveResult, { status: 'rejected' }>
 type PersistedYjsUpdate =
-  | Readonly<{ status: 'completed'; update: ArrayBuffer; version: VersionStamp }>
+  | Readonly<{
+      status: 'completed'
+      generation: ContentGeneration
+      update: ArrayBuffer
+      version: VersionStamp
+    }>
   | RejectedYjsSave
 type RetryableYjsUpdate = Readonly<{
   status: 'retryable'
@@ -21,9 +28,13 @@ type YjsVersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
 export type LiveYjsDocumentSessionOptions = Readonly<{
   document: Y.Doc
+  generation: ContentGeneration
   version: VersionStamp
   outbox: YjsUpdateOutbox
-  persist(update: Uint8Array): Promise<PersistedYjsUpdate | RetryableYjsUpdate>
+  persist(
+    generation: ContentGeneration,
+    update: Uint8Array,
+  ): Promise<PersistedYjsUpdate | RetryableYjsUpdate>
   changed(): void
   failed(result: RejectedYjsSave): void
   canonicalize(document: Y.Doc, origin: unknown): 'changed' | 'invalid' | 'unchanged'
@@ -35,7 +46,18 @@ const REMOTE_YJS_UPDATE = Symbol('remote-yjs-update')
 const YJS_SAVE_DELAY_MS = 250
 const YJS_SAVE_RETRY_DELAYS_MS = [250, 500, 1000, 2000] as const
 
-export class YjsUpdateOutboxUnavailableError extends Error {}
+class YjsUpdateOutboxUnavailableError extends Error {}
+class YjsUpdateGenerationConflictError extends Error {}
+
+export function failedYjsSessionConstructionState(error: unknown): ContentUnavailableState {
+  if (error instanceof YjsUpdateGenerationConflictError) {
+    return { status: 'integrity_error', issue: 'version_mismatch' }
+  }
+  if (error instanceof YjsUpdateOutboxUnavailableError) {
+    return { status: 'unavailable', reason: 'scope_unavailable' }
+  }
+  return { status: 'integrity_error', issue: 'content_corrupt' }
+}
 
 class LiveYjsDocumentSession {
   readonly document: Y.Doc
@@ -46,6 +68,7 @@ class LiveYjsDocumentSession {
   readonly #canonicalize: LiveYjsDocumentSessionOptions['canonicalize']
   readonly #flushCompanion: NonNullable<LiveYjsDocumentSessionOptions['flushCompanion']>
   readonly #disposeCompanion: NonNullable<LiveYjsDocumentSessionOptions['disposeCompanion']>
+  #generation: ContentGeneration
   #version: VersionStamp
   #drainPromise: Promise<ContentSessionSaveResult> | null = null
   #destroyDocument = true
@@ -57,6 +80,7 @@ class LiveYjsDocumentSession {
 
   constructor(options: LiveYjsDocumentSessionOptions) {
     this.document = options.document
+    this.#generation = options.generation
     this.#version = options.version
     this.#outbox = options.outbox
     this.#persistUpdate = options.persist
@@ -68,8 +92,13 @@ class LiveYjsDocumentSession {
 
     const recovered = this.#outbox.load()
     if (recovered.status === 'unavailable') throw new YjsUpdateOutboxUnavailableError()
-    if (recovered.update) Y.applyUpdate(this.document, recovered.update, REMOTE_YJS_UPDATE)
-    this.#pendingUpdate = recovered.update
+    if (recovered.entry && recovered.entry.generation !== this.#generation) {
+      throw new YjsUpdateGenerationConflictError()
+    }
+    if (recovered.entry) {
+      Y.applyUpdate(this.document, recovered.entry.update, REMOTE_YJS_UPDATE)
+    }
+    this.#pendingUpdate = recovered.entry?.update ?? null
     const canonicalization = this.#canonicalizeDocument()
     if (canonicalization === 'unavailable') throw new YjsUpdateOutboxUnavailableError()
     if (canonicalization === 'invalid') {
@@ -107,16 +136,24 @@ class LiveYjsDocumentSession {
     return 'applied'
   }
 
-  replace(version: VersionStamp, replaceDocument: (origin: unknown) => void): YjsVersionDecision {
+  replace(
+    generation: ContentGeneration,
+    version: VersionStamp,
+    replaceDocument: (origin: unknown) => void,
+  ): YjsVersionDecision {
     const decision = this.#incomingVersionDecision(version)
     if (decision) return decision
+    if (this.#pendingUpdate || this.#drainPromise) {
+      this.#fail({ status: 'rejected', reason: 'content_generation_conflict' })
+      return 'conflict'
+    }
     if (this.#lifecycle === 'closing') {
+      this.#generation = generation
       this.#version = version
       return 'applied'
     }
     if (this.#timer) clearTimeout(this.#timer)
     this.#timer = null
-    this.#pendingUpdate = null
     if (this.#outbox.clear().status === 'unavailable') {
       this.#fail({ status: 'rejected', reason: 'scope_unavailable' })
       return 'conflict'
@@ -135,6 +172,7 @@ class LiveYjsDocumentSession {
       this.#fail({ status: 'rejected', reason: 'content_corrupt' })
       return 'conflict'
     }
+    this.#generation = generation
     this.#version = version
     this.#changed()
     return 'applied'
@@ -181,9 +219,15 @@ class LiveYjsDocumentSession {
 
   readonly #onUpdate = (update: Uint8Array, origin: unknown) => {
     if (origin === REMOTE_YJS_UPDATE || this.#lifecycle !== 'open') return
-    const accepted = this.#outbox.merge(update)
-    if (accepted.status === 'unavailable') {
-      this.#fail({ status: 'rejected', reason: 'scope_unavailable' })
+    const accepted = this.#outbox.merge(this.#generation, update)
+    if (accepted.status !== 'accepted') {
+      this.#fail({
+        status: 'rejected',
+        reason:
+          accepted.status === 'generation_conflict'
+            ? 'content_generation_conflict'
+            : 'scope_unavailable',
+      })
       return
     }
     this.#pendingUpdate = mergeOptionalYjsUpdates(this.#pendingUpdate, update)
@@ -196,8 +240,10 @@ class LiveYjsDocumentSession {
     if (result !== 'changed') return result
 
     const update = Y.encodeStateAsUpdate(this.document, vector)
-    const accepted = this.#outbox.merge(update)
-    if (accepted.status === 'unavailable') return 'unavailable'
+    const accepted = this.#outbox.merge(this.#generation, update)
+    if (accepted.status !== 'accepted') {
+      return accepted.status === 'generation_conflict' ? 'invalid' : 'unavailable'
+    }
     this.#pendingUpdate = mergeOptionalYjsUpdates(this.#pendingUpdate, update)
     return 'changed'
   }
@@ -229,18 +275,31 @@ class LiveYjsDocumentSession {
       while (this.#pendingUpdate !== null) {
         const update = this.#pendingUpdate
         this.#pendingUpdate = null
-        const result = await this.#persist(update)
+        const generation = this.#generation
+        const result = await this.#persist(generation, update)
         if (result.status === 'rejected') {
           this.#pendingUpdate = mergeOptionalYjsUpdates(update, this.#pendingUpdate)
           this.#fail(result)
           return result
         }
+        if (result.generation !== generation || this.#generation !== generation) {
+          this.#pendingUpdate = mergeOptionalYjsUpdates(update, this.#pendingUpdate)
+          const conflict = {
+            status: 'rejected',
+            reason: 'content_generation_conflict',
+          } as const
+          this.#fail(conflict)
+          return conflict
+        }
         if (this.apply(result.update, assertVersionStamp(result.version)) === 'conflict') {
           return this.#terminal!
         }
         const remaining = this.#pendingUpdate
-        const stored = remaining === null ? this.#outbox.clear() : this.#outbox.replace(remaining)
-        if (stored.status === 'unavailable') {
+        const stored =
+          remaining === null
+            ? this.#outbox.clear()
+            : this.#outbox.replace(this.#generation, remaining)
+        if (stored.status !== 'accepted') {
           const unavailable = { status: 'rejected', reason: 'scope_unavailable' } as const
           this.#fail(unavailable)
           return unavailable
@@ -255,14 +314,14 @@ class LiveYjsDocumentSession {
     }
   }
 
-  async #persist(update: Uint8Array): Promise<PersistedYjsUpdate> {
+  async #persist(generation: ContentGeneration, update: Uint8Array): Promise<PersistedYjsUpdate> {
     let candidate = update
     for (let attempt = 0; ; attempt += 1) {
       try {
-        const result = await this.#persistUpdate(candidate)
+        const result = await this.#persistUpdate(generation, candidate)
         if (result.status !== 'retryable') return result
         const repair = Y.encodeStateAsUpdate(this.document, new Uint8Array(result.stateVector))
-        if (this.#outbox.merge(repair).status === 'unavailable') {
+        if (this.#outbox.merge(generation, repair).status !== 'accepted') {
           return { status: 'rejected', reason: 'scope_unavailable' }
         }
         candidate = Y.mergeUpdates([candidate, repair])
@@ -304,6 +363,7 @@ export function createLiveYjsDocumentSession(options: LiveYjsDocumentSessionOpti
 
 type BackendContentSaveRejection =
   | 'content_corrupt'
+  | 'content_generation_conflict'
   | 'content_limit_exceeded'
   | 'content_missing'
   | 'unauthorized'
@@ -318,6 +378,8 @@ export function failedYjsSessionState(result: RejectedYjsSave): ContentUnavailab
     case 'content_limit_exceeded':
     case 'version_exhausted':
       return { status: 'integrity_error', issue: result.reason }
+    case 'content_generation_conflict':
+      return { status: 'integrity_error', issue: 'version_mismatch' }
     case 'content_missing':
     case 'resource_missing':
       return { status: 'integrity_error', issue: 'content_missing' }
@@ -342,6 +404,7 @@ export function yjsUpdateArrayBuffer(update: Uint8Array): ArrayBuffer {
 type BackendYjsSaveResult =
   | Readonly<{
       status: 'completed'
+      generation: ContentGeneration
       resourceId: ResourceId
       update: ArrayBuffer
       version: VersionStamp
@@ -354,16 +417,23 @@ export function createBackendYjsPersistence(
   resourceId: ResourceId,
   save: (args: {
     campaignId: CampaignId
+    generation: ContentGeneration
     resourceId: ResourceId
     update: ArrayBuffer
   }) => Promise<BackendYjsSaveResult>,
 ) {
-  return async (update: Uint8Array): Promise<PersistedYjsUpdate | RetryableYjsUpdate> => {
+  return async (
+    generation: ContentGeneration,
+    update: Uint8Array,
+  ): Promise<PersistedYjsUpdate | RetryableYjsUpdate> => {
     const result = await save({
       campaignId,
+      generation,
       resourceId,
       update: yjsUpdateArrayBuffer(update),
     })
-    return result
+    return result.status === 'completed'
+      ? { ...result, generation: assertContentGeneration(result.generation) }
+      : result
   }
 }

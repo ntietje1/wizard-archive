@@ -61,6 +61,7 @@ export type ContentSessionSaveResult =
       readonly status: 'rejected'
       readonly reason:
         | 'content_corrupt'
+        | 'content_generation_conflict'
         | 'content_limit_exceeded'
         | 'content_missing'
         | 'resource_missing'

@@ -5,6 +5,7 @@ import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
   advanceContentGeneration,
+  assertContentGeneration,
   INITIAL_CONTENT_GENERATION,
 } from '@wizard-archive/editor/resources/content-generation'
 import {
@@ -206,6 +207,106 @@ describe('LiveCanvasSessionSource', () => {
       expect.objectContaining({ id: secondNodeId }),
     ])
     expect(save).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
+  it('keeps an in-flight generation-scoped update after restore wins the race', async () => {
+    sessionStorage.clear()
+    const campaignId = testDomainId('campaign', 'canvas-generation-race-campaign')
+    const memberId = testDomainId('campaignMember', 'canvas-generation-race-member')
+    const resourceId = testDomainId('resource', 'canvas-generation-race-resource')
+    const localNodeId = testDomainId('canvasNode', 'canvas-generation-race-local')
+    const restoredNodeId = testDomainId('canvasNode', 'canvas-generation-race-restored')
+    const initialDocument = createCanvasDocumentDoc({ nodes: [], edges: [] })
+    const restoredDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: restoredNodeId,
+          type: 'text',
+          position: { x: 20, y: 20 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const initialUpdate = Uint8Array.from(Y.encodeStateAsUpdate(initialDocument)).buffer
+    const restoredUpdate = Uint8Array.from(Y.encodeStateAsUpdate(restoredDocument)).buffer
+    initialDocument.destroy()
+    restoredDocument.destroy()
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    let settleSave:
+      | ((result: Extract<SaveCanvasResult, { status: 'rejected' }>) => void)
+      | undefined
+    const save = vi.fn(
+      (args: SaveCanvasArgs): Promise<SaveCanvasResult> =>
+        new Promise((resolve) => {
+          expect(args.generation).toBe(generation)
+          settleSave = resolve
+        }),
+    )
+    const source = createLiveCanvasSessionSource(
+      campaignId,
+      memberId,
+      collaborationUser,
+      {
+        ...presenceBackend(),
+        create: vi.fn(),
+        load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        refresh: vi.fn(),
+        save,
+        watch: (_resourceId, updateSnapshot) => {
+          apply = updateSnapshot
+          return () => undefined
+        },
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+    source.subscribe(resourceId, () => {})
+    apply({ status: 'ready', generation, update: initialUpdate, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected editable canvas')
+    applyCanvasContentUpdate(ready.session.document, {
+      nodes: [
+        {
+          id: localNodeId,
+          type: 'text',
+          position: { x: 10, y: 10 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const drain = ready.session.flush()
+    await vi.waitFor(() => expect(save).toHaveBeenCalledOnce())
+
+    apply({
+      status: 'ready',
+      generation: replacementGeneration,
+      update: restoredUpdate,
+      version: { ...version, revision: 2, digest: 'b'.repeat(64) },
+    })
+    expect(source.get(resourceId)).toEqual({
+      status: 'integrity_error',
+      issue: 'version_mismatch',
+    })
+    const outbox = createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId)
+    expect(outbox.load()).toMatchObject({
+      status: 'available',
+      entry: { generation },
+    })
+
+    settleSave?.({
+      status: 'rejected',
+      reason: 'content_generation_conflict',
+    })
+    await expect(drain).resolves.toEqual({
+      status: 'rejected',
+      reason: 'content_generation_conflict',
+    })
+    expect(outbox.load()).toMatchObject({
+      status: 'available',
+      entry: { generation },
+    })
     source.dispose()
   })
 
@@ -454,24 +555,27 @@ describe('LiveCanvasSessionSource', () => {
     initialDocument.destroy()
     let persistedVersion = assertVersionStamp(version)
     let apply: (snapshot: Snapshot) => void = () => undefined
-    const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
-      const persisted = new Y.Doc()
-      Y.applyUpdate(persisted, new Uint8Array(persistedUpdate))
-      Y.applyUpdate(persisted, new Uint8Array(update))
-      persistedUpdate = Y.encodeStateAsUpdate(persisted).buffer as ArrayBuffer
-      persisted.destroy()
-      persistedVersion = assertVersionStamp({
-        ...persistedVersion,
-        revision: persistedVersion.revision + 1,
-        digest: (persistedVersion.digest === version.digest ? 'b' : 'c').repeat(64),
-      })
-      return Promise.resolve({
-        status: 'completed' as const,
-        resourceId,
-        update: persistedUpdate,
-        version: persistedVersion,
-      })
-    })
+    const save = vi.fn(
+      ({ generation: observedGeneration, update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+        const persisted = new Y.Doc()
+        Y.applyUpdate(persisted, new Uint8Array(persistedUpdate))
+        Y.applyUpdate(persisted, new Uint8Array(update))
+        persistedUpdate = Y.encodeStateAsUpdate(persisted).buffer as ArrayBuffer
+        persisted.destroy()
+        persistedVersion = assertVersionStamp({
+          ...persistedVersion,
+          revision: persistedVersion.revision + 1,
+          digest: (persistedVersion.digest === version.digest ? 'b' : 'c').repeat(64),
+        })
+        return Promise.resolve({
+          status: 'completed' as const,
+          generation: assertContentGeneration(observedGeneration),
+          resourceId,
+          update: persistedUpdate,
+          version: persistedVersion,
+        })
+      },
+    )
     const source = createLiveCanvasSessionSource(
       campaignId,
       testDomainId('campaignMember', 'canvas-save-member'),
@@ -568,27 +672,32 @@ describe('LiveCanvasSessionSource', () => {
     let persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(server)).buffer
     let persistedVersion = assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) })
     const outbox = createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId)
-    expect(outbox.merge(Y.encodeStateAsUpdate(local))).toEqual({ status: 'accepted' })
-    let apply: (snapshot: Snapshot) => void = () => undefined
-    const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
-      const merged = new Y.Doc()
-      Y.applyUpdate(merged, new Uint8Array(persistedUpdate))
-      Y.applyUpdate(merged, new Uint8Array(update))
-      if (!canonicalizeCanvasDocumentContent(merged)) throw new Error('Invalid canvas merge')
-      persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(merged)).buffer
-      merged.destroy()
-      persistedVersion = assertVersionStamp({
-        ...persistedVersion,
-        revision: persistedVersion.revision + 1,
-        digest: 'c'.repeat(64),
-      })
-      return Promise.resolve({
-        status: 'completed',
-        resourceId,
-        update: persistedUpdate,
-        version: persistedVersion,
-      })
+    expect(outbox.merge(generation, Y.encodeStateAsUpdate(local))).toEqual({
+      status: 'accepted',
     })
+    let apply: (snapshot: Snapshot) => void = () => undefined
+    const save = vi.fn(
+      ({ generation: observedGeneration, update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+        const merged = new Y.Doc()
+        Y.applyUpdate(merged, new Uint8Array(persistedUpdate))
+        Y.applyUpdate(merged, new Uint8Array(update))
+        if (!canonicalizeCanvasDocumentContent(merged)) throw new Error('Invalid canvas merge')
+        persistedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(merged)).buffer
+        merged.destroy()
+        persistedVersion = assertVersionStamp({
+          ...persistedVersion,
+          revision: persistedVersion.revision + 1,
+          digest: 'c'.repeat(64),
+        })
+        return Promise.resolve({
+          status: 'completed',
+          generation: assertContentGeneration(observedGeneration),
+          resourceId,
+          update: persistedUpdate,
+          version: persistedVersion,
+        })
+      },
+    )
     const source = createLiveCanvasSessionSource(
       campaignId,
       memberId,
@@ -628,7 +737,7 @@ describe('LiveCanvasSessionSource', () => {
 
     await expect(ready.session.flush()).resolves.toMatchObject({ status: 'completed' })
     expect(save).toHaveBeenCalledOnce()
-    expect(outbox.load()).toEqual({ status: 'available', update: null })
+    expect(outbox.load()).toEqual({ status: 'available', entry: null })
     const persisted = new Y.Doc()
     Y.applyUpdate(persisted, new Uint8Array(persistedUpdate))
     const persistedContent = readCanvasDocumentContent(persisted)
@@ -657,16 +766,19 @@ describe('LiveCanvasSessionSource', () => {
       initialDocument.destroy()
       let apply: (snapshot: Snapshot) => void = () => undefined
       let attempt = 0
-      const save = vi.fn(({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
-        attempt += 1
-        if (attempt === 1) return Promise.reject(new Error('provider unavailable'))
-        return Promise.resolve({
-          status: 'completed',
-          resourceId,
-          update,
-          version: assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) }),
-        })
-      })
+      const save = vi.fn(
+        ({ generation: observedGeneration, update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+          attempt += 1
+          if (attempt === 1) return Promise.reject(new Error('provider unavailable'))
+          return Promise.resolve({
+            status: 'completed',
+            generation: assertContentGeneration(observedGeneration),
+            resourceId,
+            update,
+            version: assertVersionStamp({ ...version, revision: 2, digest: 'b'.repeat(64) }),
+          })
+        },
+      )
       const source = createLiveCanvasSessionSource(
         campaignId,
         memberId,
@@ -721,24 +833,30 @@ describe('LiveCanvasSessionSource', () => {
     let apply: (snapshot: Snapshot) => void = () => undefined
     let releaseFinalSave: (() => void) | undefined
     let saveAttempt = 0
-    const save = vi.fn(async ({ update }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
-      saveAttempt += 1
-      if (saveAttempt === 2) {
-        await new Promise<void>((resolve) => {
-          releaseFinalSave = resolve
-        })
-      }
-      return {
-        status: 'completed',
-        resourceId,
+    const save = vi.fn(
+      async ({
+        generation: observedGeneration,
         update,
-        version: assertVersionStamp({
-          ...version,
-          revision: version.revision + saveAttempt,
-          digest: String(saveAttempt).repeat(64),
-        }),
-      }
-    })
+      }: SaveCanvasArgs): Promise<SaveCanvasResult> => {
+        saveAttempt += 1
+        if (saveAttempt === 2) {
+          await new Promise<void>((resolve) => {
+            releaseFinalSave = resolve
+          })
+        }
+        return {
+          status: 'completed',
+          generation: assertContentGeneration(observedGeneration),
+          resourceId,
+          update,
+          version: assertVersionStamp({
+            ...version,
+            revision: version.revision + saveAttempt,
+            digest: String(saveAttempt).repeat(64),
+          }),
+        }
+      },
+    )
     const source = createLiveCanvasSessionSource(
       campaignId,
       memberId,
@@ -769,7 +887,7 @@ describe('LiveCanvasSessionSource', () => {
     let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
-      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v1:')) {
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v2:')) {
         return
       }
       outboxKey = key
