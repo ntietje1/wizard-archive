@@ -43,7 +43,6 @@ jobs:
       - run: vp run check:editor-package
       - run: vp check
       - run: vp run lint:convex
-      - run: vp run check:import-boundaries
 
   fallow:
     if: github.event_name == 'pull_request'

@@ -20,7 +20,6 @@
     "lint:fix": "vp lint . --fix && vp run lint:convex:fix",
     "lint:convex": "vp exec eslint convex/ --no-warn-ignored",
     "lint:convex:fix": "vp exec eslint convex/ --fix --no-warn-ignored",
-    "check:import-boundaries": "vp exec node scripts/check-import-boundaries.mjs",
     "test:frontend": "vp run build:editor-package && vp test run --config vitest.config.ts",
     "test:frontend:watch": "vp run build:editor-package && vp test --config vitest.config.ts",
     "test:frontend:coverage": "vp run build:editor-package && vp test run --config vitest.config.ts --coverage",

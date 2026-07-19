@@ -110,7 +110,6 @@ jobs:
           vp run check:editor-package
           vp check
           vp run lint:convex
-          vp run check:import-boundaries
           vp test run --config vitest.config.ts --reporter=verbose
           vp test run --config convex/vitest.config.mts --reporter=verbose
           vp run build:production

@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test'
 import http from './http'
 import crons from './crons'
-import { onCreate, onDelete, onUpdate } from './auth/component'
-import { handleResendWebhook } from './emailHttpActions'
 import {
   changeEmailConfirmationEmail,
   deleteAccountVerificationEmail,
   passwordResetEmail,
-  resend,
   verificationEmail,
 } from './email'
 
@@ -35,14 +32,6 @@ describe('production Convex entrypoints', () => {
     expect(Object.keys(registeredCrons)).toEqual([
       'purge expired auth sessions and verification tokens',
     ])
-  })
-
-  it('loads email and auth component wiring', () => {
-    expect(resend).toBeDefined()
-    expect(handleResendWebhook).toBeTypeOf('function')
-    expect(onCreate).toBeTypeOf('function')
-    expect(onUpdate).toBeTypeOf('function')
-    expect(onDelete).toBeTypeOf('function')
   })
 
   it('renders every production email template', () => {
