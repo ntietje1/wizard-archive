@@ -142,6 +142,10 @@
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
     },
+    "./resources/item-history-controller": {
+      "types": "./dist/resources/item-history-controller.d.mts",
+      "default": "./dist/resources/item-history-controller.mjs"
+    },
     "./resources/preview": {
       "types": "./dist/resources/resource-preview.d.mts",
       "default": "./dist/resources/resource-preview.mjs"

@@ -267,10 +267,14 @@ export type ItemHistoryPreviewState =
 
 export type ItemHistoryRestoreState =
   | Readonly<{ status: 'closed' }>
-  | Readonly<{ status: 'loading'; entryId: HistoryEntryId }>
   | Readonly<{ status: 'ready'; entryId: HistoryEntryId; entryTime: number }>
   | Readonly<{ status: 'restoring'; entryId: HistoryEntryId; entryTime: number }>
-  | Readonly<{ status: 'error'; entryId: HistoryEntryId; entryTime: number }>
+  | Readonly<{
+      status: 'error'
+      entryId: HistoryEntryId
+      entryTime: number
+      result: Exclude<ItemHistoryRestoreResult, { status: 'restored' }>
+    }>
 
 export type ItemHistoryRestoreResult =
   | Readonly<{
