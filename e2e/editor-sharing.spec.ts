@@ -17,7 +17,7 @@ import {
 import {
   createE2EConvexClient,
   ensureAcceptedPlayerMember,
-  getCampaignInvitationRoute,
+  getCampaignInvitationPath,
 } from './helpers/convex-helpers'
 import { provisionNoteResource } from './helpers/resource-helpers'
 import { testName } from './helpers/constants'
@@ -77,12 +77,11 @@ test.describe('canonical sharing and view-as', () => {
       },
     ])
 
-    const invitation = await getCampaignInvitationRoute(campaignId)
     playerContext = await browser.newContext()
     playerPage = await playerContext.newPage()
     await playerPage.goto('/sign-in', { waitUntil: 'commit' })
     await signInByApi(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
-    await playerPage.goto(`/join/${invitation.dmUsername}/${invitation.campaignSlug}`)
+    await playerPage.goto(getCampaignInvitationPath(campaignId))
     const joinButton = playerPage.getByRole('button', { name: /join/i })
     await expect(joinButton).toBeVisible({ timeout: 10_000 })
     await joinButton.click()

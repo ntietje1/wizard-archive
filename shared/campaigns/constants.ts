@@ -1,3 +1,2 @@
 export const CAMPAIGN_NAME_MIN_LENGTH = 3
 export const CAMPAIGN_NAME_MAX_LENGTH = 30
-export const CAMPAIGN_SLUG_MAX_LENGTH = 30

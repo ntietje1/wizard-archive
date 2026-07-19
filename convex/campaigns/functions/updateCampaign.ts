@@ -1,6 +1,3 @@
-import type { CampaignSlug } from '../../../shared/campaigns/validation'
-import { ERROR_CODE } from '../../../shared/errors/client'
-import { throwClientError } from '../../errors'
 import { prepareCampaignDescription } from '../../../shared/campaigns/validation'
 import { prepareCampaignName } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
@@ -15,18 +12,14 @@ export async function updateCampaign(
   {
     name,
     description,
-    slug,
     resourceAccessDefaults,
   }: {
     name?: string
     description?: string
-    slug?: CampaignSlug
     resourceAccessDefaults?: ResourceAccessDefaults
   },
 ): Promise<CampaignId> {
   const campaign = ctx.campaign
-  const userId = ctx.membership.userId
-
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
   if (name !== undefined) {
@@ -37,17 +30,6 @@ export async function updateCampaign(
   }
   if (resourceAccessDefaults !== undefined) {
     updates.resourceAccessDefaults = resourceAccessDefaults
-  }
-
-  if (slug !== undefined && slug !== campaign.slug) {
-    const conflict = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', userId))
-      .unique()
-    if (conflict) {
-      throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this slug already exists')
-    }
-    updates.slug = slug
   }
 
   if (Object.keys(updates).length === 0) {

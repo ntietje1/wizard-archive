@@ -112,7 +112,6 @@ describe('useOptionalCampaign', () => {
   it('returns derived campaign state from the active campaign route', () => {
     const campaign = createCampaign({
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
-      slug: 'my-campaign',
     })
     mockUseMatch.mockReturnValue({
       params: { campaignId: campaign.id },

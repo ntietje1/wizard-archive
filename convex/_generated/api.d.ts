@@ -42,7 +42,6 @@ import type * as campaigns_rows from "../campaigns/rows.js";
 import type * as campaigns_validation from "../campaigns/validation.js";
 import type * as common_logger from "../common/logger.js";
 import type * as common_pagination from "../common/pagination.js";
-import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
 import type * as crons from "../crons.js";
 import type * as email from "../email.js";
@@ -188,7 +187,6 @@ declare const fullApi: ApiFromModules<{
   "campaigns/validation": typeof campaigns_validation;
   "common/logger": typeof common_logger;
   "common/pagination": typeof common_pagination;
-  "common/slug": typeof common_slug;
   "common/types": typeof common_types;
   crons: typeof crons;
   email: typeof email;

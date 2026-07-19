@@ -24,7 +24,6 @@ const campaignFields = {
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
-  slug: v.string(),
   status: campaignStatusValidator,
   acceptedMemberCount: v.number(),
   resourceAccessDefaults: v.object({
@@ -51,9 +50,7 @@ const campaignMemberTableFields = {
 export const campaignTables = {
   campaigns: defineTable({
     ...campaignTableFields,
-  })
-    .index('by_campaignUuid', ['campaignUuid'])
-    .index('by_slug_dm', ['slug', 'dmUserId']),
+  }).index('by_campaignUuid', ['campaignUuid']),
 
   campaignMembers: defineTable({
     ...campaignMemberTableFields,
@@ -89,7 +86,6 @@ const publicCampaignFields = {
   createdAt: v.number(),
   name: v.string(),
   description: v.string(),
-  slug: v.string(),
   status: campaignStatusValidator,
   resourceAccessDefaults: v.object({
     folderInheritance: v.union(

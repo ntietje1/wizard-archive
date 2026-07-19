@@ -14,21 +14,15 @@ export async function createCampaign(page: Page, name: string): Promise<Campaign
   await expect(dialog).toBeVisible({ timeout: 5000 })
   const nameInput = dialog.getByLabel(/campaign name/i)
   await expect(nameInput).toBeVisible({ timeout: 5000 })
-  const slugInput = dialog.getByLabel(/custom link/i)
-  await expect(slugInput).toBeVisible({ timeout: 5000 })
-  const slug = slugForCampaignName(name)
   const createBtn = dialog.getByRole('button', { name: /^create campaign$/i })
   let lastError: unknown
 
   for (let attempt = 0; attempt < 6; attempt += 1) {
     try {
       await fillCampaignNameInput(nameInput, name)
-      await fillCampaignSlugInput(slugInput, slug)
       await nameInput.blur()
-      await slugInput.blur()
 
       await expect(nameInput).toHaveValue(name, { timeout: 5000 })
-      await expect(slugInput).toHaveValue(slug, { timeout: 5000 })
       await expect(createBtn).toBeEnabled({ timeout: 15000 })
       await createBtn.click({ timeout: 5000 })
       await expect(dialog).not.toBeVisible({ timeout: 30000 })
@@ -62,27 +56,6 @@ async function fillCampaignNameInput(nameInput: Locator, name: string) {
   await expect(nameInput).toHaveValue(name, { timeout: 5000 })
 }
 
-async function fillCampaignSlugInput(slugInput: Locator, slug: string) {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    await expect(slugInput).toBeEditable({ timeout: 5000 })
-    await slugInput.fill(slug)
-    if ((await slugInput.inputValue({ timeout: 1000 }).catch(() => null)) === slug) {
-      return
-    }
-  }
-
-  await expect(slugInput).toHaveValue(slug, { timeout: 5000 })
-}
-
-function slugForCampaignName(name: string) {
-  let hash = 0
-  for (const char of name) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
-  }
-
-  return `e2e-${hash.toString(36).padStart(7, '0')}`.slice(0, 30)
-}
-
 export async function navigateToCampaign(page: Page, campaignName: string) {
   await waitForCampaignsDashboard(page)
   await page.getByText(campaignName, { exact: true }).click()
@@ -92,10 +65,7 @@ export async function navigateToCampaign(page: Page, campaignName: string) {
 
 export async function provisionCampaign(name: string): Promise<CampaignId> {
   const client = await createE2EConvexClient()
-  return await client.mutation(api.campaigns.mutations.createCampaign, {
-    name,
-    slug: slugForCampaignName(name),
-  })
+  return await client.mutation(api.campaigns.mutations.createCampaign, { name })
 }
 
 export async function navigateToCampaignId(page: Page, campaignId: CampaignId) {

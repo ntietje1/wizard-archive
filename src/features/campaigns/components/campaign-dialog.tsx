@@ -1,11 +1,8 @@
-import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
-import { validateCampaignName, validateCampaignSlug } from 'shared/campaigns/validation'
-import { Link, Sword } from 'lucide-react'
-import type { RefObject } from 'react'
+import { validateCampaignName } from 'shared/campaigns/validation'
+import { Sword } from 'lucide-react'
 import type { Campaign } from 'shared/campaigns/types'
-import { UrlPreview } from '~/features/campaigns/components/url-preview'
 import { Input } from '@wizard-archive/ui/shadcn/components/input'
 import { Label } from '@wizard-archive/ui/shadcn/components/label'
 import { Textarea } from '@wizard-archive/ui/shadcn/components/textarea'
@@ -15,8 +12,6 @@ import {
   useCreateCampaignMutation,
   useUpdateCampaignMutation,
 } from '~/features/campaigns/hooks/use-campaign-operations'
-import { useUserProfileQuery } from '~/shared/hooks/use-user-profile-operations'
-import { useSlugFieldFeedback } from '@wizard-archive/ui/hooks/use-slug-field-feedback'
 import { handleError } from '~/shared/utils/logger'
 
 interface CampaignDialogProps {
@@ -24,16 +19,9 @@ interface CampaignDialogProps {
   isOpen: boolean
   onClose: () => void
   campaign?: Campaign
-  campaigns: Array<Campaign>
 }
 
-export function CampaignDialog({
-  mode,
-  isOpen,
-  onClose,
-  campaign,
-  campaigns,
-}: CampaignDialogProps) {
+export function CampaignDialog({ mode, isOpen, onClose, campaign }: CampaignDialogProps) {
   return (
     <FormDialog
       isOpen={isOpen}
@@ -46,27 +34,14 @@ export function CampaignDialog({
       }
       icon={Sword}
     >
-      {isOpen && (
-        <CampaignForm mode={mode} onClose={onClose} campaign={campaign} campaigns={campaigns} />
-      )}
+      {isOpen && <CampaignForm mode={mode} onClose={onClose} campaign={campaign} />}
     </FormDialog>
   )
 }
 
-function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialogProps, 'isOpen'>) {
-  const userProfile = useUserProfileQuery()
+function CampaignForm({ mode, onClose, campaign }: Omit<CampaignDialogProps, 'isOpen'>) {
   const createCampaign = useCreateCampaignMutation()
   const updateCampaign = useUpdateCampaignMutation()
-
-  const campaignsRef: RefObject<Array<Campaign>> = useRef(campaigns)
-  campaignsRef.current = campaigns
-
-  const [initialSlug] = useState(() => Math.random().toString(36).substring(2, 15))
-  const {
-    showFeedback: showSlugFeedback,
-    scheduleFeedback: scheduleSlugFeedback,
-    showFeedbackNow: showSlugFeedbackNow,
-  } = useSlugFieldFeedback()
 
   const form = useForm({
     defaultValues:
@@ -74,12 +49,10 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
         ? {
             name: campaign.name,
             description: campaign.description || '',
-            slug: campaign.slug,
           }
         : {
             name: '',
             description: '',
-            slug: initialSlug,
           },
     onSubmit: async ({ value }) => {
       try {
@@ -87,7 +60,6 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
           await createCampaign.mutateAsync({
             name: value.name.trim(),
             description: value.description.trim(),
-            slug: value.slug.trim(),
           })
 
           toast.success('Campaign created successfully')
@@ -97,7 +69,6 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
             campaignId: campaign.id,
             name: value.name.trim(),
             description: value.description.trim() || undefined,
-            slug: value.slug.trim(),
           })
 
           toast.success('Campaign updated successfully')
@@ -115,14 +86,6 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   const handleClose = () => {
     if (form.state.isSubmitting) return
     onClose()
-  }
-
-  const validateSlug = (value: string): string | null => {
-    const syncError = validateCampaignSlug(value)
-    if (syncError) return syncError
-    const excludeId = mode === 'edit' ? campaign?.id : undefined
-    const slugTaken = campaignsRef.current.some((c) => c.slug === value && c.id !== excludeId)
-    return slugTaken ? 'This link is already taken.' : null
   }
 
   return (
@@ -172,53 +135,6 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
               placeholder="A thrilling adventure in the Sword Coast..."
               disabled={form.state.isSubmitting}
             />
-          </div>
-        )}
-      </form.Field>
-
-      <form.Field
-        name="slug"
-        validators={{
-          onMount: ({ value }) => validateSlug(value),
-          onBlur: ({ value }) => validateSlug(value),
-          onChange: ({ value }) => validateSlug(value),
-          onSubmit: ({ value }) => validateSlug(value),
-        }}
-      >
-        {(field) => (
-          <div className="space-y-2 px-px">
-            <Label htmlFor="campaign-slug" className="flex items-center gap-2">
-              <Link className="size-4" />
-              Custom Link*
-            </Label>
-            <Input
-              id="campaign-slug"
-              value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value)
-                scheduleSlugFeedback()
-              }}
-              onBlur={() => {
-                showSlugFeedbackNow()
-                field.handleBlur()
-              }}
-              placeholder="campaign-link"
-              maxLength={30}
-              disabled={form.state.isSubmitting}
-            />
-            {field.state.meta.errors.length > 0 &&
-            field.state.meta.isTouched &&
-            showSlugFeedback ? (
-              <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
-            ) : null}
-
-            {userProfile.data?.username ? (
-              <UrlPreview
-                url={`${window.location.origin}/join/${userProfile.data.username}/${field.state.value || 'campaign-link'}`}
-              />
-            ) : (
-              <UrlPreview url="Loading preview..." />
-            )}
           </div>
         )}
       </form.Field>

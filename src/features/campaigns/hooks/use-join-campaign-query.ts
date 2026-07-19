@@ -1,23 +1,19 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { parseCampaignSlug } from 'shared/campaigns/validation'
-import { parseUsername } from 'shared/users/validation'
-import type { CampaignSlug } from 'shared/campaigns/validation'
-import type { Username } from 'shared/users/validation'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
-const PLACEHOLDER_USERNAME = parseUsername('placeholder')!
-const PLACEHOLDER_SLUG = parseCampaignSlug('placeholder')!
+const PLACEHOLDER_CAMPAIGN_ID = assertDomainId(
+  DOMAIN_ID_KIND.campaign,
+  '00000000-0000-7000-8000-000000000000',
+)
 
-export function useJoinCampaignQuery(
-  dmUsername: Username | null,
-  campaignSlug: CampaignSlug | null,
-) {
+export function useJoinCampaignQuery(campaignId: CampaignId | null) {
   return useQuery({
-    ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
-      dmUsername: dmUsername ?? PLACEHOLDER_USERNAME,
-      slug: campaignSlug ?? PLACEHOLDER_SLUG,
+    ...convexQuery(api.campaigns.queries.getCampaignInvitation, {
+      campaignId: campaignId ?? PLACEHOLDER_CAMPAIGN_ID,
     }),
-    enabled: dmUsername !== null && campaignSlug !== null,
+    enabled: campaignId !== null,
   })
 }

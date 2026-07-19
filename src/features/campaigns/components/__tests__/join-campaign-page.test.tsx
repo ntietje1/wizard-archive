@@ -9,6 +9,9 @@ import { clientError } from '~/test/factories/error-factory'
 import { mockAppMutation, mockAuthQuery, mockAuthQueryError } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
 import type * as TanstackReactQuery from '@tanstack/react-query'
+import { testDomainId } from 'shared/test/domain-id'
+
+const campaignId = testDomainId('campaign', 'join_campaign')
 
 const mockNavigate = vi.fn()
 const mockUseQuery = vi.fn()
@@ -18,8 +21,7 @@ const mockUseAppMutation = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({
-    dmUsername: 'testdm',
-    campaignSlug: 'my-campaign',
+    campaignId,
   }),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),

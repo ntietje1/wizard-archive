@@ -7,7 +7,6 @@ import {
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
 } from '../shared/campaigns/types'
-import { assertCampaignSlug } from './campaigns/validation'
 import { ERROR_CODE } from '../shared/errors/client'
 import { throwClientError } from './errors'
 import { getAuthProfileKey } from './auth/identity'
@@ -52,10 +51,7 @@ async function toAuthenticatedProfile(
 }
 
 function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
-  return {
-    ...campaign,
-    slug: assertCampaignSlug(campaign.slug),
-  }
+  return campaign
 }
 
 export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUser> {

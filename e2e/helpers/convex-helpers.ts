@@ -18,12 +18,8 @@ export function getCampaignIdFromUrl(url: string): CampaignId {
   return assertDomainId(DOMAIN_ID_KIND.campaign, campaignId)
 }
 
-export async function getCampaignInvitationRoute(campaignId: CampaignId) {
-  const client = await createE2EConvexClient()
-  const campaign = await client.query(api.campaigns.queries.getCampaignById, { campaignId })
-  const dmUsername = campaign.dmUserProfile.username
-  if (!dmUsername) throw new Error(`Campaign ${campaignId} has no DM username`)
-  return { dmUsername, campaignSlug: campaign.slug }
+export function getCampaignInvitationPath(campaignId: CampaignId) {
+  return `/join/${campaignId}`
 }
 
 export async function ensureAcceptedPlayerMember({

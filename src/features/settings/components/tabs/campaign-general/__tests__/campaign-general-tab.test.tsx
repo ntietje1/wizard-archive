@@ -50,7 +50,7 @@ describe('CampaignGeneralTab', () => {
   })
 
   it('announces loading while campaign settings are pending', () => {
-    const campaign = createCampaign({ slug: 'pending-campaign' })
+    const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
       campaign: mockAuthQuery<ReturnType<typeof createCampaign>>(undefined),
       isDm: undefined,
@@ -68,7 +68,7 @@ describe('CampaignGeneralTab', () => {
   })
 
   it('shows the campaign settings load failure', () => {
-    const campaign = createCampaign({ slug: 'failed-campaign' })
+    const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
       campaign: mockAuthQueryError<ReturnType<typeof createCampaign>>(new Error('campaign failed')),
       isDm: undefined,
@@ -86,7 +86,7 @@ describe('CampaignGeneralTab', () => {
   })
 
   it('shows the campaign settings load failure after campaign lookup settles without data', () => {
-    const campaign = createCampaign({ slug: 'missing-campaign' })
+    const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
       campaign: mockAuthQuery<ReturnType<typeof createCampaign>>(undefined, {
         fetchStatus: 'idle',

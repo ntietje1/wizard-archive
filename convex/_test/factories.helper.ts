@@ -3,7 +3,6 @@ import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resourc
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
 import type { ResourceAccessDefaults } from '@wizard-archive/editor/resources/access-policy'
-import { assertCampaignSlug } from '../campaigns/validation'
 import { assertUsername } from '../users/validation'
 import type { TestConvex } from 'convex-test'
 import type { Id } from '../_generated/dataModel'
@@ -66,25 +65,22 @@ export async function createCampaignWithDm(
   overrides?: Partial<{
     name: string
     description: string
-    slug: string
     status: 'Active' | 'Inactive'
     currentSessionId: Id<'sessions'> | null
     resourceAccessDefaults: ResourceAccessDefaults
   }>,
 ) {
   const n = nextId()
-  const { slug, ...rest } = overrides ?? {}
   const campaignData = {
     campaignUuid: generateDomainId(DOMAIN_ID_KIND.campaign),
     name: `Campaign ${n}`,
     description: '',
     dmUserId: dmProfile._id,
-    slug: assertCampaignSlug(slug ?? `campaign-${n}`),
     status: 'Active' as const,
     acceptedMemberCount: 1,
     currentSessionId: null,
     resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS,
-    ...rest,
+    ...overrides,
   }
   const campaignId = await t.run(async (ctx) => await ctx.db.insert('campaigns', campaignData))
   const dmMemberDomainId = generateDomainId(DOMAIN_ID_KIND.campaignMember)

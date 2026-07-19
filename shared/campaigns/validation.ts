@@ -1,35 +1,4 @@
-import {
-  CAMPAIGN_NAME_MAX_LENGTH,
-  CAMPAIGN_NAME_MIN_LENGTH,
-  CAMPAIGN_SLUG_MAX_LENGTH,
-} from './constants'
-import { brandString } from '../branded'
-import { parseSlug, validateSlug } from '../slugs'
-import type { BrandedString } from '../branded'
-
-export type CampaignSlug = BrandedString<'CampaignSlug'>
-
-const CAMPAIGN_SLUG_OPTIONS = {
-  label: 'Campaign link',
-  maxLength: CAMPAIGN_SLUG_MAX_LENGTH,
-} as const
-
-export function validateCampaignSlug(value: string): string | null {
-  return validateSlug(value, CAMPAIGN_SLUG_OPTIONS)
-}
-
-export function parseCampaignSlug(value: string): CampaignSlug | null {
-  const parsed = parseSlug(value, CAMPAIGN_SLUG_OPTIONS)
-  return parsed ? brandString<'CampaignSlug'>(parsed) : null
-}
-
-export function assertCampaignSlug(value: string): CampaignSlug {
-  const parsed = parseCampaignSlug(value)
-  if (!parsed) {
-    throw new Error(validateCampaignSlug(value) ?? 'Invalid campaign link')
-  }
-  return parsed
-}
+import { CAMPAIGN_NAME_MAX_LENGTH, CAMPAIGN_NAME_MIN_LENGTH } from './constants'
 
 export function validateCampaignName(name: string): string | null {
   const trimmed = name.trim()

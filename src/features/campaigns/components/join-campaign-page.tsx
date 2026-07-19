@@ -1,8 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { parseCampaignSlug } from 'shared/campaigns/validation'
 import { useConvexAuth } from 'convex/react'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
-import { parseUsername } from 'shared/users/validation'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Loader2, Users } from 'lucide-react'
@@ -22,6 +20,7 @@ import { StatusIcon } from '~/features/campaigns/components/status-icon'
 import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 import type { Campaign, CampaignMemberSummary } from 'shared/campaigns/types'
 import type { CampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 type JoinCampaignCardContent = {
   title: string
@@ -400,11 +399,10 @@ function joinRequestCardContent(
 
 export function JoinCampaignPage() {
   const navigate = useNavigate()
-  const { dmUsername: rawDmUsername, campaignSlug: rawCampaignSlug } = useParams({
-    from: '/_app/join/$dmUsername/$campaignSlug/',
+  const { campaignId: rawCampaignId } = useParams({
+    from: '/_app/join/$campaignId/',
   })
-  const dmUsername = parseUsername(rawDmUsername)
-  const campaignSlug = parseCampaignSlug(rawCampaignSlug)
+  const campaignId = parseDomainId(DOMAIN_ID_KIND.campaign, rawCampaignId)
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const [showSignIn, setShowSignIn] = useState(false)
 
@@ -419,7 +417,7 @@ export function JoinCampaignPage() {
     error: campaignError,
     refetch: refetchCampaign,
     status: campaignQueryStatus,
-  } = useJoinCampaignQuery(dmUsername, campaignSlug)
+  } = useJoinCampaignQuery(campaignId)
 
   const campaignMember = campaign?.myMembership
   const campaignLookupState = resolveCampaignLookupState({
@@ -432,13 +430,10 @@ export function JoinCampaignPage() {
   const joinCampaign = useJoinCampaignMutation()
 
   const handleJoinCampaign = async () => {
-    if (!campaign || !dmUsername || !campaignSlug) return
+    if (!campaign || !campaignId) return
 
     try {
-      await joinCampaign.mutateAsync({
-        slug: campaignSlug,
-        dmUsername,
-      })
+      await joinCampaign.mutateAsync({ campaignId })
     } catch {
       // Error UI rendered via joinCampaign.status === 'error'
     }
@@ -456,7 +451,7 @@ export function JoinCampaignPage() {
     })
   }
 
-  if (!dmUsername || !campaignSlug) {
+  if (!campaignId) {
     return (
       <div className="min-h-screen bg-muted flex items-center justify-center p-4">
         <Card className="w-full max-w-lg bg-card">

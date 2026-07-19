@@ -1,7 +1,9 @@
-import { deduplicateSlug, slugify } from '../../../shared/slugs'
-import { assertUsername } from '../../users/validation'
-import { parseUsername, USERNAME_SLUG_OPTIONS } from '../../../shared/users/validation'
-import { USERNAME_MAX_LENGTH } from '../../users/constants'
+import {
+  assertUsername,
+  deduplicateUsername,
+  normalizeUsernameCandidate,
+  parseUsername,
+} from '../../../shared/users/validation'
 import type { MutationCtx } from '../../_generated/server'
 import type { Username } from '../../../shared/users/validation'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
@@ -25,27 +27,14 @@ function getBaseUsername(user: AuthUserDoc): string {
   )
 }
 
-function getValidBaseUsernameSlug(user: AuthUserDoc): string {
+function getValidBaseUsername(user: AuthUserDoc): string {
   const idSuffix = String(user._id).slice(-8)
   const baseUsername = getBaseUsername(user)
   const fallbackUsername = idSuffix ? `user-${idSuffix}` : 'user'
-
-  const normalizedBaseSlug = slugify(baseUsername, {
-    fallback: fallbackUsername,
-    maxLength: USERNAME_MAX_LENGTH,
-  })
-  if (!normalizedBaseSlug) {
-    return slugify(fallbackUsername, {
-      fallback: 'user',
-      maxLength: USERNAME_MAX_LENGTH,
-    })
-  }
-  return parseUsername(normalizedBaseSlug) !== null
-    ? normalizedBaseSlug
-    : slugify(`user-${normalizedBaseSlug}`, {
-        fallback: fallbackUsername,
-        maxLength: USERNAME_MAX_LENGTH,
-      })
+  const normalized = normalizeUsernameCandidate(baseUsername, fallbackUsername)
+  return parseUsername(normalized) !== null
+    ? normalized
+    : normalizeUsernameCandidate(`user-${normalized}`, fallbackUsername)
 }
 
 async function insertUserProfile(ctx: MutationCtx, user: AuthUserDoc, username: Username) {
@@ -62,10 +51,10 @@ async function insertUserProfile(ctx: MutationCtx, user: AuthUserDoc, username: 
 }
 
 export async function onCreateUser(ctx: MutationCtx, user: AuthUserDoc): Promise<void> {
-  const baseSlug = getValidBaseUsernameSlug(user)
+  const baseUsername = getValidBaseUsername(user)
   const conflicts = new Set<string>()
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    const candidate = deduplicateSlug(baseSlug, conflicts, USERNAME_SLUG_OPTIONS)
+    const candidate = deduplicateUsername(baseUsername, conflicts)
     const username = assertUsername(candidate)
 
     const conflict = await ctx.db

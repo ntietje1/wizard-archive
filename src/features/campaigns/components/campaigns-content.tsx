@@ -148,7 +148,6 @@ function CampaignsContentProjection() {
         mode="create"
         isOpen={creatingCampaign}
         onClose={() => setCreatingCampaign(false)}
-        campaigns={campaigns.results}
       />
 
       <CampaignDialog
@@ -156,7 +155,6 @@ function CampaignsContentProjection() {
         isOpen={editingCampaignId !== null}
         onClose={() => setEditingCampaignId(null)}
         campaign={currentlyEditingCampaign ?? undefined}
-        campaigns={campaigns.results}
       />
 
       {currentlyDeletingCampaign && (

@@ -56,9 +56,7 @@ describe('PeopleTab', () => {
   })
 
   it('renders on campaign routes without requiring CampaignProvider', () => {
-    const campaign = createCampaign({
-      slug: 'my-campaign',
-    })
+    const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
       campaign: mockAuthQuery(campaign),
       isDm: false,
@@ -98,7 +96,6 @@ describe('PeopleTab', () => {
 
   it('renders the DM invite link for the active campaign', () => {
     const campaign = createCampaign({
-      slug: 'my-campaign',
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
@@ -129,7 +126,7 @@ describe('PeopleTab', () => {
     )
 
     expect(screen.getByTestId('invite-link-section')).toHaveTextContent(
-      `https://example.test/join/${campaign.dmUserProfile.username}/${campaign.slug}`,
+      `https://example.test/join/${campaign.id}`,
     )
     expect(screen.getByTestId('members-section')).toBeInTheDocument()
     expect(screen.getByTestId('pending-requests-section')).toBeInTheDocument()
@@ -138,7 +135,6 @@ describe('PeopleTab', () => {
 
   it('keeps request sections usable when the member list fails', () => {
     const campaign = createCampaign({
-      slug: 'my-campaign',
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const retryMembers = vi.fn()
@@ -173,7 +169,6 @@ describe('PeopleTab', () => {
 
   it('keeps member management usable when join requests fail', () => {
     const campaign = createCampaign({
-      slug: 'my-campaign',
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const retryRequests = vi.fn()

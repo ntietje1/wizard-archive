@@ -1,29 +1,18 @@
-import { assertCampaignSlug } from '../validation'
-import type { CampaignSlug } from '../../../shared/campaigns/validation'
-import type { Username } from '../../../shared/users/validation'
 import { getAuthProfileKey } from '../../auth/identity'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
 import {
   getUserProfileDocByAuthProfileKey,
-  getUserProfileDocByUsername,
   getUserProfileById,
 } from '../../users/functions/getUserProfile'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
 import type { Campaign, CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { CampaignMemberRow, CampaignRow } from '../rows'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { toCampaignMemberProjection } from './campaignMemberProjection'
-
-function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
-  return {
-    ...campaign,
-    slug: assertCampaignSlug(campaign.slug),
-  }
-}
 
 function toCampaign(campaign: CampaignRow): Omit<Campaign, 'dmUserProfile' | 'myMembership'> {
   const {
@@ -86,32 +75,18 @@ export async function getCampaign(
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get('campaigns', campaignId)
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted) return null
-  return enhanceCampaign(ctx, { campaign: toCampaignRow(campaign) })
+  return enhanceCampaign(ctx, { campaign })
 }
 
-// is public for the join campaign screen
-export async function getCampaignBySlug(
+export async function getCampaignInvitation(
   ctx: QueryCtx,
-  { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
+  campaignId: Campaign['id'],
 ): Promise<Campaign> {
-  return enhanceCampaign(ctx, {
-    campaign: await getCampaignRowBySlug(ctx, { dmUsername, slug }),
-  })
-}
-
-export async function getCampaignRowBySlug(
-  ctx: QueryCtx,
-  { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
-): Promise<CampaignRow> {
-  const dmUserProfile = await getUserProfileDocByUsername(ctx, {
-    username: dmUsername,
-  })
-  if (!dmUserProfile) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const campaign = await ctx.db
     .query('campaigns')
-    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', dmUserProfile._id))
+    .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
     .unique()
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
-  return toCampaignRow(campaign)
+  return enhanceCampaign(ctx, { campaign })
 }
