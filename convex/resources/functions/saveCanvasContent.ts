@@ -22,6 +22,7 @@ import { canvasEncodedBytesWithinWorkload } from '@wizard-archive/editor/canvas/
 import { resourceAuthoredDestinationOccurrences } from '@wizard-archive/editor/resources/authored-destination'
 import { replaceResourceReferenceProjection } from './resourceReferences'
 import type { ResourceReferenceProjection } from './resourceReferences'
+import { queueYjsHistoryCheckpoint } from './itemHistory'
 
 export type SaveCanvasContentResult =
   | Readonly<{
@@ -67,6 +68,7 @@ export async function saveCanvasContent(
       update: merged.update,
       version: merged.version,
     })
+    await queueYjsHistoryCheckpoint(ctx, resourceId, merged.version)
   }
   return { status: 'completed', resourceId, update: merged.update, version: merged.version }
 }

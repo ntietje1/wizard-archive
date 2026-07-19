@@ -142,6 +142,30 @@ export type ItemHistoryActor = Readonly<{
   imageUrl: string | null
 }>
 
+export const ITEM_HISTORY_ACTION = {
+  created: 'created',
+  copied: 'copied',
+  renamed: 'renamed',
+  moved: 'moved',
+  iconChanged: 'icon_changed',
+  colorChanged: 'color_changed',
+  trashed: 'trashed',
+  restored: 'restored',
+  fileReplaced: 'file_replaced',
+  fileRemoved: 'file_removed',
+  accessChanged: 'access_changed',
+  blockVisibilityChanged: 'block_visibility_changed',
+  inheritanceChanged: 'inheritance_changed',
+  contentEdited: 'content_edited',
+  contentRestored: 'content_restored',
+  mapImageChanged: 'map_image_changed',
+  mapImageRemoved: 'map_image_removed',
+  mapPinAdded: 'map_pin_added',
+  mapPinMoved: 'map_pin_moved',
+  mapPinRemoved: 'map_pin_removed',
+  mapPinVisibilityChanged: 'map_pin_visibility_changed',
+} as const
+
 type ItemHistoryEntryBase<TAction extends string, TMetadata> = Readonly<{
   id: HistoryEntryId
   resourceId: ResourceId

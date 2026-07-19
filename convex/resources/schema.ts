@@ -4,15 +4,18 @@ import { RESOURCE_KIND } from '@wizard-archive/editor/resources/resource-record'
 import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-version'
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import type { PropertyValidators } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
 import {
   assetIdValidator,
+  historyEntryIdValidator,
   importJobIdValidator,
   mapPinIdValidator,
   noteBlockIdValidator,
   operationIdValidator,
   resourceIdValidator,
+  snapshotIdValidator,
 } from './validators'
 import {
   FILE_CLASSIFICATION,
@@ -23,6 +26,7 @@ import {
   RESOURCE_PERMISSION,
 } from '@wizard-archive/editor/resources/access-policy'
 import { NOTE_BLOCK_VISIBILITY } from '@wizard-archive/editor/resources/note-block-access-policy'
+import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 
 export const versionStampValidator = v.object({
   scheme: v.literal(VERSION_SCHEME),
@@ -349,6 +353,180 @@ const storedMapImageValidator = v.object({
   digest: v.string(),
   mediaType: v.string(),
 })
+
+const yjsHistoryCheckpointValidator = v.object({
+  kind: literals(RESOURCE_KIND.note, RESOURCE_KIND.canvas),
+  snapshotId: snapshotIdValidator,
+  version: versionStampValidator,
+})
+
+const mapHistoryCheckpointValidator = v.object({
+  kind: v.literal(RESOURCE_KIND.map),
+  snapshotId: snapshotIdValidator,
+  version: versionStampValidator,
+})
+
+const itemHistoryCheckpointValidator = v.union(
+  yjsHistoryCheckpointValidator,
+  mapHistoryCheckpointValidator,
+)
+
+const itemHistoryEntryFields = {
+  historyEntryUuid: historyEntryIdValidator,
+  campaignUuid: campaignIdValidator,
+  resourceUuid: resourceIdValidator,
+  actorMemberUuid: campaignMemberIdValidator,
+  createdAt: v.number(),
+}
+
+function nullTimelineHistoryEntry<TAction extends string>(action: TAction) {
+  return v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(action),
+    metadata: v.null(),
+  })
+}
+
+function objectTimelineHistoryEntry<TAction extends string, TMetadata extends PropertyValidators>(
+  action: TAction,
+  metadata: TMetadata,
+) {
+  return v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(action),
+    metadata: v.object(metadata),
+  })
+}
+
+const itemHistoryEntryValidator = v.union(
+  nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.created),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.copied, {
+    sourceResourceId: resourceIdValidator,
+    sourceTitle: v.string(),
+  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.renamed, {
+    from: v.string(),
+    to: v.string(),
+  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.moved, {
+    from: v.nullable(v.string()),
+    to: v.nullable(v.string()),
+  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.iconChanged, {
+    from: v.nullable(v.string()),
+    to: v.nullable(v.string()),
+  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.colorChanged, {
+    from: v.nullable(v.string()),
+    to: v.nullable(v.string()),
+  }),
+  nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.trashed),
+  nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.restored),
+  nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.fileReplaced),
+  nullTimelineHistoryEntry(ITEM_HISTORY_ACTION.fileRemoved),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.accessChanged, {
+    subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
+    from: resourcePermissionValidator,
+    to: resourcePermissionValidator,
+  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.blockVisibilityChanged, {
+    blockCount: v.number(),
+    subject: v.union(v.literal('all_players'), campaignMemberIdValidator),
+    visible: v.boolean(),
+  }),
+  objectTimelineHistoryEntry(ITEM_HISTORY_ACTION.inheritanceChanged, {
+    from: folderAccessInheritanceValidator,
+    to: folderAccessInheritanceValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.contentEdited),
+    metadata: v.null(),
+    checkpoint: yjsHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.contentRestored),
+    metadata: v.object({
+      restoredFromEntryId: historyEntryIdValidator,
+      preservedSnapshotId: snapshotIdValidator,
+    }),
+    checkpoint: itemHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapImageChanged),
+    metadata: v.object({ layerId: v.nullable(v.string()) }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapImageRemoved),
+    metadata: v.object({ layerId: v.nullable(v.string()) }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinAdded),
+    metadata: v.object({ pinLabel: v.string() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinMoved),
+    metadata: v.object({ pinLabel: v.string() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinRemoved),
+    metadata: v.object({ pinLabel: v.string() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+  v.object({
+    ...itemHistoryEntryFields,
+    action: v.literal(ITEM_HISTORY_ACTION.mapPinVisibilityChanged),
+    metadata: v.object({ pinLabel: v.string(), visible: v.boolean() }),
+    checkpoint: mapHistoryCheckpointValidator,
+  }),
+)
+
+const itemHistoryCheckpointFields = {
+  snapshotUuid: snapshotIdValidator,
+  campaignUuid: campaignIdValidator,
+  resourceUuid: resourceIdValidator,
+  version: versionStampValidator,
+}
+
+const itemHistoryCheckpointRowValidator = v.union(
+  v.object({
+    ...itemHistoryCheckpointFields,
+    kind: literals(RESOURCE_KIND.note, RESOURCE_KIND.canvas),
+    update: v.bytes(),
+  }),
+  v.object({
+    ...itemHistoryCheckpointFields,
+    kind: v.literal(RESOURCE_KIND.map),
+    image: v.nullable(storedMapImageValidator),
+    layers: v.array(
+      v.object({
+        id: v.string(),
+        image: v.nullable(storedMapImageValidator),
+        name: v.string(),
+      }),
+    ),
+    pins: v.array(
+      v.object({
+        mapPinUuid: mapPinIdValidator,
+        destination: authoredDestinationValidator,
+        layerId: v.nullable(v.string()),
+        x: v.number(),
+        y: v.number(),
+        visible: v.boolean(),
+      }),
+    ),
+  }),
+)
 
 const mapResourceContentValidator = v.object({
   image: mapImageContentValidator,
@@ -998,6 +1176,34 @@ export const resourceTables = {
   })
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
+
+  itemHistoryEntries: defineTable(itemHistoryEntryValidator)
+    .index('by_historyEntryUuid', ['historyEntryUuid'])
+    .index('by_resource_history', ['campaignUuid', 'resourceUuid', 'createdAt', 'historyEntryUuid'])
+    .index('by_resource_action_history', [
+      'campaignUuid',
+      'resourceUuid',
+      'action',
+      'createdAt',
+      'historyEntryUuid',
+    ]),
+
+  itemHistoryCheckpoints: defineTable(itemHistoryCheckpointRowValidator)
+    .index('by_snapshotUuid', ['snapshotUuid'])
+    .index('by_resource_snapshot', ['campaignUuid', 'resourceUuid', 'snapshotUuid']),
+
+  itemHistoryCheckpointAssets: defineTable({
+    snapshotUuid: snapshotIdValidator,
+    assetUuid: assetIdValidator,
+  })
+    .index('by_snapshot', ['snapshotUuid', 'assetUuid'])
+    .index('by_assetUuid', ['assetUuid']),
+
+  itemHistoryCaptureIntents: defineTable({
+    resourceUuid: resourceIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    version: versionStampValidator,
+  }).index('by_resourceUuid', ['resourceUuid']),
 
   resourceBookmarks: defineTable({
     campaignUuid: campaignIdValidator,

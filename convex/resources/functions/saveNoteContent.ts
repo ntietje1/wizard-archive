@@ -21,6 +21,7 @@ import { noteAuthoredDestinationOccurrences } from '@wizard-archive/editor/notes
 import { replaceResourceReferenceProjection } from './resourceReferences'
 import type { ResourceReferenceProjection } from './resourceReferences'
 import { queueNoteBlockAccessCleanup } from './noteBlockAccessCleanup'
+import { queueYjsHistoryCheckpoint } from './itemHistory'
 
 export type SaveNoteContentResult =
   | {
@@ -73,6 +74,7 @@ export async function saveNoteContent(
   })
   await queueNoteBlockAccessCleanup(ctx, resourceId, merged.version, merged.removedBlocks)
   await syncNoteSearchProjection(ctx, resourceId, merged.update)
+  await queueYjsHistoryCheckpoint(ctx, resourceId, merged.version)
   return { status: 'completed', resourceId, update: merged.update, version: merged.version }
 }
 

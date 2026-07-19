@@ -71,6 +71,7 @@ import type * as resources_functions_executeResourceAccessCommand from "../resou
 import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
 import type * as resources_functions_fileContent from "../resources/functions/fileContent.js";
 import type * as resources_functions_findCanonicalResource from "../resources/functions/findCanonicalResource.js";
+import type * as resources_functions_itemHistory from "../resources/functions/itemHistory.js";
 import type * as resources_functions_loadFileDownload from "../resources/functions/loadFileDownload.js";
 import type * as resources_functions_loadMapImage from "../resources/functions/loadMapImage.js";
 import type * as resources_functions_loadNoteContent from "../resources/functions/loadNoteContent.js";
@@ -208,6 +209,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
   "resources/functions/fileContent": typeof resources_functions_fileContent;
   "resources/functions/findCanonicalResource": typeof resources_functions_findCanonicalResource;
+  "resources/functions/itemHistory": typeof resources_functions_itemHistory;
   "resources/functions/loadFileDownload": typeof resources_functions_loadFileDownload;
   "resources/functions/loadMapImage": typeof resources_functions_loadMapImage;
   "resources/functions/loadNoteContent": typeof resources_functions_loadNoteContent;

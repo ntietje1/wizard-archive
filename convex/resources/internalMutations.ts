@@ -11,6 +11,7 @@ import { campaignIdValidator } from '../campaigns/schema'
 import { versionStampValidator } from './schema'
 import { resourceIdValidator } from './validators'
 import { cleanupNoteBlockAccess as cleanupNoteBlockAccessFn } from './functions/noteBlockAccessCleanup'
+import { captureYjsHistoryCheckpoint as captureYjsHistoryCheckpointFn } from './functions/itemHistory'
 
 const workResult = v.union(
   v.object({ status: v.literal('unavailable') }),
@@ -51,6 +52,22 @@ export const cleanupNoteBlockAccess = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await cleanupNoteBlockAccessFn(ctx, args.campaignId, args.noteId, args.contentVersion)
+    return null
+  },
+})
+
+export const captureYjsHistoryCheckpoint = internalMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    expectedVersion: versionStampValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await captureYjsHistoryCheckpointFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      args.expectedVersion,
+    )
     return null
   },
 })
