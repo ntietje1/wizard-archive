@@ -10,7 +10,6 @@ import type { AuthoredDestinationDropResolver } from '../resources/authored-dest
 import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import { createCanvasInteractionRenderStore } from './interaction-render-store'
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
-import type { ResourcePreviewPublicationGateway } from '../resources/editor-runtime-contract'
 import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
 
 type CanvasEditorProps = Readonly<{
@@ -18,7 +17,6 @@ type CanvasEditorProps = Readonly<{
   drop?: AuthoredDestinationDropResolver
   focusedNodeId?: CanvasNodeId | null
   openDestination?: (destination: AuthoredDestination) => void
-  previewPublication?: ResourcePreviewPublicationGateway
   renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   session: CanvasSession
@@ -49,20 +47,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
     <CanvasEditorSurface
       canEdit={props.canEdit}
       collaboration={props.session.collaboration}
-      document={props.session.document}
       documentController={runtime.documentController}
       drop={props.drop ?? null}
       focusedNodeId={props.focusedNodeId ?? null}
       openDestination={props.openDestination ?? null}
-      previewPublication={
-        props.previewPublication
-          ? {
-              gateway: props.previewPublication,
-              prepare: props.session.flush,
-              resourceId: props.resourceId,
-            }
-          : null
-      }
       interactionController={runtime.interactionController}
       interactionRenderStore={runtime.interactionRenderStore}
       renderEmbed={props.renderEmbed}

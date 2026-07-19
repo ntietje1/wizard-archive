@@ -39,10 +39,7 @@ export async function createMapContent(
   campaignId: CampaignId,
   resourceId: ResourceId,
 ): Promise<void> {
-  const existing = await ctx.db
-    .query('resourceMapContents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
+  const existing = await loadMapContentRow(ctx.db, resourceId)
   if (existing) {
     if (existing.campaignUuid === campaignId) return
     throw new TypeError('Map content already exists')
@@ -58,12 +55,16 @@ export async function createMapContent(
   })
 }
 
+export async function loadMapContentRow(db: CampaignQueryCtx['db'], resourceId: ResourceId) {
+  return await db
+    .query('resourceMapContents')
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .unique()
+}
+
 export async function loadMapContentRows(db: CampaignQueryCtx['db'], resourceId: ResourceId) {
   const [content, pins] = await Promise.all([
-    db
-      .query('resourceMapContents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-      .unique(),
+    loadMapContentRow(db, resourceId),
     db
       .query('resourceMapPins')
       .withIndex('by_mapResourceUuid', (query) => query.eq('mapResourceUuid', resourceId))

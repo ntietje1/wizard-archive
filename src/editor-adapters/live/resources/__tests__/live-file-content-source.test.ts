@@ -10,12 +10,6 @@ import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/reso
 import { createLiveFileContentSource as createSource } from '../live-file-content-source'
 import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
 
-const generatePdfPreview = vi.hoisted(() => vi.fn())
-
-vi.mock('@wizard-archive/editor/resources/preview-generation', () => ({
-  generatePdfPreview,
-}))
-
 function createLiveFileContentSource(
   campaign: Parameters<typeof createSource>[0],
   backend: Parameters<typeof createSource>[1],
@@ -34,8 +28,6 @@ type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 afterEach(() => vi.unstubAllGlobals())
 
 describe('LiveFileContentSource', () => {
-  afterEach(() => generatePdfPreview.mockReset())
-
   it('rejects replacement before upload when the canonical resource permission is read only', async () => {
     const resourceId = testDomainId('resource', 'readonly-file')
     const upload = vi.fn()
@@ -297,110 +289,6 @@ describe('LiveFileContentSource', () => {
     expect(recording.completed).toHaveBeenCalledOnce()
     expect(recording.abandon).not.toHaveBeenCalled()
     expect(discard).not.toHaveBeenCalled()
-    source.dispose()
-  })
-
-  it('publishes a PDF preview after its canonical file creation commits', async () => {
-    const campaignId = testDomainId('campaign', 'create-pdf-preview-campaign')
-    const resourceId = testDomainId('resource', 'create-pdf-preview')
-    const operationId = testDomainId('operation', 'create-pdf-preview')
-    const jobId = testDomainId('importJob', 'create-pdf-preview')
-    const sessionId = 'create-pdf-preview-session' as Id<'fileStorage'>
-    const metadataVersion = await initialResourceMetadataVersion({
-      parentId: null,
-      kind: 'file',
-      title: canonicalizeResourceTitle('Reference.pdf'),
-      icon: null,
-      color: null,
-      lifecycle: 'active',
-    })
-    const preview = new Blob(['preview'], { type: 'image/webp' })
-    generatePdfPreview.mockResolvedValue(preview)
-    const publish = vi.fn(async (_resourceId, generate: () => Promise<Blob>) => {
-      await generate()
-      return { status: 'published' as const }
-    })
-    const source = createSource(
-      campaignId,
-      {
-        cancel: vi.fn(),
-        load: vi.fn(),
-        watch: vi.fn(() => () => undefined),
-        create: () =>
-          Promise.resolve({
-            status: 'completed',
-            receipt: {
-              campaignId,
-              operationId,
-              result: { type: 'created', resourceId },
-              postconditions: [{ state: 'present', resourceId, metadataVersion }],
-            },
-          }),
-        discard: vi.fn(),
-        download: vi.fn(),
-        refresh: vi.fn(),
-        replace: vi.fn(),
-        upload: () => Promise.resolve(sessionId),
-      },
-      () => ({ abandon: vi.fn(), completed: vi.fn() }),
-      createLiveResourceContentAuthorityFixture().authority,
-      { publish },
-    )
-    const bytes = new TextEncoder().encode('%PDF-1.7\npreview')
-
-    await source.executeTransfer(
-      { campaignId, jobId, operationId, destinationParentId: null },
-      { bytes, fileName: 'Reference.pdf' },
-    )
-    await vi.waitFor(() => expect(publish).toHaveBeenCalledWith(resourceId, expect.any(Function)))
-    expect(generatePdfPreview).toHaveBeenCalledWith(bytes)
-    source.dispose()
-  })
-
-  it('publishes a PDF preview after canonical file replacement', async () => {
-    const campaignId = testDomainId('campaign', 'replace-pdf-preview-campaign')
-    const resourceId = testDomainId('resource', 'replace-pdf-preview')
-    const bytes = new TextEncoder().encode('%PDF-1.7\nreplacement')
-    const metadata = {
-      classification: 'viewable_pdf' as const,
-      byteSize: bytes.byteLength,
-      detectedFormat: 'pdf',
-      extension: 'pdf',
-      mediaType: 'application/pdf',
-      viewerUnavailableReason: null,
-    }
-    const version = await initialFileContentVersion(bytes, metadata)
-    const publish = vi.fn(() => Promise.resolve({ status: 'published' as const }))
-    const source = createSource(
-      campaignId,
-      {
-        cancel: vi.fn(),
-        load: () =>
-          Promise.resolve({
-            status: 'ready',
-            content: { ...metadata, attachment: 'attached' },
-            version,
-          }),
-        watch: vi.fn(() => () => undefined),
-        create: vi.fn(),
-        discard: vi.fn(),
-        download: vi.fn(),
-        refresh: vi.fn(),
-        replace: () =>
-          Promise.resolve({
-            status: 'completed',
-            content: { ...metadata, attachment: 'attached' },
-            version,
-          }),
-        upload: () => Promise.resolve('replace-pdf-preview-session' as Id<'fileStorage'>),
-      },
-      () => ({ abandon: vi.fn(), completed: vi.fn() }),
-      createLiveResourceContentAuthorityFixture().authority,
-      { publish },
-    )
-
-    await source.replace(resourceId, version, { bytes, fileName: 'replacement.pdf' })
-    await vi.waitFor(() => expect(publish).toHaveBeenCalledWith(resourceId, expect.any(Function)))
     source.dispose()
   })
 

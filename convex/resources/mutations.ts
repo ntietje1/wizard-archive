@@ -49,8 +49,6 @@ import {
   resourcePresenceReleaseResultValidator,
   resourcePresenceUpdateResultValidator,
   resourceAssetsFolderResolutionValidator,
-  resourcePreviewClaimResultValidator,
-  resourcePreviewPublicationResultValidator,
   versionStampValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
@@ -91,10 +89,6 @@ import {
   validatePlainFileTransferCommit,
 } from './functions/plainFileTransfer'
 import type { PlainFileTransferStartResult } from './functions/plainFileTransfer'
-import {
-  claimResourcePreviewGeneration as claimResourcePreviewGenerationFn,
-  publishResourcePreview as publishResourcePreviewFn,
-} from './functions/resourcePreviewPublication'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -957,31 +951,6 @@ export const executeMapContentCommand = campaignMutation({
   },
   returns: mapContentMutationResultValidator,
   handler: async (ctx, args) => await executeMapContentCommandFn(ctx, args),
-})
-
-export const claimResourcePreviewGeneration = campaignMutation({
-  args: { resourceId: resourceIdValidator },
-  returns: resourcePreviewClaimResultValidator,
-  handler: async (ctx, args) =>
-    await claimResourcePreviewGenerationFn(
-      ctx,
-      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
-    ),
-})
-
-export const publishResourcePreview = campaignMutation({
-  args: {
-    resourceId: resourceIdValidator,
-    claimToken: v.string(),
-    uploadSessionId: v.id('fileStorage'),
-    byteSize: v.number(),
-  },
-  returns: resourcePreviewPublicationResultValidator,
-  handler: async (ctx, args) =>
-    await publishResourcePreviewFn(ctx, {
-      ...args,
-      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
-    }),
 })
 
 async function commitPreparedFileContentReplacement(

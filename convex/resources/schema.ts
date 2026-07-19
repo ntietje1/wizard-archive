@@ -63,21 +63,6 @@ export const resourcePreviewStateValidator = v.union(
     imageUrl: v.nullable(v.string()),
   }),
 )
-export const resourcePreviewClaimResultValidator = v.union(
-  v.object({ status: v.literal('claimed'), claimToken: v.string() }),
-  v.object({
-    status: v.literal('unavailable'),
-    reason: literals('current', 'in_progress', 'integrity_error', 'unauthorized', 'unsupported'),
-  }),
-)
-export const resourcePreviewPublicationResultValidator = v.union(
-  v.object({ status: v.literal('published') }),
-  v.object({ status: v.literal('stale') }),
-  v.object({
-    status: v.literal('rejected'),
-    reason: literals('integrity_error', 'invalid_claim', 'invalid_upload', 'unauthorized'),
-  }),
-)
 const grantedResourcePermissionValidator = literals(
   RESOURCE_PERMISSION.view,
   RESOURCE_PERMISSION.edit,
@@ -1140,40 +1125,6 @@ export const resourceTables = {
       searchField: 'body',
       filterFields: ['campaignUuid'],
     }),
-
-  resourcePreviewPublications: defineTable(
-    v.union(
-      v.object({
-        campaignUuid: campaignIdValidator,
-        resourceUuid: resourceIdValidator,
-        publication: v.object({
-          assetUuid: assetIdValidator,
-          sourceVersion: versionStampValidator,
-          publishedAt: v.number(),
-        }),
-        claim: v.nullable(
-          v.object({
-            token: v.string(),
-            sourceVersion: versionStampValidator,
-            expiresAt: v.number(),
-          }),
-        ),
-      }),
-      v.object({
-        campaignUuid: campaignIdValidator,
-        resourceUuid: resourceIdValidator,
-        publication: v.null(),
-        claim: v.object({
-          token: v.string(),
-          sourceVersion: versionStampValidator,
-          expiresAt: v.number(),
-        }),
-      }),
-    ),
-  )
-    .index('by_campaignUuid', ['campaignUuid'])
-    .index('by_campaignUuid_and_resourceUuid', ['campaignUuid', 'resourceUuid'])
-    .index('by_resourceUuid', ['resourceUuid']),
 
   resourceReferenceEdges: defineTable({
     campaignUuid: campaignIdValidator,

@@ -653,7 +653,7 @@ describe('authorized resource projection', () => {
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
   })
 
-  it('projects note previews from current actor-visible content and never exposes stale images', async () => {
+  it('projects note previews from actor-visible text without generated images', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -686,25 +686,6 @@ describe('authorized resource projection', () => {
         },
       ]),
     })
-    const claim = await asDm(campaign).mutation(
-      api.resources.mutations.claimResourcePreviewGeneration,
-      { campaignId: campaignUuid, resourceId },
-    )
-    if (claim.status !== 'claimed') throw new TypeError('Expected preview claim')
-    const previewBytes = new Blob(['preview'], { type: 'image/webp' })
-    const upload = await storeUncommittedTestUploadSession(
-      t,
-      campaign.dm.profile._id,
-      previewBytes,
-      'preview.webp',
-    )
-    await asDm(campaign).mutation(api.resources.mutations.publishResourcePreview, {
-      campaignId: campaignUuid,
-      resourceId,
-      claimToken: claim.claimToken,
-      uploadSessionId: upload.sessionId,
-      byteSize: previewBytes.size,
-    })
     await executeAccess(campaign, campaignUuid, {
       type: 'setMemberAccess',
       resourceIds: [resourceId],
@@ -729,7 +710,7 @@ describe('authorized resource projection', () => {
         excerpt: expect.stringContaining('Hidden heading'),
         outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
       },
-      imageUrl: expect.any(String),
+      imageUrl: null,
     })
 
     await executeBlockAccess(campaign, campaignUuid, {
@@ -770,7 +751,7 @@ describe('authorized resource projection', () => {
         excerpt: expect.stringContaining('Hidden heading'),
         outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
       },
-      imageUrl: expect.any(String),
+      imageUrl: null,
     })
 
     await executeAccess(campaign, campaignUuid, {
@@ -785,27 +766,6 @@ describe('authorized resource projection', () => {
         resourceId,
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
-
-    await t.run(async (ctx) => {
-      const content = await ctx.db
-        .query('resourceNoteContents')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-        .unique()
-      if (!content) throw new TypeError('Expected note content')
-      await ctx.db.patch('resourceNoteContents', content._id, {
-        version: {
-          ...content.version,
-          revision: content.version.revision + 1,
-          digest: 'f'.repeat(64),
-        },
-      })
-    })
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
-        campaignId: campaignUuid,
-        resourceId,
-      }),
-    ).resolves.toMatchObject({ status: 'ready', imageUrl: null })
   })
 
   it('projects canonical block visibility with note access as the outer gate', async () => {

@@ -146,10 +146,6 @@
       "types": "./dist/resources/resource-preview.d.mts",
       "default": "./dist/resources/resource-preview.mjs"
     },
-    "./resources/preview-generation": {
-      "types": "./dist/resources/resource-preview-generation.d.mts",
-      "default": "./dist/resources/resource-preview-generation.mjs"
-    },
     "./resources/search-policy": {
       "types": "./dist/resources/resource-search-policy.d.mts",
       "default": "./dist/resources/resource-search-policy.mjs"

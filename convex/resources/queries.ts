@@ -46,7 +46,7 @@ import {
 import { normalizeNoteBlockAccessSelection } from '@wizard-archive/editor/resources/note-block-access-policy'
 import { loadResourceReferenceRows } from './functions/resourceReferences'
 import { projectResourceReferenceDirection } from './functions/projectResourceReferences'
-import { loadResourcePreviewImageUrl } from './functions/resourcePreviewPublication'
+import { loadAuthoritativeResourcePreviewImageUrl } from './functions/resourcePreview'
 import { projectNoteSearchDocument } from './functions/resourceSearchProjection'
 import { createResourcePreview } from '@wizard-archive/editor/resources/preview'
 import type { ResourcePreview } from '@wizard-archive/editor/resources/editor-runtime-contract'
@@ -182,7 +182,7 @@ export const loadResourcePreview = resourceQuery({
         return {
           status: 'ready' as const,
           preview: storedResourcePreview(projectNoteSearchDocument(content.update).preview),
-          imageUrl: await loadResourcePreviewImageUrl(ctx, resource, content.version),
+          imageUrl: null,
         }
       } catch {
         return { status: 'unavailable' as const, reason: 'integrity_error' as const }
@@ -200,7 +200,7 @@ export const loadResourcePreview = resourceQuery({
     return {
       status: 'ready' as const,
       preview: searchDocument.preview,
-      imageUrl: await loadResourcePreviewImageUrl(ctx, resource),
+      imageUrl: await loadAuthoritativeResourcePreviewImageUrl(ctx, resource),
     }
   },
 })

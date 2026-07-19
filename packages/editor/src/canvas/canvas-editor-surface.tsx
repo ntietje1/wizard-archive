@@ -37,9 +37,6 @@ import { useCanvasSurface } from './use-canvas-surface'
 import { useCanvasDropTarget } from './canvas-drop-target'
 import type { CanvasBounds } from './canvas-bounds'
 import { canvasNodeSize } from './canvas-layout'
-import type * as Y from 'yjs'
-import { useResourcePreviewPublication } from '../resources/use-resource-preview-publication'
-import type { ResourcePreviewPublicationBinding } from '../resources/use-resource-preview-publication'
 
 const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
   ['1', 'select'],
@@ -54,14 +51,12 @@ const CANVAS_TOOL_SHORTCUTS = new Map<string, CanvasTool>([
 type CanvasEditorSurfaceProps = Readonly<{
   canEdit: boolean
   collaboration: ContentCollaboration
-  document: Y.Doc
   documentController: CanvasDocumentController
   drop: AuthoredDestinationDropResolver | null
   focusedNodeId: CanvasNodeId | null
   interactionController: CanvasInteractionController
   interactionRenderStore: ReturnType<typeof createCanvasInteractionRenderStore>
   openDestination: ((destination: AuthoredDestination) => void) | null
-  previewPublication: ResourcePreviewPublicationBinding | null
   renderEmbed: CanvasEmbedRenderer
   resourceId: ResourceId
   title: string
@@ -70,14 +65,12 @@ type CanvasEditorSurfaceProps = Readonly<{
 export function CanvasEditorSurface({
   canEdit,
   collaboration,
-  document,
   documentController,
   drop,
   focusedNodeId,
   interactionController,
   interactionRenderStore,
   openDestination,
-  previewPublication,
   renderEmbed,
   resourceId,
   title,
@@ -103,14 +96,6 @@ export function CanvasEditorSurface({
     drop,
     interactionController,
   })
-  useResourcePreviewPublication({
-    binding: previewPublication,
-    containerRef: surface,
-    document,
-    enabled: canEdit,
-    resolveElement: (container) => container,
-  })
-
   useEffect(() => {
     interactionController.reconcileDocument(
       new Set(content.nodes.map((node) => node.id)),

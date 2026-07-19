@@ -31,7 +31,6 @@ import { createLiveResourceAssetsFolderGateway } from './live-resource-assets-fo
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createLiveResourceReferenceSource } from './live-resource-references'
 import { createLiveResourcePreviewSource } from './live-resource-preview-source'
-import { createLiveResourcePreviewPublicationGateway } from './live-resource-preview-publication'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -211,24 +210,6 @@ function createScopedLiveResourceRuntime(
       throw error
     }
   }
-  const previewPublication = createLiveResourcePreviewPublicationGateway({
-    claim: (resourceId) =>
-      write(() =>
-        convex.mutation(api.resources.mutations.claimResourcePreviewGeneration, {
-          campaignId: currentScope.campaignId,
-          resourceId,
-        }),
-      ),
-    discard: discardUpload,
-    publish: (args) =>
-      write(() =>
-        convex.mutation(api.resources.mutations.publishResourcePreview, {
-          campaignId: currentScope.campaignId,
-          ...args,
-        }),
-      ),
-    upload: uploadFile,
-  })
   const files = createLiveFileContentSource(
     currentScope.campaignId,
     {
@@ -262,7 +243,6 @@ function createScopedLiveResourceRuntime(
     },
     undo.beginRecording,
     contentAuthority,
-    currentScope.projection === 'view_as_player' ? null : previewPublication,
   )
   const maps = createLiveMapSessionSource(
     currentScope.campaignId,
@@ -450,10 +430,6 @@ function createScopedLiveResourceRuntime(
             : unsupported,
         assets: assetsCapability,
         previews: { status: 'available', value: previews.source },
-        previewPublication:
-          currentScope.projection === 'view_as_player'
-            ? { status: 'unavailable', reason: 'unauthorized' }
-            : { status: 'available', value: previewPublication },
         references: referencesCapability,
         undo: undoCapability,
       },

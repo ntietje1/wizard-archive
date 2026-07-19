@@ -168,34 +168,76 @@ describe('ResourcePreviewSurface', () => {
     noteDocument.destroy()
   })
 
-  it('uses the canonical preview source for card thumbnails and drops failed images', () => {
+  it('uses actor-safe text, authoritative images, and deterministic card fallbacks', () => {
     const note = resource('note', 'Note')
-    const imageUrl = parseSafeHttpsUrl('https://example.com/note.webp')
+    const file = resource('file', 'Image')
+    const pdf = resource('file', 'Rules.pdf')
+    const canvas = resource('canvas', 'Canvas')
+    const imageUrl = parseSafeHttpsUrl('https://example.com/image.png')
     if (!imageUrl) throw new TypeError('Expected a safe test URL')
-    const previewState = {
-      status: 'ready' as const,
-      imageUrl,
-      preview: createResourcePreview('note', 'Canonical excerpt', []),
-    }
+    const previews = new Map([
+      [
+        note.id,
+        {
+          status: 'ready' as const,
+          imageUrl: null,
+          preview: createResourcePreview('note', 'Canonical excerpt', []),
+        },
+      ],
+      [
+        file.id,
+        {
+          status: 'ready' as const,
+          imageUrl,
+          preview: createResourcePreview('file', '', []),
+        },
+      ],
+      [
+        pdf.id,
+        {
+          status: 'ready' as const,
+          imageUrl: null,
+          preview: createResourcePreview('file', '', []),
+        },
+      ],
+      [
+        canvas.id,
+        {
+          status: 'ready' as const,
+          imageUrl: null,
+          preview: createResourcePreview('canvas', '', []),
+        },
+      ],
+    ])
     const runtime = {
       resources: {
         previews: {
           status: 'available',
           value: {
-            get: () => previewState,
+            get: (resourceId: AuthorizedResourceSummary['id']) => previews.get(resourceId)!,
             subscribe: () => () => undefined,
           },
         },
       },
     } as unknown as EditorRuntime
 
-    render(<ResourcePreviewSurface mode="card" resource={note} runtime={runtime} />)
+    const view = render(<ResourcePreviewSurface mode="card" resource={note} runtime={runtime} />)
+    expect(screen.getByText('Canonical excerpt')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
 
-    const image = screen.getByRole('img', { name: 'Preview of Note' })
+    view.rerender(<ResourcePreviewSurface mode="card" resource={file} runtime={runtime} />)
+    const image = screen.getByRole('img', { name: 'Preview of Image' })
     expect(image).toHaveAttribute('src', imageUrl)
     fireEvent.error(image)
-    expect(screen.queryByRole('img', { name: 'Preview of Note' })).not.toBeInTheDocument()
-    expect(screen.getByText('Canonical excerpt')).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: 'Preview of Image' })).not.toBeInTheDocument()
+    expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
+
+    view.rerender(<ResourcePreviewSurface mode="card" resource={pdf} runtime={runtime} />)
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
+
+    view.rerender(<ResourcePreviewSurface mode="card" resource={canvas} runtime={runtime} />)
+    expect(screen.getByText('Canvas preview unavailable')).toBeInTheDocument()
   })
 
   it('keeps unauthorized card previews content-free', () => {

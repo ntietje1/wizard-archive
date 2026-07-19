@@ -35,10 +35,7 @@ export async function loadFileContent(ctx: CampaignQueryCtx, resourceId: Resourc
 }
 
 export async function loadFileContentState(ctx: CampaignQueryCtx, resourceId: ResourceId) {
-  const content = await ctx.db
-    .query('resourceFileContents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
+  const content = await loadFileContentRow(ctx.db, resourceId)
   if (!content) return { status: 'integrity_error' as const, issue: 'content_missing' as const }
   if (content.campaignUuid !== ctx.resourceScope.campaignId) {
     return { status: 'integrity_error' as const, issue: 'content_corrupt' as const }
@@ -48,11 +45,15 @@ export async function loadFileContentState(ctx: CampaignQueryCtx, resourceId: Re
   return { status: 'ready' as const, content }
 }
 
-export async function loadFileContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {
-  return await ctx.db
+export async function loadFileContentRow(db: CampaignQueryCtx['db'], resourceId: ResourceId) {
+  return await db
     .query('resourceFileContents')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
+}
+
+export async function loadFileContentDeletion(ctx: CampaignMutationCtx, resourceId: ResourceId) {
+  return await loadFileContentRow(ctx.db, resourceId)
 }
 
 export async function prepareFileContentCopy(

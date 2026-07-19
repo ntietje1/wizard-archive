@@ -86,19 +86,6 @@ export interface ResourcePreviewSource {
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
-export type ResourcePreviewPublicationResult =
-  | Readonly<{ status: 'published' | 'current' | 'in_progress' | 'stale' | 'unsupported' }>
-  | Readonly<{ status: 'rejected'; reason: 'integrity_error' | 'unauthorized' }>
-  | Readonly<{ status: 'failed'; error: unknown }>
-
-export interface ResourcePreviewPublicationGateway {
-  publish(
-    resourceId: ResourceId,
-    generate: () => Promise<Blob>,
-    signal?: AbortSignal,
-  ): Promise<ResourcePreviewPublicationResult>
-}
-
 export type ResourceReferenceDirection =
   | Readonly<{ status: 'ready'; edges: ReadonlyArray<ReferenceGraphEdge> }>
   | Readonly<{ status: 'capacity_exceeded' }>
@@ -179,7 +166,6 @@ export interface EditorRuntime {
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly assets: ResourceCapability<ResourceAssetsFolderGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>
-    readonly previewPublication: ResourceCapability<ResourcePreviewPublicationGateway>
     readonly references: ResourceCapability<ResourceReferenceSource>
     readonly undo: ResourceCapability<ResourceUndoHistory>
   }
