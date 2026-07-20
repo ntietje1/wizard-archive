@@ -429,12 +429,21 @@ function useWorkspaceResourceDragOverlay(snapshot: WorkspaceResourceIndexSnapsho
     clearWorkspaceResourceDropTargets(event.currentTarget)
     setState(null)
   }
-  const leave = (event: DragEvent<HTMLElement>) => {
-    const nextTarget = event.relatedTarget
-    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
-    clearWorkspaceResourceDropTargets(event.currentTarget)
+  return {
+    begin,
+    end,
+    leave: clearWorkspaceResourceDropTargetsAfterLeave,
+    move,
+    nativePreviewRef,
+    state,
+    updateEffect,
   }
-  return { begin, end, leave, move, nativePreviewRef, state, updateEffect }
+}
+
+function clearWorkspaceResourceDropTargetsAfterLeave(event: DragEvent<HTMLElement>) {
+  const nextTarget = event.relatedTarget
+  if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
+  clearWorkspaceResourceDropTargets(event.currentTarget)
 }
 
 function WorkspaceTransferProgress({ progress }: { progress: PlainTransferProgress }) {
