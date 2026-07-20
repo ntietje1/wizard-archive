@@ -28,13 +28,17 @@ export async function reapplyYjsRecovery(
     snapshotVersion: VersionStamp
   }>,
 ): Promise<ContentRecoveryActionResult> {
-  const stored = await ctx.db
-    .query('yjsRecoveryReapplyOperations')
-    .withIndex('by_campaign_and_operation', (query) =>
-      query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('operationUuid', args.operationId),
-    )
-    .unique()
-  const fingerprint = await recoveryFingerprint(args)
+  const [stored, fingerprint] = await Promise.all([
+    ctx.db
+      .query('yjsRecoveryReapplyOperations')
+      .withIndex('by_campaign_and_operation', (query) =>
+        query
+          .eq('campaignUuid', ctx.resourceScope.campaignId)
+          .eq('operationUuid', args.operationId),
+      )
+      .unique(),
+    recoveryFingerprint(args),
+  ])
   if (stored) {
     return stored.actorMemberUuid === ctx.resourceScope.actorId &&
       stored.fingerprint === fingerprint

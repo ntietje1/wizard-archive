@@ -1,6 +1,6 @@
 import type { CampaignId, CampaignMemberId } from './domain-id'
 
-export type WorkspacePanelGeometry = Readonly<{
+type WorkspacePanelGeometry = Readonly<{
   left: number
   right: number
 }>

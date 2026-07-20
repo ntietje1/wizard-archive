@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import type { CSSProperties, MouseEvent, PointerEvent, RefObject } from 'react'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentController, CanvasDocumentNodeUpdate } from './document-controller'
@@ -371,7 +370,7 @@ function CanvasNode({
   )
 }
 
-const CanvasNodeContent = memo(function CanvasNodeContent({
+function CanvasNodeContent({
   canEdit,
   committedSelected,
   documentController,
@@ -450,7 +449,7 @@ const CanvasNodeContent = memo(function CanvasNodeContent({
       }
     />
   )
-})
+}
 
 function CanvasNodeConnectionHandles({
   interactionController,
