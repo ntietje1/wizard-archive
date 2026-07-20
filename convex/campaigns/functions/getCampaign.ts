@@ -15,18 +15,14 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import { toCampaignMemberProjection } from './campaignMemberProjection'
 
 function toCampaign(campaign: CampaignRow): Omit<Campaign, 'dmUserProfile' | 'myMembership'> {
-  const {
-    _id: _rowId,
-    _creationTime,
-    campaignUuid,
-    currentSessionId: _currentSessionId,
-    dmUserId: _dmUserRowId,
-    ...fields
-  } = campaign
   return {
-    ...fields,
-    id: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
-    createdAt: _creationTime,
+    id: assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
+    createdAt: campaign._creationTime,
+    name: campaign.name,
+    description: campaign.description,
+    status: campaign.status,
+    resourceAccessDefaults: campaign.resourceAccessDefaults,
+    acceptedMemberCount: campaign.acceptedMemberCount,
   }
 }
 

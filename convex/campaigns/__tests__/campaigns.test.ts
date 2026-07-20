@@ -88,6 +88,11 @@ describe('createCampaign', () => {
       expect(members[0].userId).toBe(profile._id)
       expect(isUuidV7(members[0].campaignMemberUuid)).toBe(true)
     })
+    const projection = await authed.query(api.campaigns.queries.getUserCampaigns, {
+      paginationOpts: { cursor: null, numItems: 1 },
+    })
+    expect(projection.page).toHaveLength(1)
+    expect(projection.page[0]).not.toHaveProperty('assetsFolderUuid')
   })
 
   it('validates name minimum length', async () => {
