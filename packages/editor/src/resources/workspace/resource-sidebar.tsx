@@ -40,6 +40,7 @@ import {
   allowWorkspaceResourceDrop,
   finishWorkspaceResourceDrop,
   leaveWorkspaceResourceDrop,
+  workspaceResourceDropTargetProps,
   workspaceResourceInteractionProps,
 } from '../workspace-resource-drag'
 import { resourceKindLabel } from './resource-operations'
@@ -240,7 +241,7 @@ export function ResourceSidebar({
       />
       <div
         aria-label={`${view} resource drop zone`}
-        className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:bg-muted/40"
+        className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
         onDrop={
@@ -618,22 +619,21 @@ function ResourceTreeRow({
 }) {
   const expanded = expansion.isExpanded(resource.id)
   const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const
-  const children = resource.kind === 'folder' ? snapshot.list(childQuery) : null
-  const hasChildren = children?.state !== 'known' || children.items.length > 0
 
   return (
     <li>
       <div
         aria-current={selectedResourceId === resource.id ? 'page' : undefined}
+        data-resource-kind={resource.kind}
         data-selected={selection.selectedIds.includes(resource.id)}
-        className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+        {...workspaceResourceDropTargetProps({ actions, canEdit, resource })}
+        className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
         style={{ paddingLeft: `${4 + depth * 12}px` }}
       >
         <SidebarIndentGuides depth={depth} />
         {resource.kind === 'folder' ? (
           <FolderExpansionButton
             expanded={expanded}
-            hasChildren={hasChildren}
             resource={resource}
             title={resource.title}
             onToggle={() => expansion.setExpanded(resource.id, !expanded)}
@@ -688,20 +688,18 @@ function SidebarIndentGuides({ depth }: { depth: number }) {
       aria-hidden="true"
       className="pointer-events-none absolute inset-y-0 border-l border-border"
       key={index}
-      style={{ left: `${9 + index * 12}px` }}
+      style={{ left: `${16 + index * 12}px` }}
     />
   ))
 }
 
 function FolderExpansionButton({
   expanded,
-  hasChildren,
   onToggle,
   resource,
   title,
 }: {
   expanded: boolean
-  hasChildren: boolean
   onToggle: () => void
   resource: AuthorizedResourceSummary
   title: string
@@ -711,23 +709,19 @@ function FolderExpansionButton({
     <button
       type="button"
       aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
-      className="relative inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      aria-expanded={expanded}
+      className="relative inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
       onClick={onToggle}
     >
       <Icon
-        className={
-          hasChildren
-            ? 'size-4 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0'
-            : 'size-4'
-        }
+        className="size-4 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
         style={{ color: resource.color ?? undefined }}
       />
-      {hasChildren &&
-        (expanded ? (
-          <ChevronDown className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
-        ) : (
-          <ChevronRight className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
-        ))}
+      {expanded ? (
+        <ChevronDown className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
+      ) : (
+        <ChevronRight className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
+      )}
     </button>
   )
 }
@@ -806,7 +800,6 @@ function ResourceTreeButton({
       data-resource-kind={resource.kind}
       data-selected={selection.selectedIds.includes(resource.id)}
       {...workspaceResourceInteractionProps({
-        actions,
         canEdit,
         onOpenContextMenu,
         onSelectionChange,
@@ -814,7 +807,7 @@ function ResourceTreeButton({
         selection,
       })}
       tabIndex={tabbable ? 0 : -1}
-      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring"
+      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={(event) =>
         selectTreeResource({ actions, event, resource, visibleIds, onSelectionChange })
       }

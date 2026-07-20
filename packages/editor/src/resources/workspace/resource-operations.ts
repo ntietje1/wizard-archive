@@ -48,8 +48,6 @@ export type WorkspaceCreationSettlement =
   | Readonly<{ status: 'cancelled' }>
   | Readonly<{ status: 'rejected'; reason: string }>
 
-const MAX_EMPTY_TRASH_ROOTS_PER_COMMAND = 25
-
 export function createWorkspaceActions(runtime: EditorRuntime, report: WorkspaceReport) {
   return {
     bookmark: (resourceIds: ReadonlyArray<ResourceId>, bookmarked: boolean) =>
@@ -75,8 +73,6 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
       downloadWorkspaceResource(runtime, resource, report),
     duplicate: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
       duplicateWorkspaceResources(runtime, resourceIds, destinationParentId, report),
-    emptyTrash: (resourceIds: ReadonlyArray<ResourceId>) =>
-      emptyWorkspaceTrash(runtime, resourceIds, report),
     importExternal: (
       destinationParentId: ResourceId | null,
       dataTransfer: BrowserPlainTransferData,
@@ -609,53 +605,6 @@ async function changeWorkspaceResourcesLifecycle(
   )
 }
 
-async function emptyWorkspaceTrash(
-  runtime: EditorRuntime,
-  resourceIds: ReadonlyArray<ResourceId>,
-  report: WorkspaceReport,
-): Promise<void> {
-  const structure = runtime.resources.structure
-  if (structure.status !== 'available') {
-    report('This workspace is read only')
-    return
-  }
-  const batches = Array.from(
-    { length: Math.ceil(resourceIds.length / MAX_EMPTY_TRASH_ROOTS_PER_COMMAND) },
-    (_, index) =>
-      resourceIds.slice(
-        index * MAX_EMPTY_TRASH_ROOTS_PER_COMMAND,
-        (index + 1) * MAX_EMPTY_TRASH_ROOTS_PER_COMMAND,
-      ),
-  )
-  const run = async (batchIndex: number, batchOperationId: ReturnType<typeof newOperationId>) => {
-    const batch = batches[batchIndex]
-    if (!batch) {
-      report('Trash emptied')
-      return
-    }
-    const delivery = await structure.value.execute({
-      campaignId: runtime.scope.campaignId,
-      operationId: batchOperationId,
-      command: { type: 'permanentlyDelete', resourceIds: batch },
-    })
-    const completed = Math.min(batchIndex * MAX_EMPTY_TRASH_ROOTS_PER_COMMAND, resourceIds.length)
-    if (delivery.status === 'indeterminate') {
-      report(
-        `Deleted ${completed} of ${resourceIds.length}; delivery is uncertain`,
-        () => void run(batchIndex, batchOperationId),
-      )
-      return
-    }
-    if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
-      report(`Deleted ${completed} of ${resourceIds.length}; ${deliveryMessage(delivery)}`)
-      return
-    }
-    clearDeletedTarget(runtime, delivery)
-    await run(batchIndex + 1, newOperationId())
-  }
-  await run(0, newOperationId())
-}
-
 function clearDeletedTarget(
   runtime: EditorRuntime,
   delivery: CommandDelivery<ResourceStructureCommandResult>,
@@ -671,10 +620,6 @@ function clearDeletedTarget(
   if (target && delivery.result.receipt.result.resourceIds.includes(target.resourceId)) {
     runtime.navigation.open(null)
   }
-}
-
-function newOperationId() {
-  return generateDomainId(DOMAIN_ID_KIND.operation)
 }
 
 async function duplicateWorkspaceResources(

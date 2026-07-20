@@ -1,5 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
-import { ChevronRight, Clock3, FileText, Link2, List, Loader2, RotateCcw, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronRight, Clock3, FileText, Link2, List, Loader2, RotateCcw } from 'lucide-react'
 import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
 import { formatRelativeTime } from '@wizard-archive/ui/utils/format-relative-time'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
@@ -18,7 +18,7 @@ import type { NoteOutlineNode } from '../../notes/document/outline'
 import type * as Y from 'yjs'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 import { canonicalTargetKey } from '../authored-destination'
-import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
+import { useResourceStoreSnapshot, useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
 
@@ -27,7 +27,6 @@ export function ResourceRightSidebar({
   activePanel,
   noteHeadingNavigation,
   onActivePanelChange,
-  onClose,
   resource,
   runtime,
 }: {
@@ -35,7 +34,6 @@ export function ResourceRightSidebar({
   activePanel: PanelId
   noteHeadingNavigation: NoteHeadingNavigationRef
   onActivePanelChange: (panel: PanelId) => void
-  onClose: () => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -64,7 +62,7 @@ export function ResourceRightSidebar({
   const selected = panels.find((panel) => panel.id === activePanel && panel.available) ?? panels[0]
   return (
     <aside aria-label="Resource panel" className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-border px-1">
+      <div className="flex h-8 shrink-0 items-center border-b border-border px-1">
         <div className="flex items-center gap-0.5">
           {panels.map((panel) => (
             <button
@@ -81,14 +79,6 @@ export function ResourceRightSidebar({
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          className="inline-flex size-6 items-center justify-center rounded hover:bg-muted"
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ResourcePanel
@@ -156,10 +146,7 @@ function ResourceReferencesPanel({
   runtime: EditorRuntime
   source: ResourceReferenceSource
 }) {
-  const state = useSyncExternalStore(
-    (listener) => source.subscribe(resource.id, listener),
-    () => source.get(resource.id),
-  )
+  const state = useResourceStoreSnapshot(source, resource.id)
   const index = useWorkspaceIndexSnapshot(runtime.resources.index)
   const label = kind === 'backlinks' ? 'backlinks' : 'outgoing links'
   if (state.status === 'loading') {
@@ -244,10 +231,7 @@ function NoteOutlinePanel({
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  const state = useSyncExternalStore(
-    (listener) => runtime.content.notes.subscribe(resource.id, listener),
-    () => runtime.content.notes.get(resource.id),
-  )
+  const state = useResourceStoreSnapshot(runtime.content.notes, resource.id)
   const document =
     state.status === 'initializing'
       ? state.local
@@ -410,10 +394,7 @@ function FileDetails({
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  const state = useSyncExternalStore(
-    (listener) => runtime.content.files.subscribe(resource.id, listener),
-    () => runtime.content.files.get(resource.id),
-  )
+  const state = useResourceStoreSnapshot(runtime.content.files, resource.id)
   if (state.status !== 'ready') {
     return <p className="mt-4 text-xs text-muted-foreground">File metadata is unavailable.</p>
   }
@@ -459,10 +440,7 @@ function AvailableResourceHistoryPanel({
   resourceId: AuthorizedResourceSummary['id']
   source: ItemHistoryController
 }) {
-  const state = useSyncExternalStore(
-    (listener) => source.subscribe(resourceId, listener),
-    () => source.get(resourceId),
-  )
+  const state = useResourceStoreSnapshot(source, resourceId)
   const list = state.list
   if (list.status === 'loading') {
     return <p className="p-3 text-sm text-muted-foreground">Loading history…</p>

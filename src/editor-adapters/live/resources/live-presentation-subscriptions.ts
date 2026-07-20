@@ -9,10 +9,11 @@ export function createLivePresentationSubscriptions<TId>(
       for (const listener of listeners.get(id) ?? []) listener()
     },
     subscribe: (id: TId, listener: () => void) => {
-      const idListeners = listeners.get(id) ?? new Set()
+      const existing = listeners.get(id)
+      const idListeners = existing ?? new Set()
       idListeners.add(listener)
       listeners.set(id, idListeners)
-      start(id)
+      if (!existing) start(id)
       return () => {
         idListeners.delete(listener)
         if (idListeners.size > 0) return

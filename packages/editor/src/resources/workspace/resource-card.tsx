@@ -3,7 +3,10 @@ import type { MouseEvent } from 'react'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
 import { workspaceSelectionIntent } from '../workspace-selection'
-import { workspaceResourceInteractionProps } from '../workspace-resource-drag'
+import {
+  workspaceResourceDropTargetProps,
+  workspaceResourceInteractionProps,
+} from '../workspace-resource-drag'
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
@@ -61,7 +64,6 @@ export function ResourceCard({
 }) {
   const folder = resource.kind === 'folder'
   const interaction = workspaceResourceInteractionProps({
-    actions,
     canEdit,
     onOpenContextMenu,
     onSelectionChange,
@@ -73,8 +75,9 @@ export function ResourceCard({
       data-resource-id={resource.id}
       data-resource-kind={resource.kind}
       data-selected={selected}
+      {...workspaceResourceDropTargetProps({ actions, canEdit, resource })}
       {...interaction}
-      className={`group/resource-card relative flex h-[140px] w-full flex-col overflow-hidden text-left outline-none focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring ${
+      className={`group/resource-card relative flex h-[140px] w-full flex-col overflow-hidden text-left outline-none focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring ${
         folder
           ? 'rounded-sm'
           : 'rounded-md border border-border bg-card p-2 shadow-sm hover:bg-muted/60'

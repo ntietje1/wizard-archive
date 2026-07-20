@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { initialVersion, sha256Digest } from '../component-version'
@@ -85,7 +85,6 @@ describe('ResourceRightSidebar note outline', () => {
         resource={authorizedResourceSummaryFromRecord(resource, 'edit')}
         runtime={core.runtime}
         onActivePanelChange={vi.fn()}
-        onClose={vi.fn()}
       />,
     )
 
@@ -215,7 +214,6 @@ describe('ResourceRightSidebar references', () => {
         resource={authorizedResourceSummaryFromRecord(records[0]!, 'edit')}
         runtime={core.runtime}
         onActivePanelChange={vi.fn()}
-        onClose={vi.fn()}
       />,
     )
 
@@ -223,6 +221,77 @@ describe('ResourceRightSidebar references', () => {
     fireEvent.click(screen.getByRole('button', { name: /Hidden vault/ }))
     expect(openTarget).toHaveBeenCalledWith(target)
 
+    core.dispose()
+  })
+
+  it('keeps the canvas reference subscription stable across panel renders', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const version = initialVersion(await sha256Digest(new Uint8Array([10])))
+    const resource: ResourceRecord = {
+      id: resourceId,
+      campaignId,
+      parentId: null,
+      kind: 'canvas',
+      title: canonicalizeResourceTitle('Reference board'),
+      icon: null,
+      color: null,
+      lifecycle: { state: 'active' },
+      metadataVersion: version,
+      created: { at: 1, by: actorId },
+      updated: { at: 1, by: actorId },
+    }
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [resource],
+        tombstones: [],
+        aliases: [],
+      },
+      navigation: {
+        current: () => ({ kind: 'resource', resourceId }),
+        open: vi.fn(),
+        subscribe: () => () => {},
+      },
+    })
+    await core.runtime.resources.loader.ensureResource(resourceId)
+    const subscribe = vi.fn(() => () => {})
+    const state = {
+      status: 'ready' as const,
+      outgoing: { status: 'ready' as const, edges: [] },
+      backlinks: { status: 'ready' as const, edges: [] },
+    }
+    const references = {
+      get: () => state,
+      subscribe,
+    }
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        references: { status: 'available' as const, value: references },
+      },
+    }
+    const panel = (
+      <ResourceRightSidebar
+        actions={createWorkspaceActions(runtime, vi.fn())}
+        activePanel="outgoing"
+        noteHeadingNavigation={{ current: null }}
+        resource={authorizedResourceSummaryFromRecord(resource, 'edit')}
+        runtime={runtime}
+        onActivePanelChange={vi.fn()}
+      />
+    )
+    const view = render(panel)
+    expect(screen.getByText('No outgoing links')).toBeVisible()
+    await waitFor(() => expect(subscribe).toHaveBeenCalledOnce())
+
+    view.rerender(panel)
+
+    expect(subscribe).toHaveBeenCalledOnce()
     core.dispose()
   })
 })
@@ -319,7 +388,6 @@ describe('ResourceRightSidebar item history', () => {
         resource={authorizedResourceSummaryFromRecord(resource, 'edit')}
         runtime={runtime}
         onActivePanelChange={vi.fn()}
-        onClose={vi.fn()}
       />,
     )
 
@@ -342,7 +410,6 @@ describe('ResourceRightSidebar item history', () => {
         resource={authorizedResourceSummaryFromRecord(resource, 'view')}
         runtime={runtime}
         onActivePanelChange={vi.fn()}
-        onClose={vi.fn()}
       />,
     )
     expect(screen.getByRole('button', { name: 'History' })).toBeDisabled()

@@ -103,14 +103,11 @@ export function CanvasConditionalToolbar({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1" role="group" aria-label="Stroke size">
-        <p className="text-[11px] font-medium text-muted-foreground">Stroke size</p>
-        <StrokeSizeControl
-          minimum={1}
-          value={{ state: 'shared', value: interaction.toolSettings.strokeSize }}
-          onChange={(value) => setSettings({ strokeSize: value })}
-        />
-      </div>
+      <StrokeSizeControl
+        minimum={1}
+        value={{ state: 'shared', value: interaction.toolSettings.strokeSize }}
+        onChange={(value) => setSettings({ strokeSize: value })}
+      />
 
       {interaction.tool === 'edge' ? (
         <>

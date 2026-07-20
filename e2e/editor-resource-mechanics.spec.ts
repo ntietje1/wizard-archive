@@ -59,7 +59,7 @@ test.describe('resource mechanics', () => {
     await expect(details).toContainText('Campaign root')
     await expect(details).toContainText('01980c1a-5e70-7000-8000-000000000401')
 
-    await details.getByRole('button', { name: 'Close sidebar' }).click()
+    await page.getByRole('button', { name: 'Close resource panel' }).click()
     await invoice.click()
     await page.getByRole('button', { name: 'Open resource panel' }).click()
     await expect(details).toContainText('File metadata')
@@ -132,8 +132,10 @@ test.describe('resource mechanics', () => {
     await trash.getByRole('button', { name: 'Restore Blue-glass Invoice' }).click()
     await expect(invoice).toBeVisible()
 
-    await trash.getByRole('button', { name: 'Empty Trash' }).click()
-    await trash.getByRole('button', { name: 'Confirm empty trash' }).click()
+    for (const title of ['Harbor Heist Board', 'Moonwell Docks']) {
+      await trash.getByRole('button', { name: `Delete ${title} forever` }).click()
+      await trash.getByRole('button', { name: `Confirm delete ${title} forever` }).click()
+    }
     await expect(trash).toContainText('Trash is empty')
     await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
   })

@@ -1,8 +1,26 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { finishWorkspaceResourceDrop } from '../workspace-resource-drag'
+import { allowWorkspaceResourceDrop, finishWorkspaceResourceDrop } from '../workspace-resource-drag'
 import type { WorkspaceActions } from '../workspace/resource-operations'
 
 describe('workspace external resource drops', () => {
+  it('keeps exactly one resource drop target active', () => {
+    const previous = document.createElement('div')
+    const current = document.createElement('div')
+    previous.dataset.dropTarget = 'true'
+    previous.dataset.dropOperation = 'move'
+    document.body.append(previous, current)
+    const drop = dropEvent(current, current, browserDataTransfer())
+
+    allowWorkspaceResourceDrop(drop.event)
+
+    expect(previous).not.toHaveAttribute('data-drop-target')
+    expect(previous).not.toHaveAttribute('data-drop-operation')
+    expect(current).toHaveAttribute('data-drop-target', 'true')
+    expect(current).toHaveAttribute('data-drop-operation', 'copy')
+    previous.remove()
+    current.remove()
+  })
+
   it('routes browser files to the destination through the workspace transfer action', async () => {
     const target = document.createElement('div')
     const dataTransfer = browserDataTransfer()

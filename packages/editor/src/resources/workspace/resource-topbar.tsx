@@ -1,6 +1,14 @@
 import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronRight, Eye, FolderInput, Menu, MoreVertical, PanelRightOpen } from 'lucide-react'
+import {
+  ChevronRight,
+  Eye,
+  FolderInput,
+  MoreVertical,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
@@ -16,9 +24,10 @@ export function ResourceTopbar({
   onModeChange,
   onOpenHistory,
   onOpenLeftSidebar,
-  onOpenRightSidebar,
+  onToggleRightSidebar,
   onRequestMove,
   resource,
+  rightSidebarVisible,
   runtime,
 }: {
   actions: WorkspaceActions
@@ -29,9 +38,10 @@ export function ResourceTopbar({
   onModeChange: (mode: 'editor' | 'viewer') => void
   onOpenHistory: () => void
   onOpenLeftSidebar: () => void
-  onOpenRightSidebar: () => void
+  onToggleRightSidebar: () => void
   onRequestMove: (resourceIds: ReadonlyArray<AuthorizedResourceSummary['id']>) => void
   resource: AuthorizedResourceSummary
+  rightSidebarVisible: boolean
   runtime: EditorRuntime
 }) {
   const [editing, setEditing] = useState(false)
@@ -45,7 +55,7 @@ export function ResourceTopbar({
     <header className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border px-1">
       {leftSidebarAvailable && !leftSidebarVisible && (
         <TopbarIcon label="Open sidebar" onClick={onOpenLeftSidebar}>
-          <Menu className="size-4" />
+          <PanelLeftOpen className="size-4" />
         </TopbarIcon>
       )}
       <div className="flex min-w-0 flex-1 items-center pl-1">
@@ -107,8 +117,15 @@ export function ResourceTopbar({
       {runtime.scope.projection === 'dm' && (
         <ResourceSharingControl resource={resource} runtime={runtime} />
       )}
-      <TopbarIcon label="Open resource panel" onClick={onOpenRightSidebar}>
-        <PanelRightOpen className="size-4" />
+      <TopbarIcon
+        label={rightSidebarVisible ? 'Close resource panel' : 'Open resource panel'}
+        onClick={onToggleRightSidebar}
+      >
+        {rightSidebarVisible ? (
+          <PanelRightClose className="size-4" />
+        ) : (
+          <PanelRightOpen className="size-4" />
+        )}
       </TopbarIcon>
       <div className="relative">
         <TopbarIcon label="More options" onClick={() => setMenuOpen((value) => !value)}>

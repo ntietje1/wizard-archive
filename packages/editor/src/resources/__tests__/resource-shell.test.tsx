@@ -364,6 +364,10 @@ describe('ResourceShell', () => {
     const appearance = await screen.findByRole('dialog', {
       name: 'Edit icon and color for Renamed folder',
     })
+    expect(within(appearance).getByRole('group', { name: 'Resource color' })).toBeVisible()
+    expect(within(appearance).getByRole('group', { name: 'Resource icon' })).toBeVisible()
+    expect(within(appearance).queryByText('Color')).not.toBeInTheDocument()
+    expect(within(appearance).queryByText('Icon')).not.toBeInTheDocument()
     fireEvent.click(within(appearance).getByRole('button', { name: 'BookOpen resource icon' }))
     await waitFor(() =>
       expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
@@ -1138,6 +1142,29 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('keeps empty folders togglable from the hover-caret control', async () => {
+    const { core, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    const expand = await screen.findByRole('button', { name: `Expand ${resource.title}` })
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(expand)
+    const collapse = screen.getByRole('button', { name: `Collapse ${resource.title}` })
+    expect(collapse).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(collapse)
+    expect(screen.getByRole('button', { name: `Expand ${resource.title}` })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    core.dispose()
+  })
+
   it('creates resources with their default title and no inline naming step', async () => {
     const { core } = await shellRuntime(true)
 
@@ -1283,6 +1310,8 @@ describe('ResourceShell', () => {
       status: 'ready',
       value: { panels: { leftVisible: true, rightVisible: true } },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Close resource panel' }))
+    expect(screen.queryByRole('complementary', { name: 'Resource panel' })).not.toBeInTheDocument()
     core.dispose()
   })
 
@@ -1586,7 +1615,7 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('empties complete trash roots only after inline confirmation', async () => {
+  it('permanently deletes one trashed resource from the compact trash surface', async () => {
     const { core, resource } = await shellRuntime(true, 'trashed')
 
     render(
@@ -1598,9 +1627,12 @@ describe('ResourceShell', () => {
     )
 
     fireEvent.click(await screen.findByRole('button', { name: 'Trash' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Empty Trash' }))
+    expect(screen.queryByText('Trash', { selector: 'strong' })).not.toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: `Delete ${resource.title} forever` }))
     expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('known')
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm empty trash' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: `Confirm delete ${resource.title} forever` }),
+    )
 
     await waitFor(() =>
       expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('missing'),

@@ -17,7 +17,6 @@ import { useEnsureResourceCollection } from './resource-loading'
 
 type TrashConfirmation =
   | Readonly<{ type: 'none' }>
-  | Readonly<{ type: 'empty' }>
   | Readonly<{ type: 'resource'; resourceId: ResourceId }>
 
 export function ResourceTrashControl({
@@ -60,12 +59,6 @@ export function ResourceTrashControl({
     setConfirmation({ type: 'none' })
     await actions.changeLifecycle(resourceIds, type)
   }
-  const empty = async () => {
-    setConfirmation({ type: 'none' })
-    await actions.emptyTrash(resources.map((resource) => resource.id))
-  }
-  const canEmpty = canEdit && collection.state === 'known' && collection.complete
-
   return (
     <div ref={container} className="relative">
       <button
@@ -91,10 +84,7 @@ export function ResourceTrashControl({
           aria-label="Trash"
           className="absolute bottom-9 left-0 z-50 flex w-80 flex-col rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
         >
-          <div className="px-3 pb-2 pt-3">
-            <strong className="text-sm font-medium">Trash</strong>
-          </div>
-          <div className="max-h-[300px] overflow-y-auto px-2 pb-2">
+          <div className="max-h-[300px] overflow-y-auto p-2">
             {collection.state === 'unknown' && (
               <p className="px-2 py-5 text-center text-sm text-muted-foreground">Loading trash…</p>
             )}
@@ -163,18 +153,6 @@ export function ResourceTrashControl({
             <p className="min-w-0 flex-1 text-xs text-muted-foreground">
               Items in Trash are permanently deleted after 30 days.
             </p>
-            {resources.length > 0 && canEdit && (
-              <button
-                type="button"
-                disabled={!canEmpty}
-                className="h-7 shrink-0 rounded px-2 text-xs text-destructive hover:bg-muted disabled:opacity-50"
-                onClick={() =>
-                  confirmation.type === 'empty' ? void empty() : setConfirmation({ type: 'empty' })
-                }
-              >
-                {confirmation.type === 'empty' ? 'Confirm empty trash' : 'Empty Trash'}
-              </button>
-            )}
           </div>
         </div>
       )}

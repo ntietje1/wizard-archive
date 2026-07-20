@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { DragEvent, KeyboardEvent, PointerEvent, ReactNode } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, PanelLeftOpen } from 'lucide-react'
 import type { ResourceId } from './domain-id'
 import type { EditorRuntime } from './editor-runtime-contract'
 import type {
@@ -18,7 +18,10 @@ import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
 import type { WorkspaceClipboard } from './workspace-clipboard'
 import { workspaceKeyboardCommand } from './workspace-keyboard'
 import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
-import { readWorkspaceResourceDrag } from './workspace-resource-drag'
+import {
+  clearWorkspaceResourceDropTargets,
+  readWorkspaceResourceDrag,
+} from './workspace-resource-drag'
 import { useEnsureResource, useEnsureResourceCollection } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
@@ -206,6 +209,7 @@ export function ResourceShell({
       onDrag={resourceDrag.move}
       onDragEnd={resourceDrag.end}
       onDragEnterCapture={resourceDrag.updateEffect}
+      onDragLeave={resourceDrag.leave}
       onDragOverCapture={resourceDrag.updateEffect}
       onDragStart={resourceDrag.begin}
       onDropCapture={resourceDrag.end}
@@ -264,7 +268,10 @@ export function ResourceShell({
             patchPreference({ field: 'rightPanelVisible', value: true })
           }}
           onOpenLeftSidebar={() => patchPreference({ field: 'leftPanelVisible', value: true })}
-          onOpenRightSidebar={() => patchPreference({ field: 'rightPanelVisible', value: true })}
+          rightSidebarVisible={rightVisible}
+          onToggleRightSidebar={() =>
+            patchPreference({ field: 'rightPanelVisible', value: !rightVisible })
+          }
           onOpenContextMenu={openContextMenu}
           onRequestMove={setMoveResourceIds}
           onSelectionChange={changeSelection}
@@ -283,7 +290,6 @@ export function ResourceShell({
             resource={selected.value}
             runtime={runtime}
             onActivePanelChange={setRightPanel}
-            onClose={() => patchPreference({ field: 'rightPanelVisible', value: false })}
           />
         </ResizableWorkspacePanel>
       )}
@@ -419,8 +425,16 @@ function useWorkspaceResourceDragOverlay(snapshot: WorkspaceResourceIndexSnapsho
       })
     })
   }
-  const end = () => setState(null)
-  return { begin, end, move, nativePreviewRef, state, updateEffect }
+  const end = (event: DragEvent<HTMLElement>) => {
+    clearWorkspaceResourceDropTargets(event.currentTarget)
+    setState(null)
+  }
+  const leave = (event: DragEvent<HTMLElement>) => {
+    const nextTarget = event.relatedTarget
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
+    clearWorkspaceResourceDropTargets(event.currentTarget)
+  }
+  return { begin, end, leave, move, nativePreviewRef, state, updateEffect }
 }
 
 function WorkspaceTransferProgress({ progress }: { progress: PlainTransferProgress }) {
@@ -562,9 +576,10 @@ function SelectedResource({
   onOpenHistory,
   onOpenContextMenu,
   onOpenLeftSidebar,
-  onOpenRightSidebar,
+  onToggleRightSidebar,
   onRequestMove,
   onSelectionChange,
+  rightSidebarVisible,
   resourceId,
   runtime,
   selection,
@@ -584,10 +599,11 @@ function SelectedResource({
   onOpenHistory: () => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onOpenLeftSidebar: () => void
-  onOpenRightSidebar: () => void
+  onToggleRightSidebar: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resourceId: ResourceId | null
+  rightSidebarVisible: boolean
   runtime: EditorRuntime
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
@@ -657,8 +673,9 @@ function SelectedResource({
         onModeChange={onModeChange}
         onOpenHistory={onOpenHistory}
         onOpenLeftSidebar={onOpenLeftSidebar}
-        onOpenRightSidebar={onOpenRightSidebar}
+        onToggleRightSidebar={onToggleRightSidebar}
         onRequestMove={onRequestMove}
+        rightSidebarVisible={rightSidebarVisible}
       />
       {!canEditViewport && (
         <div className="shrink-0 border-b border-border bg-muted/50 px-3 py-1 text-center text-xs text-muted-foreground">
@@ -766,7 +783,7 @@ function EmptyTopbar({
           className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
           onClick={onOpenLeftSidebar}
         >
-          <Menu className="size-4" />
+          <PanelLeftOpen className="size-4" />
         </button>
       )}
     </div>

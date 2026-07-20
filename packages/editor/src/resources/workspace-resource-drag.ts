@@ -51,14 +51,12 @@ function beginWorkspaceResourceDrag(
 }
 
 export function workspaceResourceInteractionProps({
-  actions,
   canEdit,
   onOpenContextMenu,
   onSelectionChange,
   resource,
   selection,
 }: {
-  actions: WorkspaceActions
   canEdit: boolean
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
@@ -73,13 +71,20 @@ export function workspaceResourceInteractionProps({
   if (!canEdit) return { ...interaction, draggable: false as const }
   const onDragStart = (event: DragEvent<HTMLElement>) =>
     beginWorkspaceResourceDrag(event, resource, selection, onSelectionChange)
-  if (resource.kind !== 'folder' || resource.lifecycle === 'trashed') {
-    return { ...interaction, draggable: true as const, onDragStart }
-  }
+  return { ...interaction, draggable: true as const, onDragStart }
+}
+
+export function workspaceResourceDropTargetProps({
+  actions,
+  canEdit,
+  resource,
+}: {
+  actions: WorkspaceActions
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+}) {
+  if (!canEdit || resource.kind !== 'folder' || resource.lifecycle === 'trashed') return {}
   return {
-    ...interaction,
-    draggable: true as const,
-    onDragStart,
     onDragOver: allowWorkspaceResourceDrop,
     onDragLeave: leaveWorkspaceResourceDrop,
     onDrop: (event: DragEvent<HTMLElement>) =>
@@ -99,6 +104,7 @@ export function allowWorkspaceResourceDrop(event: WorkspaceDropEvent) {
   }
   const dropEffect = fileDrop || copyDragRequested(event) ? 'copy' : 'move'
   event.dataTransfer.dropEffect = dropEffect
+  clearWorkspaceResourceDropTargets(event.currentTarget.ownerDocument)
   event.currentTarget.dataset.dropTarget = 'true'
   event.currentTarget.dataset.dropOperation = dropEffect
 }
@@ -113,6 +119,13 @@ export function leaveWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
   if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
   delete event.currentTarget.dataset.dropTarget
   delete event.currentTarget.dataset.dropOperation
+}
+
+export function clearWorkspaceResourceDropTargets(root: ParentNode) {
+  for (const target of root.querySelectorAll<HTMLElement>('[data-drop-operation]')) {
+    delete target.dataset.dropTarget
+    delete target.dataset.dropOperation
+  }
 }
 
 export async function finishWorkspaceResourceDrop(

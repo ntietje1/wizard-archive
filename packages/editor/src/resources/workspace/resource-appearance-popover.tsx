@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ReactElement } from 'react'
+import type { CSSProperties, ReactElement } from 'react'
 import {
   Popover,
   PopoverContent,
@@ -57,29 +57,32 @@ export function ResourceAppearancePopover({
         sideOffset={4}
         className="w-72 gap-3 p-3"
       >
-        <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">Color</p>
+        <div role="group" aria-label="Resource color">
           <div className="flex gap-2">
-            {COLORS.map((color) => (
-              <button
-                key={color.label}
-                type="button"
-                aria-label={`${color.label} resource color`}
-                aria-pressed={(resource.color ?? null) === color.value}
-                disabled={pending}
-                className="flex size-7 items-center justify-center rounded-full ring-offset-2 hover:ring-2 hover:ring-ring aria-pressed:ring-2 aria-pressed:ring-ring disabled:opacity-50"
-                onClick={() => void update({ color: color.value })}
-              >
-                <span
-                  className="size-5 rounded-full border border-border"
-                  style={{ backgroundColor: color.value ?? 'var(--muted-foreground)' }}
-                />
-              </button>
-            ))}
+            {COLORS.map((color) => {
+              const swatch = color.value ?? 'var(--muted-foreground)'
+              return (
+                <button
+                  key={color.label}
+                  type="button"
+                  aria-label={`${color.label} resource color`}
+                  data-selected={(resource.color ?? null) === color.value}
+                  aria-pressed={(resource.color ?? null) === color.value}
+                  disabled={pending}
+                  className="group flex size-7 items-center justify-center rounded-full disabled:opacity-50"
+                  style={{ '--resource-swatch': swatch } as CSSProperties}
+                  onClick={() => void update({ color: color.value })}
+                >
+                  <span
+                    className="size-5 rounded-full ring-offset-2 ring-offset-popover group-hover:ring-2 group-hover:ring-[var(--resource-swatch)] group-data-[selected=true]:ring-2 group-data-[selected=true]:ring-[var(--resource-swatch)]"
+                    style={{ backgroundColor: swatch }}
+                  />
+                </button>
+              )
+            })}
           </div>
         </div>
-        <div className="border-t border-border pt-3">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">Icon</p>
+        <div role="group" aria-label="Resource icon" className="border-t border-border pt-3">
           <div className="grid grid-cols-7 gap-1">
             <button
               type="button"

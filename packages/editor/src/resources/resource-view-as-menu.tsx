@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, LoaderCircle, PencilLine, UserRound } from 'lucide-react'
+import { Eye, LoaderCircle, UserRound } from 'lucide-react'
 import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
 import {
   DropdownMenu,
@@ -102,7 +102,7 @@ function ViewAsPicker<TParticipantId extends string>({
 }) {
   const [open, setOpen] = useState(false)
   const label = pending ? 'Loading players' : 'View as...'
-  const Icon = pending ? LoaderCircle : PencilLine
+  const Icon = pending ? LoaderCircle : Eye
   const trigger = (
     <button
       type="button"
