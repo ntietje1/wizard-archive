@@ -302,7 +302,7 @@ const CanvasNode = memo(function CanvasNode({
       data-testid="canvas-node"
       style={{
         contain: 'layout style',
-        willChange: committedSelected ? 'transform' : undefined,
+        willChange: canEdit && committedSelected ? 'transform' : undefined,
         width: size.width,
         height: size.height,
         transform: `translate(${position.x}px, ${position.y}px)`,

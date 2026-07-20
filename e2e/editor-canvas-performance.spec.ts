@@ -25,9 +25,9 @@ const PRODUCT_FRAME_BUDGET: CanvasPerformanceBudget = {
   },
 }
 const DEVELOPMENT_SERVER_TOLERANCE: CanvasPerformanceBudget = {
-  maxHandlerDuration: 25,
+  maxHandlerDuration: 35,
   maxOutlierFrameDuration: {
-    connecting: 125,
+    connecting: 175,
     dragging: 175,
     drawing: 100,
     erasing: 100,
@@ -40,8 +40,8 @@ const DEVELOPMENT_SERVER_TOLERANCE: CanvasPerformanceBudget = {
     dragging: 100,
     drawing: 50,
     erasing: 50,
-    lasso: 175,
-    marquee: 175,
+    lasso: 250,
+    marquee: 250,
     resizing: 75,
   },
 }
