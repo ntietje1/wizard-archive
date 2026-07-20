@@ -246,6 +246,8 @@ function canvasVisualNode(
   return position === node.position ? node : { ...node, position }
 }
 
+// The packed editor is consumed without compiler caching; removing this regresses maximum-selection drag.
+// react-doctor-disable-next-line react-doctor/react-compiler-no-manual-memoization
 const CanvasNode = memo(function CanvasNode({
   canEdit,
   committedSelected,
@@ -376,6 +378,8 @@ const CanvasNode = memo(function CanvasNode({
   )
 })
 
+// The packed editor is consumed without compiler caching; removing this regresses maximum-selection drag.
+// react-doctor-disable-next-line react-doctor/react-compiler-no-manual-memoization
 const CanvasNodeContent = memo(function CanvasNodeContent({
   canEdit,
   committedSelected,
