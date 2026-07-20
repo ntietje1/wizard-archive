@@ -98,6 +98,44 @@ describe('createInMemoryEditorRuntime', () => {
       value: { title: 'Renamed' },
     })
 
+    for (const color of ['#ef4444', '#3b82f6']) {
+      await structure.execute({
+        campaignId: snapshot.campaignId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: { type: 'updateMetadata', resourceId, changes: { color } },
+      })
+    }
+    expect(history.getSnapshot()).toMatchObject({
+      status: 'ready',
+      undo: { label: 'change color' },
+      redo: null,
+    })
+    await history.undo()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { color: '#ef4444' },
+    })
+    expect(history.getSnapshot()).toMatchObject({
+      status: 'ready',
+      undo: { label: 'change color' },
+      redo: { label: 'change color' },
+    })
+    await history.undo()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { color: null },
+    })
+    await history.redo()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { color: '#ef4444' },
+    })
+    await history.redo()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toMatchObject({
+      state: 'known',
+      value: { color: '#3b82f6' },
+    })
+
     await structure.execute({
       campaignId: snapshot.campaignId,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),

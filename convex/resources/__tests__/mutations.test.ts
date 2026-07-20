@@ -266,6 +266,55 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('keeps sequential metadata undo and redo valid across newer semantic revisions', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Original')
+    const applyColor = async (color: string) => {
+      const result = await asDm(campaign).mutation(
+        api.resources.mutations.executeStructureCommand,
+        {
+          campaignId: campaignUuid,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          command: { type: 'updateMetadata' as const, resourceId, changes: { color } },
+        },
+      )
+      if (result.status !== 'completed') throw new Error(`Expected color update: ${result.reason}`)
+      return result
+    }
+    const compensate = async (originalOperationId: string) => {
+      const result = await asDm(campaign).mutation(
+        api.resources.mutations.compensateResourceOperation,
+        {
+          campaignId: campaignUuid,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          originalOperationId,
+        },
+      )
+      if (result.status !== 'completed') throw new Error(`Expected compensation: ${result.reason}`)
+      return result
+    }
+    const color = async () =>
+      await t.run(async (ctx) => {
+        const resource = await ctx.db
+          .query('resources')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique()
+        return resource?.color ?? null
+      })
+
+    const first = await applyColor('#ef4444')
+    const second = await applyColor('#3b82f6')
+    const undoSecond = await compensate(second.receipt.operationId)
+    expect(await color()).toBe('#ef4444')
+    const undoFirst = await compensate(first.receipt.operationId)
+    expect(await color()).toBeNull()
+    await compensate(undoFirst.receipt.operationId)
+    expect(await color()).toBe('#ef4444')
+    await compensate(undoSecond.receipt.operationId)
+    expect(await color()).toBe('#3b82f6')
+  })
+
   it('atomically compensates a move from different original parents', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

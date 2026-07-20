@@ -329,17 +329,14 @@ export function planResourceCompensation(
   }
 }
 
-function postconditionsMatch(
+function compensationPostconditionsMatch(
   graph: ResourceGraph,
   conditions: ReadonlyArray<ResourcePostcondition>,
 ): boolean {
   return conditions.every((condition) => {
     const resource = graph.resources.get(condition.resourceId)
     if (condition.state === 'missing') return resource === undefined
-    return (
-      resource?.metadataVersion.revision === condition.metadataVersion.revision &&
-      resource.metadataVersion.digest === condition.metadataVersion.digest
-    )
+    return resource?.metadataVersion.digest === condition.metadataVersion.digest
   })
 }
 
@@ -361,7 +358,7 @@ function compensationMatches(
   campaignId: CampaignId,
   plan: ResourceCompensationPlan,
 ): boolean {
-  if (!postconditionsMatch(graph, plan.requiredPostconditions)) return false
+  if (!compensationPostconditionsMatch(graph, plan.requiredPostconditions)) return false
   return plan.type !== 'trash' && plan.type !== 'restore'
     ? true
     : closureMatches(graph, campaignId, plan)
