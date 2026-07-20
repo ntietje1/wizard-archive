@@ -3,17 +3,48 @@ import type { Page } from '@playwright/test'
 import { openDemoCanvas, visibleBox, visibleCanvasNodePoint } from './helpers/editor-canvas-helpers'
 
 const CANVAS_GESTURE_MEASURE = 'wizard-archive:canvas-gesture-frame'
-const MAX_HANDLER_DURATION_MS = 8
-const MAX_TYPICAL_FRAME_DURATION_MS: Readonly<Record<CanvasGesture, number>> = {
-  connecting: 125,
-  dragging: 125,
-  drawing: 125,
-  erasing: 125,
-  lasso: 200,
-  marquee: 200,
-  resizing: 125,
+const PRODUCT_FRAME_BUDGET: CanvasPerformanceBudget = {
+  maxHandlerDuration: 16,
+  maxOutlierFrameDuration: {
+    connecting: 100,
+    dragging: 100,
+    drawing: 100,
+    erasing: 100,
+    lasso: 100,
+    marquee: 100,
+    resizing: 100,
+  },
+  maxTypicalFrameDuration: {
+    connecting: 50,
+    dragging: 50,
+    drawing: 50,
+    erasing: 50,
+    lasso: 50,
+    marquee: 50,
+    resizing: 50,
+  },
 }
-const MAX_OUTLIER_FRAME_DURATION_MS = 300
+const DEVELOPMENT_SERVER_TOLERANCE: CanvasPerformanceBudget = {
+  maxHandlerDuration: 20,
+  maxOutlierFrameDuration: {
+    connecting: 100,
+    dragging: 100,
+    drawing: 100,
+    erasing: 100,
+    lasso: 175,
+    marquee: 175,
+    resizing: 100,
+  },
+  maxTypicalFrameDuration: {
+    connecting: 50,
+    dragging: 50,
+    drawing: 50,
+    erasing: 50,
+    lasso: 140,
+    marquee: 140,
+    resizing: 50,
+  },
+}
 const WARMUP_SAMPLES = 2
 const MIN_GESTURE_SAMPLES = 6
 
@@ -32,6 +63,12 @@ type CanvasPerformanceSample = Readonly<{
   handlerDuration: number
 }>
 
+type CanvasPerformanceBudget = Readonly<{
+  maxHandlerDuration: number
+  maxOutlierFrameDuration: Readonly<Record<CanvasGesture, number>>
+  maxTypicalFrameDuration: Readonly<Record<CanvasGesture, number>>
+}>
+
 type CanvasPerformanceSummary = Readonly<{
   gesture: CanvasGesture
   samples: number
@@ -45,16 +82,19 @@ type CanvasPerformanceSummary = Readonly<{
 test.describe('canvas performance smoke', () => {
   test.setTimeout(60_000)
 
-  test('rejects a representative long-frame control', () => {
-    const samples = Array.from({ length: MIN_GESTURE_SAMPLES }, (_, index) => ({
-      duration: index === MIN_GESTURE_SAMPLES - 1 ? MAX_OUTLIER_FRAME_DURATION_MS + 1 : 16,
+  test('rejects sustained visible multi-frame stalls at the product target', () => {
+    const samples = Array.from({ length: MIN_GESTURE_SAMPLES }, () => ({
+      duration: PRODUCT_FRAME_BUDGET.maxTypicalFrameDuration.dragging + 1,
       gesture: 'dragging' as const,
       handlerDuration: 1,
     }))
 
-    expect(() => assertCanvasPerformance(summarizeCanvasPerformance('dragging', samples))).toThrow(
-      /missed its next-frame bound/,
-    )
+    expect(() =>
+      assertCanvasPerformance(
+        summarizeCanvasPerformance('dragging', samples),
+        PRODUCT_FRAME_BUDGET,
+      ),
+    ).toThrow(/sustained visible-frame budget/)
   })
 
   test('measures maximum canonical gestures and keeps viewport culling exact', async ({
@@ -224,7 +264,7 @@ test.describe('canvas performance smoke', () => {
     await expect(selection).toBeVisible()
 
     await testInfo.attach('canvas-gesture-performance.json', {
-      body: JSON.stringify(evidence, null, 2),
+      body: canvasPerformanceEvidence(evidence),
       contentType: 'application/json',
     })
   })
@@ -277,7 +317,7 @@ test.describe('canvas performance smoke', () => {
     await expect.poll(() => strokes.count()).toBeLessThan(512)
 
     await testInfo.attach('canvas-eraser-performance.json', {
-      body: JSON.stringify([evidence], null, 2),
+      body: canvasPerformanceEvidence([evidence]),
       contentType: 'application/json',
     })
   })
@@ -305,7 +345,7 @@ test.describe('canvas performance smoke', () => {
       editor.locator('[data-testid="canvas-node"][data-node-type="stroke"]'),
     ).toHaveCount(3)
     await testInfo.attach('canvas-drawing-performance.json', {
-      body: JSON.stringify([evidence], null, 2),
+      body: canvasPerformanceEvidence([evidence]),
       contentType: 'application/json',
     })
   })
@@ -347,7 +387,7 @@ async function measureCanvasGesture(
   }, CANVAS_GESTURE_MEASURE)
   const samples = allSamples.filter((sample) => sample.gesture === gesture)
   const summary = summarizeCanvasPerformance(gesture, samples)
-  assertCanvasPerformance(summary)
+  assertCanvasPerformance(summary, DEVELOPMENT_SERVER_TOLERANCE)
   return summary
 }
 
@@ -376,20 +416,35 @@ function summarizeCanvasPerformance(
   }
 }
 
-function assertCanvasPerformance(summary: CanvasPerformanceSummary) {
-  if (summary.lateMaxHandlerDuration >= MAX_HANDLER_DURATION_MS) {
+function assertCanvasPerformance(
+  summary: CanvasPerformanceSummary,
+  budget: CanvasPerformanceBudget,
+) {
+  if (summary.lateMaxHandlerDuration >= budget.maxHandlerDuration) {
     throw new Error(
       `${summary.gesture} pointer handler exceeded its bound: ${JSON.stringify(summary)}`,
     )
   }
-  if (summary.lateMedianFrameDuration >= MAX_TYPICAL_FRAME_DURATION_MS[summary.gesture]) {
+  if (summary.lateMedianFrameDuration >= budget.maxTypicalFrameDuration[summary.gesture]) {
     throw new Error(
-      `${summary.gesture} typical frames exceeded their bound: ${JSON.stringify(summary)}`,
+      `${summary.gesture} exceeded its sustained visible-frame budget: ${JSON.stringify(summary)}`,
     )
   }
-  if (summary.lateMaxFrameDuration >= MAX_OUTLIER_FRAME_DURATION_MS) {
+  if (summary.lateMaxFrameDuration >= budget.maxOutlierFrameDuration[summary.gesture]) {
     throw new Error(`${summary.gesture} missed its next-frame bound: ${JSON.stringify(summary)}`)
   }
+}
+
+function canvasPerformanceEvidence(evidence: ReadonlyArray<CanvasPerformanceSummary>): string {
+  return JSON.stringify(
+    {
+      developmentServerTolerance: DEVELOPMENT_SERVER_TOLERANCE,
+      evidence,
+      productFrameBudget: PRODUCT_FRAME_BUDGET,
+    },
+    null,
+    2,
+  )
 }
 
 async function dragPointerOnFrames(

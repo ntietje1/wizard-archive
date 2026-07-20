@@ -336,10 +336,11 @@ export function CanvasEditorSurface({
           setContextMenu(null)
           beginCanvasSurfaceInteraction(event, canEdit, interactionController)
         }}
-        onPointerMoveCapture={(event) => {
-          measureCanvasGestureFrame(event.currentTarget, interactionController.get().interaction)
-        }}
         onPointerMove={(event) => {
+          const finishPerformanceMeasure = beginCanvasGestureFrame(
+            event.currentTarget,
+            interactionController.get().interaction,
+          )
           const point = localPoint(event, event.currentTarget)
           const viewport = interactionController.get().viewport
           setCanvasCollaborationCursor(collaboration, screenToCanvasPoint(point, viewport))
@@ -358,6 +359,7 @@ export function CanvasEditorSurface({
             screenToCanvasPoint(point, interactionController.get().viewport),
             event.shiftKey,
           )
+          finishPerformanceMeasure()
         }}
         onPointerUp={(event) => {
           const snapshot = interactionController.get()
@@ -616,15 +618,15 @@ function canvasPointerSamples(
   })
 }
 
-function measureCanvasGestureFrame(
+function beginCanvasGestureFrame(
   surface: HTMLElement,
   interaction: CanvasInteractionSnapshot['interaction'],
 ) {
   const measureName = surface.dataset.canvasPerformanceMeasure
-  if (!measureName || interaction.type === 'idle') return
+  if (!measureName || interaction.type === 'idle') return () => {}
   const gesture = interaction.type === 'selecting' ? interaction.kind : interaction.type
   const startedAt = performance.now()
-  queueMicrotask(() => {
+  return () => {
     const handlerDuration = performance.now() - startedAt
     requestAnimationFrame(() => {
       performance.measure(measureName, {
@@ -633,7 +635,7 @@ function measureCanvasGestureFrame(
         detail: { gesture, handlerDuration },
       })
     })
-  })
+  }
 }
 
 function handleWheel(

@@ -69,10 +69,13 @@ export function CanvasScene({
   surface: RefObject<HTMLElement | null>
   surfaceSize: CanvasSurfaceSize
 }) {
-  const resizedNodeBounds = canvasResizedNodeBounds(interaction)
-  const visualNodes = content.nodes.map((node) =>
-    canvasVisualNode(node, interaction, resizedNodeBounds),
-  )
+  const movingNodes =
+    interaction.interaction.type === 'dragging' || interaction.interaction.type === 'resizing'
+  const resizedNodeBounds = movingNodes ? canvasResizedNodeBounds(interaction) : null
+  const visualNodes =
+    movingNodes && resizedNodeBounds
+      ? content.nodes.map((node) => canvasVisualNode(node, interaction, resizedNodeBounds))
+      : content.nodes
   const defaultNodeZIndex = new Map(
     content.nodes.map((node, index) => [node.id, index + 1] as const),
   )
@@ -115,17 +118,17 @@ export function CanvasScene({
             >
               <CanvasEdge
                 edge={edge}
-                nodeById={nodeById}
                 pendingSelected={
                   interaction.interaction.type === 'selecting' &&
                   interaction.interaction.candidate?.edgeIds.has(edge.id) === true
                 }
+                nodeById={nodeById}
+                interactionController={interactionController}
                 selection={visualSelection}
                 tool={interaction.tool}
                 visuallySelected={visualSelection.edgeIds.has(edge.id)}
                 zoom={interaction.viewport.zoom}
                 onOpenContextMenu={onOpenContextMenu}
-                onSelect={(additive) => interactionController.selectEdge(edge.id, additive)}
               />
             </svg>
           ))}
@@ -638,9 +641,9 @@ function saveNodeTextColor(
 
 function CanvasEdge({
   edge,
+  interactionController,
   nodeById,
   onOpenContextMenu,
-  onSelect,
   pendingSelected,
   selection,
   tool,
@@ -648,9 +651,9 @@ function CanvasEdge({
   zoom,
 }: {
   edge: CanvasDocumentEdge
+  interactionController: CanvasInteractionController
   nodeById: ReadonlyMap<CanvasNodeId, CanvasDocumentNode>
   onOpenContextMenu: (event: MouseEvent<Element>, selection: CanvasSelection) => void
-  onSelect: (additive: boolean) => void
   pendingSelected: boolean
   selection: CanvasSelection
   tool: CanvasInteractionSnapshot['tool']
@@ -681,7 +684,7 @@ function CanvasEdge({
       onPointerDown={(event) => {
         if (tool !== 'select') return
         event.stopPropagation()
-        onSelect(event.metaKey || event.ctrlKey)
+        interactionController.selectEdge(edge.id, event.metaKey || event.ctrlKey)
       }}
     >
       <path
