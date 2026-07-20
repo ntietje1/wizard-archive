@@ -12,6 +12,7 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
+  noteYjsEncodedBytesWithinLimit,
 } from '@wizard-archive/editor/notes/document-yjs'
 import { noteAuthoredDestinationOccurrences } from '@wizard-archive/editor/notes/authored-destinations'
 import type { CampaignMutationCtx } from '../../functions'
@@ -42,6 +43,9 @@ export async function replaceNoteContent(
   const currentVersion = target.version
 
   const snapshotVersion = assertVersionStamp(args.snapshotVersion)
+  if (!noteYjsEncodedBytesWithinLimit(args.snapshotUpdate)) {
+    return { status: 'snapshot_incompatible' as const }
+  }
   let blocks
   let currentBlockIds
   try {

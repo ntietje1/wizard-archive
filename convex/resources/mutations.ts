@@ -554,6 +554,7 @@ export const reapplyYjsRecovery = campaignMutation({
   args: {
     expectedGeneration: v.number(),
     expectedVersion: versionStampValidator,
+    operationId: operationIdValidator,
     resourceId: resourceIdValidator,
     snapshotUpdate: v.bytes(),
     snapshotVersion: versionStampValidator,
@@ -563,6 +564,7 @@ export const reapplyYjsRecovery = campaignMutation({
     await reapplyYjsRecoveryFn(ctx, {
       expectedGeneration: assertContentGeneration(args.expectedGeneration),
       expectedVersion: assertVersionStamp(args.expectedVersion),
+      operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       snapshotUpdate: args.snapshotUpdate,
       snapshotVersion: assertVersionStamp(args.snapshotVersion),

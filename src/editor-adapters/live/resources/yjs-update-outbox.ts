@@ -2,23 +2,32 @@ import * as Y from 'yjs'
 import type {
   CampaignId,
   CampaignMemberId,
+  OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
+import { assertDomainId, DOMAIN_ID_KIND } from '@wizard-archive/editor/resources/domain-id'
 import { assertContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
-
-const MAX_YJS_PENDING_UPDATE_BYTES = 512 * 1024
-const MAX_YJS_RECOVERY_UPDATE_BYTES = 768 * 1024
+import { CANVAS_WORKLOAD_LIMITS } from '@wizard-archive/editor/canvas/workload'
+import { noteYjsEncodedBytesWithinLimit } from '@wizard-archive/editor/notes/document-yjs'
 
 type YjsUpdateOutboxUnavailable = Readonly<{ status: 'unavailable' }>
 type YjsUpdateOutboxReadResult =
   | Readonly<{
       status: 'available'
-      entry: Readonly<{
-        generation: ContentGeneration
-        state: 'pending' | 'recovery'
-        update: Uint8Array
-      }> | null
+      entry:
+        | Readonly<{
+            generation: ContentGeneration
+            state: 'pending'
+            update: Uint8Array
+          }>
+        | Readonly<{
+            generation: ContentGeneration
+            operationId: OperationId
+            state: 'recovery'
+            update: Uint8Array
+          }>
+        | null
     }>
   | YjsUpdateOutboxUnavailable
 type YjsUpdateOutboxWriteResult =
@@ -31,7 +40,11 @@ export type YjsUpdateOutbox = Readonly<{
   clear(): YjsUpdateOutboxStorageResult
   load(): YjsUpdateOutboxReadResult
   merge(generation: ContentGeneration, update: Uint8Array): YjsUpdateOutboxWriteResult
-  preserve(generation: ContentGeneration, update: Uint8Array): YjsUpdateOutboxWriteResult
+  preserve(
+    generation: ContentGeneration,
+    operationId: OperationId,
+    update: Uint8Array,
+  ): YjsUpdateOutboxWriteResult
   replace(generation: ContentGeneration, update: Uint8Array): YjsUpdateOutboxWriteResult
 }>
 
@@ -44,7 +57,7 @@ export function createYjsUpdateOutbox(
   memberId: CampaignMemberId,
   storage: YjsUpdateOutboxStorage | null = browserSessionStorage(),
 ): YjsUpdateOutbox {
-  const key = `wizard-archive:${kind}-update-outbox:v3:${memberId}:${campaignId}:${resourceId}`
+  const key = `wizard-archive:${kind}-update-outbox:v4:${memberId}:${campaignId}:${resourceId}`
   const load = (): YjsUpdateOutboxReadResult => {
     if (!storage) return { status: 'unavailable' }
     try {
@@ -58,11 +71,21 @@ export function createYjsUpdateOutbox(
       const generation = assertContentGeneration(
         Number(encoded.slice(firstSeparator + 1, secondSeparator)),
       )
-      const update = decodeBase64(encoded.slice(secondSeparator + 1))
-      const limit =
-        state === 'recovery' ? MAX_YJS_RECOVERY_UPDATE_BYTES : MAX_YJS_PENDING_UPDATE_BYTES
-      return update.byteLength <= limit
-        ? { status: 'available', entry: { generation, state, update } }
+      if (state === 'pending') {
+        const update = decodeBase64(encoded.slice(secondSeparator + 1))
+        return updateWithinLimit(kind, update)
+          ? { status: 'available', entry: { generation, state, update } }
+          : { status: 'unavailable' }
+      }
+      const thirdSeparator = encoded.indexOf(':', secondSeparator + 1)
+      if (thirdSeparator < 1) return { status: 'unavailable' }
+      const operationId = assertDomainId(
+        DOMAIN_ID_KIND.operation,
+        encoded.slice(secondSeparator + 1, thirdSeparator),
+      )
+      const update = decodeBase64(encoded.slice(thirdSeparator + 1))
+      return updateWithinLimit(kind, update)
+        ? { status: 'available', entry: { generation, operationId, state, update } }
         : { status: 'unavailable' }
     } catch {
       return { status: 'unavailable' }
@@ -72,14 +95,16 @@ export function createYjsUpdateOutbox(
     state: 'pending' | 'recovery',
     generation: ContentGeneration,
     update: Uint8Array,
+    operationId?: OperationId,
   ): YjsUpdateOutboxWriteResult => {
-    const limit =
-      state === 'recovery' ? MAX_YJS_RECOVERY_UPDATE_BYTES : MAX_YJS_PENDING_UPDATE_BYTES
-    if (!storage || update.byteLength > limit) {
+    if (!storage || !updateWithinLimit(kind, update) || (state === 'recovery' && !operationId)) {
       return { status: 'unavailable' }
     }
     try {
-      storage.setItem(key, `${state}:${generation}:${encodeBase64(update)}`)
+      storage.setItem(
+        key,
+        `${state}:${generation}:${operationId ? `${operationId}:` : ''}${encodeBase64(update)}`,
+      )
       return { status: 'accepted' }
     } catch {
       return { status: 'unavailable' }
@@ -114,9 +139,16 @@ export function createYjsUpdateOutbox(
         return { status: 'unavailable' }
       }
     },
-    preserve: (generation, update) => replace('recovery', generation, update),
+    preserve: (generation, operationId, update) =>
+      replace('recovery', generation, update, operationId),
     replace: (generation, update) => replace('pending', generation, update),
   }
+}
+
+function updateWithinLimit(kind: 'canvas' | 'note', update: Uint8Array): boolean {
+  return kind === 'note'
+    ? noteYjsEncodedBytesWithinLimit(update)
+    : update.byteLength <= CANVAS_WORKLOAD_LIMITS.encodedBytes
 }
 
 function browserSessionStorage(): Storage | null {

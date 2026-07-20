@@ -18,6 +18,7 @@ import { createCampaignWithDm } from '../../_test/factories.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
+  MAX_NOTE_YJS_ENCODED_BYTES,
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
   noteBlocksToYDoc,
@@ -52,6 +53,7 @@ import {
 import presenceTest from '@convex-dev/presence/test'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { INITIAL_CONTENT_GENERATION } from '@wizard-archive/editor/resources/content-generation'
+import { YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/content-session-contract'
 import { advanceMapContentVersion } from '@wizard-archive/editor/resources/map-session-policy'
 import { projectMapContent } from '../functions/mapContent'
 import { replaceResourceReferenceProjection } from '../functions/resourceReferences'
@@ -1960,6 +1962,14 @@ describe('resource structure commands', () => {
           restoredFromEntryId: restoredHistoryEntryId,
         },
       })
+      await ctx.db.insert('yjsRecoveryReapplyOperations', {
+        campaignUuid,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        resourceUuid: resourceId,
+        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
+        protocolVersion: YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION,
+        fingerprint: '0'.repeat(64),
+      })
     })
     await expect(
       execute(campaign, campaignUuid, { type: 'trash', resourceIds: [resourceId] }),
@@ -2006,6 +2016,12 @@ describe('resource structure commands', () => {
         operationUuid: restoreOperationId,
         resourceUuid: resourceId,
       })
+      await expect(
+        ctx.db
+          .query('yjsRecoveryReapplyOperations')
+          .withIndex('by_campaign_and_operation', (query) => query.eq('campaignUuid', campaignUuid))
+          .first(),
+      ).resolves.toMatchObject({ resourceUuid: resourceId })
       await expect(
         ctx.db
           .query('itemHistoryCheckpointAssets')
@@ -2270,6 +2286,103 @@ describe('resource structure commands', () => {
         }),
       )
     })
+  })
+
+  it('uses one encoded note bound for create, merge, load, and recovery replacement', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const acceptedUpdate = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'x'.repeat(800_023) }],
+      },
+    ])
+    expect(acceptedUpdate.byteLength).toBeGreaterThan(768 * 1024)
+    expect(acceptedUpdate.byteLength).toBeLessThanOrEqual(MAX_NOTE_YJS_ENCODED_BYTES)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'note',
+          parentId: null,
+          title: 'Large note',
+          icon: null,
+          color: null,
+        },
+        update: acceptedUpdate,
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+
+    const document = new Y.Doc()
+    Y.applyUpdate(document, new Uint8Array(acceptedUpdate))
+    const stateVector = Y.encodeStateVector(document)
+    noteTextType(document).insert(800_023, 'y'.repeat(130_000))
+    const oversizedUpdate = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    const oversizedDelta = Uint8Array.from(Y.encodeStateAsUpdate(document, stateVector)).buffer
+    document.destroy()
+    expect(oversizedUpdate.byteLength).toBeGreaterThan(MAX_NOTE_YJS_ENCODED_BYTES)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+        campaignId: campaignUuid,
+        generation: INITIAL_CONTENT_GENERATION,
+        resourceId,
+        update: oversizedDelta,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_limit_exceeded' })
+
+    const current = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+    })
+    if (current.status !== 'ready') throw new TypeError('Expected accepted large note')
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, {
+        campaignId: campaignUuid,
+        expectedGeneration: current.generation,
+        expectedVersion: current.version,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        resourceId,
+        snapshotUpdate: oversizedUpdate,
+        snapshotVersion: await initialNoteContentVersion(new Uint8Array(oversizedUpdate)),
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'snapshot_incompatible' })
+
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      if (!content) throw new TypeError('Expected stored note')
+      await ctx.db.patch('resourceNoteContents', content._id, { update: oversizedUpdate })
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'integrity_error', issue: 'content_limit_exceeded' })
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.createNoteResource, {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
+          kind: 'note',
+          parentId: null,
+          title: 'Oversized note',
+          icon: null,
+          color: null,
+        },
+        update: oversizedUpdate,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_integrity_failure' })
   })
 
   it('merges large concurrent canonical note updates and advances the content revision', async () => {

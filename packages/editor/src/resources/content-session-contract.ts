@@ -47,11 +47,14 @@ export type ContentRecoveryActionResult =
       status: 'rejected'
       reason:
         | 'content_changed'
+        | 'operation_id_reused'
         | 'resource_unavailable'
         | 'snapshot_incompatible'
         | 'scope_unavailable'
         | 'unauthorized'
     }>
+
+export const YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION = 'yjs-recovery-reapply-v1' as const
 
 export type ContentRecovery = Readonly<{
   export(): ContentExportResult

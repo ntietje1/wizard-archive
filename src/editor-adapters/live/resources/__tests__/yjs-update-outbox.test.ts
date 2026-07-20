@@ -104,15 +104,17 @@ describe('YjsUpdateOutbox', () => {
     const ledger = outbox(storage, 'note', 'recovery')
     const pending = updateWithText('pending', 10)
     const complete = updateWithText('complete', 20)
+    const operationId = testDomainId('operation', 'recovery')
 
     expect(ledger.merge(INITIAL_CONTENT_GENERATION, pending)).toEqual({ status: 'accepted' })
-    expect(ledger.preserve(INITIAL_CONTENT_GENERATION, complete)).toEqual({
+    expect(ledger.preserve(INITIAL_CONTENT_GENERATION, operationId, complete)).toEqual({
       status: 'accepted',
     })
     expect(ledger.load()).toMatchObject({
       status: 'available',
       entry: {
         generation: INITIAL_CONTENT_GENERATION,
+        operationId,
         state: 'recovery',
         update: { byteLength: complete.byteLength },
       },
@@ -147,9 +149,29 @@ describe('YjsUpdateOutbox', () => {
     expect(ledger.replace(INITIAL_CONTENT_GENERATION, new Uint8Array(600_000))).toEqual({
       status: 'unavailable',
     })
-    const recovery = outbox(new QuotaStorage(), 'canvas', 'larger-recovery')
-    expect(recovery.preserve(INITIAL_CONTENT_GENERATION, new Uint8Array(600_000))).toEqual({
+    const canvasRecovery = outbox(new QuotaStorage(), 'canvas', 'larger-recovery')
+    expect(
+      canvasRecovery.preserve(
+        INITIAL_CONTENT_GENERATION,
+        testDomainId('operation', 'canvas-larger-recovery'),
+        new Uint8Array(600_000),
+      ),
+    ).toEqual({
+      status: 'unavailable',
+    })
+    const noteRecovery = outbox(new QuotaStorage(), 'note', 'larger-recovery')
+    expect(
+      noteRecovery.preserve(
+        INITIAL_CONTENT_GENERATION,
+        testDomainId('operation', 'note-larger-recovery'),
+        new Uint8Array(800_023),
+      ),
+    ).toEqual({
       status: 'accepted',
+    })
+    expect(noteRecovery.load()).toMatchObject({
+      status: 'available',
+      entry: { state: 'recovery', update: { byteLength: 800_023 } },
     })
   })
 

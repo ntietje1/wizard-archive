@@ -30,6 +30,7 @@ import {
   ITEM_HISTORY_ACTION,
   ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/content-session-contract'
 
 export const versionStampValidator = v.object({
   scheme: v.literal(VERSION_SCHEME),
@@ -1192,6 +1193,7 @@ export const contentRecoveryActionResultValidator = v.union(
     status: v.literal('rejected'),
     reason: literals(
       'content_changed',
+      'operation_id_reused',
       'resource_unavailable',
       'snapshot_incompatible',
       'scope_unavailable',
@@ -1476,6 +1478,17 @@ export const resourceTables = {
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid'])
     .index('by_resource', ['campaignUuid', 'resourceUuid']),
+
+  yjsRecoveryReapplyOperations: defineTable({
+    campaignUuid: campaignIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    resourceUuid: resourceIdValidator,
+    operationUuid: operationIdValidator,
+    protocolVersion: v.literal(YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION),
+    fingerprint: v.string(),
+  })
+    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
+    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
 
   resourceBookmarks: defineTable({
     campaignUuid: campaignIdValidator,

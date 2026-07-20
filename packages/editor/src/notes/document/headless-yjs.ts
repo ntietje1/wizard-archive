@@ -7,6 +7,12 @@ import { createHeadlessNoteEditor } from './headless-schema'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
 import { markdownToNoteBlocks } from './markdown-import'
 
+export const MAX_NOTE_YJS_ENCODED_BYTES = 900 * 1024
+
+export function noteYjsEncodedBytesWithinLimit(bytes: Readonly<{ byteLength: number }>): boolean {
+  return bytes.byteLength <= MAX_NOTE_YJS_ENCODED_BYTES
+}
+
 export class InvalidNoteYjsDocumentError extends Error {
   readonly cause: unknown
 

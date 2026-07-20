@@ -5,6 +5,7 @@ import type {
   ContentSessionSaveResult,
   ContentUnavailableState,
 } from '@wizard-archive/editor/resources/content-session-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { assertContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
@@ -339,8 +340,11 @@ class LiveYjsDocumentSession {
     if (this.#terminal) return
     const terminal =
       result.reason === 'content_generation_conflict' &&
-      this.#outbox.preserve(this.#generation, Y.encodeStateAsUpdate(this.document)).status !==
-        'accepted'
+      this.#outbox.preserve(
+        this.#generation,
+        generateDomainId(DOMAIN_ID_KIND.operation),
+        Y.encodeStateAsUpdate(this.document),
+      ).status !== 'accepted'
         ? ({ status: 'rejected', reason: 'scope_unavailable' } as const)
         : result
     this.#terminal = terminal

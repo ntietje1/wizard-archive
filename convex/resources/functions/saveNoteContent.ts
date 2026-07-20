@@ -11,6 +11,7 @@ import {
   NOTE_YJS_FRAGMENT,
   canonicalizeNoteYjsDocument,
   decodeNoteYjsUpdatesToBlocks,
+  noteYjsEncodedBytesWithinLimit,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
 import {
@@ -116,6 +117,7 @@ async function mergeNoteUpdate(
       references: ResourceReferenceProjection
     }>
   | ContentMergeRejection
+  | Readonly<{ status: 'rejected'; reason: 'content_limit_exceeded' }>
   | ContentMergeRetry
 > {
   const document = new Y.Doc()
@@ -130,6 +132,9 @@ async function mergeNoteUpdate(
       return { status: 'rejected', reason: 'content_corrupt' }
     }
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    if (!noteYjsEncodedBytesWithinLimit(update)) {
+      return { status: 'rejected', reason: 'content_limit_exceeded' }
+    }
     const version = await advanceNoteContentVersion(
       assertVersionStamp(currentVersion),
       new Uint8Array(update),

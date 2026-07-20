@@ -16,6 +16,7 @@ import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
   noteBlocksToYDoc,
+  noteYjsEncodedBytesWithinLimit,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
 import type { GenericDatabaseReader } from 'convex/server'
@@ -59,6 +60,9 @@ export async function createNoteContent(
     }
     return 'operation_id_reused'
   }
+  if (!noteYjsEncodedBytesWithinLimit(update)) {
+    throw new RangeError('Note content exceeds its encoded byte bound')
+  }
   await ctx.db.insert('resourceNoteContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,
@@ -89,6 +93,7 @@ export async function prepareNoteContentCreation(
   version: VersionStamp
   occurrences: ReadonlyArray<AuthoredDestinationOccurrence>
 }> | null> {
+  if (!noteYjsEncodedBytesWithinLimit(update)) return null
   try {
     const blocks = decodeNoteYjsUpdatesToBlocks([{ update }], NOTE_YJS_FRAGMENT)
     const version = await initialNoteContentVersion(new Uint8Array(update))
@@ -177,6 +182,9 @@ export async function prepareNoteContentCopy(
         if (remapped.status !== 'completed') throw new TypeError('Unmapped authored destination')
         const finalized = remapped.blocks
         const update = encodeYjsDocument(noteBlocksToYDoc(finalized, NOTE_YJS_FRAGMENT))
+        if (!noteYjsEncodedBytesWithinLimit(update)) {
+          throw new RangeError('Copied note content exceeds its encoded byte bound')
+        }
         const version = await initialNoteContentVersion(new Uint8Array(update))
         return async () => {
           await ctx.db.insert('resourceNoteContents', {

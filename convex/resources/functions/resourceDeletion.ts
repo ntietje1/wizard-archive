@@ -274,6 +274,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'mapPins',
   'canvasContents',
   'searchDocuments',
+  'recoveryReapplyOperations',
   'historyRestoreOperations',
   'historyEntries',
   'historyCheckpoints',
@@ -306,6 +307,7 @@ type CampaignResourceRow =
   | Doc<'resourceMapPins'>
   | Doc<'resourceCanvasContents'>
   | Doc<'resourceSearchDocuments'>
+  | Doc<'yjsRecoveryReapplyOperations'>
   | Doc<'itemHistoryRestoreOperations'>
   | Doc<'resourceReferenceEdges'>
   | Doc<'resourceAssetCopyIntents'>
@@ -438,6 +440,11 @@ async function loadCampaignResourceDeletionBatch(
     case 'historyRestoreOperations':
       return await ctx.db
         .query('itemHistoryRestoreOperations')
+        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'recoveryReapplyOperations':
+      return await ctx.db
+        .query('yjsRecoveryReapplyOperations')
         .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
   }

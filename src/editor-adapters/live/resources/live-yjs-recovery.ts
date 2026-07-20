@@ -9,6 +9,7 @@ import type { VersionStamp } from '@wizard-archive/editor/resources/component-ve
 import type {
   CampaignId,
   CampaignMemberId,
+  OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import { createYjsUpdateOutbox } from './yjs-update-outbox'
@@ -24,6 +25,7 @@ type RecoveryReapply = (args: {
   campaignId: CampaignId
   expectedGeneration: ContentGeneration
   expectedVersion: VersionStamp
+  operationId: OperationId
   resourceId: ResourceId
   snapshotUpdate: ArrayBuffer
   snapshotVersion: VersionStamp
@@ -33,6 +35,7 @@ type RecoveryReapply = (args: {
       status: 'rejected'
       reason:
         | 'content_changed'
+        | 'operation_id_reused'
         | 'resource_unavailable'
         | 'snapshot_incompatible'
         | 'scope_unavailable'
@@ -60,10 +63,11 @@ export function createLiveYjsRecovery(
     options.memberId,
   )
   const stored = outbox.load()
-  if (stored.status !== 'available' || !stored.entry || stored.entry.state !== 'recovery') {
+  const entry = stored.status === 'available' ? stored.entry : null
+  if (!entry || entry.state !== 'recovery') {
     return null
   }
-  const artifact = Uint8Array.from(stored.entry.update)
+  const artifact = Uint8Array.from(entry.update)
   const clear = () => {
     if (outbox.clear().status !== 'accepted') {
       return { status: 'rejected', reason: 'scope_unavailable' } as const
@@ -91,6 +95,7 @@ export function createLiveYjsRecovery(
           campaignId: options.campaignId,
           expectedGeneration: assertContentGeneration(snapshot.generation),
           expectedVersion: assertVersionStamp(snapshot.version),
+          operationId: entry.operationId,
           resourceId: options.resourceId,
           snapshotUpdate: Uint8Array.from(artifact).buffer,
           snapshotVersion: await options.versionArtifact(artifact),

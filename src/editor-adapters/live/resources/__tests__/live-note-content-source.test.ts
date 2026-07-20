@@ -449,7 +449,7 @@ describe('LiveNoteContentSource', () => {
     reloaded.dispose()
   })
 
-  it('freezes a complete note draft when a restore wins against an in-flight save', async () => {
+  it('keeps a large in-flight note recovery exportable and exactly retryable after reload', async () => {
     sessionStorage.clear()
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
@@ -496,6 +496,8 @@ describe('LiveNoteContentSource', () => {
     if (ready.status !== 'ready') throw new TypeError('Expected editable note')
     noteTextType(ready.session.document).delete(0, 4)
     noteTextType(ready.session.document).insert(0, 'Draft')
+    noteTextType(ready.session.document).insert(10, 'x'.repeat(800_023))
+    noteTextType(ready.session.document).delete(10, 100)
     const drain = ready.session.flush()
     await vi.waitFor(() => expect(provider.save).toHaveBeenCalledOnce())
 
@@ -516,10 +518,20 @@ describe('LiveNoteContentSource', () => {
       status: 'rejected',
       reason: 'content_generation_conflict',
     })
-    expect(createYjsUpdateOutbox('note', campaignId, resourceId, memberId).load()).toMatchObject({
+    const stored = createYjsUpdateOutbox('note', campaignId, resourceId, memberId).load()
+    expect(stored).toMatchObject({
       status: 'available',
-      entry: { generation: INITIAL_CONTENT_GENERATION, state: 'recovery' },
+      entry: {
+        generation: INITIAL_CONTENT_GENERATION,
+        state: 'recovery',
+      },
     })
+    if (stored.status !== 'available' || !stored.entry || stored.entry.state !== 'recovery') {
+      throw new TypeError('Expected stored note recovery')
+    }
+    expect(stored.entry.update.byteLength).toBeGreaterThan(768 * 1024)
+    const operationId = stored.entry.operationId
+    source.dispose()
 
     const reloaded = createLiveNoteContentSource(
       campaignId,
@@ -542,10 +554,35 @@ describe('LiveNoteContentSource', () => {
     const reloadedExport = reloadedRecovery.recovery.export()
     if (reloadedExport.status !== 'ready') throw new TypeError('Expected reloaded export')
     expect(new TextDecoder().decode(reloadedExport.bytes)).toContain('Draft text')
+    provider.load.mockResolvedValue({
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    provider.reapply
+      .mockRejectedValueOnce(new Error('response lost'))
+      .mockResolvedValueOnce({ status: 'completed' })
+    await expect(reloadedRecovery.recovery.reapply()).resolves.toEqual({
+      status: 'rejected',
+      reason: 'scope_unavailable',
+    })
+    expect(createYjsUpdateOutbox('note', campaignId, resourceId, memberId).load()).toMatchObject({
+      status: 'available',
+      entry: { operationId, state: 'recovery' },
+    })
+    await expect(reloadedRecovery.recovery.reapply()).resolves.toEqual({ status: 'completed' })
+    expect(provider.reapply.mock.calls.map(([args]) => args.operationId)).toEqual([
+      operationId,
+      operationId,
+    ])
+    expect(createYjsUpdateOutbox('note', campaignId, resourceId, memberId).load()).toEqual({
+      status: 'available',
+      entry: null,
+    })
 
     initialDocument.destroy()
     restoredDocument.destroy()
-    source.dispose()
     reloaded.dispose()
   })
 
@@ -1338,7 +1375,7 @@ describe('LiveNoteContentSource', () => {
     let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
-      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v3:')) {
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v4:')) {
         return
       }
       outboxKey = key

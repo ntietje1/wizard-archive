@@ -911,7 +911,7 @@ describe('LiveCanvasSessionSource', () => {
     let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
-      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v3:')) {
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v4:')) {
         return
       }
       outboxKey = key

@@ -26,6 +26,7 @@ import {
   ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/content-session-contract'
 import type { Id } from '../../_generated/dataModel'
 import { storeUncommittedTestUploadSession } from '../../_test/storage.helper'
 
@@ -1206,6 +1207,14 @@ describe('deleteCampaign', () => {
           restoredFromEntryId: restoredHistoryEntryId,
         },
       })
+      await dbCtx.db.insert('yjsRecoveryReapplyOperations', {
+        campaignUuid: ctx.campaignDomainId,
+        actorMemberUuid: ctx.dm.memberDomainId,
+        resourceUuid: historyResourceId,
+        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
+        protocolVersion: YJS_RECOVERY_REAPPLY_PROTOCOL_VERSION,
+        fingerprint: '0'.repeat(64),
+      })
       for (let index = 0; index < 40; index += 1) {
         await dbCtx.db.insert('itemHistoryEntries', {
           historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
@@ -1296,6 +1305,12 @@ describe('deleteCampaign', () => {
         .withIndex('by_campaign_and_actor', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
       expect(historyRestoreOperations).toHaveLength(0)
+
+      const recoveryReapplyOperations = await dbCtx.db
+        .query('yjsRecoveryReapplyOperations')
+        .withIndex('by_campaign_and_actor', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(recoveryReapplyOperations).toHaveLength(0)
 
       const historyCheckpoints = await dbCtx.db
         .query('itemHistoryCheckpoints')

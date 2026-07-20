@@ -1308,10 +1308,12 @@ describe('item history checkpoints', () => {
     })
     if (current.status !== 'ready') throw new TypeError('Expected current note')
     const snapshotVersion = await initialNoteContentVersion(new Uint8Array(recoveryUpdate))
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const request = {
       campaignId: campaign.campaignDomainId,
       expectedGeneration: current.generation,
       expectedVersion: current.version,
+      operationId,
       resourceId,
       snapshotUpdate: recoveryUpdate,
       snapshotVersion,
@@ -1337,6 +1339,18 @@ describe('item history checkpoints', () => {
     expect(bytes(recovered.update)).toEqual(bytes(recoveryUpdate))
     await expect(
       asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, request),
+    ).resolves.toEqual({ status: 'completed' })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, {
+        ...request,
+        snapshotVersion: current.version,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, {
+        ...request,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      }),
     ).resolves.toEqual({ status: 'rejected', reason: 'content_changed' })
     await expect(
       asDm(campaign).query(api.resources.queries.loadNoteContent, {
@@ -1377,6 +1391,7 @@ describe('item history checkpoints', () => {
         campaignId: campaign.campaignDomainId,
         expectedGeneration: current.generation,
         expectedVersion: current.version,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         resourceId,
         snapshotUpdate,
         snapshotVersion,
