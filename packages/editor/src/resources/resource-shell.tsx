@@ -81,7 +81,7 @@ export function ResourceShell({
   const selected: ResourceKnowledge<AuthorizedResourceSummary> = selectedResourceId
     ? snapshot.lookup(selectedResourceId)
     : { state: 'unknown' }
-  const [sidebarView, setSidebarView] = useState<'bookmarks' | 'resources' | 'trash'>('resources')
+  const [sidebarView, setSidebarView] = useState<'bookmarks' | 'resources'>('resources')
   const [searchOpen, setSearchOpen] = useState(false)
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
@@ -114,7 +114,7 @@ export function ResourceShell({
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
   const changeSelection = (action: WorkspaceSelectionAction) =>
     setSelection((current) => updateWorkspaceSelection(current, action))
-  const changeSidebarView = (view: 'bookmarks' | 'resources' | 'trash') => {
+  const changeSidebarView = (view: 'bookmarks' | 'resources') => {
     setSidebarView(view)
     changeSelection({ type: 'clear' })
   }

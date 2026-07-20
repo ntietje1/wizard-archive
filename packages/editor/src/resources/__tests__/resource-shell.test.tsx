@@ -486,9 +486,7 @@ describe('ResourceShell', () => {
 
     const trigger = await screen.findByRole('button', { name: 'Create resource' })
     fireEvent.click(trigger)
-    fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
-      target: { value: 'Settled folder' },
-    })
+    expect(screen.queryByRole('textbox', { name: 'New resource title' })).not.toBeInTheDocument()
     const folderButton = screen.getByRole('menuitem', { name: 'Folder' })
     fireEvent.click(folderButton)
 
@@ -678,9 +676,6 @@ describe('ResourceShell', () => {
 
     const trigger = await screen.findByRole('button', { name: 'Create resource' })
     fireEvent.click(trigger)
-    fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
-      target: { value: 'Uncertain folder' },
-    })
     const folderButton = screen.getByRole('menuitem', { name: 'Folder' })
     fireEvent.click(folderButton)
 
@@ -1061,15 +1056,21 @@ describe('ResourceShell', () => {
 
     const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
     fireEvent.click(sidebar.getByRole('button', { name: resource.title }))
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse all folders' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enter close-all-folders mode' }))
     expect(sidebar.queryByRole('button', { name: 'Untitled map' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Exit close-all-folders mode' }))
+    expect(sidebar.getByRole('button', { name: 'Untitled map' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Enter close-all-folders mode' }))
     act(() => navigation.open({ kind: 'resource', resourceId: createdId }))
     await waitFor(() => expect(sidebar.getByRole('button', { name: 'Untitled map' })).toBeVisible())
+    expect(
+      screen.getByRole('button', { name: 'Enter close-all-folders mode' }),
+    ).not.toBePressed()
     core.dispose()
   })
 
-  it('keeps exact duplicate titles unchanged when creating resources', async () => {
-    const { core, resource } = await shellRuntime(true)
+  it('creates resources with their default title and no inline naming step', async () => {
+    const { core } = await shellRuntime(true)
 
     render(
       <ResourceShell
@@ -1080,9 +1081,7 @@ describe('ResourceShell', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Create resource' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
-      target: { value: resource.title },
-    })
+    expect(screen.queryByRole('textbox', { name: 'New resource title' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
 
     expect(await screen.findByText('Folder created')).toBeInTheDocument()
@@ -1091,7 +1090,7 @@ describe('ResourceShell', () => {
       .list({ parentId: null, lifecycle: 'active' })
     expect(roots).toMatchObject({ state: 'known', complete: true })
     if (roots.state === 'known') {
-      expect(roots.items.filter((item) => item.title === resource.title)).toHaveLength(2)
+      expect(roots.items.filter((item) => item.title === 'Untitled folder')).toHaveLength(1)
     }
     core.dispose()
   })
@@ -1226,8 +1225,8 @@ describe('ResourceShell', () => {
       />,
     )
 
-    await createFolderFromSidebar('Second folder')
-    await createFolderFromSidebar('Third folder')
+    await createFolderForTest(core.runtime, 'Second folder')
+    await createFolderForTest(core.runtime, 'Third folder')
     const first = screen.getByRole('button', { name: resource.title })
     const second = screen.getByRole('button', { name: 'Second folder' })
     const third = screen.getByRole('button', { name: 'Third folder' })
@@ -1258,7 +1257,7 @@ describe('ResourceShell', () => {
       />,
     )
 
-    await createFolderFromSidebar('Destination')
+    await createFolderForTest(core.runtime, 'Destination')
     fireEvent.contextMenu(screen.getByRole('button', { name: resource.title }), {
       clientX: 40,
       clientY: 50,
@@ -1299,7 +1298,7 @@ describe('ResourceShell', () => {
       />,
     )
 
-    await createFolderFromSidebar('Destination')
+    await createFolderForTest(core.runtime, 'Destination')
     const roots = core.runtime.resources.index
       .getSnapshot()
       .list({ parentId: null, lifecycle: 'active' })
@@ -1339,7 +1338,7 @@ describe('ResourceShell', () => {
       />,
     )
 
-    await createFolderFromSidebar('Keyboard source')
+    await createFolderForTest(core.runtime, 'Keyboard source')
     const source = screen.getByRole('button', { name: 'Keyboard source' })
     fireEvent.click(source)
     fireEvent.keyDown(source, { key: 'c', ctrlKey: true })
@@ -1471,9 +1470,9 @@ describe('ResourceShell', () => {
     })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bookmark' }))
     expect(await screen.findByText('Bookmarked')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Bookmarks' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show bookmarks' }))
 
-    expect(screen.getByRole('button', { name: 'Bookmarks' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Exit bookmarks' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -1481,15 +1480,8 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('restores a trashed resource by dragging it out to the workspace root', async () => {
+  it('restores a trashed resource from the compact trash surface', async () => {
     const { core, resource } = await shellRuntime(true, 'trashed')
-    const transferData = new Map<string, string>()
-    const dataTransfer = {
-      dropEffect: 'none',
-      effectAllowed: 'none',
-      getData: (type: string) => transferData.get(type) ?? '',
-      setData: (type: string, value: string) => transferData.set(type, value),
-    }
 
     render(
       <ResourceShell
@@ -1500,10 +1492,7 @@ describe('ResourceShell', () => {
     )
 
     fireEvent.click(await screen.findByRole('button', { name: 'Trash' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Open full trash view' }))
-    const source = await screen.findByRole('button', { name: resource.title })
-    fireEvent.dragStart(source, { dataTransfer })
-    fireEvent.drop(screen.getByLabelText('trash resource drop zone'), { dataTransfer })
+    fireEvent.click(await screen.findByRole('button', { name: `Restore ${resource.title}` }))
 
     await waitFor(() =>
       expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
@@ -1511,8 +1500,6 @@ describe('ResourceShell', () => {
         value: { lifecycle: 'active', displayParentId: null },
       }),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Trash' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Back to resources' }))
     expect(await screen.findByRole('button', { name: resource.title })).toBeInTheDocument()
     core.dispose()
   })
@@ -1656,14 +1643,9 @@ describe('ResourceShell', () => {
   })
 })
 
-async function createFolderFromSidebar(title: string) {
-  fireEvent.click(screen.getByRole('button', { name: 'Create resource' }))
-  fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
-    target: { value: title },
-  })
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
+async function createFolderForTest(runtime: EditorRuntime, title: string) {
+  await act(() => createWorkspaceActions(runtime, vi.fn()).create('folder', null, title))
   await screen.findByRole('button', { name: title })
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Create resource' })).toBeEnabled())
 }
 
 async function shellRuntime(

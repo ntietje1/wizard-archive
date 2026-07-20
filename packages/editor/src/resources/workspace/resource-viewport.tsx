@@ -384,14 +384,13 @@ function FolderViewport({
           />
         ))}
         {canEdit && (
-          <div className="relative flex h-[140px] items-center justify-center rounded-md border border-dashed border-border hover:bg-muted/50">
-            <ResourceCreateMenu
-              actions={actions}
-              label="Create item in this folder"
-              parentId={folder.id}
-              runtime={runtime}
-            />
-          </div>
+          <ResourceCreateMenu
+            actions={actions}
+            label="Create item in this folder"
+            parentId={folder.id}
+            runtime={runtime}
+            variant="card"
+          />
         )}
       </div>
       {!collection.complete && (

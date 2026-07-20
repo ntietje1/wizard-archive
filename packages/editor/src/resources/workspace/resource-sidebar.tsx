@@ -1,16 +1,27 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import {
+  ArrowUpDown,
+  Bookmark,
+  BookmarkCheck,
   ChevronDown,
   ChevronRight,
   File,
-  ListCollapse,
+  FolderDot,
+  FolderOpenDot,
   Loader2,
   PanelLeftClose,
   Plus,
   Search,
-  Star,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@wizard-archive/ui/shadcn/components/dropdown-menu'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -136,15 +147,15 @@ export function ResourceSidebar({
   slots?: Readonly<{ footer?: ReactNode; headerEnd?: ReactNode; headerStart?: ReactNode }>
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
-  view: 'bookmarks' | 'resources' | 'trash'
+  view: 'bookmarks' | 'resources'
   workspaceName: string | null
-  onViewChange: (view: 'bookmarks' | 'resources' | 'trash') => void
+  onViewChange: (view: 'bookmarks' | 'resources') => void
 }) {
   const navigationElement = useRef<HTMLElement>(null)
   const [treeExpansion, setTreeExpansion] = useState(DEFAULT_TREE_EXPANSION)
+  const [closeAllFoldersMode, setCloseAllFoldersMode] = useState(false)
   const visibleIds = () => visibleResourceIds(navigationElement.current)
-  const lifecycle = view === 'trash' ? 'trashed' : 'active'
-  const query = { parentId: null, lifecycle } as const
+  const query = { parentId: null, lifecycle: 'active' as const }
   const roots = snapshot.list(query)
   const initialFocusId =
     selectedResourceId ??
@@ -159,25 +170,34 @@ export function ResourceSidebar({
         const resourceId = runtime.navigation.current()?.resourceId ?? null
         if (resourceId === null) return
         const ancestorIds = visibleAncestorIds(snapshot, resourceId)
-        setTreeExpansion((current) =>
-          ancestorIds.reduce(
+        setTreeExpansion((current) => {
+          const initial = closeAllFoldersMode ? DEFAULT_TREE_EXPANSION : current
+          return ancestorIds.reduce(
             (next, ancestorId) => setTreeResourceExpanded(next, ancestorId, true),
-            current,
-          ),
-        )
+            initial,
+          )
+        })
+        setCloseAllFoldersMode(false)
       }),
-    [runtime.navigation, snapshot, view],
+    [closeAllFoldersMode, runtime.navigation, snapshot, view],
   )
   const selectedAncestorIds = new Set(
-    view === 'bookmarks' || selectedResourceId === null
+    closeAllFoldersMode || view === 'bookmarks' || selectedResourceId === null
       ? []
       : visibleAncestorIds(snapshot, selectedResourceId),
   )
   const expansion = {
     isExpanded: (resourceId: ResourceId) =>
-      selectedAncestorIds.has(resourceId) || isTreeResourceExpanded(treeExpansion, resourceId),
-    setExpanded: (resourceId: ResourceId, expanded: boolean) =>
-      setTreeExpansion((current) => setTreeResourceExpanded(current, resourceId, expanded)),
+      !closeAllFoldersMode &&
+      (selectedAncestorIds.has(resourceId) || isTreeResourceExpanded(treeExpansion, resourceId)),
+    setExpanded: (resourceId: ResourceId, expanded: boolean) => {
+      if (expanded && closeAllFoldersMode) {
+        setCloseAllFoldersMode(false)
+        setTreeExpansion(setTreeResourceExpanded(DEFAULT_TREE_EXPANSION, resourceId, true))
+        return
+      }
+      setTreeExpansion((current) => setTreeResourceExpanded(current, resourceId, expanded))
+    },
   }
   return (
     <nav
@@ -208,13 +228,14 @@ export function ResourceSidebar({
         runtime={runtime}
         sort={sort}
         view={view}
-        onCollapseAll={() => setTreeExpansion({ defaultExpanded: false, exceptions: new Set() })}
+        closeAllFoldersMode={closeAllFoldersMode}
+        onCloseAllFoldersModeChange={() => setCloseAllFoldersMode((current) => !current)}
         onSearch={onSearch}
         onSortChange={onSortChange}
+        onViewChange={onViewChange}
       />
       <div
         aria-label={`${view} resource drop zone`}
-        data-external-file-drop-disabled={view === 'trash' ? 'true' : undefined}
         className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:bg-muted/40"
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
@@ -248,30 +269,19 @@ export function ResourceSidebar({
             snapshot={snapshot}
             sort={sort}
             visibleIds={visibleIds}
+            depth={0}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
           />
         )}
       </div>
-      <div className="m-1 grid shrink-0 grid-cols-2 gap-1">
-        <button
-          type="button"
-          aria-pressed={view === 'bookmarks'}
-          className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
-          disabled={runtime.resources.bookmarks.status !== 'available'}
-          onClick={() => onViewChange(view === 'bookmarks' ? 'resources' : 'bookmarks')}
-        >
-          <Star className="size-4" />
-          Bookmarks
-        </button>
+      <div className="m-1 shrink-0">
         <ResourceTrashControl
           actions={actions}
           canEdit={canEdit}
           runtime={runtime}
           snapshot={snapshot}
           sort={sort}
-          view={view}
-          onViewChange={onViewChange}
         />
       </div>
       {slots?.footer && <div className="shrink-0 border-t border-border">{slots.footer}</div>}
@@ -282,21 +292,25 @@ export function ResourceSidebar({
 function ResourceSidebarControls({
   actions,
   canEdit,
-  onCollapseAll,
+  closeAllFoldersMode,
+  onCloseAllFoldersModeChange,
   onSearch,
   onSortChange,
+  onViewChange,
   runtime,
   sort,
   view,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
-  onCollapseAll: () => void
+  closeAllFoldersMode: boolean
+  onCloseAllFoldersModeChange: () => void
   onSearch: () => void
   onSortChange: (sort: WorkspaceSort) => void
+  onViewChange: (view: 'bookmarks' | 'resources') => void
   runtime: EditorRuntime
   sort: WorkspaceSort
-  view: 'bookmarks' | 'resources' | 'trash'
+  view: 'bookmarks' | 'resources'
 }) {
   const searchAvailable = runtime.search.status === 'available'
   return (
@@ -309,6 +323,39 @@ function ResourceSidebarControls({
           runtime={runtime}
         />
       )}
+      {view !== 'bookmarks' && (
+        <button
+          type="button"
+          aria-label={
+            closeAllFoldersMode ? 'Exit close-all-folders mode' : 'Enter close-all-folders mode'
+          }
+          aria-pressed={closeAllFoldersMode}
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
+          onClick={onCloseAllFoldersModeChange}
+        >
+          {closeAllFoldersMode ? (
+            <FolderDot className="size-4" />
+          ) : (
+            <FolderOpenDot className="size-4" />
+          )}
+        </button>
+      )}
+      <ResourceSortMenu sort={sort} onSortChange={onSortChange} />
+      <div className="flex-1" />
+      <button
+        type="button"
+        aria-label={view === 'bookmarks' ? 'Exit bookmarks' : 'Show bookmarks'}
+        aria-pressed={view === 'bookmarks'}
+        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
+        disabled={runtime.resources.bookmarks.status !== 'available'}
+        onClick={() => onViewChange(view === 'bookmarks' ? 'resources' : 'bookmarks')}
+      >
+        {view === 'bookmarks' ? (
+          <BookmarkCheck className="size-4" />
+        ) : (
+          <Bookmark className="size-4" />
+        )}
+      </button>
       <button
         type="button"
         aria-label="Search resources"
@@ -319,36 +366,51 @@ function ResourceSidebarControls({
       >
         <Search className="size-4" />
       </button>
-      <div className="flex-1" />
-      {view !== 'bookmarks' && (
-        <button
-          type="button"
-          aria-label="Collapse all folders"
-          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={onCollapseAll}
-        >
-          <ListCollapse className="size-4" />
-        </button>
-      )}
-      <label className="sr-only" htmlFor="workspace-resource-sort">
-        Sort resources
-      </label>
-      <select
-        id="workspace-resource-sort"
-        aria-label="Sort resources"
-        className="h-7 max-w-28 rounded-md border-0 bg-transparent px-1 text-xs text-muted-foreground hover:bg-muted"
-        value={`${sort.by}:${sort.direction}`}
-        onChange={(event) => {
-          const nextSort = parseWorkspaceSort(event.target.value)
-          if (nextSort) onSortChange(nextSort)
-        }}
-      >
-        <option value="title:ascending">Title A–Z</option>
-        <option value="title:descending">Title Z–A</option>
-        <option value="updated:descending">Recently edited</option>
-        <option value="created:descending">Recently created</option>
-      </select>
     </div>
+  )
+}
+
+function ResourceSortMenu({
+  onSortChange,
+  sort,
+}: {
+  onSortChange: (sort: WorkspaceSort) => void
+  sort: WorkspaceSort
+}) {
+  const value = `${sort.by}:${sort.direction}`
+  const options = [
+    { value: 'title:ascending', label: 'File name (A to Z)' },
+    { value: 'title:descending', label: 'File name (Z to A)' },
+    { value: 'updated:descending', label: 'Modified time (new to old)' },
+    { value: 'updated:ascending', label: 'Modified time (old to new)' },
+    { value: 'created:descending', label: 'Created time (new to old)' },
+    { value: 'created:ascending', label: 'Created time (old to new)' },
+  ] as const
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Sort resources"
+        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+      >
+        <ArrowUpDown className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuRadioGroup
+          value={value}
+          onValueChange={(nextValue) => {
+            const nextSort = parseWorkspaceSort(nextValue)
+            if (nextSort) onSortChange(nextSort)
+          }}
+        >
+          {options.map((option, index) => (
+            <Fragment key={option.value}>
+              {(index === 2 || index === 4) && <DropdownMenuSeparator />}
+              <DropdownMenuRadioItem value={option.value}>{option.label}</DropdownMenuRadioItem>
+            </Fragment>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -395,31 +457,33 @@ function BookmarkedResourceCollection({
     sort.direction,
   )
   if (resources.length === 0) {
-    return <p className="px-2 py-3 text-xs text-muted-foreground">No bookmarked resources</p>
+    return null
   }
   const initialFocusId = selectedResourceId ?? resources[0]?.id ?? null
   const ambiguous = duplicateResourceKeys(resources)
   return (
     <ul className="space-y-0.5">
       {resources.map((resource) => (
-        <li
-          key={resource.id}
-          className="group flex min-w-0 items-center rounded-md hover:bg-muted/70"
-        >
-          <span className="size-6 shrink-0" />
-          <ResourceTreeButton
-            actions={actions}
-            ambiguous={ambiguous.has(resourcePresentationKey(resource))}
-            canEdit={canEdit}
-            expansion={{ status: 'unavailable' }}
-            initialFocusId={initialFocusId}
-            resource={resource}
-            selectedResourceId={selectedResourceId}
-            selection={selection}
-            visibleIds={visibleIds}
-            onSelectionChange={onSelectionChange}
-            onOpenContextMenu={onOpenContextMenu}
-          />
+        <li key={resource.id}>
+          <div
+            aria-current={selectedResourceId === resource.id ? 'page' : undefined}
+            data-selected={selection.selectedIds.includes(resource.id)}
+            className="group flex min-w-0 items-center rounded-md px-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+          >
+            <ResourceTreeButton
+              actions={actions}
+              ambiguous={ambiguous.has(resourcePresentationKey(resource))}
+              canEdit={canEdit}
+              expansion={{ status: 'unavailable' }}
+              initialFocusId={initialFocusId}
+              resource={resource}
+              selectedResourceId={selectedResourceId}
+              selection={selection}
+              visibleIds={visibleIds}
+              onSelectionChange={onSelectionChange}
+              onOpenContextMenu={onOpenContextMenu}
+            />
+          </div>
         </li>
       ))}
     </ul>
@@ -440,6 +504,7 @@ function ResourceCollection({
   snapshot,
   sort,
   visibleIds,
+  depth,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
@@ -454,6 +519,7 @@ function ResourceCollection({
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
   visibleIds: () => ReadonlyArray<ResourceId>
+  depth: number
 }) {
   const collection = snapshot.list(query)
   const load = useEnsureResourceCollection(
@@ -465,7 +531,7 @@ function ResourceCollection({
     return <SidebarState load={load} pendingLabel="Loading resources…" />
   }
   if (collection.items.length === 0 && collection.complete) {
-    return <p className="px-2 py-3 text-xs text-muted-foreground">No resources</p>
+    return null
   }
 
   const items = sortAuthorizedResourceSummaries(collection.items, sort.by, sort.direction)
@@ -487,6 +553,7 @@ function ResourceCollection({
           snapshot={snapshot}
           sort={sort}
           visibleIds={visibleIds}
+          depth={depth}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
         />
@@ -519,6 +586,7 @@ function ResourceTreeRow({
   snapshot,
   sort,
   visibleIds,
+  depth,
 }: {
   actions: WorkspaceActions
   ambiguous: boolean
@@ -534,6 +602,7 @@ function ResourceTreeRow({
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
   visibleIds: () => ReadonlyArray<ResourceId>
+  depth: number
 }) {
   const expanded = expansion.isExpanded(resource.id)
   const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const
@@ -542,17 +611,22 @@ function ResourceTreeRow({
 
   return (
     <li>
-      <div className="group flex min-w-0 items-center rounded-md hover:bg-muted/70">
+      <div
+        aria-current={selectedResourceId === resource.id ? 'page' : undefined}
+        data-selected={selection.selectedIds.includes(resource.id)}
+        className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+        style={{ paddingLeft: `${4 + depth * 12}px` }}
+      >
+        <SidebarIndentGuides depth={depth} />
         {resource.kind === 'folder' ? (
           <FolderExpansionButton
             expanded={expanded}
             hasChildren={hasChildren}
+            icon={resourceKindIcon(resource.kind)}
             title={resource.title}
             onToggle={() => expansion.setExpanded(resource.id, !expanded)}
           />
-        ) : (
-          <span className="size-6 shrink-0" />
-        )}
+        ) : null}
         <ResourceTreeButton
           actions={actions}
           ambiguous={ambiguous}
@@ -568,40 +642,53 @@ function ResourceTreeRow({
           resource={resource}
           selectedResourceId={selectedResourceId}
           selection={selection}
+          showIcon={resource.kind !== 'folder'}
           visibleIds={visibleIds}
         />
       </div>
       {resource.kind === 'folder' && expanded && (
-        <div className="ml-3 border-l border-border pl-1">
-          <ResourceCollection
-            actions={actions}
-            canEdit={canEdit}
-            expansion={expansion}
-            query={childQuery}
-            runtime={runtime}
-            initialFocusId={initialFocusId}
-            selectedResourceId={selectedResourceId}
-            selection={selection}
-            snapshot={snapshot}
-            sort={sort}
-            visibleIds={visibleIds}
-            onSelectionChange={onSelectionChange}
-            onOpenContextMenu={onOpenContextMenu}
-          />
-        </div>
+        <ResourceCollection
+          actions={actions}
+          canEdit={canEdit}
+          expansion={expansion}
+          query={childQuery}
+          runtime={runtime}
+          initialFocusId={initialFocusId}
+          selectedResourceId={selectedResourceId}
+          selection={selection}
+          snapshot={snapshot}
+          sort={sort}
+          visibleIds={visibleIds}
+          depth={depth + 1}
+          onSelectionChange={onSelectionChange}
+          onOpenContextMenu={onOpenContextMenu}
+        />
       )}
     </li>
   )
 }
 
+function SidebarIndentGuides({ depth }: { depth: number }) {
+  return Array.from({ length: depth }, (_, index) => (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 border-l border-border"
+      key={index}
+      style={{ left: `${9 + index * 12}px` }}
+    />
+  ))
+}
+
 function FolderExpansionButton({
   expanded,
   hasChildren,
+  icon: Icon,
   onToggle,
   title,
 }: {
   expanded: boolean
   hasChildren: boolean
+  icon: ReturnType<typeof resourceKindIcon>
   onToggle: () => void
   title: string
 }) {
@@ -609,11 +696,22 @@ function FolderExpansionButton({
     <button
       type="button"
       aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
-      className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      className="relative inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
       onClick={onToggle}
     >
+      <Icon
+        className={
+          hasChildren
+            ? 'size-4 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0'
+            : 'size-4'
+        }
+      />
       {hasChildren &&
-        (expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />)}
+        (expanded ? (
+          <ChevronDown className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
+        ) : (
+          <ChevronRight className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
+        ))}
     </button>
   )
 }
@@ -629,6 +727,7 @@ function ResourceTreeButton({
   resource,
   selectedResourceId,
   selection,
+  showIcon = true,
   visibleIds,
 }: {
   actions: WorkspaceActions
@@ -641,10 +740,10 @@ function ResourceTreeButton({
   resource: AuthorizedResourceSummary
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
+  showIcon?: boolean
   visibleIds: () => ReadonlyArray<ResourceId>
 }) {
   const Icon = resourceKindIcon(resource.kind)
-  const selected = selection.selectedIds.includes(resource.id)
   const tabbable =
     selection.focusedId === resource.id ||
     (selection.focusedId === null && initialFocusId === resource.id)
@@ -654,7 +753,7 @@ function ResourceTreeButton({
       aria-current={selectedResourceId === resource.id ? 'page' : undefined}
       data-resource-id={resource.id}
       data-resource-kind={resource.kind}
-      data-selected={selected}
+      data-selected={selection.selectedIds.includes(resource.id)}
       {...workspaceResourceInteractionProps({
         actions,
         canEdit,
@@ -664,7 +763,7 @@ function ResourceTreeButton({
         selection,
       })}
       tabIndex={tabbable ? 0 : -1}
-      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-ring"
       onClick={(event) =>
         selectTreeResource({ actions, event, resource, visibleIds, onSelectionChange })
       }
@@ -680,7 +779,7 @@ function ResourceTreeButton({
         })
       }
     >
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      {showIcon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
       <span className="min-w-0 flex-1 truncate">{resource.title}</span>
       {ambiguous && (
         <span className="shrink-0 text-[10px] text-muted-foreground">
@@ -801,26 +900,31 @@ export function ResourceCreateMenu({
   label,
   parentId,
   runtime,
+  variant = 'icon',
 }: {
   actions: WorkspaceActions
   label: string
   parentId: ResourceId | null
   runtime: EditorRuntime
+  variant?: 'card' | 'icon'
 }) {
   const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState('')
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, parentId)
   const blocked = creation.blocked
   const upload = useRef<HTMLInputElement>(null)
   return (
-    <div className="relative">
+    <div className={variant === 'card' ? 'relative h-[140px]' : 'relative'}>
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={label}
         disabled={blocked}
-        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        className={
+          variant === 'card'
+            ? 'flex h-full w-full items-center justify-center rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+            : 'inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
+        }
         onClick={() => setOpen((value) => !value)}
       >
         <Plus className="size-4" />
@@ -828,17 +932,10 @@ export function ResourceCreateMenu({
       {open && (
         <div
           role="menu"
-          className="absolute left-0 top-8 z-30 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          className={`absolute left-0 z-30 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md ${
+            variant === 'card' ? 'top-full mt-1' : 'top-8'
+          }`}
         >
-          <input
-            autoFocus
-            aria-label="New resource title"
-            disabled={blocked}
-            className="mb-1 h-8 w-full rounded border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Optional title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
           {(
             [
               RESOURCE_KIND.note,
@@ -859,11 +956,10 @@ export function ResourceCreateMenu({
                 className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
                 onClick={async () => {
                   const settlement = await creation.run(kind, (signal) =>
-                    actions.create(kind, parentId, title, signal),
+                    actions.create(kind, parentId, '', signal),
                   )
                   if (settlement.status === 'completed') {
                     setOpen(false)
-                    setTitle('')
                   }
                 }}
               >
@@ -905,7 +1001,6 @@ export function ResourceCreateMenu({
               )
               if (settlement.status === 'completed') {
                 setOpen(false)
-                setTitle('')
               }
             }}
           />
@@ -913,7 +1008,6 @@ export function ResourceCreateMenu({
             creation={creation}
             onCompleted={() => {
               setOpen(false)
-              setTitle('')
             }}
           />
         </div>

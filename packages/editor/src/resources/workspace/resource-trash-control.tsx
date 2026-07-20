@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { CircleHelp, RotateCcw, Trash2 } from 'lucide-react'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { WorkspaceResourceIndexSnapshot } from '../resource-index-contract'
@@ -11,6 +11,7 @@ import {
   leaveWorkspaceResourceDrop,
 } from '../workspace-resource-drag'
 import type { WorkspaceActions } from './resource-operations'
+import { resourceKindLabel } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
 import { useEnsureResourceCollection } from './resource-loading'
 
@@ -22,19 +23,15 @@ type TrashConfirmation =
 export function ResourceTrashControl({
   actions,
   canEdit,
-  onViewChange,
   runtime,
   snapshot,
   sort,
-  view,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
-  onViewChange: (view: 'resources' | 'trash') => void
   runtime: EditorRuntime
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
-  view: 'bookmarks' | 'resources' | 'trash'
 }) {
   const query = { parentId: null, lifecycle: 'trashed' as const }
   useEnsureResourceCollection(runtime.resources.loader, query)
@@ -74,8 +71,7 @@ export function ResourceTrashControl({
       <button
         type="button"
         aria-expanded={open}
-        aria-pressed={view === 'trash'}
-        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-destructive"
+        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-destructive"
         onClick={() => setOpen((value) => !value)}
         onDragOver={canEdit ? allowWorkspaceInternalResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
@@ -93,27 +89,12 @@ export function ResourceTrashControl({
         <div
           role="region"
           aria-label="Trash"
-          className="absolute bottom-9 left-0 z-50 flex w-72 flex-col rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-lg"
+          className="absolute bottom-9 left-0 z-50 flex w-80 flex-col rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
         >
-          <div className="mb-1 flex items-center gap-2 px-1">
-            <strong className="min-w-0 flex-1 text-sm font-medium">Trash</strong>
-            <button
-              type="button"
-              aria-label={view === 'trash' ? 'Back to resources' : 'Open full trash view'}
-              className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-              onClick={() => {
-                onViewChange(view === 'trash' ? 'resources' : 'trash')
-                setOpen(false)
-              }}
-            >
-              {view === 'trash' ? (
-                <RotateCcw className="size-3.5" />
-              ) : (
-                <SquareArrowOutUpRight className="size-3.5" />
-              )}
-            </button>
+          <div className="px-3 pb-2 pt-3">
+            <strong className="text-sm font-medium">Trash</strong>
           </div>
-          <div className="max-h-[300px] overflow-y-auto">
+          <div className="max-h-[300px] overflow-y-auto px-2 pb-2">
             {collection.state === 'unknown' && (
               <p className="px-2 py-5 text-center text-sm text-muted-foreground">Loading trash…</p>
             )}
@@ -138,7 +119,12 @@ export function ResourceTrashControl({
                     }}
                   >
                     <Icon className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate text-sm">{resource.title}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{resource.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {resourceKindLabel(resource.kind)}
+                      </span>
+                    </span>
                   </button>
                   {canEdit && (
                     <>
@@ -172,20 +158,24 @@ export function ResourceTrashControl({
               )
             })}
           </div>
-          {resources.length > 0 && canEdit && (
-            <div className="mt-2 flex justify-end border-t border-border pt-2">
+          <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+            <CircleHelp className="size-4 shrink-0 text-muted-foreground" />
+            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+              Items in Trash are permanently deleted after 30 days.
+            </p>
+            {resources.length > 0 && canEdit && (
               <button
                 type="button"
                 disabled={!canEmpty}
-                className="h-7 rounded px-2 text-xs text-destructive hover:bg-muted disabled:opacity-50"
+                className="h-7 shrink-0 rounded px-2 text-xs text-destructive hover:bg-muted disabled:opacity-50"
                 onClick={() =>
                   confirmation.type === 'empty' ? void empty() : setConfirmation({ type: 'empty' })
                 }
               >
                 {confirmation.type === 'empty' ? 'Confirm empty trash' : 'Empty Trash'}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
