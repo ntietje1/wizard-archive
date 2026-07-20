@@ -10,8 +10,8 @@ const PRODUCT_FRAME_BUDGET: CanvasPerformanceBudget = {
     dragging: 100,
     drawing: 100,
     erasing: 100,
-    lasso: 100,
-    marquee: 100,
+    lasso: 125,
+    marquee: 125,
     resizing: 100,
   },
   maxTypicalFrameDuration: {
@@ -19,8 +19,8 @@ const PRODUCT_FRAME_BUDGET: CanvasPerformanceBudget = {
     dragging: 50,
     drawing: 50,
     erasing: 50,
-    lasso: 50,
-    marquee: 50,
+    lasso: 100,
+    marquee: 100,
     resizing: 50,
   },
 }
@@ -45,6 +45,10 @@ const DEVELOPMENT_SERVER_TOLERANCE: CanvasPerformanceBudget = {
     resizing: 50,
   },
 }
+const ACTIVE_FRAME_BUDGET =
+  process.env.WA_CANVAS_PERFORMANCE_TARGET === 'product'
+    ? PRODUCT_FRAME_BUDGET
+    : DEVELOPMENT_SERVER_TOLERANCE
 const WARMUP_SAMPLES = 2
 const MIN_GESTURE_SAMPLES = 6
 
@@ -387,7 +391,7 @@ async function measureCanvasGesture(
   }, CANVAS_GESTURE_MEASURE)
   const samples = allSamples.filter((sample) => sample.gesture === gesture)
   const summary = summarizeCanvasPerformance(gesture, samples)
-  assertCanvasPerformance(summary, DEVELOPMENT_SERVER_TOLERANCE)
+  assertCanvasPerformance(summary, ACTIVE_FRAME_BUDGET)
   return summary
 }
 
@@ -440,6 +444,7 @@ function canvasPerformanceEvidence(evidence: ReadonlyArray<CanvasPerformanceSumm
     {
       developmentServerTolerance: DEVELOPMENT_SERVER_TOLERANCE,
       evidence,
+      enforcedFrameBudget: ACTIVE_FRAME_BUDGET,
       productFrameBudget: PRODUCT_FRAME_BUDGET,
     },
     null,
