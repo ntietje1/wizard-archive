@@ -1676,8 +1676,8 @@ describe('authorized resource projection', () => {
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     if (kind === 'file') {
       const result = await createEmptyFile(campaign, campaignUuid, operationId, parentId)
-      expect(result.status).toBe('completed')
-      const entry = result.status === 'completed' ? result.entries[0] : null
+      expect(result.status).toBe('settled')
+      const entry = result.status === 'settled' ? result.entries[0] : null
       if (!entry || entry.status !== 'completed') {
         throw new TypeError('Expected completed file transfer')
       }
@@ -1762,7 +1762,7 @@ describe('authorized resource projection', () => {
   async function createEmptyFile(
     campaign: DmCampaignContext,
     campaignUuid: string,
-    operationId: string,
+    _operationId: string,
     parentId: ResourceId | null,
   ) {
     const bytes = new TextEncoder().encode('x')
@@ -1772,21 +1772,45 @@ describe('authorized resource projection', () => {
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).action(api.resources.actions.executePlainTransfer, {
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const reservation = await asDm(campaign).mutation(
+      api.resources.mutations.reservePlainTransfer,
+      {
+        campaignId: campaignUuid,
+        jobId,
+        destinationParentId: parentId,
+        textFileHandling: 'files',
+        sources: [{ id: 'selected-file', kind: 'file', name: 'empty.txt' }],
+        entries: [
+          {
+            sourceId: 'selected-file',
+            path: 'empty.txt',
+            type: 'file',
+            byteSize: bytes.byteLength,
+          },
+        ],
+      },
+    )
+    if (reservation.status !== 'reserved' || !reservation.uploadTargets[0]) {
+      throw new TypeError('Expected reserved file transfer')
+    }
+    await t.run(async (ctx) => {
+      const entry = await ctx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .filter((query) => query.eq(query.field('entryType'), 'file'))
+        .unique()
+      if (!entry) throw new TypeError('Expected reserved transfer entry')
+      await ctx.db.delete('fileStorage', reservation.uploadTargets[0]!.sessionId)
+      await ctx.db.patch('resourceTransferEntries', entry._id, {
+        uploadSessionUuid: upload.sessionId,
+      })
+    })
+    return await asDm(campaign).action(api.resources.actions.commitPlainTransfer, {
       campaignId: campaignUuid,
-      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-      operationId,
-      destinationParentId: parentId,
-      textFileHandling: 'files',
-      sources: [{ id: 'selected-file', kind: 'file', name: 'empty.txt' }],
-      entries: [
-        {
-          sourceId: 'selected-file',
-          path: 'empty.txt',
-          type: 'file',
-          uploadSessionId: upload.sessionId,
-        },
-      ],
+      jobId,
     })
   }
 })

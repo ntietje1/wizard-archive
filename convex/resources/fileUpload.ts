@@ -15,6 +15,7 @@ export const prepareFileUpload = internalQuery({
     actorId: v.string(),
     originalFileName: v.string(),
     storageId: v.id('_storage'),
+    byteSize: v.number(),
   }),
   handler: async (ctx, args) => {
     const user = await authenticate(ctx)
@@ -31,12 +32,15 @@ export const prepareFileUpload = internalQuery({
     ) {
       throw new TypeError('Upload session is unavailable')
     }
+    const metadata = await ctx.db.system.get('_storage', upload.storageId)
+    if (!metadata) throw new TypeError('Uploaded file bytes are unavailable')
     return {
       campaignId: campaign._id,
       campaignUuid: campaign.campaignUuid,
       actorId: membership.campaignMemberUuid,
       originalFileName: upload.originalFileName,
       storageId: upload.storageId,
+      byteSize: metadata.size,
     }
   },
 })

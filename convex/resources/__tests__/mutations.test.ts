@@ -6,7 +6,7 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import type { FunctionArgs } from 'convex/server'
@@ -38,11 +38,6 @@ import {
   initialNoteContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
 import {
-  buildPlainTransferInventory,
-  digestPlainTransferSources,
-} from '@wizard-archive/editor/resources/plain-transfer-inventory'
-import { TRANSFER_JOB_REQUEST_VERSION } from '@wizard-archive/editor/resources/transfer-job-contract'
-import {
   parseSerializedAuthoredDestination,
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
@@ -58,6 +53,7 @@ import { projectMapContent } from '../functions/mapContent'
 import { replaceResourceReferenceProjection } from '../functions/resourceReferences'
 import { deleteResourceItemHistoryBatch } from '../functions/itemHistoryCleanup'
 import type { ItemHistoryCleanupStage } from '../functions/itemHistoryCleanup'
+import { PLAIN_TRANSFER_LIMITS } from '@wizard-archive/editor/resources/plain-transfer-inventory'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -394,13 +390,13 @@ describe('resource structure commands', () => {
       },
       'payload.bin',
     )
-    const result = await asDm(campaign).action(api.resources.actions.executePlainTransfer, args)
+    const result = await commitTestPlainTransfer(asDm(campaign), args)
 
     expect(result).toMatchObject({
-      status: 'completed',
+      status: 'settled',
       entries: [{ status: 'completed', kind: 'file' }],
     })
-    const createdEntry = result.status === 'completed' ? result.entries[0] : null
+    const createdEntry = result.status === 'settled' ? result.entries[0] : null
     if (!createdEntry || createdEntry.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
@@ -411,25 +407,20 @@ describe('resource structure commands', () => {
         jobId,
       }),
     ).resolves.toMatchObject({
-      status: 'completed',
+      status: 'settled',
       jobId,
-      operationId,
-      sourceDigest: expect.any(String),
-      rejectionReason: null,
       entries: [
         {
           status: 'completed',
           resourceId,
-          sourceRootId: 'selected-file',
-          rawPath: 'payload.bin',
-          normalizedPath: 'payload.bin',
-          rejectionReason: null,
+          sourceId: 'selected-file',
+          sourcePath: 'payload.bin',
         },
       ],
     })
-    await expect(
-      asDm(campaign).action(api.resources.actions.executePlainTransfer, args),
-    ).resolves.toMatchObject({ status: 'completed' })
+    await expect(commitTestPlainTransfer(asDm(campaign), args)).resolves.toMatchObject({
+      status: 'settled',
+    })
     const conflictingUpload = await storeUncommittedTestUploadSession(
       t,
       campaign.dm.profile._id,
@@ -437,8 +428,8 @@ describe('resource structure commands', () => {
       'payload.bin',
     )
     await expect(
-      asDm(campaign).action(
-        api.resources.actions.executePlainTransfer,
+      commitTestPlainTransfer(
+        asDm(campaign),
         singleFileTransferArgs(
           {
             campaignId: campaignUuid,
@@ -450,15 +441,14 @@ describe('resource structure commands', () => {
           'payload.bin',
         ),
       ),
-    ).resolves.toMatchObject({ status: 'completed' })
+    ).resolves.toMatchObject({ status: 'settled' })
     await expect(
       asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId,
       }),
     ).resolves.toMatchObject({
-      status: 'completed',
-      sourceDigest: expect.any(String),
+      status: 'settled',
       entries: [{ status: 'completed', resourceId }],
     })
     const rejectedArgs = singleFileTransferArgs(
@@ -471,17 +461,12 @@ describe('resource structure commands', () => {
       },
       'payload.bin',
     )
-    const rejected = await asDm(campaign).action(
-      api.resources.actions.executePlainTransfer,
-      rejectedArgs,
-    )
+    const rejected = await commitTestPlainTransfer(asDm(campaign), rejectedArgs)
     expect(rejected).toMatchObject({
-      status: 'completed',
+      status: 'settled',
       entries: [{ status: 'rejected' }],
     })
-    await expect(
-      asDm(campaign).action(api.resources.actions.executePlainTransfer, rejectedArgs),
-    ).resolves.toEqual(rejected)
+    await expect(commitTestPlainTransfer(asDm(campaign), rejectedArgs)).resolves.toEqual(rejected)
     await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
@@ -540,22 +525,6 @@ describe('resource structure commands', () => {
       new Blob([fileBytes], { type: 'application/octet-stream' }),
       'evidence.bin',
     )
-    const noteDocument = noteBlocksToYDoc(
-      [
-        {
-          type: 'heading',
-          props: { level: 1 },
-          content: [{ type: 'text', text: 'Session', styles: {} }],
-        },
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'Arrival notes', styles: {} }],
-        },
-      ],
-      NOTE_YJS_FRAGMENT,
-    )
-    const noteUpdate = Uint8Array.from(Y.encodeStateAsUpdate(noteDocument)).buffer
-    noteDocument.destroy()
     const args = {
       campaignId: campaignUuid,
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
@@ -574,7 +543,6 @@ describe('resource structure commands', () => {
           path: 'Docs/Session.md',
           type: 'file' as const,
           uploadSessionId: markdownUpload.sessionId,
-          noteUpdate,
         },
         {
           sourceId: 'campaign-directory',
@@ -585,9 +553,11 @@ describe('resource structure commands', () => {
       ],
     }
 
-    const result = await asDm(campaign).action(api.resources.actions.executePlainTransfer, args)
+    const result = await commitTestPlainTransfer(asDm(campaign), args)
 
-    if (result.status !== 'completed') throw new TypeError('Expected completed transfer')
+    if (result.status !== 'settled') {
+      throw new TypeError(`Expected settled transfer: ${JSON.stringify(result)}`)
+    }
     expect(
       result.entries.map((entry) => ({
         status: entry.status,
@@ -632,14 +602,21 @@ describe('resource structure commands', () => {
       status: 'ready',
       content: { attachment: 'attached', byteSize: fileBytes.byteLength, extension: 'bin' },
     })
+    await t.run(async (ctx) => {
+      await expect(ctx.db.get('fileStorage', markdownUpload.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(markdownUpload.storageId)).resolves.toBeNull()
+      await expect(ctx.db.get('fileStorage', fileUpload.sessionId)).resolves.toMatchObject({
+        status: 'committed',
+      })
+      await expect(ctx.storage.get(fileUpload.storageId)).resolves.not.toBeNull()
+    })
     await expect(
       asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId: args.jobId,
       }),
     ).resolves.toMatchObject({
-      status: 'completed',
-      operationId: args.operationId,
+      status: 'settled',
       entries: [
         { status: 'completed' },
         { status: 'completed' },
@@ -648,7 +625,10 @@ describe('resource structure commands', () => {
       ],
     })
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainTransfer, args),
+      asDm(campaign).action(api.resources.actions.commitPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId: args.jobId,
+      }),
     ).resolves.toEqual(result)
     await t.run(async (ctx) => {
       const aliases = await ctx.db
@@ -676,23 +656,301 @@ describe('resource structure commands', () => {
         },
       ],
     }
-    const partial = await asDm(campaign).action(
-      api.resources.actions.executePlainTransfer,
-      partialArgs,
-    )
+    const partial = await commitTestPlainTransfer(asDm(campaign), partialArgs)
     expect(partial).toMatchObject({
-      status: 'completed',
-      entries: [{ status: 'completed', kind: 'folder' }, { status: 'rejected' }],
+      status: 'settled',
+      entries: [{ status: 'rejected' }, { status: 'rejected' }],
     })
     await expect(
       asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId: partialArgs.jobId,
       }),
-    ).resolves.toMatchObject({ status: 'completed_with_issues' })
+    ).resolves.toMatchObject({ status: 'settled' })
+    await expect(commitTestPlainTransfer(asDm(campaign), partialArgs)).resolves.toEqual(partial)
+  })
+
+  it('rejects limit-plus-one manifests before reserving a job or entries', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const entries = Array.from({ length: PLAIN_TRANSFER_LIMITS.maxEntries + 1 }, (_, index) => ({
+      sourceId: 'directory',
+      path: `${index}.bin`,
+      type: 'file' as const,
+      byteSize: 0,
+    }))
+
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainTransfer, partialArgs),
-    ).resolves.toEqual(partial)
+      asDm(campaign).mutation(api.resources.mutations.reservePlainTransfer, {
+        campaignId: campaignUuid,
+        jobId,
+        destinationParentId: null,
+        textFileHandling: 'files',
+        sources: [{ id: 'directory', kind: 'directory', name: 'Directory' }],
+        entries,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_request' })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceTransferJobs')
+          .withIndex('by_campaign_and_importJobUuid', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+          )
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(
+        ctx.db
+          .query('resourceTransferEntries')
+          .withIndex('by_campaign_and_job', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+          )
+          .take(1),
+      ).resolves.toEqual([])
+    })
+  })
+
+  it('rejects conflicting job reuse while exact reservation replay keeps one plan', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const manifest = {
+      campaignId: campaignUuid,
+      jobId,
+      destinationParentId: null,
+      textFileHandling: 'files' as const,
+      sources: [{ id: 'directory', kind: 'directory' as const, name: 'Directory' }],
+      entries: [
+        {
+          sourceId: 'directory',
+          path: 'Folder',
+          type: 'directory' as const,
+        },
+      ],
+    }
+
+    const first = await asDm(campaign).mutation(
+      api.resources.mutations.reservePlainTransfer,
+      manifest,
+    )
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reservePlainTransfer, manifest),
+    ).resolves.toEqual(first)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reservePlainTransfer, {
+        ...manifest,
+        entries: [{ ...manifest.entries[0]!, path: 'Different' }],
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'job_conflict' })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resourceTransferJobs')
+          .withIndex('by_campaign_and_importJobUuid', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+          )
+          .unique(),
+      ).resolves.not.toBeNull()
+      await expect(
+        ctx.db
+          .query('resourceTransferEntries')
+          .withIndex('by_campaign_and_job', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+          )
+          .take(PLAIN_TRANSFER_LIMITS.maxEntries + 1),
+      ).resolves.toHaveLength(2)
+    })
+  })
+
+  it('rejects upload metadata mismatches before materializing any resource', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['two bytes']),
+      'mismatch.bin',
+    )
+    const reservation = await asDm(campaign).mutation(
+      api.resources.mutations.reservePlainTransfer,
+      {
+        campaignId: campaignUuid,
+        jobId,
+        destinationParentId: null,
+        textFileHandling: 'files',
+        sources: [{ id: 'file', kind: 'file', name: 'mismatch.bin' }],
+        entries: [
+          {
+            sourceId: 'file',
+            path: 'mismatch.bin',
+            type: 'file',
+            byteSize: 1,
+          },
+        ],
+      },
+    )
+    if (reservation.status !== 'reserved' || !reservation.uploadTargets[0]) {
+      throw new TypeError('Expected mismatched upload reservation')
+    }
+    const plannedResourceId = await t.run(async (ctx) => {
+      const entry = await ctx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .unique()
+      if (!entry) throw new TypeError('Expected reserved transfer entry')
+      await ctx.db.delete('fileStorage', reservation.uploadTargets[0]!.sessionId)
+      await ctx.db.patch('resourceTransferEntries', entry._id, {
+        uploadSessionUuid: upload.sessionId,
+      })
+      return entry.plannedResourceUuid
+    })
+
+    await expect(
+      asDm(campaign).action(api.resources.actions.commitPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'settled',
+      entries: [{ status: 'rejected', reason: 'invalid_source' }],
+    })
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resources')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', plannedResourceId))
+          .unique(),
+      ).resolves.toBeNull()
+      await expect(ctx.db.get('fileStorage', upload.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(upload.storageId)).resolves.toBeNull()
+    })
+  })
+
+  it('resumes pending entries after a completed note source has been retired', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const noteBytes = new TextEncoder().encode('# Completed')
+    const fileBytes = Uint8Array.from([1, 2, 3])
+    const noteUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([noteBytes]),
+      'completed.md',
+    )
+    const fileUpload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([fileBytes]),
+      'pending.bin',
+    )
+    const reservation = await asDm(campaign).mutation(
+      api.resources.mutations.reservePlainTransfer,
+      {
+        campaignId: campaignUuid,
+        jobId,
+        destinationParentId: null,
+        textFileHandling: 'notes',
+        sources: [
+          { id: 'note', kind: 'file', name: 'completed.md' },
+          { id: 'file', kind: 'file', name: 'pending.bin' },
+        ],
+        entries: [
+          {
+            sourceId: 'note',
+            path: 'completed.md',
+            type: 'file',
+            byteSize: noteBytes.byteLength,
+          },
+          {
+            sourceId: 'file',
+            path: 'pending.bin',
+            type: 'file',
+            byteSize: fileBytes.byteLength,
+          },
+        ],
+      },
+    )
+    if (reservation.status !== 'reserved') {
+      throw new TypeError('Expected resumable transfer reservation')
+    }
+    const planned = await t.run(async (ctx) => {
+      const job = await ctx.db
+        .query('resourceTransferJobs')
+        .withIndex('by_campaign_and_importJobUuid', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .unique()
+      const entries = await ctx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .take(PLAIN_TRANSFER_LIMITS.maxEntries + 1)
+      const note = entries.find((entry) => entry.sourceRootId === 'note')
+      const file = entries.find((entry) => entry.sourceRootId === 'file')
+      if (!job || !note || !file) throw new TypeError('Expected resumable transfer plan')
+      for (const target of reservation.uploadTargets) {
+        await ctx.db.delete('fileStorage', target.sessionId)
+      }
+      await ctx.db.patch('resourceTransferJobs', job._id, { status: 'running' })
+      await ctx.storage.delete(noteUpload.storageId)
+      await ctx.db.delete('fileStorage', noteUpload.sessionId)
+      await ctx.db.patch('resourceTransferEntries', note._id, {
+        status: 'completed',
+        resourceKind: 'note',
+        resourceUuid: note.plannedResourceUuid,
+        uploadSessionUuid: null,
+      })
+      await ctx.db.patch('resourceTransferEntries', file._id, {
+        uploadSessionUuid: fileUpload.sessionId,
+      })
+      return {
+        fileResourceId: file.plannedResourceUuid,
+        noteResourceId: note.plannedResourceUuid,
+      }
+    })
+
+    const result = await asDm(campaign).action(api.resources.actions.commitPlainTransfer, {
+      campaignId: campaignUuid,
+      jobId,
+    })
+    expect(result).toMatchObject({
+      status: 'settled',
+      entries: [
+        {
+          status: 'completed',
+          resourceId: planned.fileResourceId,
+          kind: 'file',
+        },
+        {
+          status: 'completed',
+          resourceId: planned.noteResourceId,
+          kind: 'note',
+        },
+      ],
+    })
+    await expect(
+      asDm(campaign).action(api.resources.actions.commitPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId,
+      }),
+    ).resolves.toEqual(result)
+    await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('resources')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', planned.fileResourceId))
+          .unique(),
+      ).resolves.not.toBeNull()
+      await expect(ctx.db.get('fileStorage', fileUpload.sessionId)).resolves.toMatchObject({
+        status: 'committed',
+      })
+    })
   })
 
   it('replaces file content once, advances its version, and retires the previous asset', async () => {
@@ -705,8 +963,8 @@ describe('resource structure commands', () => {
       new Blob(['original'], { type: 'text/plain' }),
       'evidence.txt',
     )
-    const created = await asDm(campaign).action(
-      api.resources.actions.executePlainTransfer,
+    const created = await commitTestPlainTransfer(
+      asDm(campaign),
       singleFileTransferArgs({
         campaignId: campaignUuid,
         jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
@@ -715,7 +973,7 @@ describe('resource structure commands', () => {
         uploadSessionId: original.sessionId,
       }),
     )
-    const createdEntry = created.status === 'completed' ? created.entries[0] : null
+    const createdEntry = created.status === 'settled' ? created.entries[0] : null
     if (!createdEntry || createdEntry.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
@@ -814,23 +1072,18 @@ describe('resource structure commands', () => {
       destinationParentId: null,
       uploadSessionId: upload.sessionId,
     })
-    const created = await asDm(campaign).action(
-      api.resources.actions.executePlainTransfer,
-      ownerArgs,
-    )
-    expect(created).toMatchObject({ status: 'completed' })
-    const ownerEntry = created.status === 'completed' ? created.entries[0] : null
+    const created = await commitTestPlainTransfer(asDm(campaign), ownerArgs)
+    expect(created).toMatchObject({ status: 'settled' })
+    const ownerEntry = created.status === 'settled' ? created.entries[0] : null
     if (!ownerEntry || ownerEntry.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
     const ownerResourceId = assertDomainId(DOMAIN_ID_KIND.resource, ownerEntry.resourceId)
-    await expect(
-      asDm(campaign).action(api.resources.actions.executePlainTransfer, ownerArgs),
-    ).resolves.toEqual(created)
+    await expect(commitTestPlainTransfer(asDm(campaign), ownerArgs)).resolves.toEqual(created)
 
     await expect(
-      asDm(campaign).action(
-        api.resources.actions.executePlainTransfer,
+      commitTestPlainTransfer(
+        asDm(campaign),
         singleFileTransferArgs({
           campaignId: campaignUuid,
           jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
@@ -839,11 +1092,11 @@ describe('resource structure commands', () => {
           uploadSessionId: upload.sessionId,
         }),
       ),
-    ).resolves.toMatchObject({ status: 'completed', entries: [{ status: 'rejected' }] })
+    ).resolves.toMatchObject({ status: 'settled', entries: [{ status: 'rejected' }] })
 
     await expect(
-      campaign.dm.authed.action(
-        api.resources.actions.executePlainTransfer,
+      commitTestPlainTransfer(
+        campaign.dm.authed,
         singleFileTransferArgs({
           campaignId: otherCampaign.campaignDomainId,
           jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
@@ -852,7 +1105,7 @@ describe('resource structure commands', () => {
           uploadSessionId: upload.sessionId,
         }),
       ),
-    ).resolves.toMatchObject({ status: 'completed', entries: [{ status: 'rejected' }] })
+    ).resolves.toMatchObject({ status: 'settled', entries: [{ status: 'rejected' }] })
 
     const ownerVersion = await storedFileVersion(ownerResourceId)
     await expect(
@@ -886,8 +1139,8 @@ describe('resource structure commands', () => {
       new Blob(['other'], { type: 'text/plain' }),
       'other.txt',
     )
-    const crossCampaignCreated = await campaign.dm.authed.action(
-      api.resources.actions.executePlainTransfer,
+    const crossCampaignCreated = await commitTestPlainTransfer(
+      campaign.dm.authed,
       singleFileTransferArgs({
         campaignId: otherCampaign.campaignDomainId,
         jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
@@ -897,7 +1150,7 @@ describe('resource structure commands', () => {
       }),
     )
     const crossCampaignEntry =
-      crossCampaignCreated.status === 'completed' ? crossCampaignCreated.entries[0] : null
+      crossCampaignCreated.status === 'settled' ? crossCampaignCreated.entries[0] : null
     if (!crossCampaignEntry || crossCampaignEntry.status !== 'completed') {
       throw new TypeError('Expected completed cross-campaign file transfer')
     }
@@ -976,8 +1229,8 @@ describe('resource structure commands', () => {
     const results = await Promise.all(
       jobs.map(
         async (jobId) =>
-          await asDm(campaign).action(
-            api.resources.actions.executePlainTransfer,
+          await commitTestPlainTransfer(
+            asDm(campaign),
             singleFileTransferArgs({
               campaignId: campaignUuid,
               jobId,
@@ -988,7 +1241,9 @@ describe('resource structure commands', () => {
           ),
       ),
     )
-    expect(results.map(({ status }) => status).sort()).toEqual(['completed', 'completed'])
+    expect(
+      results.map(({ status }) => status).sort((left, right) => left.localeCompare(right)),
+    ).toEqual(['settled', 'settled'])
     expect(results).toContainEqual(
       expect.objectContaining({ entries: [expect.objectContaining({ status: 'rejected' })] }),
     )
@@ -1010,11 +1265,10 @@ describe('resource structure commands', () => {
     })
   })
 
-  it('persists cancellation before execution and rejects every later retry', async () => {
+  it('settles cancellation by job identity and preserves its truthful receipt on retry', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
-    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const bytes = new TextEncoder().encode('cancelled transfer')
     const upload = await storeUncommittedTestUploadSession(
       t,
@@ -1022,39 +1276,51 @@ describe('resource structure commands', () => {
       new Blob([bytes], { type: 'text/plain' }),
       'cancelled.txt',
     )
-    const transferArgs = singleFileTransferArgs({
+    await asDm(campaign).mutation(api.resources.mutations.reservePlainTransfer, {
       campaignId: campaignUuid,
       jobId,
-      operationId,
       destinationParentId: null,
-      uploadSessionId: upload.sessionId,
+      textFileHandling: 'files',
+      sources: [{ id: 'selected-file', kind: 'file', name: 'cancelled.txt' }],
+      entries: [
+        {
+          sourceId: 'selected-file',
+          path: 'cancelled.txt',
+          type: 'file',
+          byteSize: bytes.byteLength,
+        },
+      ],
     })
-    const cancellation = await plainTransferCancellationArgs(
-      campaignUuid,
-      campaign.dm.memberDomainId,
-      transferArgs,
-      bytes,
-    )
     await expect(
-      asDm(campaign).mutation(api.resources.mutations.cancelPlainTransfer, cancellation),
-    ).resolves.toEqual({ status: 'cancelled' })
+      asDm(campaign).mutation(api.resources.mutations.cancelPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'settled',
+      entries: [{ status: 'cancelled' }],
+    })
     await expect(
-      asDm(campaign).action(api.resources.actions.executePlainTransfer, transferArgs),
-    ).resolves.toEqual({ status: 'cancelled' })
+      asDm(campaign).action(api.resources.actions.commitPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId,
+      }),
+    ).resolves.toMatchObject({
+      status: 'settled',
+      entries: [{ status: 'cancelled' }],
+    })
     await expect(
       asDm(campaign).query(api.resources.queries.loadPlainTransfer, {
         campaignId: campaignUuid,
         jobId,
       }),
     ).resolves.toMatchObject({
-      status: 'cancelled',
-      sourceDigest: cancellation.sourceDigest,
-      rejectionReason: null,
+      status: 'settled',
       entries: [
         {
           status: 'cancelled',
-          resourceId: null,
-          rejectionReason: null,
+          sourceId: 'selected-file',
+          sourcePath: 'cancelled.txt',
         },
       ],
     })
@@ -1069,6 +1335,70 @@ describe('resource structure commands', () => {
         status: 'uncommitted',
       })
     })
+  })
+
+  it('preserves completed entries when cancellation settles the remaining plan', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const reservation = await asDm(campaign).mutation(
+      api.resources.mutations.reservePlainTransfer,
+      {
+        campaignId: campaignUuid,
+        jobId,
+        destinationParentId: null,
+        textFileHandling: 'files',
+        sources: [{ id: 'directory', kind: 'directory', name: 'Bundle' }],
+        entries: [
+          { sourceId: 'directory', path: 'First', type: 'directory' },
+          { sourceId: 'directory', path: 'Second', type: 'directory' },
+        ],
+      },
+    )
+    if (reservation.status !== 'reserved') {
+      throw new TypeError('Expected partial cancellation reservation')
+    }
+    const completed = await t.run(async (ctx) => {
+      const entries = await ctx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .take(PLAIN_TRANSFER_LIMITS.maxEntries + 1)
+      const entry = entries.find((candidate) => candidate.rawPath === 'Bundle/First')
+      if (!entry) throw new TypeError('Expected first transfer entry')
+      await ctx.db.patch('resourceTransferEntries', entry._id, {
+        status: 'completed',
+        resourceKind: 'folder',
+        resourceUuid: entry.plannedResourceUuid,
+      })
+      return entry
+    })
+
+    const cancelled = await asDm(campaign).mutation(api.resources.mutations.cancelPlainTransfer, {
+      campaignId: campaignUuid,
+      jobId,
+    })
+    expect(cancelled.status).toBe('settled')
+    if (cancelled.status !== 'settled') return
+    expect(cancelled.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'completed',
+          sourcePath: 'Bundle/First',
+          resourceId: completed.plannedResourceUuid,
+          kind: 'folder',
+        }),
+        expect.objectContaining({ status: 'cancelled', sourcePath: 'Bundle' }),
+        expect.objectContaining({ status: 'cancelled', sourcePath: 'Bundle/Second' }),
+      ]),
+    )
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.cancelPlainTransfer, {
+        campaignId: campaignUuid,
+        jobId,
+      }),
+    ).resolves.toEqual(cancelled)
   })
 
   it('serializes concurrent replacement claims and preserves exact response replay', async () => {
@@ -4169,8 +4499,8 @@ describe('resource structure commands', () => {
     } as const
     if (kind === 'file') {
       const result = await createEmptyFile(campaign, campaignUuid, operationId, parentId)
-      expect(result.status).toBe('completed')
-      const entry = result.status === 'completed' ? result.entries[0] : null
+      expect(result.status).toBe('settled')
+      const entry = result.status === 'settled' ? result.entries[0] : null
       if (!entry || entry.status !== 'completed') {
         throw new TypeError('Expected completed file transfer')
       }
@@ -4218,8 +4548,8 @@ describe('resource structure commands', () => {
       new Blob([bytes]),
       'empty.txt',
     )
-    return await asDm(campaign).action(
-      api.resources.actions.executePlainTransfer,
+    return await commitTestPlainTransfer(
+      asDm(campaign),
       singleFileTransferArgs({
         campaignId: campaignUuid,
         jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
@@ -4256,52 +4586,87 @@ describe('resource structure commands', () => {
     }
   }
 
-  async function plainTransferCancellationArgs(
-    campaignId: string,
-    actorId: CampaignMemberId,
-    transfer: ReturnType<typeof singleFileTransferArgs>,
-    bytes: Uint8Array,
+  async function commitTestPlainTransfer(
+    client: ReturnType<typeof asDm>,
+    transfer: Readonly<{
+      campaignId: string
+      jobId: string
+      destinationParentId: ResourceId | null
+      textFileHandling: 'files' | 'notes'
+      sources: ReadonlyArray<{
+        id: string
+        kind: 'directory' | 'file' | 'zip'
+        name: string
+      }>
+      entries: ReadonlyArray<
+        | Readonly<{ sourceId: string; path: string; type: 'directory' }>
+        | Readonly<{
+            sourceId: string
+            path: string
+            type: 'file'
+            uploadSessionId: Id<'fileStorage'>
+          }>
+      >
+    }>,
   ) {
-    const sources = transfer.sources
-    const entries = transfer.entries.map((entry) => ({
-      sourceId: entry.sourceId,
-      path: entry.path,
-      type: entry.type,
-      bytes,
-    }))
-    const sourceDigest = await digestPlainTransferSources(sources, entries)
-    const planned = await buildPlainTransferInventory({
-      request: {
-        version: TRANSFER_JOB_REQUEST_VERSION,
-        jobId: assertDomainId(DOMAIN_ID_KIND.importJob, transfer.jobId),
-        operationId: assertDomainId(DOMAIN_ID_KIND.operation, transfer.operationId),
-        actorId,
-        destinationCampaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaignId),
-        destinationParentId: transfer.destinationParentId,
-        textFileHandling: transfer.textFileHandling,
-        manifestHandling: 'reject',
-        mode: 'plain_resources',
-        sourceDigest,
-        sources,
-      },
+    const entries = await Promise.all(
+      transfer.entries.map(async (entry) => {
+        if (entry.type === 'directory') return entry
+        const byteSize = await t.run(async (ctx) => {
+          const session = await ctx.db.get('fileStorage', entry.uploadSessionId)
+          if (!session?.storageId) throw new TypeError('Expected a bound test upload')
+          const metadata = await ctx.db.system.get('_storage', session.storageId)
+          if (!metadata) throw new TypeError('Expected test upload metadata')
+          return metadata.size
+        })
+        return { sourceId: entry.sourceId, path: entry.path, type: 'file' as const, byteSize }
+      }),
+    )
+    const reservation = await client.mutation(api.resources.mutations.reservePlainTransfer, {
+      campaignId: transfer.campaignId,
+      jobId: transfer.jobId,
+      destinationParentId: transfer.destinationParentId,
+      textFileHandling: transfer.textFileHandling,
+      sources: [...transfer.sources],
       entries,
     })
-    if (planned.status !== 'ready') throw new TypeError('Expected cancellable transfer inventory')
-    return {
-      campaignId,
-      jobId: transfer.jobId,
-      operationId: transfer.operationId,
-      destinationParentId: transfer.destinationParentId,
-      sourceDigest,
-      entries: planned.inventory.resources.map((resource) => ({
-        sourceRootId: resource.alias.sourceRootId,
-        rawPath: resource.alias.rawPath,
-        normalizedPath: resource.alias.normalizedPath,
-        plannedResourceId: resource.id,
-        plannedOperationId: resource.operationId,
-        resourceKind: resource.kind,
-      })),
+    if (reservation.status === 'rejected') return reservation
+    for (const target of reservation.uploadTargets) {
+      const entry = transfer.entries.find(
+        (candidate) =>
+          candidate.type === 'file' &&
+          candidate.sourceId === target.sourceId &&
+          candidate.path === target.sourcePath,
+      )
+      if (!entry || entry.type !== 'file') throw new TypeError('Expected reserved test upload')
+      await t.run(async (ctx) => {
+        const source = await ctx.db.get('fileStorage', entry.uploadSessionId)
+        if (source?.status !== 'uncommitted') return
+        const transferEntries = await ctx.db
+          .query('resourceTransferEntries')
+          .withIndex('by_campaign_and_job', (query) =>
+            query.eq('campaignUuid', transfer.campaignId).eq('importJobUuid', transfer.jobId),
+          )
+          .take(100)
+        const transferEntry = transferEntries.find(
+          (candidate) =>
+            candidate.sourceRootId === target.sourceId &&
+            candidate.sourceEntryPath === target.sourcePath,
+        )
+        if (!transferEntry) throw new TypeError('Expected reserved transfer entry')
+        await ctx.db.delete('fileStorage', target.sessionId)
+        await ctx.db.patch('resourceTransferEntries', transferEntry._id, {
+          uploadSessionUuid: source._id,
+        })
+        await ctx.db.patch('fileStorage', source._id, {
+          originalFileName: target.sourcePath.slice(target.sourcePath.lastIndexOf('/') + 1),
+        })
+      })
     }
+    return await client.action(api.resources.actions.commitPlainTransfer, {
+      campaignId: transfer.campaignId,
+      jobId: transfer.jobId,
+    })
   }
 
   async function execute(

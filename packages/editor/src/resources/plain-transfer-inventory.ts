@@ -1,13 +1,7 @@
-import type { Sha256Digest, VersionStamp } from './component-version'
+import type { VersionStamp } from './component-version'
 import { sha256Digest } from './component-version'
 import { DOMAIN_ID_KIND, assertDomainId, isUuidV7 } from './domain-id'
-import type {
-  CampaignMemberId,
-  DomainIdByKind,
-  DomainIdKind,
-  OperationId,
-  ResourceId,
-} from './domain-id'
+import type { DomainIdByKind, DomainIdKind, OperationId, ResourceId } from './domain-id'
 import type { FileOwnedMetadata } from './file-content-contract'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceKind, ResourceTitle } from './resource-record'
@@ -16,14 +10,13 @@ import { classifyFileResourceSource, classifyResourceSource } from './resource-s
 import type { ResourceSourceClassification } from './resource-source-classifier'
 import { createSourcePathAlias, normalizeSourcePath } from './source-path-alias'
 import type { SourcePathAlias } from './resource-catalog-contract'
-import { TRANSFER_JOB_REQUEST_VERSION } from './transfer-job-contract'
+import { PLAIN_TRANSFER_MANIFEST_VERSION } from './transfer-job-contract'
 import type {
   PlainTransferInputEntry,
-  PlainTransferEntryIdentity,
   PlainTransferIntent,
-  PlainTransferJobRequest,
+  PlainTransferManifest,
+  PlainTransferManifestEntry,
   PlainTransferSourceDescriptor,
-  TransferSourceDescriptor,
 } from './transfer-job-contract'
 
 export const PLAIN_TRANSFER_INVENTORY_VERSION = 'plain-transfer-inventory-v3' as const
@@ -31,58 +24,49 @@ export const PLAIN_TRANSFER_LIMITS = {
   maxEntries: MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
   maxPathDepth: 64,
   maxPathUtf8Bytes: 1_024,
+  maxSourceStringUtf8Bytes: 1_024,
+  maxSources: 32,
   maxTotalBytes: 500 * 1024 * 1024,
 } as const
 
 export type PlainTransferSourceEntry = PlainTransferInputEntry
 
-export function plainTransferEntryIdentities(
-  resources: ReadonlyArray<PlainTransferInventoryResource>,
-): ReadonlyArray<PlainTransferEntryIdentity> {
-  return resources.map((resource) => ({
-    sourceRootId: resource.alias.sourceRootId,
-    rawPath: resource.alias.rawPath,
-    normalizedPath: resource.alias.normalizedPath,
-    plannedResourceId: resource.id,
-    plannedOperationId: resource.operationId,
-    resourceKind: resource.kind,
-  }))
-}
-
-async function createPlainTransferRequest({
-  actorId,
+export function createPlainTransferManifest({
   entries,
   intent,
   sources,
 }: Readonly<{
-  actorId: CampaignMemberId
   entries: ReadonlyArray<PlainTransferInputEntry>
   intent: PlainTransferIntent
   sources: ReadonlyArray<PlainTransferSourceDescriptor>
-}>): Promise<PlainTransferJobRequest> {
+}>): PlainTransferManifest {
   return {
-    version: TRANSFER_JOB_REQUEST_VERSION,
+    version: PLAIN_TRANSFER_MANIFEST_VERSION,
     jobId: intent.jobId,
-    operationId: intent.operationId,
-    actorId,
     destinationCampaignId: intent.campaignId,
     destinationParentId: intent.destinationParentId,
     textFileHandling: intent.textFileHandling,
-    manifestHandling: 'reject',
-    mode: 'plain_resources',
-    sourceDigest: await digestPlainTransferSources(sources, entries),
     sources,
+    entries: entries.map(
+      (entry): PlainTransferManifestEntry =>
+        entry.type === 'directory'
+          ? entry
+          : {
+              sourceId: entry.sourceId,
+              path: entry.path,
+              type: 'file',
+              byteSize: entry.bytes.byteLength,
+            },
+    ),
   }
 }
 
 export async function planPlainTransfer({
-  actorId,
   campaignId,
   entries,
   intent,
   sources,
 }: Readonly<{
-  actorId: CampaignMemberId
   campaignId: PlainTransferIntent['campaignId']
   entries: ReadonlyArray<PlainTransferInputEntry>
   intent: PlainTransferIntent
@@ -93,8 +77,8 @@ export async function planPlainTransfer({
   if (intent.campaignId !== campaignId) {
     return { status: 'rejected', reason: 'invalid_campaign' }
   }
-  const request = await createPlainTransferRequest({ actorId, entries, intent, sources })
-  return await buildPlainTransferInventory({ request, entries })
+  const manifest = createPlainTransferManifest({ entries, intent, sources })
+  return await buildPlainTransferInventory({ manifest, entries })
 }
 
 export type PlainTransferInventoryContent =
@@ -118,9 +102,27 @@ type PlainTransferInventoryResourceBase = Readonly<{
   title: ResourceTitle
   sourceEntryPath: string
   sourcePath: string
-  sourceDigest: Sha256Digest | null
+  entryType: 'directory' | 'file'
+  declaredByteSize: number
   metadataVersion: VersionStamp
   alias: SourcePathAlias
+}>
+
+export type PlainTransferPlannedResource = Readonly<{
+  id: ResourceId
+  operationId: OperationId
+  parentId: ResourceId | null
+  title: ResourceTitle
+  sourceEntryPath: string
+  sourcePath: string
+  alias: SourcePathAlias
+  entryType: 'directory' | 'file'
+  declaredByteSize: number
+}>
+
+export type PlainTransferPlan = Readonly<{
+  manifest: PlainTransferManifest
+  resources: ReadonlyArray<PlainTransferPlannedResource>
 }>
 
 export type PlainTransferInventoryResource = PlainTransferInventoryResourceBase &
@@ -138,8 +140,7 @@ export type PlainTransferInventoryResource = PlainTransferInventoryResourceBase 
 
 export type PlainTransferInventory = Readonly<{
   version: typeof PLAIN_TRANSFER_INVENTORY_VERSION
-  request: PlainTransferJobRequest
-  sourceDigest: Sha256Digest
+  manifest: PlainTransferManifest
   resources: ReadonlyArray<PlainTransferInventoryResource>
 }>
 
@@ -152,11 +153,9 @@ export type PlainTransferInventoryResult =
         | 'entry_limit_exceeded'
         | 'invalid_request'
         | 'invalid_source'
-        | 'manifest_requires_explicit_choice'
         | 'path_limit_exceeded'
         | 'source_changed'
         | 'source_limit_exceeded'
-        | 'workspace_source_required'
     }>
   | Readonly<{
       status: 'rejected'
@@ -165,133 +164,176 @@ export type PlainTransferInventoryResult =
       sourcePath: string
     }>
 
-type CanonicalEntry = Readonly<{
-  source: TransferSourceDescriptor
+export type PlainTransferPlanResult =
+  | Readonly<{ status: 'ready'; plan: PlainTransferPlan }>
+  | Extract<PlainTransferInventoryResult, { status: 'rejected' }>
+
+type CanonicalManifestEntry = Readonly<{
+  source: PlainTransferSourceDescriptor
   path: string
-  type: PlainTransferSourceEntry['type']
-  bytes: Uint8Array | null
+  type: PlainTransferManifestEntry['type']
+  byteSize: number
 }>
 
-type PlacedEntry = CanonicalEntry & Readonly<{ placedPath: string }>
+type PlacedManifestEntry = CanonicalManifestEntry & Readonly<{ placedPath: string }>
 
 type AcceptedResourceSourceClassification = Exclude<
   ResourceSourceClassification,
   { classification: 'rejected' }
 >
 
-type PreparedEntry = PlacedEntry &
-  Readonly<{ classification: AcceptedResourceSourceClassification | null }>
-
 type RejectedInventory = Extract<PlainTransferInventoryResult, { status: 'rejected' }>
 
-type PreparedInventory = Readonly<{
-  entries: ReadonlyArray<PreparedEntry>
-  sourceDigest: Sha256Digest
-}>
-
-export async function digestPlainTransferSources(
-  sources: ReadonlyArray<TransferSourceDescriptor>,
-  entries: ReadonlyArray<PlainTransferSourceEntry>,
-): Promise<Sha256Digest> {
-  const canonical = canonicalEntries(sources, entries)
-  if (canonical.status === 'rejected') throw new TypeError(canonical.reason)
-  return await digestCanonicalEntries(sources, canonical.entries)
-}
-
-async function digestCanonicalEntries(
-  sources: ReadonlyArray<TransferSourceDescriptor>,
-  entries: ReadonlyArray<CanonicalEntry>,
-): Promise<Sha256Digest> {
-  const parts: Array<Uint8Array> = []
+export async function digestPlainTransferPlan(
+  plan: Pick<PlainTransferPlan, 'manifest' | 'resources'>,
+): Promise<string> {
+  const { manifest } = plan
   const encoder = new TextEncoder()
-  for (const source of [...sources].sort((left, right) => compareText(left.id, right.id))) {
-    parts.push(
-      encoder.encode(`source\0${source.id}\0${source.kind}\0${source.name.normalize('NFC')}`),
-    )
+  const canonical = {
+    version: manifest.version,
+    jobId: manifest.jobId,
+    destinationCampaignId: manifest.destinationCampaignId,
+    destinationParentId: manifest.destinationParentId,
+    textFileHandling: manifest.textFileHandling,
+    sources: [...manifest.sources]
+      .sort((left, right) => compareText(left.id, right.id))
+      .map((source) => ({
+        id: source.id,
+        kind: source.kind,
+        name: source.name.normalize('NFC'),
+      })),
+    entries: plan.resources.map((resource) => ({
+      sourceRootId: resource.alias.sourceRootId,
+      sourceEntryPath: resource.sourceEntryPath,
+      sourcePath: resource.sourcePath,
+      entryType: resource.entryType,
+      declaredByteSize: resource.declaredByteSize,
+      resourceId: resource.id,
+      operationId: resource.operationId,
+      parentId: resource.parentId,
+      title: resource.title,
+    })),
   }
-  for (const entry of entries) {
-    const bytesDigest = entry.bytes ? await sha256Digest(entry.bytes) : ''
-    parts.push(
-      encoder.encode(
-        `entry\0${entry.source.id}\0${entry.path}\0${entry.type}\0${entry.bytes?.byteLength ?? 0}\0${bytesDigest}`,
-      ),
-    )
-  }
-  const length = parts.reduce((total, part) => total + 8 + part.byteLength, 0)
-  const encoded = new Uint8Array(length)
-  const view = new DataView(encoded.buffer)
-  let offset = 0
-  for (const part of parts) {
-    view.setBigUint64(offset, BigInt(part.byteLength))
-    offset += 8
-    encoded.set(part, offset)
-    offset += part.byteLength
-  }
-  return await sha256Digest(encoded)
+  return await sha256Digest(encoder.encode(JSON.stringify(canonical)))
 }
 
 export async function buildPlainTransferInventory({
-  request,
+  manifest,
   entries,
 }: Readonly<{
-  request: PlainTransferJobRequest
+  manifest: PlainTransferManifest
   entries: ReadonlyArray<PlainTransferSourceEntry>
 }>): Promise<PlainTransferInventoryResult> {
-  const prepared = await preparePlainTransferInventory(request, entries)
-  if ('status' in prepared) return prepared
-  const resources = await materializePlainTransferResources(request, prepared.entries)
+  const planned = await planPlainTransferManifest(manifest)
+  if (planned.status === 'rejected') return planned
+  return await materializePlainTransferInventory(planned.plan, entries)
+}
+
+export async function planPlainTransferManifest(
+  manifest: PlainTransferManifest,
+): Promise<PlainTransferPlanResult> {
+  if (!validManifest(manifest)) return { status: 'rejected', reason: 'invalid_request' }
+  const canonical = canonicalManifestEntries(manifest.sources, manifest.entries)
+  if (canonical.status === 'rejected') return canonical
+  if (hasFileAncestor(canonical.entries, (entry) => entry.path)) {
+    return { status: 'rejected', reason: 'invalid_source' }
+  }
+  const ordinary = ordinaryCanonicalEntries(canonical.entries)
+  if ('status' in ordinary) return ordinary
+  const placed = preparePlacedEntries(manifest, ordinary.entries)
+  if ('status' in placed) return placed
+  return {
+    status: 'ready',
+    plan: {
+      manifest,
+      resources: await materializePlannedResources(manifest, placed),
+    },
+  }
+}
+
+export async function materializePlainTransferInventory(
+  plan: PlainTransferPlan,
+  entries: ReadonlyArray<PlainTransferSourceEntry>,
+): Promise<PlainTransferInventoryResult> {
+  const canonical = canonicalSourceEntries(plan.manifest.sources, entries)
+  if (canonical.status === 'rejected') return canonical
+  if (!manifestMatchesEntries(plan.manifest.entries, canonical.entries)) {
+    return { status: 'rejected', reason: 'source_changed' }
+  }
+  const sourceByEntry = new Map(
+    canonical.entries.map((entry) => [
+      sourcePathKey(entry, entry.path),
+      entry.type === 'file' ? entry.bytes : null,
+    ]),
+  )
+  const resources: Array<PlainTransferInventoryResource> = []
+  for (const resource of plan.resources) {
+    if (resource.entryType === 'directory') {
+      resources.push({
+        ...resource,
+        kind: 'folder',
+        metadataVersion: await transferMetadataVersion(resource.parentId, 'folder', resource.title),
+        content: null,
+      })
+      continue
+    }
+    const bytes = sourceByEntry.get(
+      `${resource.alias.sourceRootId}\0${normalizeSourcePath(resource.sourceEntryPath)}`,
+    )
+    if (!bytes) return { status: 'rejected', reason: 'source_changed' }
+    const classification = classifyEntry(
+      resource.sourceEntryPath,
+      bytes,
+      plan.manifest.textFileHandling,
+    )
+    if (classification.classification === 'rejected') {
+      return {
+        status: 'rejected',
+        reason: classification.reason,
+        sourceId: resource.alias.sourceRootId,
+        sourcePath: resource.sourcePath,
+      }
+    }
+    if (classification.classification === 'note') {
+      resources.push({
+        ...resource,
+        kind: 'note',
+        metadataVersion: await transferMetadataVersion(resource.parentId, 'note', resource.title),
+        content: {
+          kind: 'note',
+          source: {
+            bytes,
+            removedUtf8Bom: classification.removedUtf8Bom,
+            text: classification.text,
+          },
+        },
+      })
+    } else {
+      resources.push({
+        ...resource,
+        kind: 'file',
+        metadataVersion: await transferMetadataVersion(resource.parentId, 'file', resource.title),
+        content: { kind: 'file', source: { bytes, metadata: classification } },
+      })
+    }
+  }
   return {
     status: 'ready',
     inventory: {
       version: PLAIN_TRANSFER_INVENTORY_VERSION,
-      request,
-      sourceDigest: prepared.sourceDigest,
+      manifest: plan.manifest,
       resources,
     },
   }
 }
 
-async function preparePlainTransferInventory(
-  request: PlainTransferJobRequest,
-  entries: ReadonlyArray<PlainTransferSourceEntry>,
-): Promise<PreparedInventory | RejectedInventory> {
-  if (!validRequest(request)) return { status: 'rejected', reason: 'invalid_request' }
-  if (request.mode === 'plain_workspace' && request.sources.length !== 1) {
-    return { status: 'rejected', reason: 'workspace_source_required' }
-  }
-  const canonical = canonicalEntries(request.sources, entries)
-  if (canonical.status === 'rejected') return canonical
-  if (hasFileAncestor(canonical.entries, (entry) => entry.path)) {
-    return { status: 'rejected', reason: 'invalid_source' }
-  }
-  if (canonical.entries.length > PLAIN_TRANSFER_LIMITS.maxEntries) {
-    return { status: 'rejected', reason: 'entry_limit_exceeded' }
-  }
-  const totalBytes = canonical.entries.reduce(
-    (total, entry) => total + (entry.bytes?.byteLength ?? 0),
-    0,
-  )
-  if (totalBytes > PLAIN_TRANSFER_LIMITS.maxTotalBytes) {
-    return { status: 'rejected', reason: 'source_limit_exceeded' }
-  }
-  const ordinary = ordinaryCanonicalEntries(canonical.entries, request.manifestHandling)
-  if ('status' in ordinary) return ordinary
-  const sourceDigest = await digestCanonicalEntries(request.sources, canonical.entries)
-  if (sourceDigest !== request.sourceDigest) {
-    return { status: 'rejected', reason: 'source_changed' }
-  }
-  const preparedEntries = preparePlacedEntries(request, ordinary.entries)
-  if ('status' in preparedEntries) return preparedEntries
-  return classifyPreparedEntries(preparedEntries, sourceDigest, request.textFileHandling)
-}
-
 function preparePlacedEntries(
-  request: PlainTransferJobRequest,
-  entries: ReadonlyArray<CanonicalEntry>,
-): ReadonlyArray<PlacedEntry> | RejectedInventory {
-  let placed: ReadonlyArray<PlacedEntry>
+  manifest: PlainTransferManifest,
+  entries: ReadonlyArray<CanonicalManifestEntry>,
+): ReadonlyArray<PlacedManifestEntry> | RejectedInventory {
+  let placed: ReadonlyArray<PlacedManifestEntry>
   try {
-    placed = placeEntries(request, entries).filter((entry) => entry.placedPath.length > 0)
+    placed = placeEntries(manifest, entries)
   } catch {
     return { status: 'rejected', reason: 'invalid_source' }
   }
@@ -308,45 +350,22 @@ function preparePlacedEntries(
   return resourcePaths
 }
 
-function classifyPreparedEntries(
-  entries: ReadonlyArray<PlacedEntry>,
-  sourceDigest: Sha256Digest,
-  textFileHandling: PlainTransferJobRequest['textFileHandling'],
-): PreparedInventory | RejectedInventory {
-  const preparedEntries: Array<PreparedEntry> = []
-  for (const entry of entries) {
-    const classification = classifyEntry(entry, textFileHandling)
-    if (classification?.classification === 'rejected') {
-      return {
-        status: 'rejected',
-        reason: classification.reason,
-        sourceId: entry.source.id,
-        sourcePath: entry.placedPath,
-      }
-    }
-    preparedEntries.push({ ...entry, classification })
-  }
-  return { entries: preparedEntries, sourceDigest }
-}
-
-async function materializePlainTransferResources(
-  request: PlainTransferJobRequest,
-  entries: ReadonlyArray<PreparedEntry>,
-): Promise<ReadonlyArray<PlainTransferInventoryResource>> {
-  const ids = await derivePlannedResourceIds(request, entries)
-  return await Promise.all(
-    entries.map((entry) => materializePlainTransferResource(request, entry, ids)),
-  )
+async function materializePlannedResources(
+  manifest: PlainTransferManifest,
+  entries: ReadonlyArray<PlacedManifestEntry>,
+): Promise<ReadonlyArray<PlainTransferPlannedResource>> {
+  const ids = await derivePlannedResourceIds(manifest, entries)
+  return await Promise.all(entries.map((entry) => materializePlannedResource(manifest, entry, ids)))
 }
 
 async function derivePlannedResourceIds(
-  request: PlainTransferJobRequest,
-  entries: ReadonlyArray<PreparedEntry>,
+  manifest: PlainTransferManifest,
+  entries: ReadonlyArray<PlacedManifestEntry>,
 ): Promise<ReadonlyMap<string, ResourceId>> {
   const ids = new Map<string, ResourceId>()
   const allocated = new Set<ResourceId>()
   for (const entry of entries) {
-    const id = await derivePlannedResourceId(request, entry)
+    const id = await derivePlannedResourceId(manifest, entry)
     if (allocated.has(id)) throw new TypeError('Plain transfer identity collision')
     allocated.add(id)
     ids.set(resourceKey(entry), id)
@@ -354,63 +373,33 @@ async function derivePlannedResourceIds(
   return ids
 }
 
-async function materializePlainTransferResource(
-  request: PlainTransferJobRequest,
-  entry: PreparedEntry,
+async function materializePlannedResource(
+  manifest: PlainTransferManifest,
+  entry: PlacedManifestEntry,
   ids: ReadonlyMap<string, ResourceId>,
-): Promise<PlainTransferInventoryResource> {
+): Promise<PlainTransferPlannedResource> {
   const id = ids.get(resourceKey(entry))!
   const parentPath = pathParent(entry.placedPath)
   const parentId = parentPath
-    ? (ids.get(resourceKey(entry, parentPath)) ?? request.destinationParentId)
-    : request.destinationParentId
+    ? (ids.get(resourceKey(entry, parentPath)) ?? manifest.destinationParentId)
+    : manifest.destinationParentId
   const title = canonicalizeResourceTitle(pathBasename(entry.placedPath))
-  const bytes = entry.bytes
-  const base = {
+  return {
     id,
-    operationId: await derivePlannedOperationId(request, entry),
+    operationId: await derivePlannedOperationId(manifest, entry),
     parentId,
     title,
     sourceEntryPath: entry.path,
     sourcePath: entry.placedPath,
-    sourceDigest: bytes ? await sha256Digest(bytes) : null,
     alias: createSourcePathAlias({
-      campaignId: request.destinationCampaignId,
-      importJobId: request.jobId,
+      campaignId: manifest.destinationCampaignId,
+      importJobId: manifest.jobId,
       rawPath: entry.placedPath,
       resourceId: id,
       sourceRootId: entry.source.id,
     }),
-  }
-  if (entry.classification === null) {
-    return {
-      ...base,
-      kind: 'folder',
-      metadataVersion: await transferMetadataVersion(parentId, 'folder', title),
-      content: null,
-    }
-  }
-  if (!bytes) throw new TypeError('Classified plain transfer entry has no bytes')
-  if (entry.classification.classification === 'note') {
-    return {
-      ...base,
-      kind: 'note',
-      metadataVersion: await transferMetadataVersion(parentId, 'note', title),
-      content: {
-        kind: 'note',
-        source: {
-          bytes,
-          removedUtf8Bom: entry.classification.removedUtf8Bom,
-          text: entry.classification.text,
-        },
-      },
-    }
-  }
-  return {
-    ...base,
-    kind: 'file',
-    metadataVersion: await transferMetadataVersion(parentId, 'file', title),
-    content: { kind: 'file', source: { bytes, metadata: entry.classification } },
+    entryType: entry.type,
+    declaredByteSize: entry.byteSize,
   }
 }
 
@@ -429,23 +418,41 @@ async function transferMetadataVersion(
   })
 }
 
-function validRequest(request: PlainTransferJobRequest): boolean {
+function validManifest(manifest: PlainTransferManifest): boolean {
+  const encoder = new TextEncoder()
   return (
-    request.version === TRANSFER_JOB_REQUEST_VERSION &&
-    isUuidV7(request.jobId) &&
-    isUuidV7(request.operationId) &&
-    isUuidV7(request.actorId) &&
-    isUuidV7(request.destinationCampaignId) &&
-    (request.destinationParentId === null || isUuidV7(request.destinationParentId)) &&
-    (request.textFileHandling === 'notes' || request.textFileHandling === 'files') &&
-    request.sources.length > 0 &&
-    new Set(request.sources.map((source) => source.id)).size === request.sources.length &&
-    request.sources.every(validPlainSourceDescriptor)
+    manifest.version === PLAIN_TRANSFER_MANIFEST_VERSION &&
+    isUuidV7(manifest.jobId) &&
+    isUuidV7(manifest.destinationCampaignId) &&
+    (manifest.destinationParentId === null || isUuidV7(manifest.destinationParentId)) &&
+    (manifest.textFileHandling === 'notes' || manifest.textFileHandling === 'files') &&
+    manifest.sources.length > 0 &&
+    manifest.sources.length <= PLAIN_TRANSFER_LIMITS.maxSources &&
+    manifest.entries.length > 0 &&
+    manifest.entries.length <= PLAIN_TRANSFER_LIMITS.maxEntries &&
+    new Set(manifest.sources.map((source) => source.id)).size === manifest.sources.length &&
+    manifest.sources.every((source) => validPlainSourceDescriptor(source, encoder)) &&
+    manifest.entries.every(
+      (entry) =>
+        entry.type === 'directory' || (Number.isSafeInteger(entry.byteSize) && entry.byteSize >= 0),
+    ) &&
+    manifest.entries.reduce(
+      (total, entry) => total + (entry.type === 'file' ? entry.byteSize : 0),
+      0,
+    ) <= PLAIN_TRANSFER_LIMITS.maxTotalBytes
   )
 }
 
-function validPlainSourceDescriptor(source: TransferSourceDescriptor): boolean {
-  if (source.id.length === 0 || source.name.length === 0 || source.kind === 'wizard_archive') {
+function validPlainSourceDescriptor(
+  source: PlainTransferSourceDescriptor,
+  encoder: TextEncoder,
+): boolean {
+  if (
+    source.id.length === 0 ||
+    source.name.length === 0 ||
+    encoder.encode(source.id).byteLength > PLAIN_TRANSFER_LIMITS.maxSourceStringUtf8Bytes ||
+    encoder.encode(source.name).byteLength > PLAIN_TRANSFER_LIMITS.maxSourceStringUtf8Bytes
+  ) {
     return false
   }
   try {
@@ -455,14 +462,50 @@ function validPlainSourceDescriptor(source: TransferSourceDescriptor): boolean {
   }
 }
 
-function canonicalEntries(
-  sources: ReadonlyArray<TransferSourceDescriptor>,
+function canonicalManifestEntries(
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>,
+  entries: ReadonlyArray<PlainTransferManifestEntry>,
+):
+  | Readonly<{ status: 'ready'; entries: ReadonlyArray<CanonicalManifestEntry> }>
+  | Extract<PlainTransferInventoryResult, { status: 'rejected' }> {
+  return canonicalizeSourceEntries(sources, entries, (source, path, entry) => ({
+    source,
+    path,
+    type: entry.type,
+    byteSize: entry.type === 'file' ? entry.byteSize : 0,
+  }))
+}
+
+function canonicalSourceEntries(
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>,
   entries: ReadonlyArray<PlainTransferSourceEntry>,
 ):
-  | Readonly<{ status: 'ready'; entries: ReadonlyArray<CanonicalEntry> }>
+  | Readonly<{
+      status: 'ready'
+      entries: ReadonlyArray<CanonicalManifestEntry & Readonly<{ bytes: Uint8Array | null }>>
+    }>
+  | Extract<PlainTransferInventoryResult, { status: 'rejected' }> {
+  return canonicalizeSourceEntries(sources, entries, (source, path, entry) => ({
+    source,
+    path,
+    type: entry.type,
+    byteSize: entry.type === 'file' ? entry.bytes.byteLength : 0,
+    bytes: entry.type === 'file' ? entry.bytes : null,
+  }))
+}
+
+function canonicalizeSourceEntries<
+  TEntry extends Readonly<{ sourceId: string; path: string; type: 'directory' | 'file' }>,
+  TCanonical extends CanonicalManifestEntry,
+>(
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>,
+  entries: ReadonlyArray<TEntry>,
+  canonicalize: (source: PlainTransferSourceDescriptor, path: string, entry: TEntry) => TCanonical,
+):
+  | Readonly<{ status: 'ready'; entries: ReadonlyArray<TCanonical> }>
   | Extract<PlainTransferInventoryResult, { status: 'rejected' }> {
   const sourceById = new Map(sources.map((source) => [source.id, source]))
-  const canonical: Array<CanonicalEntry> = []
+  const canonical: Array<TCanonical> = []
   const identities = new Set<string>()
   try {
     for (const entry of entries) {
@@ -480,12 +523,7 @@ function canonicalEntries(
         return { status: 'rejected', reason: 'duplicate_source_path' }
       }
       identities.add(identity)
-      canonical.push({
-        source,
-        path,
-        type: entry.type,
-        bytes: entry.type === 'file' ? entry.bytes : null,
-      })
+      canonical.push(canonicalize(source, path, entry))
     }
   } catch {
     return { status: 'rejected', reason: 'invalid_source' }
@@ -497,30 +535,37 @@ function canonicalEntries(
   return { status: 'ready', entries: canonical }
 }
 
-function placeEntries(
-  request: PlainTransferJobRequest,
-  entries: ReadonlyArray<CanonicalEntry>,
-): ReadonlyArray<PlacedEntry> {
-  if (request.mode === 'plain_workspace') {
-    return entries.map((entry) => {
-      const wrapper =
-        entry.source.kind === 'zip' ? soleTopLevelDirectory(entries, entry.source) : null
-      return {
-        ...entry,
-        placedPath:
-          wrapper && entry.path === wrapper
-            ? ''
-            : wrapper && entry.path.startsWith(`${wrapper}/`)
-              ? entry.path.slice(wrapper.length + 1)
-              : entry.path,
-      }
-    })
-  }
-  const sourceContainers = request.sources.flatMap((source): ReadonlyArray<PlacedEntry> => {
-    if (source.kind === 'file') return []
-    const path = plainTransferSourceContainer(source)
-    return [{ source, path, placedPath: path, type: 'directory', bytes: null }]
+function manifestMatchesEntries(
+  manifestEntries: ReadonlyArray<PlainTransferManifestEntry>,
+  entries: ReadonlyArray<CanonicalManifestEntry & Readonly<{ bytes: Uint8Array | null }>>,
+): boolean {
+  if (manifestEntries.length !== entries.length) return false
+  const manifestBySourcePath = new Map(
+    manifestEntries.map((entry) => [
+      `${entry.sourceId}\0${normalizeSourcePath(entry.path)}`,
+      entry,
+    ]),
+  )
+  return entries.every((entry) => {
+    const manifest = manifestBySourcePath.get(`${entry.source.id}\0${entry.path}`)
+    return (
+      manifest?.type === entry.type &&
+      (manifest.type === 'directory' || manifest.byteSize === entry.byteSize)
+    )
   })
+}
+
+function placeEntries(
+  manifest: PlainTransferManifest,
+  entries: ReadonlyArray<CanonicalManifestEntry>,
+): ReadonlyArray<PlacedManifestEntry> {
+  const sourceContainers = manifest.sources.flatMap(
+    (source): ReadonlyArray<PlacedManifestEntry> => {
+      if (source.kind === 'file') return []
+      const path = plainTransferSourceContainer(source)
+      return [{ source, path, placedPath: path, type: 'directory', byteSize: 0 }]
+    },
+  )
   return [
     ...sourceContainers,
     ...entries.map((entry) =>
@@ -534,33 +579,23 @@ function placeEntries(
   ]
 }
 
-function plainTransferSourceContainer(source: TransferSourceDescriptor): string {
+function plainTransferSourceContainer(source: PlainTransferSourceDescriptor): string {
   const name =
     source.kind === 'zip' ? source.name.replace(/\.zip$/i, '') || source.name : source.name
   return normalizeSourcePath(name)
 }
 
 function ordinaryCanonicalEntries(
-  entries: ReadonlyArray<CanonicalEntry>,
-  manifestHandling: PlainTransferJobRequest['manifestHandling'],
-): Readonly<{ entries: ReadonlyArray<CanonicalEntry> }> | RejectedInventory {
+  entries: ReadonlyArray<CanonicalManifestEntry>,
+): Readonly<{ entries: ReadonlyArray<CanonicalManifestEntry> }> | RejectedInventory {
   const logical = canonicalLogicalEntries(entries)
-  if (logical.some(({ control }) => control === 'invalid')) {
+  if (logical.some(({ control }) => control !== 'ordinary')) {
     return { status: 'rejected', reason: 'invalid_source' }
   }
-  const manifests = logical.filter(({ control }) => control === 'manifest')
-  if (manifests.length > 1 || manifests.some(({ entry }) => !validPlainManifest(entry))) {
-    return { status: 'rejected', reason: 'invalid_source' }
-  }
-  if (manifests.length === 1 && manifestHandling === 'reject') {
-    return { status: 'rejected', reason: 'manifest_requires_explicit_choice' }
-  }
-  return {
-    entries: logical.filter(({ control }) => control === 'ordinary').map(({ entry }) => entry),
-  }
+  return { entries: logical.map(({ entry }) => entry) }
 }
 
-function canonicalLogicalEntries(entries: ReadonlyArray<CanonicalEntry>) {
+function canonicalLogicalEntries(entries: ReadonlyArray<CanonicalManifestEntry>) {
   const wrappers = new Map<string, string | null>()
   return entries.map((entry) => {
     if (!wrappers.has(entry.source.id)) {
@@ -588,19 +623,9 @@ function sourceLogicalPath(path: string, wrapper: string | null): string {
   return path.startsWith(`${wrapper}/`) ? path.slice(wrapper.length + 1) : path
 }
 
-function validPlainManifest(entry: CanonicalEntry): boolean {
-  if (entry.type !== 'file' || entry.bytes === null) return false
-  try {
-    const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(entry.bytes))
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-  } catch {
-    return false
-  }
-}
-
 function soleTopLevelDirectory(
-  entries: ReadonlyArray<CanonicalEntry>,
-  source: TransferSourceDescriptor,
+  entries: ReadonlyArray<CanonicalManifestEntry>,
+  source: PlainTransferSourceDescriptor,
 ): string | null {
   const candidates = entries.filter((entry) => entry.source.id === source.id)
   const segments = new Set(candidates.map((entry) => entry.path.split('/')[0]!))
@@ -612,7 +637,9 @@ function soleTopLevelDirectory(
     : segment
 }
 
-function addImplicitDirectories(entries: ReadonlyArray<PlacedEntry>): ReadonlyArray<PlacedEntry> {
+function addImplicitDirectories(
+  entries: ReadonlyArray<PlacedManifestEntry>,
+): ReadonlyArray<PlacedManifestEntry> {
   const byPath = new Map(entries.map((entry) => [resourceKey(entry), entry]))
   for (const entry of entries) {
     for (const parent of ancestorPaths(entry.placedPath)) {
@@ -623,7 +650,7 @@ function addImplicitDirectories(entries: ReadonlyArray<PlacedEntry>): ReadonlyAr
           path: parent,
           placedPath: parent,
           type: 'directory',
-          bytes: null,
+          byteSize: 0,
         })
       }
     }
@@ -636,7 +663,7 @@ function addImplicitDirectories(entries: ReadonlyArray<PlacedEntry>): ReadonlyAr
   )
 }
 
-function hasFileAncestor<TEntry extends CanonicalEntry>(
+function hasFileAncestor<TEntry extends CanonicalManifestEntry>(
   entries: ReadonlyArray<TEntry>,
   pathOf: (entry: TEntry) => string,
 ): boolean {
@@ -663,22 +690,22 @@ function ancestorPaths(path: string): ReadonlyArray<string> {
 }
 
 async function derivePlannedResourceId(
-  request: PlainTransferJobRequest,
-  entry: PreparedEntry,
+  manifest: PlainTransferManifest,
+  entry: PlacedManifestEntry,
 ): Promise<ResourceId> {
-  return await derivePlannedUuid(request, entry, DOMAIN_ID_KIND.resource, 'resource')
+  return await derivePlannedUuid(manifest, entry, DOMAIN_ID_KIND.resource, 'resource')
 }
 
 async function derivePlannedOperationId(
-  request: PlainTransferJobRequest,
-  entry: PreparedEntry,
+  manifest: PlainTransferManifest,
+  entry: PlacedManifestEntry,
 ): Promise<OperationId> {
-  return await derivePlannedUuid(request, entry, DOMAIN_ID_KIND.operation, 'operation')
+  return await derivePlannedUuid(manifest, entry, DOMAIN_ID_KIND.operation, 'operation')
 }
 
 async function derivePlannedUuid<TKind extends DomainIdKind>(
-  request: PlainTransferJobRequest,
-  entry: PreparedEntry,
+  manifest: PlainTransferManifest,
+  entry: PlacedManifestEntry,
   kind: TKind,
   purpose: string,
 ): Promise<DomainIdByKind[TKind]> {
@@ -687,17 +714,14 @@ async function derivePlannedUuid<TKind extends DomainIdKind>(
       [
         PLAIN_TRANSFER_INVENTORY_VERSION,
         purpose,
-        request.jobId,
-        request.operationId,
-        request.sourceDigest,
-        request.destinationCampaignId,
-        request.destinationParentId ?? '',
-        request.mode,
+        manifest.jobId,
+        manifest.destinationCampaignId,
+        manifest.destinationParentId ?? '',
         resourceKey(entry),
       ].join('\0'),
     ),
   )
-  const timestamp = request.jobId.replaceAll('-', '').slice(0, 12)
+  const timestamp = manifest.jobId.replaceAll('-', '').slice(0, 12)
   return assertDomainId(
     kind,
     `${timestamp.slice(0, 8)}-${timestamp.slice(8)}-7${digest.slice(0, 3)}-8${digest.slice(3, 6)}-${digest.slice(6, 18)}`,
@@ -708,22 +732,27 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0
 }
 
-function resourceKey(entry: Pick<PlacedEntry, 'source' | 'placedPath'>, path = entry.placedPath) {
+function resourceKey(
+  entry: Pick<PlacedManifestEntry, 'source' | 'placedPath'>,
+  path = entry.placedPath,
+) {
   return sourcePathKey(entry, path)
 }
 
-function sourcePathKey(entry: Pick<CanonicalEntry, 'source'>, path: string) {
+function sourcePathKey(entry: Pick<CanonicalManifestEntry, 'source'>, path: string) {
   return `${entry.source.id}\0${path}`
 }
 
 function classifyEntry(
-  entry: PlacedEntry,
-  textFileHandling: PlainTransferJobRequest['textFileHandling'],
-): ResourceSourceClassification | null {
-  if (entry.type === 'directory') return null
+  sourcePath: string,
+  bytes: Uint8Array,
+  textFileHandling: PlainTransferManifest['textFileHandling'],
+):
+  | AcceptedResourceSourceClassification
+  | Extract<ResourceSourceClassification, { classification: 'rejected' }> {
   const source = {
-    bytes: entry.bytes!,
-    fileName: pathBasename(entry.path),
+    bytes,
+    fileName: pathBasename(sourcePath),
   }
   return textFileHandling === 'files'
     ? classifyFileResourceSource(source)

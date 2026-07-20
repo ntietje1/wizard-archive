@@ -1,190 +1,201 @@
-import type { SourcePathAlias } from '@wizard-archive/editor/resources/catalog-contract'
+import type { PlainTransferPlan } from '@wizard-archive/editor/resources/plain-transfer-inventory'
+import {
+  PLAIN_TRANSFER_LIMITS,
+  digestPlainTransferPlan,
+  planPlainTransferManifest,
+} from '@wizard-archive/editor/resources/plain-transfer-inventory'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type {
-  ImportJobId,
-  OperationId,
-  ResourceId,
-} from '@wizard-archive/editor/resources/domain-id'
+import type { ImportJobId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
-import type { PlainTransferEntryIdentity } from '@wizard-archive/editor/resources/transfer-job-contract'
 import { normalizeSourcePath } from '@wizard-archive/editor/resources/source-path-alias'
-import type { Doc } from '../../_generated/dataModel'
+import type {
+  PlainTransferManifest,
+  PlainTransferReceipt,
+} from '@wizard-archive/editor/resources/transfer-job-contract'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 
-export type PlainTransferStartResult = Readonly<{
-  status: 'ready' | 'cancelled' | 'completed' | 'completed_with_issues' | 'rejected'
-}>
-
-export type PlainTransferIdentity = Readonly<{
-  jobId: string
-  operationId: string
-  destinationParentId: string | null
-  sourceDigest: string
-  entries: ReadonlyArray<PlainTransferEntryIdentity>
-}>
-
-type PlainTransferContext = Pick<CampaignMutationCtx, 'db' | 'resourceScope'>
+type PlainTransferContext = Pick<
+  CampaignMutationCtx,
+  'db' | 'membership' | 'resourceScope' | 'storage'
+>
 type PlainTransferReadContext = Pick<CampaignQueryCtx, 'db' | 'resourceScope'>
 
-export async function loadPlainTransfer(ctx: PlainTransferReadContext, jobId: ImportJobId) {
-  const job = await loadPlainTransferJob(ctx, jobId)
-  if (!job || job.actorMemberUuid !== ctx.resourceScope.actorId) {
-    return { status: 'unavailable' as const }
-  }
-  const entries = await loadPlainTransferEntries(ctx, jobId)
-  if (entries.length === 0) throw new TypeError('Plain transfer has no entries')
-  if (job.status === 'completed' && entries.some((entry) => entry.status !== 'completed')) {
-    throw new TypeError('Completed plain transfer contains an incomplete entry')
-  }
-  if (
-    job.status === 'completed_with_issues' &&
-    (!entries.some((entry) => entry.status === 'completed') ||
-      !entries.some((entry) => entry.status === 'rejected'))
-  ) {
-    throw new TypeError('Plain transfer issue status does not match its entries')
-  }
-  if (job.status === 'rejected' && entries.some((entry) => entry.status !== 'rejected')) {
-    throw new TypeError('Rejected plain transfer contains a non-rejected entry')
-  }
-  return {
-    status: job.status,
-    jobId: job.importJobUuid,
-    operationId: job.operationUuid,
-    destinationParentId: job.destinationParentUuid,
-    sourceDigest: job.sourceDigest,
-    rejectionReason: job.rejectionReason,
-    entries: entries.map((entry) => ({
-      sourceRootId: entry.sourceRootId,
-      rawPath: entry.rawPath,
-      normalizedPath: entry.normalizedPath,
-      plannedResourceId: entry.plannedResourceUuid,
-      plannedOperationId: entry.plannedOperationUuid,
-      resourceKind: entry.resourceKind,
-      resourceId: entry.resourceUuid,
-      status: entry.status,
-      rejectionReason: entry.rejectionReason,
-    })),
-  }
-}
+export type PlainTransferUploadTarget = Readonly<{
+  sourceId: string
+  sourcePath: string
+  sessionId: Id<'fileStorage'>
+  uploadUrl: string
+}>
 
-export async function beginPlainTransfer(
+export type PlainTransferReservationResult =
+  | Readonly<{
+      status: 'reserved'
+      receipt: PlainTransferReceipt
+      uploadTargets: Array<PlainTransferUploadTarget>
+    }>
+  | Readonly<{ status: 'rejected'; reason: string }>
+
+export async function reservePlainTransfer(
   ctx: PlainTransferContext,
-  input: PlainTransferIdentity,
-): Promise<PlainTransferStartResult> {
-  const jobId = assertDomainId(DOMAIN_ID_KIND.importJob, input.jobId)
-  if (!validEntries(input.entries)) return { status: 'rejected' }
-  const existing = await loadPlainTransferJob(ctx, jobId)
-  if (existing) {
-    const entries = await loadPlainTransferEntries(ctx, jobId)
-    if (!matchesPlainTransfer(ctx, existing, entries, input)) {
-      return { status: 'rejected' }
-    }
-    return { status: existing.status === 'pending' ? 'ready' : existing.status }
+  manifest: PlainTransferManifest,
+): Promise<PlainTransferReservationResult> {
+  if (manifest.destinationCampaignId !== ctx.resourceScope.campaignId) {
+    return { status: 'rejected', reason: 'invalid_campaign' }
   }
+  const planned = await planPlainTransferManifest(manifest)
+  if (planned.status === 'rejected') return planned
+  const [fingerprint, existing] = await Promise.all([
+    digestPlainTransferPlan(planned.plan),
+    loadPlainTransferJob(ctx, manifest.jobId),
+  ])
+  if (existing) {
+    if (
+      existing.actorMemberUuid !== ctx.resourceScope.actorId ||
+      existing.fingerprint !== fingerprint
+    ) {
+      return { status: 'rejected', reason: 'job_conflict' }
+    }
+    const entries = await loadPlainTransferEntries(ctx, manifest.jobId)
+    return {
+      status: 'reserved',
+      receipt: plainTransferReceipt(existing, entries),
+      uploadTargets: await createRetryUploadTargets(ctx, entries),
+    }
+  }
+
   const createdAt = Date.now()
   await ctx.db.insert('resourceTransferJobs', {
     campaignUuid: ctx.resourceScope.campaignId,
-    importJobUuid: jobId,
+    importJobUuid: manifest.jobId,
     actorMemberUuid: ctx.resourceScope.actorId,
-    operationUuid: assertDomainId(DOMAIN_ID_KIND.operation, input.operationId),
-    destinationParentUuid:
-      input.destinationParentId === null
-        ? null
-        : assertDomainId(DOMAIN_ID_KIND.resource, input.destinationParentId),
-    mode: 'plain_resources',
-    sourceDigest: input.sourceDigest,
-    status: 'pending',
-    rejectionReason: null,
+    manifestVersion: manifest.version,
+    fingerprint,
+    destinationParentUuid: manifest.destinationParentId,
+    textFileHandling: manifest.textFileHandling,
+    sources: [...manifest.sources],
+    status: 'reserved',
     createdAt,
     updatedAt: createdAt,
   })
-  for (const entry of input.entries) {
+  const uploadTargets: Array<PlainTransferUploadTarget> = []
+  const explicitEntries = new Set(
+    manifest.entries.map((entry) => `${entry.sourceId}\0${normalizeSourcePath(entry.path)}`),
+  )
+  for (const resource of planned.plan.resources) {
+    const uploadSessionId =
+      resource.entryType === 'file'
+        ? await ctx.db.insert('fileStorage', {
+            assetUuid: null,
+            status: 'pending',
+            storageId: null,
+            userId: ctx.membership.userId,
+            originalFileName: null,
+          })
+        : null
     await ctx.db.insert('resourceTransferEntries', {
       campaignUuid: ctx.resourceScope.campaignId,
-      importJobUuid: jobId,
-      sourceRootId: entry.sourceRootId,
-      rawPath: entry.rawPath,
-      normalizedPath: entry.normalizedPath,
-      plannedResourceUuid: entry.plannedResourceId,
-      plannedOperationUuid: entry.plannedOperationId,
-      resourceKind: entry.resourceKind,
-      sourceDigest: input.sourceDigest,
+      importJobUuid: manifest.jobId,
+      sourceRootId: resource.alias.sourceRootId,
+      sourceEntryPath: resource.sourceEntryPath,
+      rawPath: resource.alias.rawPath,
+      normalizedPath: resource.alias.normalizedPath,
+      plannedResourceUuid: resource.id,
+      plannedOperationUuid: resource.operationId,
+      parentResourceUuid: resource.parentId,
+      title: resource.title,
+      entryType: resource.entryType,
+      isExplicit: explicitEntries.has(
+        `${resource.alias.sourceRootId}\0${resource.sourceEntryPath}`,
+      ),
+      declaredByteSize: resource.declaredByteSize,
+      uploadSessionUuid: uploadSessionId,
+      resourceKind: resource.entryType === 'directory' ? 'folder' : null,
       resourceUuid: null,
       status: 'pending',
       rejectionReason: null,
     })
+    if (uploadSessionId) {
+      uploadTargets.push({
+        sourceId: resource.alias.sourceRootId,
+        sourcePath: resource.sourceEntryPath,
+        sessionId: uploadSessionId,
+        uploadUrl: await ctx.storage.generateUploadUrl(),
+      })
+    }
   }
-  return { status: 'ready' }
+  return {
+    status: 'reserved',
+    receipt: {
+      jobId: manifest.jobId,
+      status: 'reserved',
+      entries: planned.plan.resources.map((resource) => ({
+        status: 'pending',
+        sourceId: resource.alias.sourceRootId,
+        sourcePath: resource.alias.rawPath,
+      })),
+    },
+    uploadTargets,
+  }
+}
+
+export async function loadPlainTransfer(
+  ctx: PlainTransferReadContext,
+  jobId: ImportJobId,
+): Promise<PlainTransferReceipt | Readonly<{ status: 'unavailable' }>> {
+  const transfer = await loadOwnedPlainTransfer(ctx, jobId)
+  return transfer ? plainTransferReceipt(transfer.job, transfer.entries) : { status: 'unavailable' }
+}
+
+export async function startPlainTransfer(ctx: PlainTransferContext, jobId: ImportJobId) {
+  const transfer = await loadOwnedPlainTransfer(ctx, jobId)
+  if (!transfer) return unavailable()
+  const { entries, job } = transfer
+  if (job.status === 'reserved') {
+    await ctx.db.patch('resourceTransferJobs', job._id, {
+      status: 'running',
+      updatedAt: Date.now(),
+    })
+    return storedPlainTransferSnapshot({ ...job, status: 'running' }, entries)
+  }
+  return storedPlainTransferSnapshot(job, entries)
 }
 
 export async function cancelPlainTransfer(
   ctx: PlainTransferContext,
-  input: PlainTransferIdentity,
-): Promise<PlainTransferStartResult> {
-  const jobId = assertDomainId(DOMAIN_ID_KIND.importJob, input.jobId)
-  let job = await loadPlainTransferJob(ctx, jobId)
-  if (!job) {
-    const started = await beginPlainTransfer(ctx, input)
-    if (started.status !== 'ready') return started
-    job = await loadPlainTransferJob(ctx, jobId)
-    if (!job) throw new TypeError('Plain transfer cancellation did not create its job')
-  }
-  if (!matchesPlainTransferJob(ctx, job, input)) return { status: 'rejected' }
-  if (job.status !== 'pending') return { status: job.status }
-  const entries = await loadPlainTransferEntries(ctx, jobId)
-  const updatedAt = Date.now()
-  await ctx.db.patch('resourceTransferJobs', job._id, {
-    status: 'cancelled',
-    updatedAt,
-  })
-  for (const entry of entries) {
-    if (entry.status === 'pending') {
-      await ctx.db.patch('resourceTransferEntries', entry._id, {
-        status: 'cancelled',
-      })
-    }
-  }
-  return { status: 'cancelled' }
+  jobId: ImportJobId,
+): Promise<PlainTransferReceipt | Readonly<{ status: 'unavailable' }>> {
+  const transfer = await loadOwnedPlainTransfer(ctx, jobId)
+  if (!transfer) return { status: 'unavailable' }
+  const { entries, job } = transfer
+  if (job.status === 'settled') return plainTransferReceipt(job, entries)
+
+  return await settleRemainingPlainTransfer(ctx, job, entries, { status: 'cancelled' })
 }
 
 export async function validatePlainTransferEntryCommit(
   ctx: PlainTransferContext,
   input: Readonly<{
-    jobId: string
-    operationId: OperationId
-    sourceDigest: string
-    resourceId: ResourceId
-    kind: ResourceKind
-    alias: SourcePathAlias
+    jobId: ImportJobId
+    sourceId: string
+    sourcePath: string
+    kind: Extract<ResourceKind, 'file' | 'folder' | 'note'>
   }>,
 ): Promise<Readonly<{
   job: Doc<'resourceTransferJobs'>
   entry: Doc<'resourceTransferEntries'>
 }> | null> {
-  const jobId = assertDomainId(DOMAIN_ID_KIND.importJob, input.jobId)
-  const job = await loadPlainTransferJob(ctx, jobId)
-  if (
-    !job ||
-    job.actorMemberUuid !== ctx.resourceScope.actorId ||
-    job.sourceDigest !== input.sourceDigest ||
-    job.status !== 'pending'
-  ) {
+  const job = await loadPlainTransferJob(ctx, input.jobId)
+  if (!job || job.actorMemberUuid !== ctx.resourceScope.actorId || job.status !== 'running') {
     return null
   }
-  const entry = await loadPlainTransferEntry(
-    ctx,
-    jobId,
-    input.alias.sourceRootId,
-    input.alias.normalizedPath,
-  )
+  const entry = await loadPlainTransferEntry(ctx, input.jobId, input.sourceId, input.sourcePath)
   if (
     !entry ||
-    entry.rawPath !== input.alias.rawPath ||
-    entry.plannedResourceUuid !== input.resourceId ||
-    entry.plannedOperationUuid !== input.operationId ||
-    entry.resourceKind !== input.kind ||
-    entry.sourceDigest !== input.sourceDigest ||
-    entry.status !== 'pending'
+    entry.status !== 'pending' ||
+    (entry.entryType === 'directory' ? input.kind !== 'folder' : input.kind === 'folder') ||
+    (entry.resourceKind !== null && entry.resourceKind !== input.kind)
   ) {
     return null
   }
@@ -195,97 +206,262 @@ export async function settlePlainTransferEntry(
   ctx: PlainTransferContext,
   entry: Doc<'resourceTransferEntries'>,
   outcome:
-    | Readonly<{ status: 'completed'; resourceId: ResourceId }>
+    | Readonly<{
+        status: 'completed'
+        resourceId: ResourceId
+        kind: Extract<ResourceKind, 'file' | 'folder' | 'note'>
+      }>
     | Readonly<{ status: 'rejected'; reason: string }>,
 ): Promise<void> {
   if (entry.status !== 'pending') return
-  const completed = outcome.status === 'completed'
+  if (outcome.status === 'completed' && outcome.kind === 'note') {
+    await discardReservedUpload(ctx, entry.uploadSessionUuid)
+  }
   await ctx.db.patch('resourceTransferEntries', entry._id, {
-    resourceUuid: completed ? outcome.resourceId : null,
+    resourceKind: outcome.status === 'completed' ? outcome.kind : entry.resourceKind,
+    resourceUuid: outcome.status === 'completed' ? outcome.resourceId : null,
     status: outcome.status,
-    rejectionReason: completed ? null : outcome.reason,
+    rejectionReason: outcome.status === 'rejected' ? outcome.reason : null,
+    uploadSessionUuid:
+      outcome.status === 'completed' && outcome.kind === 'note' ? null : entry.uploadSessionUuid,
   })
 }
 
 export async function finishPlainTransfer(
   ctx: PlainTransferContext,
   jobId: ImportJobId,
-): Promise<'completed' | 'completed_with_issues' | 'rejected'> {
-  const job = await loadPlainTransferJob(ctx, jobId)
-  if (!job || job.actorMemberUuid !== ctx.resourceScope.actorId || job.status !== 'pending') {
-    return job?.status === 'completed' || job?.status === 'completed_with_issues'
-      ? job.status
-      : 'rejected'
+): Promise<PlainTransferReceipt | Readonly<{ status: 'unavailable' }>> {
+  const transfer = await loadOwnedPlainTransfer(ctx, jobId)
+  if (!transfer) return { status: 'unavailable' }
+  const { entries, job } = transfer
+  if (job.status !== 'settled' && entries.every((entry) => entry.status !== 'pending')) {
+    await ctx.db.patch('resourceTransferJobs', job._id, {
+      status: 'settled',
+      updatedAt: Date.now(),
+    })
+    return plainTransferReceipt({ ...job, status: 'settled' }, entries)
   }
-  const entries = await loadPlainTransferEntries(ctx, jobId)
-  if (entries.length === 0 || entries.some((entry) => entry.status === 'pending')) {
-    return 'rejected'
-  }
-  const status = entries.some((entry) => entry.status === 'rejected')
-    ? entries.some((entry) => entry.status === 'completed')
-      ? 'completed_with_issues'
-      : 'rejected'
-    : 'completed'
-  await ctx.db.patch('resourceTransferJobs', job._id, {
-    status,
-    rejectionReason: status === 'rejected' ? 'all_entries_rejected' : null,
-    updatedAt: Date.now(),
+  return plainTransferReceipt(job, entries)
+}
+
+export async function rejectPlainTransfer(
+  ctx: PlainTransferContext,
+  jobId: ImportJobId,
+  reason: string,
+): Promise<PlainTransferReceipt | Readonly<{ status: 'unavailable' }>> {
+  const transfer = await loadOwnedPlainTransfer(ctx, jobId)
+  if (!transfer) return { status: 'unavailable' }
+  return await settleRemainingPlainTransfer(ctx, transfer.job, transfer.entries, {
+    status: 'rejected',
+    reason,
   })
-  return status
 }
 
-function validEntries(entries: ReadonlyArray<PlainTransferEntryIdentity>): boolean {
-  const identities = new Set<string>()
-  try {
-    for (const entry of entries) {
-      if (normalizeSourcePath(entry.rawPath) !== entry.normalizedPath) return false
-      const key = entryKey(entry)
-      if (identities.has(key)) return false
-      identities.add(key)
-    }
-  } catch {
-    return false
-  }
-  return entries.length > 0
-}
-
-function matchesPlainTransfer(
+async function settleRemainingPlainTransfer(
   ctx: PlainTransferContext,
   job: Doc<'resourceTransferJobs'>,
   entries: ReadonlyArray<Doc<'resourceTransferEntries'>>,
-  input: PlainTransferIdentity,
-): boolean {
-  if (!matchesPlainTransferJob(ctx, job, input) || entries.length !== input.entries.length) {
-    return false
+  outcome: Readonly<{ status: 'cancelled' }> | Readonly<{ status: 'rejected'; reason: string }>,
+): Promise<PlainTransferReceipt> {
+  await Promise.all(
+    entries.flatMap((entry) =>
+      entry.status === 'pending'
+        ? [
+            (async () => {
+              await discardReservedUpload(ctx, entry.uploadSessionUuid)
+              await ctx.db.patch('resourceTransferEntries', entry._id, {
+                status: outcome.status,
+                rejectionReason: outcome.status === 'rejected' ? outcome.reason : null,
+                uploadSessionUuid: null,
+              })
+            })(),
+          ]
+        : [],
+    ),
+  )
+  if (job.status !== 'settled') {
+    await ctx.db.patch('resourceTransferJobs', job._id, {
+      status: 'settled',
+      updatedAt: Date.now(),
+    })
   }
-  const expected = new Map(input.entries.map((entry) => [entryKey(entry), entry]))
-  return entries.every((entry) => {
-    const identity = expected.get(entryKey(entry))
-    return (
-      identity?.plannedResourceId === entry.plannedResourceUuid &&
-      identity.plannedOperationId === entry.plannedOperationUuid &&
-      identity.resourceKind === entry.resourceKind &&
-      entry.sourceDigest === input.sourceDigest
-    )
-  })
-}
-
-function matchesPlainTransferJob(
-  ctx: PlainTransferContext,
-  job: Doc<'resourceTransferJobs'>,
-  input: Omit<PlainTransferIdentity, 'entries'>,
-): boolean {
-  return (
-    job.actorMemberUuid === ctx.resourceScope.actorId &&
-    job.operationUuid === input.operationId &&
-    job.destinationParentUuid === input.destinationParentId &&
-    job.sourceDigest === input.sourceDigest &&
-    job.mode === 'plain_resources'
+  return plainTransferReceipt(
+    { ...job, status: 'settled' },
+    await loadPlainTransferEntries(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.importJob, job.importJobUuid),
+    ),
   )
 }
 
-function entryKey(entry: Pick<PlainTransferEntryIdentity, 'sourceRootId' | 'normalizedPath'>) {
-  return `${entry.sourceRootId}\0${entry.normalizedPath}`
+export function storedPlainTransferPlan(
+  snapshot: ReturnType<typeof storedPlainTransferSnapshot>,
+): PlainTransferPlan {
+  const pending = snapshot.entries.filter((entry) => entry.status === 'pending')
+  return {
+    manifest: {
+      version: 'plain-transfer-manifest-v1',
+      jobId: assertDomainId(DOMAIN_ID_KIND.importJob, snapshot.jobId),
+      destinationCampaignId: assertDomainId(
+        DOMAIN_ID_KIND.campaign,
+        snapshot.entries[0]!.alias.campaignId,
+      ),
+      destinationParentId:
+        snapshot.destinationParentId === null
+          ? null
+          : assertDomainId(DOMAIN_ID_KIND.resource, snapshot.destinationParentId),
+      textFileHandling: snapshot.textFileHandling,
+      sources: snapshot.sources,
+      entries: pending.flatMap((entry) =>
+        entry.explicit
+          ? [
+              entry.entryType === 'directory'
+                ? {
+                    sourceId: entry.alias.sourceRootId,
+                    path: entry.sourceEntryPath,
+                    type: 'directory' as const,
+                  }
+                : {
+                    sourceId: entry.alias.sourceRootId,
+                    path: entry.sourceEntryPath,
+                    type: 'file' as const,
+                    byteSize: entry.declaredByteSize,
+                  },
+            ]
+          : [],
+      ),
+    },
+    resources: pending.map(
+      ({ explicit: _explicit, status: _status, uploadSessionId: _upload, ...entry }) => ({
+        ...entry,
+        id: assertDomainId(DOMAIN_ID_KIND.resource, entry.id),
+        operationId: assertDomainId(DOMAIN_ID_KIND.operation, entry.operationId),
+        parentId:
+          entry.parentId === null ? null : assertDomainId(DOMAIN_ID_KIND.resource, entry.parentId),
+        title: canonicalizeResourceTitle(entry.title),
+        alias: {
+          ...entry.alias,
+          campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, entry.alias.campaignId),
+          resourceId: assertDomainId(DOMAIN_ID_KIND.resource, entry.alias.resourceId),
+          importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, entry.alias.importJobId),
+        },
+      }),
+    ),
+  }
+}
+
+function storedPlanEntry(entry: Doc<'resourceTransferEntries'>) {
+  return {
+    id: entry.plannedResourceUuid,
+    operationId: entry.plannedOperationUuid,
+    parentId: entry.parentResourceUuid,
+    title: entry.title,
+    sourceEntryPath: entry.sourceEntryPath,
+    sourcePath: entry.rawPath,
+    alias: {
+      campaignId: entry.campaignUuid,
+      resourceId: entry.plannedResourceUuid,
+      importJobId: entry.importJobUuid,
+      sourceRootId: entry.sourceRootId,
+      rawPath: entry.rawPath,
+      normalizedPath: entry.normalizedPath,
+    },
+    entryType: entry.entryType,
+    declaredByteSize: entry.declaredByteSize,
+    uploadSessionId: entry.uploadSessionUuid,
+    explicit: entry.isExplicit,
+    status: entry.status,
+  }
+}
+
+function storedPlainTransferSnapshot(
+  job: Doc<'resourceTransferJobs'>,
+  entries: ReadonlyArray<Doc<'resourceTransferEntries'>>,
+) {
+  return {
+    status: job.status,
+    jobId: job.importJobUuid,
+    destinationParentId: job.destinationParentUuid,
+    textFileHandling: job.textFileHandling,
+    sources: job.sources,
+    entries: entries.map(storedPlanEntry),
+  }
+}
+
+function unavailable() {
+  return { status: 'unavailable' as const }
+}
+
+function plainTransferReceipt(
+  job: Doc<'resourceTransferJobs'>,
+  entries: ReadonlyArray<Doc<'resourceTransferEntries'>>,
+): PlainTransferReceipt {
+  if (entries.length === 0) throw new TypeError('Plain transfer has no entries')
+  return {
+    jobId: assertDomainId(DOMAIN_ID_KIND.importJob, job.importJobUuid),
+    status: job.status,
+    entries: entries.map(plainTransferEntryOutcome),
+  }
+}
+
+function plainTransferEntryOutcome(
+  entry: Doc<'resourceTransferEntries'>,
+): PlainTransferReceipt['entries'][number] {
+  if (entry.status === 'completed') {
+    if (!entry.resourceUuid || !entry.resourceKind) {
+      throw new TypeError('Completed plain transfer entry has no resource')
+    }
+    return {
+      status: 'completed',
+      sourceId: entry.sourceRootId,
+      sourcePath: entry.rawPath,
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, entry.resourceUuid),
+      kind: entry.resourceKind,
+    }
+  }
+  if (entry.status === 'rejected') {
+    return {
+      status: 'rejected',
+      sourceId: entry.sourceRootId,
+      sourcePath: entry.rawPath,
+      reason: entry.rejectionReason ?? 'invalid_command',
+    }
+  }
+  return {
+    status: entry.status,
+    sourceId: entry.sourceRootId,
+    sourcePath: entry.rawPath,
+  }
+}
+
+async function createRetryUploadTargets(
+  ctx: PlainTransferContext,
+  entries: ReadonlyArray<Doc<'resourceTransferEntries'>>,
+): Promise<Array<PlainTransferUploadTarget>> {
+  const targets: Array<PlainTransferUploadTarget> = []
+  for (const entry of entries) {
+    if (entry.status !== 'pending' || !entry.uploadSessionUuid) continue
+    const session = await ctx.db.get('fileStorage', entry.uploadSessionUuid)
+    if (session?.status !== 'pending' || session.userId !== ctx.membership.userId) continue
+    targets.push({
+      sourceId: entry.sourceRootId,
+      sourcePath: entry.sourceEntryPath,
+      sessionId: entry.uploadSessionUuid,
+      uploadUrl: await ctx.storage.generateUploadUrl(),
+    })
+  }
+  return targets
+}
+
+async function discardReservedUpload(
+  ctx: PlainTransferContext,
+  sessionId: Id<'fileStorage'> | null,
+): Promise<void> {
+  if (!sessionId) return
+  const session = await ctx.db.get('fileStorage', sessionId)
+  if (!session || session.status === 'committed') return
+  if (session.storageId) await ctx.storage.delete(session.storageId)
+  await ctx.db.delete('fileStorage', sessionId)
 }
 
 async function loadPlainTransferJob(ctx: PlainTransferReadContext, jobId: ImportJobId) {
@@ -297,20 +473,30 @@ async function loadPlainTransferJob(ctx: PlainTransferReadContext, jobId: Import
     .unique()
 }
 
+async function loadOwnedPlainTransfer(ctx: PlainTransferReadContext, jobId: ImportJobId) {
+  const job = await loadPlainTransferJob(ctx, jobId)
+  if (!job || job.actorMemberUuid !== ctx.resourceScope.actorId) return null
+  return { job, entries: await loadPlainTransferEntries(ctx, jobId) }
+}
+
 async function loadPlainTransferEntries(ctx: PlainTransferReadContext, jobId: ImportJobId) {
-  return await ctx.db
+  const entries = await ctx.db
     .query('resourceTransferEntries')
     .withIndex('by_campaign_and_job', (query) =>
       query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('importJobUuid', jobId),
     )
-    .collect()
+    .take(PLAIN_TRANSFER_LIMITS.maxEntries + 1)
+  if (entries.length > PLAIN_TRANSFER_LIMITS.maxEntries) {
+    throw new TypeError('Plain transfer entry limit exceeded')
+  }
+  return entries
 }
 
 async function loadPlainTransferEntry(
   ctx: PlainTransferReadContext,
   jobId: ImportJobId,
   sourceRootId: string,
-  normalizedPath: string,
+  rawPath: string,
 ) {
   return await ctx.db
     .query('resourceTransferEntries')
@@ -319,7 +505,7 @@ async function loadPlainTransferEntry(
         .eq('campaignUuid', ctx.resourceScope.campaignId)
         .eq('importJobUuid', jobId)
         .eq('sourceRootId', sourceRootId)
-        .eq('normalizedPath', normalizedPath),
+        .eq('normalizedPath', normalizeSourcePath(rawPath)),
     )
     .unique()
 }

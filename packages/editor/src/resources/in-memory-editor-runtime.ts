@@ -41,7 +41,7 @@ import type {
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type { EditorRuntime, ResourceNavigation } from './editor-runtime-contract'
-import type { CampaignId, CampaignMemberId, OperationId, ResourceId } from './domain-id'
+import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
@@ -72,12 +72,13 @@ import {
   transitionMapContent,
 } from './map-session-policy'
 import type { MapImageBytes } from './map-session-policy'
-import { planPlainTransfer } from './plain-transfer-inventory'
+import { digestPlainTransferPlan, planPlainTransfer } from './plain-transfer-inventory'
 import type { PlainTransferInventoryResource } from './plain-transfer-inventory'
 import type {
   PlainTransferEntryOutcome,
   PlainTransferGateway,
   PlainTransferProgress,
+  PlainTransferReceipt,
 } from './transfer-job-contract'
 import { createInMemoryResourceAssetsFolderGateway } from './in-memory-resource-assets-folder'
 import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
@@ -731,26 +732,23 @@ async function createOwnedContentResource(
 }
 
 function createInMemoryPlainTransferGateway({
-  actorId,
   appendAlias,
   campaignId,
   executeStructure,
   files,
   notes,
 }: Readonly<{
-  actorId: CampaignMemberId
   appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
   campaignId: CampaignId
   executeStructure: ResourceStructureCommandGateway['execute']
   files: InMemoryFileContentSource
   notes: InMemoryNoteSessionSource
 }>): PlainTransferGateway {
+  const jobs = new Map<string, Readonly<{ fingerprint: string; receipt: PlainTransferReceipt }>>()
   return {
     execute: async (intent, sources, entries, options) => {
-      if (options?.signal?.aborted) return { status: 'cancelled' }
       const planned = await planPlainTransfer({
         campaignId,
-        actorId,
         intent,
         sources,
         entries,
@@ -759,6 +757,35 @@ function createInMemoryPlainTransferGateway({
         return { status: 'rejected', reason: planned.reason }
       }
       const resources = planned.inventory.resources
+      const fingerprint = await digestPlainTransferPlan(planned.inventory)
+      const existing = jobs.get(intent.jobId)
+      if (existing) {
+        return existing.fingerprint === fingerprint
+          ? existing.receipt
+          : { status: 'rejected', reason: 'job_conflict' }
+      }
+      const pendingEntries: PlainTransferReceipt['entries'] = resources.map((resource) => ({
+        status: 'pending',
+        sourceId: resource.alias.sourceRootId,
+        sourcePath: resource.sourcePath,
+      }))
+      if (options?.signal?.aborted) {
+        const receipt: PlainTransferReceipt = {
+          jobId: intent.jobId,
+          status: 'settled',
+          entries: pendingEntries.map((entry) => ({
+            status: 'cancelled',
+            sourceId: entry.sourceId,
+            sourcePath: entry.sourcePath,
+          })),
+        }
+        jobs.set(intent.jobId, { fingerprint, receipt })
+        return receipt
+      }
+      jobs.set(intent.jobId, {
+        fingerprint,
+        receipt: { jobId: intent.jobId, status: 'running', entries: pendingEntries },
+      })
       const totalBytes = entries.reduce(
         (total, entry) => total + (entry.type === 'file' ? entry.bytes.byteLength : 0),
         0,
@@ -774,10 +801,14 @@ function createInMemoryPlainTransferGateway({
         signal: options?.signal,
         totalBytes,
       })
-      const completed = outcomes.filter(
-        (outcome): outcome is PlainTransferEntryOutcome => outcome !== null,
+      const completed = outcomes.map(
+        (outcome, index): PlainTransferEntryOutcome =>
+          outcome ?? {
+            status: 'cancelled',
+            sourceId: resources[index]!.alias.sourceRootId,
+            sourcePath: resources[index]!.sourcePath,
+          },
       )
-      if (completed.length !== outcomes.length) return { status: 'cancelled' }
       options?.onProgress?.({
         completedEntries: resources.length,
         totalEntries: resources.length,
@@ -785,7 +816,13 @@ function createInMemoryPlainTransferGateway({
         totalBytes,
         currentPath: null,
       })
-      return { status: 'completed', entries: completed }
+      const receipt: PlainTransferReceipt = {
+        jobId: intent.jobId,
+        status: 'settled',
+        entries: completed,
+      }
+      jobs.set(intent.jobId, { fingerprint, receipt })
+      return receipt
     },
   }
 }
@@ -1041,7 +1078,6 @@ export function createInMemoryEditorRuntime({
   })
   const previews = createInMemoryResourcePreviewSource(snapshot.resources, content.notes ?? [])
   const transfers = createInMemoryPlainTransferGateway({
-    actorId: scope.actorId,
     appendAlias: resources.appendAlias,
     campaignId: scope.campaignId,
     executeStructure: (envelope) => executeStructure(envelope),

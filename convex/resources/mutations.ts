@@ -10,7 +10,6 @@ import type {
 } from '@wizard-archive/editor/resources/command-contract'
 import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import {
   advanceVersion,
   assertSha256Digest,
@@ -38,7 +37,6 @@ import {
   resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
-  sourcePathAliasValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   resourceAccessCommandResultValidator,
@@ -52,6 +50,10 @@ import {
   resourcePresenceUpdateResultValidator,
   resourceAssetsFolderResolutionValidator,
   versionStampValidator,
+  plainTransferManifestEntryValidator,
+  plainTransferPlanSnapshotValidator,
+  plainTransferReceiptValidator,
+  plainTransferSourceDescriptorValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
 import { saveCanvasContent as saveCanvasContentFn } from './functions/saveCanvasContent'
@@ -89,14 +91,15 @@ import {
 } from './functions/resourceCatalogMetadata'
 import { ensureResourceAssetsFolder as ensureResourceAssetsFolderFn } from './functions/ensureResourceAssetsFolder'
 import {
-  beginPlainTransfer as beginPlainTransferFn,
   cancelPlainTransfer as cancelPlainTransferFn,
   finishPlainTransfer as finishPlainTransferFn,
+  rejectPlainTransfer as rejectPlainTransferFn,
+  reservePlainTransfer as reservePlainTransferFn,
   settlePlainTransferEntry,
+  startPlainTransfer as startPlainTransferFn,
   validatePlainTransferEntryCommit,
 } from './functions/plainTransfer'
-import type { PlainTransferStartResult } from './functions/plainTransfer'
-import type { PlainTransferEntryIdentity } from '@wizard-archive/editor/resources/transfer-job-contract'
+import type { PlainTransferManifest } from '@wizard-archive/editor/resources/transfer-job-contract'
 import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import {
   recordItemHistoryEvent,
@@ -114,15 +117,9 @@ type StoredResourceAccessCommand = Infer<typeof resourceAccessCommandValidator>
 type StoredNoteBlockAccessCommand = Infer<typeof noteBlockAccessCommandValidator>
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
 type StoredVersionStamp = Infer<typeof versionStampValidator>
-type StoredSourcePathAlias = Infer<typeof sourcePathAliasValidator>
 
 type FileResourceCreationArgs = Readonly<{
-  jobId: string
   operationId: string
-  sourceDigest: string
-  command: StoredResourceStructureCommand
-  alias: StoredSourcePathAlias
-  metadataVersion: StoredVersionStamp
   uploadSessionId: Id<'fileStorage'>
   metadata: FileOwnedMetadata
   version: StoredVersionStamp
@@ -139,22 +136,26 @@ type FileCreationIdentity = Readonly<{
   version: VersionStamp
 }>
 
-const plainTransferStartResultValidator = v.union(
-  v.object({ status: v.literal('ready') }),
-  v.object({ status: v.literal('cancelled') }),
-  v.object({ status: v.literal('completed') }),
-  v.object({ status: v.literal('completed_with_issues') }),
-  v.object({ status: v.literal('rejected') }),
+const plainTransferReservationResultValidator = v.union(
+  v.object({
+    status: v.literal('reserved'),
+    receipt: plainTransferReceiptValidator,
+    uploadTargets: v.array(
+      v.object({
+        sourceId: v.string(),
+        sourcePath: v.string(),
+        sessionId: v.id('fileStorage'),
+        uploadUrl: v.string(),
+      }),
+    ),
+  }),
+  v.object({ status: v.literal('rejected'), reason: v.string() }),
 )
 
-const plainTransferEntryIdentityValidator = v.object({
-  sourceRootId: v.string(),
-  rawPath: v.string(),
-  normalizedPath: v.string(),
-  plannedResourceId: resourceIdValidator,
-  plannedOperationId: operationIdValidator,
-  resourceKind: v.union(v.literal('folder'), v.literal('note'), v.literal('file')),
-})
+const plainTransferReceiptResultValidator = v.union(
+  plainTransferReceiptValidator,
+  v.object({ status: v.literal('unavailable') }),
+)
 
 function existingFileContentMatches(
   content: Doc<'resourceFileContents'>,
@@ -619,57 +620,67 @@ export const disconnectResourcePresence = campaignMutation({
     ),
 })
 
-export const beginPlainTransfer = campaignInternalMutation({
+export const reservePlainTransfer = dmMutation({
   args: {
     jobId: importJobIdValidator,
-    operationId: operationIdValidator,
     destinationParentId: v.nullable(resourceIdValidator),
-    sourceDigest: v.string(),
-    entries: v.array(plainTransferEntryIdentityValidator),
+    textFileHandling: v.union(v.literal('files'), v.literal('notes')),
+    sources: v.array(plainTransferSourceDescriptorValidator),
+    entries: v.array(plainTransferManifestEntryValidator),
   },
-  returns: plainTransferStartResultValidator,
-  handler: async (ctx, args): Promise<PlainTransferStartResult> =>
-    await beginPlainTransferFn(ctx, {
-      ...args,
-      entries: args.entries.map(plainTransferEntryIdentity),
-    }),
+  returns: plainTransferReservationResultValidator,
+  handler: async (ctx, args) =>
+    await reservePlainTransferFn(ctx, {
+      version: 'plain-transfer-manifest-v1',
+      jobId: assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId),
+      destinationCampaignId: ctx.resourceScope.campaignId,
+      destinationParentId:
+        args.destinationParentId === null
+          ? null
+          : assertDomainId(DOMAIN_ID_KIND.resource, args.destinationParentId),
+      textFileHandling: args.textFileHandling,
+      sources: args.sources,
+      entries: args.entries,
+    } satisfies PlainTransferManifest),
 })
 
 export const cancelPlainTransfer = dmMutation({
-  args: {
-    jobId: importJobIdValidator,
-    operationId: operationIdValidator,
-    destinationParentId: v.nullable(resourceIdValidator),
-    sourceDigest: v.string(),
-    entries: v.array(plainTransferEntryIdentityValidator),
-  },
-  returns: plainTransferStartResultValidator,
-  handler: async (ctx, args): Promise<PlainTransferStartResult> =>
-    await cancelPlainTransferFn(ctx, {
-      ...args,
-      entries: args.entries.map(plainTransferEntryIdentity),
-    }),
+  args: { jobId: importJobIdValidator },
+  returns: plainTransferReceiptResultValidator,
+  handler: async (ctx, args) =>
+    await cancelPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
+})
+
+export const startPlainTransfer = campaignInternalMutation({
+  args: { jobId: importJobIdValidator },
+  returns: plainTransferPlanSnapshotValidator,
+  handler: async (ctx, args) =>
+    await startPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
 })
 
 export const finishPlainTransfer = campaignInternalMutation({
   args: { jobId: importJobIdValidator },
-  returns: v.union(
-    v.literal('completed'),
-    v.literal('completed_with_issues'),
-    v.literal('rejected'),
-  ),
+  returns: plainTransferReceiptResultValidator,
   handler: async (ctx, args) =>
     await finishPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
+})
+
+export const rejectPlainTransfer = campaignInternalMutation({
+  args: { jobId: importJobIdValidator, reason: v.string() },
+  returns: plainTransferReceiptResultValidator,
+  handler: async (ctx, args) =>
+    await rejectPlainTransferFn(
+      ctx,
+      assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId),
+      args.reason,
+    ),
 })
 
 export const commitPlainTransferFolder = campaignInternalMutation({
   args: {
     jobId: importJobIdValidator,
-    operationId: operationIdValidator,
-    sourceDigest: v.string(),
-    command: resourceStructureCommandValidator,
-    alias: sourcePathAliasValidator,
-    metadataVersion: versionStampValidator,
+    sourceId: v.string(),
+    sourcePath: v.string(),
   },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
@@ -679,11 +690,8 @@ export const commitPlainTransferFolder = campaignInternalMutation({
 export const commitPlainTransferNote = campaignInternalMutation({
   args: {
     jobId: importJobIdValidator,
-    operationId: operationIdValidator,
-    sourceDigest: v.string(),
-    command: resourceStructureCommandValidator,
-    alias: sourcePathAliasValidator,
-    metadataVersion: versionStampValidator,
+    sourceId: v.string(),
+    sourcePath: v.string(),
     update: v.bytes(),
   },
   returns: resourceStructureCommandResultValidator,
@@ -694,7 +702,7 @@ export const commitPlainTransferNote = campaignInternalMutation({
     if (!prepared)
       return await rejectPlainTransferEntry(ctx, plan.entry, 'content_integrity_failure')
     const result = await executeStructureCommandFn(ctx, {
-      operationId: args.operationId,
+      operationId: plan.operationId,
       command: plan.command,
     })
     if (result.status !== 'completed') {
@@ -704,7 +712,7 @@ export const commitPlainTransferNote = campaignInternalMutation({
       ctx,
       ctx.resourceScope.campaignId,
       plan.command.resourceId,
-      assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      plan.operationId,
       args.update,
       prepared.version,
       prepared.occurrences,
@@ -717,6 +725,7 @@ export const commitPlainTransferNote = campaignInternalMutation({
     await settlePlainTransferEntry(ctx, plan.entry, {
       status: 'completed',
       resourceId: plan.command.resourceId,
+      kind: 'note',
     })
     return storedResult(result)
   },
@@ -725,12 +734,8 @@ export const commitPlainTransferNote = campaignInternalMutation({
 export const commitPlainTransferFile = campaignInternalMutation({
   args: {
     jobId: importJobIdValidator,
-    operationId: operationIdValidator,
-    sourceDigest: v.string(),
-    command: resourceStructureCommandValidator,
-    alias: sourcePathAliasValidator,
-    metadataVersion: versionStampValidator,
-    uploadSessionId: v.id('fileStorage'),
+    sourceId: v.string(),
+    sourcePath: v.string(),
     metadata: v.object(fileOwnedMetadataValidators),
     version: versionStampValidator,
   },
@@ -738,7 +743,20 @@ export const commitPlainTransferFile = campaignInternalMutation({
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
     const plan = await preparePlainTransferCatalogResource(ctx, args, 'file')
     if (plan.state === 'rejected') return plan.result
-    const result = await commitFileResourceCreationFn(ctx, args, plan.command, plan.alias)
+    if (!plan.entry.uploadSessionUuid) {
+      return await rejectPlainTransferEntry(ctx, plan.entry, 'invalid_source')
+    }
+    const result = await commitFileResourceCreationFn(
+      ctx,
+      {
+        uploadSessionId: plan.entry.uploadSessionUuid,
+        operationId: plan.operationId,
+        metadata: args.metadata,
+        version: args.version,
+      },
+      plan.command,
+      plan.alias,
+    )
     await settlePlainTransferEntry(
       ctx,
       plan.entry,
@@ -746,6 +764,7 @@ export const commitPlainTransferFile = campaignInternalMutation({
         ? {
             status: 'completed',
             resourceId: assertDomainId(DOMAIN_ID_KIND.resource, result.receipt.result.resourceId),
+            kind: 'file',
           }
         : {
             status: 'rejected',
@@ -758,11 +777,8 @@ export const commitPlainTransferFile = campaignInternalMutation({
 
 type PlainTransferCatalogResourceArgs = Readonly<{
   jobId: string
-  operationId: string
-  sourceDigest: string
-  command: StoredResourceStructureCommand
-  alias: StoredSourcePathAlias
-  metadataVersion: StoredVersionStamp
+  sourceId: string
+  sourcePath: string
 }>
 
 type PlainTransferCatalogResourcePlan<TKind extends 'file' | 'folder' | 'note'> =
@@ -771,17 +787,12 @@ type PlainTransferCatalogResourcePlan<TKind extends 'file' | 'folder' | 'note'> 
       command: Extract<ResourceStructureCommand, { type: 'create' }> & Readonly<{ kind: TKind }>
       alias: SourcePathAlias
       entry: Doc<'resourceTransferEntries'>
+      operationId: ReturnType<typeof assertOperationId>
     }>
   | Readonly<{ state: 'rejected'; result: StoredResourceStructureCommandResult }>
 
-function plainTransferEntryIdentity(
-  value: Infer<typeof plainTransferEntryIdentityValidator>,
-): PlainTransferEntryIdentity {
-  return {
-    ...value,
-    plannedResourceId: assertDomainId(DOMAIN_ID_KIND.resource, value.plannedResourceId),
-    plannedOperationId: assertDomainId(DOMAIN_ID_KIND.operation, value.plannedOperationId),
-  }
+function assertOperationId(value: string) {
+  return assertDomainId(DOMAIN_ID_KIND.operation, value)
 }
 
 async function preparePlainTransferCatalogResource<TKind extends 'file' | 'folder' | 'note'>(
@@ -789,45 +800,12 @@ async function preparePlainTransferCatalogResource<TKind extends 'file' | 'folde
   args: PlainTransferCatalogResourceArgs,
   kind: TKind,
 ): Promise<PlainTransferCatalogResourcePlan<TKind>> {
-  const command = readStructureCommand(args.command)
-  if ('status' in command) return { state: 'rejected', result: command }
-  if (command.type !== 'create' || command.kind !== kind) {
-    return {
-      state: 'rejected',
-      result: { status: 'rejected', reason: 'invalid_command' },
-    }
-  }
-  const alias = fileCreationAlias(args.alias)
-  if (
-    alias.campaignId !== ctx.resourceScope.campaignId ||
-    alias.resourceId !== command.resourceId
-  ) {
-    return {
-      state: 'rejected',
-      result: { status: 'rejected', reason: 'invalid_command' },
-    }
-  }
-  const expectedMetadataVersion = await initialResourceMetadataVersion({
-    parentId: command.parentId,
-    kind: command.kind,
-    title: command.title,
-    icon: command.icon,
-    color: command.color,
-    lifecycle: 'active',
-  })
-  if (!versionStampEquals(assertVersionStamp(args.metadataVersion), expectedMetadataVersion)) {
-    return {
-      state: 'rejected',
-      result: { status: 'rejected', reason: 'invalid_command' },
-    }
-  }
+  const jobId = assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)
   const validated = await validatePlainTransferEntryCommit(ctx, {
-    jobId: args.jobId,
-    operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
-    sourceDigest: args.sourceDigest,
-    resourceId: command.resourceId,
+    jobId,
+    sourceId: args.sourceId,
+    sourcePath: args.sourcePath,
     kind,
-    alias,
   })
   if (!validated) {
     return {
@@ -835,7 +813,33 @@ async function preparePlainTransferCatalogResource<TKind extends 'file' | 'folde
       result: { status: 'rejected', reason: 'invalid_command' },
     }
   }
-  return { state: 'ready', command: { ...command, kind }, alias, entry: validated.entry }
+  const entry = validated.entry
+  const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, entry.plannedResourceUuid)
+  return {
+    state: 'ready',
+    command: {
+      type: 'create',
+      resourceId,
+      kind,
+      parentId:
+        entry.parentResourceUuid === null
+          ? null
+          : assertDomainId(DOMAIN_ID_KIND.resource, entry.parentResourceUuid),
+      title: canonicalizeResourceTitle(entry.title),
+      icon: null,
+      color: null,
+    },
+    alias: {
+      campaignId: ctx.resourceScope.campaignId,
+      resourceId,
+      importJobId: jobId,
+      sourceRootId: entry.sourceRootId,
+      rawPath: entry.rawPath,
+      normalizedPath: entry.normalizedPath,
+    },
+    entry,
+    operationId: assertOperationId(entry.plannedOperationUuid),
+  }
 }
 
 async function commitPlainTransferCatalogResource(
@@ -846,7 +850,7 @@ async function commitPlainTransferCatalogResource(
   const plan = await preparePlainTransferCatalogResource(ctx, args, kind)
   if (plan.state === 'rejected') return plan.result
   const result = await executeStructureCommandFn(ctx, {
-    operationId: args.operationId,
+    operationId: plan.operationId,
     command: plan.command,
   })
   if (result.status !== 'completed') {
@@ -856,6 +860,7 @@ async function commitPlainTransferCatalogResource(
   await settlePlainTransferEntry(ctx, plan.entry, {
     status: 'completed',
     resourceId: plan.command.resourceId,
+    kind: 'folder',
   })
   return storedResult(result)
 }
@@ -961,17 +966,6 @@ async function commitFreshFileCreation(
   })
   await appendResourceSourcePathAlias(ctx, alias)
   return storedResult(result)
-}
-
-function fileCreationAlias(value: Infer<typeof sourcePathAliasValidator>): SourcePathAlias {
-  return {
-    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, value.campaignId),
-    resourceId: assertDomainId(DOMAIN_ID_KIND.resource, value.resourceId),
-    importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, value.importJobId),
-    sourceRootId: value.sourceRootId,
-    rawPath: value.rawPath,
-    normalizedPath: value.normalizedPath,
-  }
 }
 
 export const commitFileContentReplacement = campaignInternalMutation({

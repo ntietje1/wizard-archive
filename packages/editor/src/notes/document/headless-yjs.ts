@@ -5,6 +5,7 @@ import type { NoteBlock, PartialNoteBlock } from './model'
 import { destroyHeadlessBlockNoteEditor } from './headless-editor-cleanup'
 import { createHeadlessNoteEditor } from './headless-schema'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
+import { markdownToNoteBlocks } from './markdown-import'
 
 export class InvalidNoteYjsDocumentError extends Error {
   readonly cause: unknown
@@ -23,27 +24,7 @@ export function createEmptyNoteYDoc(): Y.Doc {
 }
 
 export function markdownToNoteYDoc(markdown: string): Y.Doc {
-  const editor = createHeadlessNoteEditor()
-  try {
-    return noteBlocksToYDoc(
-      parsePartialNoteBlocks(stripGeneratedBlockIds(editor.tryParseMarkdownToBlocks(markdown))),
-      NOTE_YJS_FRAGMENT,
-    )
-  } finally {
-    destroyHeadlessBlockNoteEditor(editor)
-  }
-}
-
-function stripGeneratedBlockIds(blocks: unknown): unknown {
-  if (!Array.isArray(blocks)) return blocks
-  return blocks.map((block) => {
-    if (!block || typeof block !== 'object') return block
-    const { id: _id, children, ...content } = block as Record<string, unknown>
-    return {
-      ...content,
-      ...(Array.isArray(children) ? { children: stripGeneratedBlockIds(children) } : {}),
-    }
-  })
+  return noteBlocksToYDoc(markdownToNoteBlocks(markdown), NOTE_YJS_FRAGMENT)
 }
 
 export function noteBlocksToYDoc(blocks: Array<PartialNoteBlock>, fragment: string): Y.Doc {

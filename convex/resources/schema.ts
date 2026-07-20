@@ -43,6 +43,85 @@ export const sourcePathAliasValidator = v.object({
   normalizedPath: v.string(),
 })
 
+export const plainTransferSourceDescriptorValidator = v.object({
+  id: v.string(),
+  kind: literals('directory', 'file', 'zip'),
+  name: v.string(),
+})
+
+export const plainTransferManifestEntryValidator = v.union(
+  v.object({
+    sourceId: v.string(),
+    path: v.string(),
+    type: v.literal('directory'),
+  }),
+  v.object({
+    sourceId: v.string(),
+    path: v.string(),
+    type: v.literal('file'),
+    byteSize: v.number(),
+  }),
+)
+
+export const plainTransferEntryOutcomeValidator = v.union(
+  v.object({
+    status: v.literal('pending'),
+    sourceId: v.string(),
+    sourcePath: v.string(),
+  }),
+  v.object({
+    status: v.literal('completed'),
+    sourceId: v.string(),
+    sourcePath: v.string(),
+    resourceId: resourceIdValidator,
+    kind: literals(RESOURCE_KIND.folder, RESOURCE_KIND.note, RESOURCE_KIND.file),
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    sourceId: v.string(),
+    sourcePath: v.string(),
+    reason: v.string(),
+  }),
+  v.object({
+    status: v.literal('cancelled'),
+    sourceId: v.string(),
+    sourcePath: v.string(),
+  }),
+)
+
+export const plainTransferReceiptValidator = v.object({
+  jobId: importJobIdValidator,
+  status: literals('reserved', 'running', 'settled'),
+  entries: v.array(plainTransferEntryOutcomeValidator),
+})
+
+export const plainTransferPlanSnapshotValidator = v.union(
+  v.object({ status: v.literal('unavailable') }),
+  v.object({
+    status: literals('reserved', 'running', 'settled'),
+    jobId: importJobIdValidator,
+    destinationParentId: v.nullable(resourceIdValidator),
+    textFileHandling: literals('files', 'notes'),
+    sources: v.array(plainTransferSourceDescriptorValidator),
+    entries: v.array(
+      v.object({
+        id: resourceIdValidator,
+        operationId: operationIdValidator,
+        parentId: v.nullable(resourceIdValidator),
+        title: v.string(),
+        sourceEntryPath: v.string(),
+        sourcePath: v.string(),
+        alias: sourcePathAliasValidator,
+        entryType: literals('directory', 'file'),
+        declaredByteSize: v.number(),
+        uploadSessionId: v.nullable(v.id('fileStorage')),
+        explicit: v.boolean(),
+        status: literals('pending', 'completed', 'rejected', 'cancelled'),
+      }),
+    ),
+  }),
+)
+
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
 export const resourcePermissionValidator = literals(...Object.values(RESOURCE_PERMISSION))
 export const resourcePreviewValidator = v.object({
@@ -1329,12 +1408,18 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     importJobUuid: importJobIdValidator,
     actorMemberUuid: campaignMemberIdValidator,
-    operationUuid: operationIdValidator,
+    manifestVersion: v.literal('plain-transfer-manifest-v1'),
+    fingerprint: v.string(),
     destinationParentUuid: v.nullable(resourceIdValidator),
-    mode: v.literal('plain_resources'),
-    sourceDigest: v.nullable(v.string()),
-    status: literals('pending', 'completed', 'completed_with_issues', 'cancelled', 'rejected'),
-    rejectionReason: v.nullable(v.string()),
+    textFileHandling: literals('files', 'notes'),
+    sources: v.array(
+      v.object({
+        id: v.string(),
+        kind: literals('directory', 'file', 'zip'),
+        name: v.string(),
+      }),
+    ),
+    status: literals('reserved', 'running', 'settled'),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index('by_campaign_and_importJobUuid', ['campaignUuid', 'importJobUuid']),
@@ -1343,12 +1428,20 @@ export const resourceTables = {
     campaignUuid: campaignIdValidator,
     importJobUuid: importJobIdValidator,
     sourceRootId: v.string(),
+    sourceEntryPath: v.string(),
     rawPath: v.string(),
     normalizedPath: v.string(),
     plannedResourceUuid: resourceIdValidator,
     plannedOperationUuid: operationIdValidator,
-    resourceKind: literals(RESOURCE_KIND.folder, RESOURCE_KIND.note, RESOURCE_KIND.file),
-    sourceDigest: v.nullable(v.string()),
+    parentResourceUuid: v.nullable(resourceIdValidator),
+    title: v.string(),
+    entryType: literals('directory', 'file'),
+    isExplicit: v.boolean(),
+    declaredByteSize: v.number(),
+    uploadSessionUuid: v.nullable(v.id('fileStorage')),
+    resourceKind: v.nullable(
+      literals(RESOURCE_KIND.folder, RESOURCE_KIND.note, RESOURCE_KIND.file),
+    ),
     resourceUuid: v.nullable(resourceIdValidator),
     status: literals('pending', 'completed', 'cancelled', 'rejected'),
     rejectionReason: v.nullable(v.string()),

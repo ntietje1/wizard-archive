@@ -1,130 +1,95 @@
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
-import {
-  planPlainTransfer,
-  plainTransferEntryIdentities,
-} from '@wizard-archive/editor/resources/plain-transfer-inventory'
-import type { PlainTransferInventoryResource } from '@wizard-archive/editor/resources/plain-transfer-inventory'
+import { createPlainTransferManifest } from '@wizard-archive/editor/resources/plain-transfer-inventory'
 import type {
   PlainTransferGateway,
-  PlainTransferExecutionResult,
   PlainTransferInputEntry,
   PlainTransferProgress,
+  PlainTransferReceipt,
 } from '@wizard-archive/editor/resources/transfer-job-contract'
 import { assertDomainId, DOMAIN_ID_KIND } from '@wizard-archive/editor/resources/domain-id'
-import type {
-  CampaignId,
-  CampaignMemberId,
-  ImportJobId,
-  ResourceId,
-} from '@wizard-archive/editor/resources/domain-id'
-import type { FileResourceSource } from '@wizard-archive/editor/resources/content-session-contract'
-import { markdownToNoteYDoc } from '@wizard-archive/editor/notes/document-yjs'
-import * as Y from 'yjs'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
-type ExecuteArgs = FunctionArgs<typeof api.resources.actions.executePlainTransfer>
-type ExecuteResult = FunctionReturnType<typeof api.resources.actions.executePlainTransfer>
+type ReserveArgs = FunctionArgs<typeof api.resources.mutations.reservePlainTransfer>
+type ReserveResult = FunctionReturnType<typeof api.resources.mutations.reservePlainTransfer>
+type CommitArgs = FunctionArgs<typeof api.resources.actions.commitPlainTransfer>
+type CommitResult = FunctionReturnType<typeof api.resources.actions.commitPlainTransfer>
 type CancelArgs = FunctionArgs<typeof api.resources.mutations.cancelPlainTransfer>
+type LoadArgs = FunctionArgs<typeof api.resources.queries.loadPlainTransfer>
+type LoadResult = FunctionReturnType<typeof api.resources.queries.loadPlainTransfer>
+
+type UploadTarget = Extract<ReserveResult, { status: 'reserved' }>['uploadTargets'][number]
 
 type LivePlainTransferBackend = Readonly<{
-  cancel(args: CancelArgs): Promise<void>
-  discard(sessionId: Id<'fileStorage'>): Promise<void>
-  execute(args: ExecuteArgs): Promise<ExecuteResult>
+  bind(
+    target: UploadTarget,
+    source: Extract<PlainTransferInputEntry, { type: 'file' }>,
+  ): Promise<void>
+  cancel(args: CancelArgs): Promise<LoadResult>
+  commit(args: CommitArgs): Promise<CommitResult>
+  load(args: LoadArgs): Promise<LoadResult>
   refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
-  upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
-}>
-
-type PendingPlainTransfer = Readonly<{
-  sourceDigest: string
-  sessions: ReadonlyMap<string, Id<'fileStorage'>>
+  reserve(args: ReserveArgs): Promise<ReserveResult>
 }>
 
 export function createLivePlainTransferGateway(
   campaignId: CampaignId,
-  actorId: CampaignMemberId,
   backend: LivePlainTransferBackend,
 ): PlainTransferGateway {
-  const pending = new Map<ImportJobId, PendingPlainTransfer>()
   return {
     execute: async (intent, sources, entries, options) => {
-      if (options?.signal?.aborted) return { status: 'cancelled' }
-      const planned = await planPlainTransfer({
-        campaignId,
-        actorId,
-        intent,
-        sources,
-        entries,
-      })
-      if (planned.status === 'rejected') {
-        return { status: 'rejected', reason: planned.reason }
+      const manifest = createPlainTransferManifest({ intent, sources, entries })
+      let reservation: ReserveResult
+      try {
+        reservation = await backend.reserve({
+          campaignId,
+          jobId: manifest.jobId,
+          destinationParentId: manifest.destinationParentId,
+          textFileHandling: manifest.textFileHandling,
+          sources: [...manifest.sources],
+          entries: [...manifest.entries],
+        })
+      } catch {
+        return { status: 'indeterminate', reason: 'transport_unavailable' }
       }
-      const request = planned.inventory.request
-      const noteUpdates = prepareNoteUpdates(planned.inventory.resources)
-      const existing = pending.get(intent.jobId)
-      if (existing && existing.sourceDigest !== request.sourceDigest) {
-        return { status: 'rejected', reason: 'source_changed' }
-      }
-      let current = existing
+      if (reservation.status === 'rejected') return reservation
+
       const cancel = () => {
-        void backend
-          .cancel({
-            campaignId,
-            jobId: intent.jobId,
-            operationId: intent.operationId,
-            destinationParentId: intent.destinationParentId,
-            sourceDigest: request.sourceDigest,
-            entries: [...plainTransferEntryIdentities(planned.inventory.resources)],
-          })
-          .catch(() => undefined)
+        void backend.cancel({ campaignId, jobId: intent.jobId }).catch(() => undefined)
       }
       options?.signal?.addEventListener('abort', cancel, { once: true })
       try {
-        if (!current) {
-          current = {
-            sourceDigest: request.sourceDigest,
-            sessions: await uploadPlainTransferEntries(backend, entries, options?.onProgress),
-          }
-          pending.set(intent.jobId, current)
-        }
-        const transfer = current
         if (options?.signal?.aborted) {
-          pending.delete(intent.jobId)
-          await discardSessions(backend, transfer.sessions)
-          return { status: 'cancelled' }
+          return await cancelPlainTransfer(backend, campaignId, intent.jobId)
         }
-        const result = await backend.execute({
-          campaignId,
-          jobId: intent.jobId,
-          operationId: intent.operationId,
-          destinationParentId: intent.destinationParentId,
-          textFileHandling: intent.textFileHandling,
-          sources: [...sources],
-          entries: entries.map((entry) => liveTransferEntry(entry, transfer.sessions, noteUpdates)),
-        })
-        if (result.status === 'indeterminate') return result
-        pending.delete(intent.jobId)
-        if (result.status !== 'completed') {
-          await discardSessions(backend, transfer.sessions)
-          return result
-        }
-        await discardRejectedSessions(backend, transfer.sessions, result.entries)
-        const completed = await completeLivePlainTransfer(
-          planned.inventory.resources,
-          result,
+        await uploadReservedEntries(
           backend,
+          reservation.uploadTargets,
+          entries,
+          options?.onProgress,
         )
-        if (completed.status !== 'completed') return completed
-        options?.onProgress?.({
-          completedEntries: completed.entries.length,
-          totalEntries: completed.entries.length,
-          uploadedBytes: totalFileBytes(entries),
-          totalBytes: totalFileBytes(entries),
-          currentPath: null,
-        })
-        return completed
+        if (options?.signal?.aborted) {
+          return await cancelPlainTransfer(backend, campaignId, intent.jobId)
+        }
+        const result = await backend.commit({ campaignId, jobId: intent.jobId })
+        const response =
+          result.status === 'indeterminate'
+            ? await recoverPlainTransfer(backend, campaignId, intent.jobId, result)
+            : result
+        if (response.status === 'indeterminate' || response.status === 'rejected') {
+          return response
+        }
+        const receipt = readPlainTransferReceipt(response)
+        if (receipt.status === 'settled') {
+          await refreshCompletedEntries(backend, receipt, intent.destinationParentId)
+          reportSettledProgress(entries, receipt, options?.onProgress)
+        }
+        return receipt
       } catch {
-        return { status: 'indeterminate', reason: 'response_lost' }
+        return await recoverPlainTransfer(backend, campaignId, intent.jobId, {
+          status: 'indeterminate',
+          reason: 'response_lost',
+        })
       } finally {
         options?.signal?.removeEventListener('abort', cancel)
       }
@@ -132,116 +97,89 @@ export function createLivePlainTransferGateway(
   }
 }
 
-async function completeLivePlainTransfer(
-  planned: ReadonlyArray<PlainTransferInventoryResource>,
-  result: Extract<ExecuteResult, { status: 'completed' }>,
-  backend: Pick<LivePlainTransferBackend, 'refresh'>,
-): Promise<PlainTransferExecutionResult> {
-  const resources = new Map(planned.map((resource) => [resource.id, resource]))
-  const resourcesBySource = new Map(
-    planned.map((resource) => [
-      transferEntryKey({
-        sourceId: resource.alias.sourceRootId,
-        path: resource.sourcePath,
-      }),
-      resource,
-    ]),
-  )
-  const entries = result.entries.map((entry) =>
-    entry.status === 'rejected'
-      ? entry
-      : {
-          ...entry,
-          resourceId: assertDomainId(DOMAIN_ID_KIND.resource, entry.resourceId),
-        },
-  )
-  if (entries.length !== resourcesBySource.size) {
-    return { status: 'rejected', reason: 'invalid_response' }
-  }
-  const receivedSources = new Set<string>()
-  for (const entry of entries) {
-    const source = transferEntryKey({
-      sourceId: entry.sourceId,
-      path: entry.sourcePath,
-    })
-    const expected = resourcesBySource.get(source)
-    if (
-      !expected ||
-      receivedSources.has(source) ||
-      (entry.status === 'completed' &&
-        (entry.resourceId !== expected.id || entry.kind !== expected.kind))
-    ) {
-      return { status: 'rejected', reason: 'invalid_response' }
-    }
-    receivedSources.add(source)
-  }
-  await Promise.all(
-    entries.flatMap((entry) => {
-      if (entry.status !== 'completed') return []
-      const resource = resources.get(entry.resourceId)
-      return resource ? [backend.refresh(resource.id, resource.parentId)] : []
-    }),
-  )
-  return { status: 'completed', entries }
-}
-
-async function uploadPlainTransferEntries(
-  backend: Pick<LivePlainTransferBackend, 'discard' | 'upload'>,
+async function uploadReservedEntries(
+  backend: Pick<LivePlainTransferBackend, 'bind'>,
+  targets: ReadonlyArray<UploadTarget>,
   entries: ReadonlyArray<PlainTransferInputEntry>,
   onProgress: ((progress: PlainTransferProgress) => void) | undefined,
-): Promise<ReadonlyMap<string, Id<'fileStorage'>>> {
-  const sessions = new Map<string, Id<'fileStorage'>>()
-  const fileEntries = entries.filter(
-    (entry): entry is Extract<PlainTransferInputEntry, { type: 'file' }> => entry.type === 'file',
+): Promise<void> {
+  const files = new Map(
+    entries.flatMap((entry) =>
+      entry.type === 'file' ? [[transferEntryKey(entry.sourceId, entry.path), entry] as const] : [],
+    ),
   )
   const totalBytes = totalFileBytes(entries)
-  let uploadedBytes = 0
-  try {
-    for (const [index, entry] of fileEntries.entries()) {
-      onProgress?.({
-        completedEntries: index,
-        totalEntries: entries.length,
-        uploadedBytes,
-        totalBytes,
-        currentPath: entry.path,
-      })
-      const sessionId = await backend.upload({
-        bytes: entry.bytes,
-        fileName: entry.path.slice(entry.path.lastIndexOf('/') + 1),
-      })
-      sessions.set(transferEntryKey(entry), sessionId)
-      uploadedBytes += entry.bytes.byteLength
-    }
-    return sessions
-  } catch (error) {
-    await discardSessions(backend, sessions)
-    throw error
+  let uploadedBytes =
+    totalBytes -
+    targets.reduce((total, target) => {
+      const source = files.get(transferEntryKey(target.sourceId, target.sourcePath))
+      if (!source) throw new TypeError('Reserved upload target is not in the local manifest')
+      return total + source.bytes.byteLength
+    }, 0)
+  for (const [index, target] of targets.entries()) {
+    const source = files.get(transferEntryKey(target.sourceId, target.sourcePath))
+    if (!source) throw new TypeError('Reserved upload target is not in the local manifest')
+    onProgress?.({
+      completedEntries: index,
+      totalEntries: entries.length,
+      uploadedBytes,
+      totalBytes,
+      currentPath: source.path,
+    })
+    await backend.bind(target, source)
+    uploadedBytes += source.bytes.byteLength
   }
 }
 
-async function discardSessions(
-  backend: Pick<LivePlainTransferBackend, 'discard'>,
-  sessions: ReadonlyMap<string, Id<'fileStorage'>>,
+async function cancelPlainTransfer(
+  backend: Pick<LivePlainTransferBackend, 'cancel'>,
+  campaignId: CampaignId,
+  jobId: FunctionArgs<typeof api.resources.mutations.cancelPlainTransfer>['jobId'],
+) {
+  const result = await backend.cancel({ campaignId, jobId })
+  return result.status === 'unavailable'
+    ? ({ status: 'rejected', reason: 'invalid_job' } as const)
+    : readPlainTransferReceipt(result)
+}
+
+async function recoverPlainTransfer(
+  backend: Pick<LivePlainTransferBackend, 'load'>,
+  campaignId: CampaignId,
+  jobId: FunctionArgs<typeof api.resources.queries.loadPlainTransfer>['jobId'],
+  fallback: Extract<CommitResult, { status: 'indeterminate' }>,
+) {
+  try {
+    const receipt = await backend.load({ campaignId, jobId })
+    return receipt.status === 'unavailable' ? fallback : readPlainTransferReceipt(receipt)
+  } catch {
+    return fallback
+  }
+}
+
+async function refreshCompletedEntries(
+  backend: Pick<LivePlainTransferBackend, 'refresh'>,
+  receipt: PlainTransferReceipt,
+  destinationParentId: ResourceId | null,
 ): Promise<void> {
   await Promise.all(
-    [...sessions.values()].map((sessionId) => backend.discard(sessionId).catch(() => undefined)),
+    receipt.entries.flatMap((entry) =>
+      entry.status === 'completed' ? [backend.refresh(entry.resourceId, destinationParentId)] : [],
+    ),
   )
 }
 
-async function discardRejectedSessions(
-  backend: Pick<LivePlainTransferBackend, 'discard'>,
-  sessions: ReadonlyMap<string, Id<'fileStorage'>>,
-  entries: Extract<ExecuteResult, { status: 'completed' }>['entries'],
-): Promise<void> {
-  await Promise.all(
-    entries.flatMap((entry) => {
-      if (entry.status !== 'rejected') return []
-      const sessionId = sessions.get(
-        transferEntryKey({ sourceId: entry.sourceId, path: entry.sourcePath }),
-      )
-      return sessionId ? [backend.discard(sessionId).catch(() => undefined)] : []
-    }),
-  )
+function reportSettledProgress(
+  entries: ReadonlyArray<PlainTransferInputEntry>,
+  receipt: PlainTransferReceipt,
+  onProgress: ((progress: PlainTransferProgress) => void) | undefined,
+): void {
+  onProgress?.({
+    completedEntries: receipt.entries.filter((entry) => entry.status === 'completed').length,
+    totalEntries: receipt.entries.length,
+    uploadedBytes: totalFileBytes(entries),
+    totalBytes: totalFileBytes(entries),
+    currentPath: null,
+  })
 }
 
 function totalFileBytes(entries: ReadonlyArray<PlainTransferInputEntry>): number {
@@ -251,53 +189,25 @@ function totalFileBytes(entries: ReadonlyArray<PlainTransferInputEntry>): number
   )
 }
 
-function transferEntryKey(entry: Pick<PlainTransferInputEntry, 'sourceId' | 'path'>): string {
-  return `${entry.sourceId}\0${entry.path}`
+function transferEntryKey(sourceId: string, path: string): string {
+  return `${sourceId}\0${path}`
 }
 
-function requireUploadSession(
-  sessions: ReadonlyMap<string, Id<'fileStorage'>>,
-  entry: Pick<PlainTransferInputEntry, 'sourceId' | 'path'>,
-): Id<'fileStorage'> {
-  const session = sessions.get(transferEntryKey(entry))
-  if (!session) throw new TypeError(`Upload session is unavailable for ${entry.path}`)
-  return session
-}
-
-function liveTransferEntry(
-  entry: PlainTransferInputEntry,
-  sessions: ReadonlyMap<string, Id<'fileStorage'>>,
-  noteUpdates: ReadonlyMap<string, ArrayBuffer>,
-): ExecuteArgs['entries'][number] {
-  if (entry.type === 'directory') return entry
-  const noteUpdate = noteUpdates.get(transferEntryKey(entry))
+function readPlainTransferReceipt(
+  receipt:
+    | PlainTransferReceipt
+    | Extract<CommitResult, { status: 'reserved' | 'running' | 'settled' }>,
+): PlainTransferReceipt {
   return {
-    sourceId: entry.sourceId,
-    path: entry.path,
-    type: 'file',
-    uploadSessionId: requireUploadSession(sessions, entry),
-    ...(noteUpdate ? { noteUpdate } : {}),
+    jobId: assertDomainId(DOMAIN_ID_KIND.importJob, receipt.jobId),
+    status: receipt.status,
+    entries: receipt.entries.map((entry) =>
+      entry.status === 'completed'
+        ? {
+            ...entry,
+            resourceId: assertDomainId(DOMAIN_ID_KIND.resource, entry.resourceId),
+          }
+        : entry,
+    ),
   }
-}
-
-function prepareNoteUpdates(
-  resources: ReadonlyArray<PlainTransferInventoryResource>,
-): ReadonlyMap<string, ArrayBuffer> {
-  const updates = new Map<string, ArrayBuffer>()
-  for (const resource of resources) {
-    if (resource.kind !== 'note') continue
-    const document = markdownToNoteYDoc(resource.content.source.text)
-    try {
-      updates.set(
-        transferEntryKey({
-          sourceId: resource.alias.sourceRootId,
-          path: resource.sourceEntryPath,
-        }),
-        Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer,
-      )
-    } finally {
-      document.destroy()
-    }
-  }
-  return updates
 }

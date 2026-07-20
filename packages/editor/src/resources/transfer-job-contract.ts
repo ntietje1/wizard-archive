@@ -1,60 +1,29 @@
-import type { Sha256Digest } from './component-version'
-import type {
-  CampaignId,
-  CampaignMemberId,
-  ImportJobId,
-  OperationId,
-  ResourceId,
-} from './domain-id'
+import type { CampaignId, ImportJobId, ResourceId } from './domain-id'
 import type { ResourceKind } from './resource-record'
 
-export const TRANSFER_JOB_REQUEST_VERSION = 'transfer-job-request-v1' as const
-
-export type TransferSourceKind = 'directory' | 'file' | 'wizard_archive' | 'zip'
-
-export type TransferSourceDescriptor = Readonly<{
-  id: string
-  kind: TransferSourceKind
-  name: string
-}>
+export const PLAIN_TRANSFER_MANIFEST_VERSION = 'plain-transfer-manifest-v1' as const
 
 export type PlainTransferSourceDescriptor = Readonly<{
   id: string
-  kind: Exclude<TransferSourceKind, 'wizard_archive'>
+  kind: 'directory' | 'file' | 'zip'
   name: string
 }>
 
 export type PlainTransferTextFileHandling = 'files' | 'notes'
 
-type TransferJobRequestBase<TSource extends TransferSourceDescriptor> = Readonly<{
-  version: typeof TRANSFER_JOB_REQUEST_VERSION
+export type PlainTransferManifest = Readonly<{
+  version: typeof PLAIN_TRANSFER_MANIFEST_VERSION
   jobId: ImportJobId
-  operationId: OperationId
-  actorId: CampaignMemberId
   destinationCampaignId: CampaignId
-  sourceDigest: Sha256Digest
-  sources: ReadonlyArray<TSource>
+  destinationParentId: ResourceId | null
+  textFileHandling: PlainTransferTextFileHandling
+  sources: ReadonlyArray<PlainTransferSourceDescriptor>
+  entries: ReadonlyArray<PlainTransferManifestEntry>
 }>
-
-export type PlainTransferJobRequest = TransferJobRequestBase<PlainTransferSourceDescriptor> &
-  Readonly<{ textFileHandling: PlainTransferTextFileHandling }> &
-  (
-    | Readonly<{
-        mode: 'plain_workspace'
-        destinationParentId: null
-        manifestHandling: 'continue_plain' | 'reject'
-      }>
-    | Readonly<{
-        mode: 'plain_resources'
-        destinationParentId: ResourceId | null
-        manifestHandling: 'continue_plain' | 'reject'
-      }>
-  )
 
 export type PlainTransferIntent = Readonly<{
   campaignId: CampaignId
   jobId: ImportJobId
-  operationId: OperationId
   destinationParentId: ResourceId | null
   textFileHandling: PlainTransferTextFileHandling
 }>
@@ -68,14 +37,9 @@ export type PlainTransferInputEntry =
       bytes: Uint8Array
     }>
 
-export type PlainTransferEntryIdentity = Readonly<{
-  sourceRootId: string
-  rawPath: string
-  normalizedPath: string
-  plannedResourceId: ResourceId
-  plannedOperationId: OperationId
-  resourceKind: Extract<ResourceKind, 'file' | 'folder' | 'note'>
-}>
+export type PlainTransferManifestEntry =
+  | Readonly<{ sourceId: string; path: string; type: 'directory' }>
+  | Readonly<{ sourceId: string; path: string; type: 'file'; byteSize: number }>
 
 export type PlainTransferProgress = Readonly<{
   completedEntries: number
@@ -87,11 +51,16 @@ export type PlainTransferProgress = Readonly<{
 
 export type PlainTransferEntryOutcome =
   | Readonly<{
+      status: 'pending'
+      sourceId: string
+      sourcePath: string
+    }>
+  | Readonly<{
       status: 'completed'
       sourceId: string
       sourcePath: string
       resourceId: ResourceId
-      kind: ResourceKind
+      kind: Extract<ResourceKind, 'file' | 'folder' | 'note'>
     }>
   | Readonly<{
       status: 'rejected'
@@ -99,13 +68,20 @@ export type PlainTransferEntryOutcome =
       sourcePath: string
       reason: string
     }>
+  | Readonly<{
+      status: 'cancelled'
+      sourceId: string
+      sourcePath: string
+    }>
+
+export type PlainTransferReceipt = Readonly<{
+  jobId: ImportJobId
+  status: 'reserved' | 'running' | 'settled'
+  entries: Array<PlainTransferEntryOutcome>
+}>
 
 export type PlainTransferExecutionResult =
-  | Readonly<{
-      status: 'completed'
-      entries: ReadonlyArray<PlainTransferEntryOutcome>
-    }>
-  | Readonly<{ status: 'cancelled' }>
+  | PlainTransferReceipt
   | Readonly<{
       status: 'indeterminate'
       reason: 'response_lost' | 'transport_unavailable'
@@ -126,17 +102,3 @@ export interface PlainTransferGateway {
     }>,
   ): Promise<PlainTransferExecutionResult>
 }
-
-export type WizardArchiveTransferJobRequest = TransferJobRequestBase<TransferSourceDescriptor> &
-  (
-    | Readonly<{
-        mode: 'same_campaign_update'
-        destinationParentId: null
-      }>
-    | Readonly<{
-        mode: 'new_campaign_clone'
-        destinationParentId: null
-      }>
-  )
-
-export type TransferJobRequest = PlainTransferJobRequest | WizardArchiveTransferJobRequest

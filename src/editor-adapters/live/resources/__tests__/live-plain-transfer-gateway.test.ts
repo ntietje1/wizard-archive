@@ -1,246 +1,237 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { Id } from 'convex/_generated/dataModel'
-import type { FunctionArgs } from 'convex/server'
-import type { api } from 'convex/_generated/api'
-import {
-  buildPlainTransferInventory,
-  digestPlainTransferSources,
-} from '@wizard-archive/editor/resources/plain-transfer-inventory'
-import { TRANSFER_JOB_REQUEST_VERSION } from '@wizard-archive/editor/resources/transfer-job-contract'
-import {
-  decodeNoteYjsUpdatesToBlocks,
-  NOTE_YJS_FRAGMENT,
-} from '@wizard-archive/editor/notes/document-yjs'
-import { testDomainId } from '../../../../../shared/test/domain-id'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  PlainTransferIntent,
+  PlainTransferReceipt,
+} from '@wizard-archive/editor/resources/transfer-job-contract'
 import { createLivePlainTransferGateway } from '../live-plain-transfer-gateway'
 
+const encoder = new TextEncoder()
+
 describe('live plain transfer gateway', () => {
-  it('retains uploaded sessions across an indeterminate response and refreshes one canonical replay', async () => {
-    const campaignId = testDomainId('campaign', 'plain-transfer')
-    const actorId = testDomainId('campaignMember', 'plain-transfer')
-    const intent = {
-      campaignId,
-      jobId: testDomainId('importJob', 'plain-transfer'),
-      operationId: testDomainId('operation', 'plain-transfer'),
-      destinationParentId: null,
-      textFileHandling: 'files' as const,
-    }
-    const sources = [{ id: 'selected-file', kind: 'file' as const, name: 'evidence.bin' }]
-    const entries = [
-      {
-        sourceId: 'selected-file',
-        path: 'evidence.bin',
-        type: 'file' as const,
-        bytes: Uint8Array.from([1, 2, 3]),
-      },
-    ]
-    const inventory = await plannedInventory(actorId, intent, sources, entries)
-    const resource = inventory.resources[0]!
-    const sessionId = 'plain-transfer-session' as Id<'fileStorage'>
-    const execute = vi
-      .fn()
-      .mockResolvedValueOnce({ status: 'indeterminate' as const, reason: 'response_lost' as const })
-      .mockResolvedValueOnce({
-        status: 'completed' as const,
-        entries: [
+  it('reserves the bounded manifest before uploading and commits only the server-owned job', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const intent = transferIntent(campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const events: Array<string> = []
+    const reserve = vi.fn(() => {
+      events.push('reserve')
+      return Promise.resolve({
+        status: 'reserved' as const,
+        receipt: pendingReceipt(intent),
+        uploadTargets: [
           {
-            status: 'completed' as const,
-            sourceId: resource.alias.sourceRootId,
-            sourcePath: resource.sourcePath,
-            resourceId: resource.id,
-            kind: resource.kind,
+            sourceId: 'upload',
+            sourcePath: 'Session.md',
+            sessionId: 'session' as Id<'fileStorage'>,
+            uploadUrl: 'https://upload.test',
           },
         ],
       })
-    const discard = vi.fn(() => Promise.resolve())
+    })
+    const bind = vi.fn(() => {
+      events.push('bind')
+      return Promise.resolve()
+    })
+    const commit = vi.fn(() => {
+      events.push('commit')
+      return Promise.resolve(settledReceipt(intent, resourceId))
+    })
     const refresh = vi.fn(() => Promise.resolve())
-    const upload = vi.fn(() => Promise.resolve(sessionId))
-    const gateway = createLivePlainTransferGateway(campaignId, actorId, {
-      cancel: vi.fn(() => Promise.resolve()),
-      discard,
-      execute,
+    const gateway = createLivePlainTransferGateway(campaignId, {
+      reserve,
+      bind,
+      commit,
+      cancel: vi.fn(),
+      load: vi.fn(),
       refresh,
-      upload,
     })
 
-    await expect(gateway.execute(intent, sources, entries)).resolves.toEqual({
-      status: 'indeterminate',
-      reason: 'response_lost',
-    })
-    expect(upload).toHaveBeenCalledOnce()
-    expect(discard).not.toHaveBeenCalled()
-
-    await expect(gateway.execute(intent, sources, entries)).resolves.toEqual({
-      status: 'completed',
-      entries: [
+    const result = await gateway.execute(
+      intent,
+      [{ id: 'upload', kind: 'file', name: 'Session.md' }],
+      [
         {
-          status: 'completed',
-          sourceId: 'selected-file',
-          sourcePath: 'evidence.bin',
-          resourceId: resource.id,
-          kind: 'file',
+          sourceId: 'upload',
+          path: 'Session.md',
+          type: 'file',
+          bytes: encoder.encode('# Session'),
         },
       ],
+    )
+
+    expect(events).toEqual(['reserve', 'bind', 'commit'])
+    expect(reserve).toHaveBeenCalledWith({
+      campaignId,
+      jobId: intent.jobId,
+      destinationParentId: null,
+      textFileHandling: 'notes',
+      sources: [{ id: 'upload', kind: 'file', name: 'Session.md' }],
+      entries: [{ sourceId: 'upload', path: 'Session.md', type: 'file', byteSize: 9 }],
     })
-    expect(upload).toHaveBeenCalledOnce()
-    expect(execute).toHaveBeenCalledTimes(2)
-    expect(execute.mock.calls[1]?.[0].entries).toEqual(execute.mock.calls[0]?.[0].entries)
-    expect(refresh).toHaveBeenCalledWith(resource.id, null)
-    expect(discard).not.toHaveBeenCalled()
+    expect(commit).toHaveBeenCalledWith({ campaignId, jobId: intent.jobId })
+    expect(result).toEqual(settledReceipt(intent, resourceId))
+    expect(refresh).toHaveBeenCalledWith(resourceId, null)
   })
 
-  it('persists cancellation with the immutable planned entry identity', async () => {
-    const campaignId = testDomainId('campaign', 'cancel-transfer')
-    const actorId = testDomainId('campaignMember', 'cancel-transfer')
-    const intent = {
-      campaignId,
-      jobId: testDomainId('importJob', 'cancel-transfer'),
-      operationId: testDomainId('operation', 'cancel-transfer'),
-      destinationParentId: null,
-      textFileHandling: 'files' as const,
-    }
-    const sources = [{ id: 'selected-file', kind: 'file' as const, name: 'cancel.bin' }]
-    const entries = [
-      {
-        sourceId: 'selected-file',
-        path: 'cancel.bin',
-        type: 'file' as const,
-        bytes: Uint8Array.from([4, 5, 6]),
-      },
-    ]
-    const inventory = await plannedInventory(actorId, intent, sources, entries)
-    const resource = inventory.resources[0]!
-    let settle!: (result: { status: 'cancelled' }) => void
-    const execute = vi.fn(
-      () =>
-        new Promise<{ status: 'cancelled' }>((resolve) => {
-          settle = resolve
+  it('does not upload again when an exact reservation replay has no pending targets', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const intent = transferIntent(campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const receipt = settledReceipt(intent, resourceId)
+    const bind = vi.fn()
+    const gateway = createLivePlainTransferGateway(campaignId, {
+      reserve: vi.fn(() =>
+        Promise.resolve({
+          status: 'reserved' as const,
+          receipt,
+          uploadTargets: [],
         }),
-    )
-    const cancel = vi.fn(() => Promise.resolve())
-    const discard = vi.fn(() => Promise.resolve())
-    const controller = new AbortController()
-    const gateway = createLivePlainTransferGateway(campaignId, actorId, {
-      cancel,
-      discard,
-      execute,
-      refresh: vi.fn(() => Promise.resolve()),
-      upload: vi.fn(() => Promise.resolve('cancel-session' as Id<'fileStorage'>)),
+      ),
+      bind,
+      commit: vi.fn(() => Promise.resolve(receipt)),
+      cancel: vi.fn(),
+      load: vi.fn(),
+      refresh: vi.fn(),
     })
 
-    const transfer = gateway.execute(intent, sources, entries, { signal: controller.signal })
-    await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce())
-    controller.abort()
-    await vi.waitFor(() =>
-      expect(cancel).toHaveBeenCalledWith({
-        campaignId,
-        jobId: intent.jobId,
-        operationId: intent.operationId,
-        destinationParentId: null,
-        sourceDigest: expect.any(String),
-        entries: [
-          {
-            sourceRootId: 'selected-file',
-            rawPath: 'cancel.bin',
-            normalizedPath: 'cancel.bin',
-            plannedResourceId: resource.id,
-            plannedOperationId: resource.operationId,
-            resourceKind: 'file',
-          },
-        ],
-      }),
+    await gateway.execute(
+      intent,
+      [{ id: 'upload', kind: 'file', name: 'Session.md' }],
+      [
+        {
+          sourceId: 'upload',
+          path: 'Session.md',
+          type: 'file',
+          bytes: encoder.encode('# Session'),
+        },
+      ],
     )
-    settle({ status: 'cancelled' })
 
-    await expect(transfer).resolves.toEqual({ status: 'cancelled' })
-    expect(discard).toHaveBeenCalledWith('cancel-session')
+    expect(bind).not.toHaveBeenCalled()
   })
 
-  it('converts imported Markdown through the native note schema before delivery', async () => {
-    const campaignId = testDomainId('campaign', 'markdown-transfer')
-    const actorId = testDomainId('campaignMember', 'markdown-transfer')
-    const intent = {
-      campaignId,
-      jobId: testDomainId('importJob', 'markdown-transfer'),
-      operationId: testDomainId('operation', 'markdown-transfer'),
-      destinationParentId: null,
-      textFileHandling: 'notes' as const,
+  it('cancels by job identity alone and returns the truthful settled receipt', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const intent = transferIntent(campaignId)
+    const controller = new AbortController()
+    controller.abort()
+    const cancelled: PlainTransferReceipt = {
+      jobId: intent.jobId,
+      status: 'settled',
+      entries: [
+        {
+          status: 'cancelled',
+          sourceId: 'upload',
+          sourcePath: 'Session.md',
+        },
+      ],
     }
-    const sources = [{ id: 'markdown-file', kind: 'file' as const, name: 'Session.md' }]
-    const entries = [
-      {
-        sourceId: 'markdown-file',
-        path: 'Session.md',
-        type: 'file' as const,
-        bytes: new TextEncoder().encode('# Session\n\nArrival notes'),
-      },
-    ]
-    const inventory = await plannedInventory(actorId, intent, sources, entries)
-    const execute = vi.fn((_: FunctionArgs<typeof api.resources.actions.executePlainTransfer>) =>
-      Promise.resolve({
-        status: 'completed' as const,
-        entries: inventory.resources.map((resource) => ({
-          status: 'rejected' as const,
-          sourceId: resource.alias.sourceRootId,
-          sourcePath: resource.sourcePath,
-          reason: 'fixture',
-        })),
-      }),
-    )
-    const discard = vi.fn(() => Promise.resolve())
-    const gateway = createLivePlainTransferGateway(campaignId, actorId, {
-      cancel: vi.fn(() => Promise.resolve()),
-      discard,
-      execute,
-      refresh: vi.fn(() => Promise.resolve()),
-      upload: vi.fn(() => Promise.resolve('markdown-session' as Id<'fileStorage'>)),
+    const cancel = vi.fn(() => Promise.resolve(cancelled))
+    const bind = vi.fn()
+    const commit = vi.fn()
+    const gateway = createLivePlainTransferGateway(campaignId, {
+      reserve: vi.fn(() =>
+        Promise.resolve({
+          status: 'reserved' as const,
+          receipt: pendingReceipt(intent),
+          uploadTargets: [],
+        }),
+      ),
+      bind,
+      commit,
+      cancel,
+      load: vi.fn(),
+      refresh: vi.fn(),
     })
 
-    await gateway.execute(intent, sources, entries)
+    const result = await gateway.execute(
+      intent,
+      [{ id: 'upload', kind: 'file', name: 'Session.md' }],
+      [
+        {
+          sourceId: 'upload',
+          path: 'Session.md',
+          type: 'file',
+          bytes: encoder.encode('# Session'),
+        },
+      ],
+      { signal: controller.signal },
+    )
 
-    const delivered = execute.mock.calls[0]
-    if (!delivered) throw new TypeError('Expected transfer delivery')
-    const deliveredFile = delivered[0].entries.find((entry) => entry.type === 'file')
-    if (!deliveredFile?.noteUpdate) throw new TypeError('Expected a native note update')
-    expect(
-      decodeNoteYjsUpdatesToBlocks([{ update: deliveredFile.noteUpdate }], NOTE_YJS_FRAGMENT),
-    ).toMatchObject([
-      { type: 'heading', content: [{ type: 'text', text: 'Session' }] },
-      { type: 'paragraph', content: [{ type: 'text', text: 'Arrival notes' }] },
-    ])
-    expect(discard).toHaveBeenCalledWith('markdown-session')
+    expect(cancel).toHaveBeenCalledWith({ campaignId, jobId: intent.jobId })
+    expect(bind).not.toHaveBeenCalled()
+    expect(commit).not.toHaveBeenCalled()
+    expect(result).toEqual(cancelled)
+  })
+
+  it('recovers a lost commit response from the authoritative job receipt', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const intent = transferIntent(campaignId)
+    const receipt = settledReceipt(intent, generateDomainId(DOMAIN_ID_KIND.resource))
+    const load = vi.fn(() => Promise.resolve(receipt))
+    const gateway = createLivePlainTransferGateway(campaignId, {
+      reserve: vi.fn(() =>
+        Promise.resolve({
+          status: 'reserved' as const,
+          receipt: pendingReceipt(intent),
+          uploadTargets: [],
+        }),
+      ),
+      bind: vi.fn(),
+      commit: vi.fn(() =>
+        Promise.resolve({
+          status: 'indeterminate' as const,
+          reason: 'response_lost' as const,
+        }),
+      ),
+      cancel: vi.fn(),
+      load,
+      refresh: vi.fn(),
+    })
+
+    await expect(
+      gateway.execute(
+        intent,
+        [{ id: 'directory', kind: 'directory', name: 'Campaign' }],
+        [{ sourceId: 'directory', path: 'Notes', type: 'directory' }],
+      ),
+    ).resolves.toEqual(receipt)
+    expect(load).toHaveBeenCalledWith({ campaignId, jobId: intent.jobId })
   })
 })
 
-async function plannedInventory(
-  actorId: ReturnType<typeof testDomainId<'campaignMember'>>,
-  intent: {
-    campaignId: ReturnType<typeof testDomainId<'campaign'>>
-    jobId: ReturnType<typeof testDomainId<'importJob'>>
-    operationId: ReturnType<typeof testDomainId<'operation'>>
-    destinationParentId: null
-    textFileHandling: 'files' | 'notes'
-  },
-  sources: Parameters<ReturnType<typeof createLivePlainTransferGateway>['execute']>[1],
-  entries: Parameters<ReturnType<typeof createLivePlainTransferGateway>['execute']>[2],
-) {
-  const sourceDigest = await digestPlainTransferSources(sources, entries)
-  const planned = await buildPlainTransferInventory({
-    request: {
-      version: TRANSFER_JOB_REQUEST_VERSION,
-      jobId: intent.jobId,
-      operationId: intent.operationId,
-      actorId,
-      destinationCampaignId: intent.campaignId,
-      destinationParentId: intent.destinationParentId,
-      textFileHandling: intent.textFileHandling,
-      manifestHandling: 'reject',
-      mode: 'plain_resources',
-      sourceDigest,
-      sources,
-    },
-    entries,
-  })
-  if (planned.status !== 'ready') throw new TypeError('Expected a valid transfer inventory')
-  return planned.inventory
+function transferIntent(campaignId: CampaignId): PlainTransferIntent {
+  return {
+    campaignId,
+    jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
+    destinationParentId: null,
+    textFileHandling: 'notes',
+  }
+}
+
+function pendingReceipt(intent: PlainTransferIntent): PlainTransferReceipt {
+  return {
+    jobId: intent.jobId,
+    status: 'reserved',
+    entries: [{ status: 'pending', sourceId: 'upload', sourcePath: 'Session.md' }],
+  }
+}
+
+function settledReceipt(intent: PlainTransferIntent, resourceId: ResourceId): PlainTransferReceipt {
+  return {
+    jobId: intent.jobId,
+    status: 'settled',
+    entries: [
+      {
+        status: 'completed',
+        sourceId: 'upload',
+        sourcePath: 'Session.md',
+        resourceId,
+        kind: 'note',
+      },
+    ],
+  }
 }

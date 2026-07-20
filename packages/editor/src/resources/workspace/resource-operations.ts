@@ -241,7 +241,6 @@ async function importWorkspaceDataTransfer(
     {
       campaignId: runtime.scope.campaignId,
       jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       destinationParentId,
       textFileHandling: 'notes',
     },
@@ -300,12 +299,19 @@ async function settleWorkspaceDropTransfer(
     )
     return
   }
-  if (result.status === 'cancelled') {
-    report('Import cancelled')
-    return
-  }
   if (result.status === 'rejected') {
     report(`Import rejected: ${result.reason}`)
+    return
+  }
+  if (result.status !== 'settled') {
+    report(
+      'Import status is unresolved',
+      () => void settleWorkspaceDropTransfer(runtime, deliver, report),
+    )
+    return
+  }
+  if (result.entries.every((entry) => entry.status === 'cancelled')) {
+    report('Import cancelled')
     return
   }
   const completed = result.entries.filter((entry) => entry.status === 'completed')
@@ -489,7 +495,6 @@ async function completeWorkspaceTransfer(
       retry: () => completeWorkspaceTransfer(deliver, report),
     }
   }
-  if (result.status === 'cancelled') return { status: 'cancelled' }
   if (result.status === 'indeterminate') {
     return {
       status: 'indeterminate',
@@ -499,6 +504,16 @@ async function completeWorkspaceTransfer(
   }
   if (result.status === 'rejected') {
     return { status: 'rejected', reason: result.reason }
+  }
+  if (result.status !== 'settled') {
+    return {
+      status: 'indeterminate',
+      reason: 'response_lost',
+      retry: () => completeWorkspaceTransfer(deliver, report),
+    }
+  }
+  if (result.entries.every((entry) => entry.status === 'cancelled')) {
+    return { status: 'cancelled' }
   }
   const completed = result.entries.filter((entry) => entry.status === 'completed')
   const rejected = result.entries.filter((entry) => entry.status === 'rejected')

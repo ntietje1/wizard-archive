@@ -54,6 +54,21 @@ function subscribeToWatch<T>(
   return unsubscribe
 }
 
+async function uploadBytes(
+  uploadUrl: string,
+  bytes: Uint8Array,
+  mediaType: string,
+): Promise<Id<'_storage'>> {
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': mediaType },
+    body: new Blob([Uint8Array.from(bytes).buffer]),
+  })
+  if (!response.ok) throw new Error('File upload failed')
+  const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+  return storageId
+}
+
 const READONLY_PRESENCE_BACKEND: LiveResourcePresenceBackend = {
   heartbeatPresence: () => Promise.resolve({ status: 'unavailable' }),
   updatePresence: () => Promise.resolve({ status: 'unavailable' }),
@@ -196,13 +211,11 @@ function createScopedLiveResourceRuntime(
       convex.mutation(api.storage.mutations.createUploadSession, {}),
     )
     try {
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': source.mediaType ?? 'application/octet-stream' },
-        body: new Blob([Uint8Array.from(source.bytes).buffer]),
-      })
-      if (!response.ok) throw new Error('File upload failed')
-      const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+      const storageId = await uploadBytes(
+        uploadUrl,
+        source.bytes,
+        source.mediaType ?? 'application/octet-stream',
+      )
       await write(() =>
         convex.mutation(api.storage.mutations.bindUpload, {
           sessionId,
@@ -215,6 +228,22 @@ function createScopedLiveResourceRuntime(
       await discardUpload(sessionId).catch(() => undefined)
       throw error
     }
+  }
+  const bindReservedUpload = async (
+    target: Readonly<{
+      sessionId: Id<'fileStorage'>
+      uploadUrl: string
+    }>,
+    source: Readonly<{ bytes: Uint8Array; path: string }>,
+  ) => {
+    const storageId = await uploadBytes(target.uploadUrl, source.bytes, 'application/octet-stream')
+    await write(() =>
+      convex.mutation(api.storage.mutations.bindUpload, {
+        sessionId: target.sessionId,
+        storageId,
+        originalFileName: source.path.slice(source.path.lastIndexOf('/') + 1),
+      }),
+    )
   }
   const files = createLiveFileContentSource(
     currentScope.campaignId,
@@ -415,16 +444,16 @@ function createScopedLiveResourceRuntime(
   const content = { notes, files, maps, canvases }
   const transfers =
     currentScope.projection === 'dm'
-      ? createLivePlainTransferGateway(currentScope.campaignId, currentScope.actorId, {
+      ? createLivePlainTransferGateway(currentScope.campaignId, {
+          bind: bindReservedUpload,
           cancel: (args) =>
-            write(() => convex.mutation(api.resources.mutations.cancelPlainTransfer, args)).then(
-              () => undefined,
-            ),
-          discard: discardUpload,
-          execute: (args) =>
-            write(() => convex.action(api.resources.actions.executePlainTransfer, args)),
+            write(() => convex.mutation(api.resources.mutations.cancelPlainTransfer, args)),
+          commit: (args) =>
+            write(() => convex.action(api.resources.actions.commitPlainTransfer, args)),
+          load: (args) => convex.query(api.resources.queries.loadPlainTransfer, args),
           refresh,
-          upload: uploadFile,
+          reserve: (args) =>
+            write(() => convex.mutation(api.resources.mutations.reservePlainTransfer, args)),
         })
       : null
   const history =

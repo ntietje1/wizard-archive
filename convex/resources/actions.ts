@@ -5,27 +5,28 @@ import {
   initialFileContentVersion,
 } from '@wizard-archive/editor/resources/content-version'
 import {
-  planPlainTransfer,
-  plainTransferEntryIdentities,
+  materializePlainTransferInventory,
+  PLAIN_TRANSFER_LIMITS,
 } from '@wizard-archive/editor/resources/plain-transfer-inventory'
-import type {
-  PlainTransferInventoryResource,
-  PlainTransferSourceEntry,
-} from '@wizard-archive/editor/resources/plain-transfer-inventory'
+import type { PlainTransferInventoryResource } from '@wizard-archive/editor/resources/plain-transfer-inventory'
 import { sha256Digest } from '@wizard-archive/editor/resources/component-version'
 import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { PlainTransferSourceDescriptor } from '@wizard-archive/editor/resources/transfer-job-contract'
+import { markdownToNoteYDoc } from '@wizard-archive/editor/notes/document-yjs'
+import { storedPlainTransferPlan } from './functions/plainTransfer'
+import type { PlainTransferInputEntry } from '@wizard-archive/editor/resources/transfer-job-contract'
+import * as Y from 'yjs'
 import { action } from '../_generated/server'
 import type { ActionCtx } from '../_generated/server'
+import type { FunctionReturnType } from 'convex/server'
 import { internal } from '../_generated/api'
 import type { Id } from '../_generated/dataModel'
 import {
   fileContentReplaceResultValidator,
   mapContentMutationResultValidator,
+  plainTransferReceiptValidator,
   versionStampValidator,
 } from './schema'
-import { importJobIdValidator, operationIdValidator, resourceIdValidator } from './validators'
+import { importJobIdValidator, resourceIdValidator } from './validators'
 
 type StoredFileUpload = Readonly<{
   campaignId: Id<'campaigns'>
@@ -33,6 +34,7 @@ type StoredFileUpload = Readonly<{
   actorId: string
   originalFileName: string
   storageId: Id<'_storage'>
+  byteSize: number
 }>
 
 type ClassifiedFileUpload = Readonly<{
@@ -43,11 +45,6 @@ type ClassifiedFileUpload = Readonly<{
 
 type LoadedFileUpload = Readonly<{
   bytes: Uint8Array
-  upload: StoredFileUpload
-}>
-
-type PlainTransferUpload = Readonly<{
-  sessionId: Id<'fileStorage'>
   upload: StoredFileUpload
 }>
 
@@ -93,55 +90,8 @@ async function loadClassifiedFileUpload(
   return metadata.classification === 'rejected' ? null : { bytes, metadata, upload }
 }
 
-const transferSourceDescriptorValidator = v.object({
-  id: v.string(),
-  kind: v.union(v.literal('directory'), v.literal('file'), v.literal('zip')),
-  name: v.string(),
-})
-
-const transferInputEntryValidator = v.union(
-  v.object({
-    sourceId: v.string(),
-    path: v.string(),
-    type: v.literal('directory'),
-  }),
-  v.object({
-    sourceId: v.string(),
-    path: v.string(),
-    type: v.literal('file'),
-    uploadSessionId: v.id('fileStorage'),
-    noteUpdate: v.optional(v.bytes()),
-  }),
-)
-
-const transferEntryOutcomeValidator = v.union(
-  v.object({
-    status: v.literal('completed'),
-    sourceId: v.string(),
-    sourcePath: v.string(),
-    resourceId: resourceIdValidator,
-    kind: v.union(
-      v.literal('folder'),
-      v.literal('note'),
-      v.literal('file'),
-      v.literal('map'),
-      v.literal('canvas'),
-    ),
-  }),
-  v.object({
-    status: v.literal('rejected'),
-    sourceId: v.string(),
-    sourcePath: v.string(),
-    reason: v.string(),
-  }),
-)
-
 const plainTransferExecutionResultValidator = v.union(
-  v.object({
-    status: v.literal('completed'),
-    entries: v.array(transferEntryOutcomeValidator),
-  }),
-  v.object({ status: v.literal('cancelled') }),
+  plainTransferReceiptValidator,
   v.object({
     status: v.literal('indeterminate'),
     reason: v.union(v.literal('response_lost'), v.literal('transport_unavailable')),
@@ -149,237 +99,190 @@ const plainTransferExecutionResultValidator = v.union(
   v.object({ status: v.literal('rejected'), reason: v.string() }),
 )
 type StoredPlainTransferExecutionResult = Infer<typeof plainTransferExecutionResultValidator>
-type StoredPlainTransferInputEntry = Infer<typeof transferInputEntryValidator>
 
-type PreparedPlainTransferSource =
-  | Readonly<{ status: 'ready'; entry: PlainTransferSourceEntry }>
-  | Readonly<{
-      status: 'ready'
-      entry: PlainTransferSourceEntry
-      key: string
-      noteUpdate: ArrayBuffer | null
-      upload: PlainTransferUpload
-    }>
-  | Readonly<{ status: 'rejected' }>
-
-async function preparePlainTransferSources(
-  ctx: ActionCtx,
-  {
-    actorId,
-    campaignId,
-    campaignRowId,
-    input,
-  }: Readonly<{
-    actorId: string
-    campaignId: string
-    campaignRowId: Id<'campaigns'>
-    input: ReadonlyArray<StoredPlainTransferInputEntry>
-  }>,
-): Promise<
-  | Readonly<{
-      status: 'ready'
-      entries: ReadonlyArray<PlainTransferSourceEntry>
-      noteUpdates: ReadonlyMap<string, ArrayBuffer>
-      uploads: ReadonlyMap<string, PlainTransferUpload>
-    }>
-  | Readonly<{ status: 'rejected' }>
-> {
-  const prepared = await Promise.all(
-    input.map(async (entry): Promise<PreparedPlainTransferSource> => {
-      if (entry.type === 'directory') return { status: 'ready', entry }
-      const upload = await prepareFileUpload(ctx, campaignId, entry.uploadSessionId)
-      if (upload.campaignId !== campaignRowId || upload.actorId !== actorId) {
-        return { status: 'rejected' }
-      }
-      return {
-        status: 'ready',
-        entry: {
-          sourceId: entry.sourceId,
-          path: entry.path,
-          type: 'file',
-          bytes: await loadFileUploadBytes(ctx, upload),
-        },
-        key: transferEntryKey(entry.sourceId, entry.path),
-        noteUpdate: entry.noteUpdate ?? null,
-        upload: { sessionId: entry.uploadSessionId, upload },
-      }
-    }),
-  )
-  if (prepared.some((source) => source.status === 'rejected')) return { status: 'rejected' }
-
-  const entries: Array<PlainTransferSourceEntry> = []
-  const noteUpdates = new Map<string, ArrayBuffer>()
-  const uploads = new Map<string, PlainTransferUpload>()
-  for (const source of prepared) {
-    if (source.status === 'rejected') continue
-    entries.push(source.entry)
-    if (!('upload' in source)) continue
-    uploads.set(source.key, source.upload)
-    if (source.noteUpdate) noteUpdates.set(source.key, source.noteUpdate)
-  }
-  return { status: 'ready', entries, noteUpdates, uploads }
-}
-
-export const executePlainTransfer = action({
+export const commitPlainTransfer = action({
   args: {
     campaignId: v.string(),
     jobId: importJobIdValidator,
-    operationId: operationIdValidator,
-    destinationParentId: v.nullable(resourceIdValidator),
-    textFileHandling: v.union(v.literal('files'), v.literal('notes')),
-    sources: v.array(transferSourceDescriptorValidator),
-    entries: v.array(transferInputEntryValidator),
   },
   returns: plainTransferExecutionResultValidator,
   handler: async (ctx, args): Promise<StoredPlainTransferExecutionResult> => {
     const scope = await ctx.runQuery(internal.resources.queries.loadPlainTransferScope, {
       campaignId: args.campaignId,
     })
-    const sources: ReadonlyArray<PlainTransferSourceDescriptor> = args.sources
-    const prepared = await preparePlainTransferSources(ctx, {
-      actorId: scope.actorId,
-      campaignId: args.campaignId,
-      campaignRowId: scope.campaignId,
-      input: args.entries,
+    const snapshot = await ctx.runMutation(internal.resources.mutations.startPlainTransfer, {
+      campaignId: scope.campaignId,
+      jobId: args.jobId,
     })
-    if (prepared.status === 'rejected') return { status: 'rejected', reason: 'invalid_source' }
-    const { entries, noteUpdates, uploads } = prepared
-    const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, scope.campaignUuid)
-    const planned = await planPlainTransfer({
-      actorId: assertDomainId(DOMAIN_ID_KIND.campaignMember, scope.actorId),
-      campaignId,
-      entries,
-      intent: {
-        campaignId,
-        jobId: assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId),
-        operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
-        destinationParentId:
-          args.destinationParentId === null
-            ? null
-            : assertDomainId(DOMAIN_ID_KIND.resource, args.destinationParentId),
-        textFileHandling: args.textFileHandling,
-      },
-      sources,
-    })
-    if (planned.status === 'rejected') return { status: 'rejected', reason: planned.reason }
-    const inventory = planned.inventory
-    if (
-      !inventory.resources.every((resource) =>
-        transferResourceContentAvailable(resource, uploads, noteUpdates),
+    if (snapshot.status === 'unavailable') {
+      return { status: 'rejected', reason: 'invalid_job' }
+    }
+    if (snapshot.status === 'settled') {
+      return await finishPlainTransfer(ctx, scope.campaignId, args.jobId)
+    }
+    let entries: ReadonlyArray<PlainTransferInputEntry>
+    try {
+      entries = await loadPlainTransferSourceEntries(ctx, args.campaignId, scope, snapshot)
+    } catch {
+      return await rejectPlainTransfer(ctx, scope.campaignId, args.jobId, 'invalid_source')
+    }
+    try {
+      const inventory = await materializePlainTransferInventory(
+        storedPlainTransferPlan(snapshot),
+        entries,
       )
-    ) {
-      return { status: 'rejected', reason: 'invalid_inventory' }
+      if (inventory.status === 'rejected') {
+        return await rejectPlainTransfer(ctx, scope.campaignId, args.jobId, inventory.reason)
+      }
+      for (const resource of [...inventory.inventory.resources].sort(
+        (left, right) =>
+          pathDepth(left.sourcePath) - pathDepth(right.sourcePath) ||
+          left.sourcePath.localeCompare(right.sourcePath),
+      )) {
+        await commitPlainTransferResource(ctx, scope.campaignId, args.jobId, resource)
+      }
+      return await finishPlainTransfer(ctx, scope.campaignId, args.jobId)
+    } catch {
+      return { status: 'indeterminate', reason: 'response_lost' }
     }
-    const start = await ctx.runMutation(internal.resources.mutations.beginPlainTransfer, {
-      campaignId: scope.campaignId,
-      jobId: args.jobId,
-      operationId: args.operationId,
-      destinationParentId: args.destinationParentId,
-      sourceDigest: inventory.sourceDigest,
-      entries: [...plainTransferEntryIdentities(inventory.resources)],
-    })
-    if (start.status === 'cancelled') return { status: 'cancelled' }
-    if (start.status === 'rejected') {
-      const replay = await loadCompletedPlainTransfer(ctx, scope.campaignId, args.jobId)
-      return replay.status === 'indeterminate'
-        ? { status: 'rejected', reason: 'invalid_job' }
-        : replay
-    }
-    if (start.status === 'completed' || start.status === 'completed_with_issues') {
-      return await loadCompletedPlainTransfer(ctx, scope.campaignId, args.jobId)
-    }
-    await commitPlainTransferInventory(
-      ctx,
-      scope.campaignId,
-      args.jobId,
-      inventory.sourceDigest,
-      inventory.resources,
-      uploads,
-      noteUpdates,
-    )
-    await ctx.runMutation(internal.resources.mutations.finishPlainTransfer, {
-      campaignId: scope.campaignId,
-      jobId: args.jobId,
-    })
-    return await loadCompletedPlainTransfer(ctx, scope.campaignId, args.jobId)
   },
 })
 
-async function loadCompletedPlainTransfer(
+async function finishPlainTransfer(
   ctx: ActionCtx,
   campaignId: Id<'campaigns'>,
   jobId: string,
 ): Promise<StoredPlainTransferExecutionResult> {
-  const snapshot = await ctx.runQuery(internal.resources.queries.loadPlainTransferInternal, {
+  const receipt = await ctx.runMutation(internal.resources.mutations.finishPlainTransfer, {
     campaignId,
     jobId,
   })
-  if (snapshot.status === 'unavailable' || snapshot.status === 'pending') {
-    return { status: 'indeterminate', reason: 'response_lost' }
+  return receipt.status === 'unavailable'
+    ? { status: 'indeterminate', reason: 'response_lost' }
+    : receipt
+}
+
+async function rejectPlainTransfer(
+  ctx: ActionCtx,
+  campaignId: Id<'campaigns'>,
+  jobId: string,
+  reason: string,
+): Promise<StoredPlainTransferExecutionResult> {
+  const receipt = await ctx.runMutation(internal.resources.mutations.rejectPlainTransfer, {
+    campaignId,
+    jobId,
+    reason,
+  })
+  return receipt.status === 'unavailable' ? { status: 'rejected', reason: 'invalid_job' } : receipt
+}
+
+type PlainTransferSnapshot = Exclude<
+  FunctionReturnType<typeof internal.resources.mutations.startPlainTransfer>,
+  { status: 'unavailable' }
+>
+
+async function loadPlainTransferSourceEntries(
+  ctx: ActionCtx,
+  campaignId: string,
+  scope: Readonly<{ actorId: string; campaignId: Id<'campaigns'> }>,
+  snapshot: PlainTransferSnapshot,
+): Promise<ReadonlyArray<PlainTransferInputEntry>> {
+  const files = snapshot.entries.filter(
+    (entry) => entry.status === 'pending' && entry.entryType === 'file',
+  )
+  if (files.length > PLAIN_TRANSFER_LIMITS.maxEntries) {
+    throw new TypeError('Plain transfer entry limit exceeded')
   }
-  if (snapshot.status === 'cancelled') return { status: 'cancelled' }
-  return {
-    status: 'completed',
-    entries: snapshot.entries.map((entry) =>
-      entry.status === 'completed' && entry.resourceId !== null
-        ? {
-            status: 'completed',
-            sourceId: entry.sourceRootId,
-            sourcePath: entry.rawPath,
-            resourceId: assertDomainId(DOMAIN_ID_KIND.resource, entry.resourceId),
-            kind: entry.resourceKind,
-          }
-        : {
-            status: 'rejected',
-            sourceId: entry.sourceRootId,
-            sourcePath: entry.rawPath,
-            reason: entry.rejectionReason ?? 'invalid_command',
-          },
+  const prepared = await Promise.all(
+    files.map(async (entry) => {
+      if (!entry.uploadSessionId) throw new TypeError('Upload session is unavailable')
+      const upload = await prepareFileUpload(ctx, campaignId, entry.uploadSessionId)
+      if (
+        upload.campaignId !== scope.campaignId ||
+        upload.actorId !== scope.actorId ||
+        upload.byteSize !== entry.declaredByteSize ||
+        upload.originalFileName !== pathBasename(entry.sourceEntryPath)
+      ) {
+        throw new TypeError('Reserved upload does not match its manifest entry')
+      }
+      return { entry, upload }
+    }),
+  )
+  if (
+    prepared.reduce((total, item) => total + item.upload.byteSize, 0) >
+    PLAIN_TRANSFER_LIMITS.maxTotalBytes
+  ) {
+    throw new TypeError('Plain transfer byte limit exceeded')
+  }
+  const bytesByEntry = new Map(
+    await Promise.all(
+      prepared.map(
+        async ({ entry, upload }) =>
+          [
+            transferEntryKey(entry.alias.sourceRootId, entry.sourceEntryPath),
+            await loadFileUploadBytes(ctx, upload),
+          ] as const,
+      ),
     ),
+  )
+  const entries: Array<PlainTransferInputEntry> = []
+  for (const entry of snapshot.entries) {
+    if (entry.status !== 'pending' || !entry.explicit) continue
+    if (entry.entryType === 'directory') {
+      entries.push({
+        sourceId: entry.alias.sourceRootId,
+        path: entry.sourceEntryPath,
+        type: 'directory',
+      })
+      continue
+    }
+    const bytes = bytesByEntry.get(
+      transferEntryKey(entry.alias.sourceRootId, entry.sourceEntryPath),
+    )
+    if (!bytes) throw new TypeError('Uploaded file bytes are unavailable')
+    entries.push({
+      sourceId: entry.alias.sourceRootId,
+      path: entry.sourceEntryPath,
+      type: 'file',
+      bytes,
+    })
   }
+  return entries
 }
 
 async function commitPlainTransferResource(
   ctx: ActionCtx,
   campaignId: Id<'campaigns'>,
   jobId: string,
-  sourceDigest: string,
   resource: PlainTransferInventoryResource,
-  upload: PlainTransferUpload | null,
-  noteUpdate: ArrayBuffer | null,
 ): Promise<void> {
   const common = {
     campaignId,
     jobId,
-    operationId: resource.operationId,
-    sourceDigest,
-    command: {
-      type: 'create' as const,
-      resourceId: resource.id,
-      kind: resource.kind,
-      parentId: resource.parentId,
-      title: resource.title,
-      icon: null,
-      color: null,
-    },
-    alias: resource.alias,
-    metadataVersion: resource.metadataVersion,
+    sourceId: resource.alias.sourceRootId,
+    sourcePath: resource.alias.rawPath,
   }
   if (resource.kind === 'folder') {
     await ctx.runMutation(internal.resources.mutations.commitPlainTransferFolder, common)
     return
   }
-  if (resource.kind === 'note' && noteUpdate) {
+  if (resource.kind === 'note') {
+    const document = markdownToNoteYDoc(resource.content.source.text)
+    let update: ArrayBuffer
+    try {
+      update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
+    } finally {
+      document.destroy()
+    }
     await ctx.runMutation(internal.resources.mutations.commitPlainTransferNote, {
       ...common,
-      update: noteUpdate,
+      update,
     })
     return
   }
-  if (resource.kind === 'file' && upload) {
+  if (resource.kind === 'file') {
     await ctx.runMutation(internal.resources.mutations.commitPlainTransferFile, {
       ...common,
-      uploadSessionId: upload.sessionId,
       metadata: resource.content.source.metadata,
       version: await initialFileContentVersion(
         resource.content.source.bytes,
@@ -391,48 +294,16 @@ async function commitPlainTransferResource(
   throw new TypeError('Plain transfer inventory contains an unsupported resource')
 }
 
-async function commitPlainTransferInventory(
-  ctx: ActionCtx,
-  campaignId: Id<'campaigns'>,
-  jobId: string,
-  sourceDigest: string,
-  resources: ReadonlyArray<PlainTransferInventoryResource>,
-  uploads: ReadonlyMap<string, PlainTransferUpload>,
-  noteUpdates: ReadonlyMap<string, ArrayBuffer>,
-): Promise<void> {
-  const commits = new Map<string, Promise<void>>()
-  for (const resource of resources) {
-    const parentCommit = resource.parentId === null ? undefined : commits.get(resource.parentId)
-    const commit = (parentCommit ?? Promise.resolve()).then(() =>
-      commitPlainTransferResource(
-        ctx,
-        campaignId,
-        jobId,
-        sourceDigest,
-        resource,
-        uploads.get(transferEntryKey(resource.alias.sourceRootId, resource.sourceEntryPath)) ??
-          null,
-        noteUpdates.get(transferEntryKey(resource.alias.sourceRootId, resource.sourceEntryPath)) ??
-          null,
-      ),
-    )
-    commits.set(resource.id, commit)
-  }
-  await Promise.all(commits.values())
-}
-
 function transferEntryKey(sourceId: string, path: string): string {
   return `${sourceId}\0${path}`
 }
 
-function transferResourceContentAvailable(
-  resource: PlainTransferInventoryResource,
-  uploads: ReadonlyMap<string, PlainTransferUpload>,
-  noteUpdates: ReadonlyMap<string, ArrayBuffer>,
-): boolean {
-  if (resource.kind === 'folder') return true
-  const key = transferEntryKey(resource.alias.sourceRootId, resource.sourceEntryPath)
-  return resource.kind === 'note' ? noteUpdates.has(key) : uploads.has(key)
+function pathBasename(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
+
+function pathDepth(path: string): number {
+  return path.split('/').length
 }
 
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>

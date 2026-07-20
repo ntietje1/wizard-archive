@@ -1,12 +1,6 @@
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
-import {
-  authQuery,
-  campaignInternalQuery,
-  campaignUuidInternalQuery,
-  dmQuery,
-  resourceQuery,
-} from '../functions'
+import { authQuery, campaignUuidInternalQuery, dmQuery, resourceQuery } from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
@@ -29,6 +23,7 @@ import {
   resourceAccessPresentationPageValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
+  plainTransferReceiptValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
@@ -40,7 +35,6 @@ import {
   historyEntryIdValidator,
   importJobIdValidator,
   noteBlockIdValidator,
-  operationIdValidator,
   resourceIdValidator,
 } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
@@ -97,40 +91,9 @@ const authorizedResourceSearchValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
 })
 
-const plainTransferSnapshotValidator = v.union(
+const plainTransferReceiptResultValidator = v.union(
   v.object({ status: v.literal('unavailable') }),
-  v.object({
-    status: v.union(
-      v.literal('pending'),
-      v.literal('completed'),
-      v.literal('completed_with_issues'),
-      v.literal('cancelled'),
-      v.literal('rejected'),
-    ),
-    jobId: importJobIdValidator,
-    operationId: v.string(),
-    destinationParentId: v.nullable(resourceIdValidator),
-    sourceDigest: v.nullable(v.string()),
-    rejectionReason: v.nullable(v.string()),
-    entries: v.array(
-      v.object({
-        sourceRootId: v.string(),
-        rawPath: v.string(),
-        normalizedPath: v.string(),
-        plannedResourceId: resourceIdValidator,
-        plannedOperationId: operationIdValidator,
-        resourceKind: v.union(v.literal('folder'), v.literal('note'), v.literal('file')),
-        resourceId: v.nullable(resourceIdValidator),
-        status: v.union(
-          v.literal('pending'),
-          v.literal('completed'),
-          v.literal('cancelled'),
-          v.literal('rejected'),
-        ),
-        rejectionReason: v.nullable(v.string()),
-      }),
-    ),
-  }),
+  plainTransferReceiptValidator,
 )
 
 type StoredAuthorizedResourceCollectionPage = Infer<
@@ -292,7 +255,7 @@ export const loadResourceProjectionAvailability = authQuery({
 
 export const loadPlainTransfer = dmQuery({
   args: { jobId: importJobIdValidator },
-  returns: plainTransferSnapshotValidator,
+  returns: plainTransferReceiptResultValidator,
   handler: async (ctx, args) =>
     await loadPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
 })
@@ -309,13 +272,6 @@ export const loadPlainTransferScope = campaignUuidInternalQuery({
     campaignUuid: ctx.resourceScope.campaignId,
     actorId: ctx.resourceScope.actorId,
   }),
-})
-
-export const loadPlainTransferInternal = campaignInternalQuery({
-  args: { jobId: importJobIdValidator },
-  returns: plainTransferSnapshotValidator,
-  handler: async (ctx, args) =>
-    await loadPlainTransferFn(ctx, assertDomainId(DOMAIN_ID_KIND.importJob, args.jobId)),
 })
 
 export const loadResourceAccess = dmQuery({

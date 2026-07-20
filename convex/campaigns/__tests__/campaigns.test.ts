@@ -1054,12 +1054,12 @@ describe('deleteCampaign', () => {
       t,
       ctx.dm.profile._id,
       new Blob(['campaign deletion asset'], { type: 'text/plain' }),
-      'campaign-deletion.txt',
+      'campaign-deletion.bin',
     )
-    const fileCreation = await dmAuth.action(api.resources.actions.executePlainTransfer, {
+    const fileJobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const fileReservation = await dmAuth.mutation(api.resources.mutations.reservePlainTransfer, {
       campaignId: ctx.campaignDomainId,
-      jobId: generateDomainId(DOMAIN_ID_KIND.importJob),
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      jobId: fileJobId,
       destinationParentId: null,
       textFileHandling: 'files',
       sources: [{ id: 'selected-file', kind: 'file', name: 'campaign-deletion.bin' }],
@@ -1068,11 +1068,32 @@ describe('deleteCampaign', () => {
           sourceId: 'selected-file',
           path: 'campaign-deletion.bin',
           type: 'file',
-          uploadSessionId: upload.sessionId,
+          byteSize: 'campaign deletion asset'.length,
         },
       ],
     })
-    const fileEntry = fileCreation.status === 'completed' ? fileCreation.entries[0] : null
+    if (fileReservation.status !== 'reserved' || !fileReservation.uploadTargets[0]) {
+      throw new TypeError('Expected campaign deletion transfer reservation')
+    }
+    await t.run(async (dbCtx) => {
+      const entry = await dbCtx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', ctx.campaignDomainId).eq('importJobUuid', fileJobId),
+        )
+        .filter((query) => query.eq(query.field('entryType'), 'file'))
+        .unique()
+      if (!entry) throw new TypeError('Expected campaign deletion transfer entry')
+      await dbCtx.db.delete('fileStorage', fileReservation.uploadTargets[0]!.sessionId)
+      await dbCtx.db.patch('resourceTransferEntries', entry._id, {
+        uploadSessionUuid: upload.sessionId,
+      })
+    })
+    const fileCreation = await dmAuth.action(api.resources.actions.commitPlainTransfer, {
+      campaignId: ctx.campaignDomainId,
+      jobId: fileJobId,
+    })
+    const fileEntry = fileCreation.status === 'settled' ? fileCreation.entries[0] : null
     if (!fileEntry || fileEntry.status !== 'completed') {
       throw new TypeError('Expected campaign deletion file fixture')
     }
@@ -1083,12 +1104,12 @@ describe('deleteCampaign', () => {
         campaignUuid: ctx.campaignDomainId,
         importJobUuid: transferJobId,
         actorMemberUuid: ctx.dm.memberDomainId,
-        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
+        manifestVersion: 'plain-transfer-manifest-v1',
+        fingerprint: 'pending-transfer',
         destinationParentUuid: null,
-        mode: 'plain_resources',
-        sourceDigest: null,
-        status: 'pending',
-        rejectionReason: null,
+        textFileHandling: 'files',
+        sources: [{ id: 'selected-file', kind: 'file', name: 'pending.txt' }],
+        status: 'reserved',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       })
@@ -1096,12 +1117,18 @@ describe('deleteCampaign', () => {
         campaignUuid: ctx.campaignDomainId,
         importJobUuid: transferJobId,
         sourceRootId: 'selected-file',
+        sourceEntryPath: 'pending.txt',
         rawPath: 'pending.txt',
         normalizedPath: 'pending.txt',
         plannedResourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
         plannedOperationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
+        parentResourceUuid: null,
+        title: 'pending.txt',
+        entryType: 'file',
+        isExplicit: true,
+        declaredByteSize: 0,
+        uploadSessionUuid: null,
         resourceKind: 'file',
-        sourceDigest: null,
         resourceUuid: null,
         status: 'pending',
         rejectionReason: null,

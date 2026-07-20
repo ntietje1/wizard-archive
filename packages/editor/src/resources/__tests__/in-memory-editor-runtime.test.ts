@@ -428,7 +428,6 @@ describe('createInMemoryEditorRuntime', () => {
       {
         campaignId: snapshot.campaignId,
         jobId,
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         destinationParentId: null,
         textFileHandling: 'notes',
       },
@@ -436,8 +435,8 @@ describe('createInMemoryEditorRuntime', () => {
       [{ sourceId: 'selected-file', path: 'image.png', type: 'file', bytes }],
     )
 
-    expect(delivery).toMatchObject({ status: 'completed' })
-    if (delivery.status !== 'completed' || delivery.entries[0]?.status !== 'completed') {
+    expect(delivery).toMatchObject({ status: 'settled' })
+    if (delivery.status !== 'settled' || delivery.entries[0]?.status !== 'completed') {
       throw new TypeError('Expected completed file transfer')
     }
     const resourceId = delivery.entries[0].resourceId
