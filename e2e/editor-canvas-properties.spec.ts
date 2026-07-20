@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
+import { sidebarResource } from './helpers/editor-resource-helpers'
 import type { Locator } from '@playwright/test'
 
 test.describe('canvas properties and arrangement', () => {
@@ -83,8 +84,8 @@ test.describe('canvas properties and arrangement', () => {
       })
       .toEqual(['40', '40'])
 
-    await page.getByRole('button', { name: 'Moonwell Docks' }).click()
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Moonwell Docks').click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const reopened = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
     const reopenedNodes = reopened.getByTestId('canvas-node')
     await expect.poll(() => nodeSurfaceStyle(reopenedNodes.first())).toEqual(persistedStyle)
@@ -112,8 +113,8 @@ test.describe('canvas properties and arrangement', () => {
     await page.keyboard.press('Escape')
     await expect(primaryPath).toHaveAttribute('stroke', 'var(--t-blue)')
 
-    await page.getByRole('button', { name: 'Moonwell Docks' }).click()
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Moonwell Docks').click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const reopenedEdge = page
       .getByRole('application', { name: 'Harbor Heist Board canvas editor' })
       .getByTestId('canvas-edge')

@@ -268,7 +268,7 @@ test.describe('canonical sharing and view-as', () => {
     const pageErrors: Array<Error> = []
     page.on('pageerror', (error) => pageErrors.push(error))
     await openResource(page, sharedNoteId)
-    await page.getByRole('button', { name: 'View as player' }).click()
+    await page.getByRole('button', { name: 'View as...', exact: true }).click()
     const playerItem = page
       .getByRole('menuitemcheckbox')
       .filter({ hasText: new RegExp(escapeRegExp(playerUsername), 'i') })
@@ -293,7 +293,7 @@ test.describe('canonical sharing and view-as', () => {
     await expect(page.getByRole('button', { name: /^(?:Private|Shared)$/ })).not.toBeVisible()
     expect(pageErrors.map((error) => error.message)).toEqual([])
 
-    const exit = page.getByRole('button', { name: 'Exit' })
+    const exit = page.getByRole('button', { name: 'Exit', exact: true })
     await exit.focus()
     await page.keyboard.press('Enter')
     await expect(page.getByRole('status').filter({ hasText: 'Viewing as' })).not.toBeVisible()

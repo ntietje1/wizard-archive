@@ -7,6 +7,12 @@ import {
   provisionCampaign,
 } from './helpers/campaign-helpers'
 import { testName } from './helpers/constants'
+import {
+  createNamedResource,
+  exitViewAs,
+  sidebarResource,
+  viewAsYourself,
+} from './helpers/editor-resource-helpers'
 import type { Page } from '@playwright/test'
 
 const campaignName = testName('Map Lifecycle')
@@ -64,12 +70,12 @@ test.describe.serial('canonical map lifecycle', () => {
   test('creates a UUID pin by sidebar drop and restores move, visibility, readonly, and removal', async ({
     page,
   }) => {
-    await page.getByRole('button', { name: mapName, exact: true }).click()
+    await sidebarResource(page, mapName).click()
     const map = page.getByLabel('Map content')
     const image = map.getByRole('img', { name: `${mapName} map` })
     await expect(image).toBeVisible({ timeout: 15_000 })
 
-    const target = page.getByRole('button', { name: noteName, exact: true })
+    const target = sidebarResource(page, noteName)
     const canvas = map.getByRole('region', { name: 'Map canvas' })
     await target.dragTo(canvas, {
       targetPosition: { x: 80, y: 70 },
@@ -92,12 +98,12 @@ test.describe.serial('canonical map lifecycle', () => {
     pin = map.getByRole('button', { name: `${noteName} (hidden)`, exact: true })
     await expect(pin).toBeVisible()
 
-    await page.getByRole('button', { name: 'Viewer' }).click()
+    await viewAsYourself(page)
     await expect(map.getByText('Viewing map — changes are disabled')).toBeVisible()
     await expect(pin).toBeHidden()
     await expect(map.getByLabel('Choose map image')).toBeHidden()
 
-    await page.getByRole('button', { name: 'Editor' }).click()
+    await exitViewAs(page)
     pin = map.getByRole('button', { name: `${noteName} (hidden)`, exact: true })
     await pin.click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Show pin' }).click()
@@ -106,7 +112,7 @@ test.describe.serial('canonical map lifecycle', () => {
 
     await pin.dblclick()
     await expect(page.getByRole('heading', { name: noteName })).toBeVisible()
-    await page.getByRole('button', { name: mapName, exact: true }).click()
+    await sidebarResource(page, mapName).click()
     pin = page.getByLabel('Map content').getByRole('button', { name: noteName, exact: true })
     await pin.click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Remove pin' }).click()
@@ -116,12 +122,7 @@ test.describe.serial('canonical map lifecycle', () => {
 })
 
 async function createResource(page: Page, kind: 'Map' | 'Note', title: string) {
-  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-  await page.getByRole('textbox', { name: 'New resource title' }).fill(title)
-  await page.getByRole('menuitem', { name: kind, exact: true }).click()
-  await expect(page.getByRole('button', { name: title, exact: true })).toBeVisible({
-    timeout: 15_000,
-  })
+  await createNamedResource(page, kind, title)
 }
 
 function createPng(width: number, height: number, value: number): Buffer {

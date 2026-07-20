@@ -140,13 +140,14 @@ describe('NoteEditor', () => {
     view.rerender(
       <NoteEditor
         document={document}
-        label="Mode-switching note"
+        label="Renamed note"
         mode="view"
         scroll={EPHEMERAL_NOTE_SCROLL}
       />,
     )
 
     expect(editor).toHaveAttribute('contenteditable', 'false')
+    expect(editor).toHaveAccessibleName('Renamed note')
     expect(editor).toHaveTextContent('One canonical document')
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
     expect(flush).toHaveBeenCalledOnce()

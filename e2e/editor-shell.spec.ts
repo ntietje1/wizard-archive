@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  createNamedResource,
+  sidebarResource,
+  viewAsYourself,
+} from './helpers/editor-resource-helpers'
 
 test.describe('editor shell', () => {
   test('navigates resources and preserves workspace controls', async ({ page }) => {
@@ -8,9 +13,9 @@ test.describe('editor shell', () => {
     await expect(workspace).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible({ timeout: 10_000 })
 
-    const invoice = page.getByRole('button', { name: 'Blue-glass Invoice' })
-    const canvas = page.getByRole('button', { name: 'Harbor Heist Board' })
-    const map = page.getByRole('button', { name: 'Moonwell Docks' })
+    const invoice = sidebarResource(page, 'Blue-glass Invoice')
+    const canvas = sidebarResource(page, 'Harbor Heist Board')
+    const map = sidebarResource(page, 'Moonwell Docks')
     await canvas.click()
     await invoice.click({ modifiers: ['Shift'] })
     await expect(invoice).toHaveAttribute('data-selected', 'true')
@@ -21,16 +26,13 @@ test.describe('editor shell', () => {
     await expect(page.getByRole('menuitem', { name: 'Copy 3 items' })).toBeVisible()
     await page.keyboard.press('Escape')
 
-    await page.getByRole('button', { name: 'Create resource' }).click()
-    await page.getByRole('textbox', { name: 'New resource title' }).fill('Drop destination')
-    await page.getByRole('menuitem', { name: 'Folder' }).click()
-    const destination = page.getByRole('button', { name: 'Drop destination', exact: true })
+    const destination = await createNamedResource(page, 'Folder', 'Drop destination')
     await expect(destination).toBeVisible()
     await expect(invoice).toHaveAttribute('draggable', 'true')
     await invoice.dragTo(destination)
     await expect(page.getByRole('status')).toContainText('Completed')
 
-    await page.getByRole('button', { name: 'The Lantern Market' }).click()
+    await sidebarResource(page, 'The Lantern Market').click()
     await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
     await expect(
       page.getByRole('textbox', { name: 'The Lantern Market note editor' }),
@@ -45,8 +47,7 @@ test.describe('editor shell', () => {
     await expect(page.getByRole('complementary', { name: 'Resource panel' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Viewer' }).click()
-    await expect(page.getByText('Viewer mode — editing is disabled')).toBeVisible()
+    await viewAsYourself(page)
 
     if (process.env.WA_VISUAL_QA_PATH) {
       await page.screenshot({ path: process.env.WA_VISUAL_QA_PATH })
@@ -57,9 +58,7 @@ test.describe('editor shell', () => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
     const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
     await expect(workspace).toHaveAttribute('aria-busy', 'false')
-    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-    await page.getByRole('textbox', { name: 'New resource title' }).fill('Outline scratchpad')
-    await page.getByRole('menuitem', { name: 'Note' }).click()
+    await createNamedResource(page, 'Note', 'Outline scratchpad')
     await expect(page.getByRole('heading', { name: 'Outline scratchpad' })).toBeVisible()
     const editor = page.getByRole('textbox', { name: 'Outline scratchpad note editor' })
     await expect(editor).toBeVisible()
@@ -103,7 +102,7 @@ test.describe('editor shell', () => {
 
   test('restores a note viewport after navigating away and back', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'The Lantern Market' }).click()
+    await sidebarResource(page, 'The Lantern Market').click()
     const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
     await expect(editor).toBeVisible()
     await editor.click()
@@ -121,7 +120,7 @@ test.describe('editor shell', () => {
       return scrollTop
     })
     expect(expectedScrollTop).toBeGreaterThan(0)
-    await page.getByRole('button', { name: 'Blue-glass Invoice' }).click()
+    await sidebarResource(page, 'Blue-glass Invoice').click()
     await expect(page.getByRole('heading', { name: 'Blue-glass Invoice' })).toBeVisible()
     await expect
       .poll(() =>
@@ -138,7 +137,7 @@ test.describe('editor shell', () => {
         }),
       )
       .toBe(expectedScrollTop)
-    await page.getByRole('button', { name: 'The Lantern Market' }).click()
+    await sidebarResource(page, 'The Lantern Market').click()
     const restoredViewport = page.locator(
       '.resource-note-editor [data-slot="scroll-area-viewport"]',
     )
@@ -157,7 +156,7 @@ test.describe('editor shell', () => {
     })
 
     await expect(page.getByText('File uploaded')).toBeVisible()
-    await page.getByRole('button', { name: 'payload.exe', exact: true }).click()
+    await sidebarResource(page, 'payload.exe').click()
     await expect(page.getByText('This file type cannot be previewed.')).toBeVisible()
   })
 })

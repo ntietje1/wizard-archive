@@ -9,6 +9,7 @@ import {
   provisionCampaign,
 } from './helpers/campaign-helpers'
 import { testName } from './helpers/constants'
+import { sidebarResource } from './helpers/editor-resource-helpers'
 
 const campaignName = testName('File Lifecycle')
 let campaignId: CampaignId
@@ -28,7 +29,7 @@ test.describe.serial('canonical file lifecycle', () => {
 
   test('uploads, views, downloads, and replaces exact file bytes', async ({ page }) => {
     await uploadFile(page, 'evidence.txt', 'text/plain', Buffer.from('original evidence'))
-    await page.getByRole('button', { name: 'evidence.txt', exact: true }).click()
+    await sidebarResource(page, 'evidence.txt').click()
     const file = page.getByLabel('File content')
     await expect(file).toBeVisible()
     await expect(file).toContainText('This file type cannot be previewed.')
@@ -56,14 +57,14 @@ test.describe.serial('canonical file lifecycle', () => {
       'base64',
     )
     await uploadFile(page, 'token.png', 'image/png', png)
-    await page.getByRole('button', { name: 'token.png', exact: true }).click()
+    await sidebarResource(page, 'token.png').click()
     await expect(page.getByRole('img', { name: 'token.png' })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible()
 
     const document = await PDFDocument.create()
     document.addPage([612, 792])
     await uploadFile(page, 'rules.pdf', 'application/pdf', Buffer.from(await document.save()))
-    await page.getByRole('button', { name: 'rules.pdf', exact: true }).click()
+    await sidebarResource(page, 'rules.pdf').click()
     await expect(page.getByText('Page 1 of 1')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible()
   })
@@ -88,7 +89,7 @@ async function uploadFile(page: Page, name: string, mimeType: string, buffer: Bu
   await page.getByRole('button', { name: 'Create resource', exact: true }).click()
   await page.getByLabel('Create resource: choose file').setInputFiles({ name, mimeType, buffer })
   await expect(page.getByText('File uploaded')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByRole('button', { name, exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(sidebarResource(page, name)).toBeVisible({ timeout: 15_000 })
 }
 
 async function downloadText(file: Locator): Promise<string> {

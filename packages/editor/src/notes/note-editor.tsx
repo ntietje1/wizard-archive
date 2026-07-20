@@ -87,6 +87,9 @@ function NoteDocumentEditor(props: NoteEditorProps) {
     onEditorChange?.(editor)
     return () => onEditorChange?.(null)
   }, [editor, onEditorChange])
+  useEffect(() => {
+    editor._tiptapEditor.view.dom.setAttribute('aria-label', label)
+  }, [editor, label])
 
   useEffect(() => {
     if (!flush) return

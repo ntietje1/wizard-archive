@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  createNamedResource,
+  openSidebarHistoryMenu,
+  renameCurrentResource,
+} from './helpers/editor-resource-helpers'
 import type { Page } from '@playwright/test'
 
 async function openWorkspace(page: Page) {
@@ -15,19 +20,20 @@ test.describe('resource mechanics', () => {
   }) => {
     const workspace = await openWorkspace(page)
     const sidebar = workspace.getByRole('navigation', { name: 'Sidebar' })
-    const market = sidebar.getByRole('button', { name: 'The Lantern Market' })
-    const invoice = sidebar.getByRole('button', { name: 'Blue-glass Invoice' })
+    const market = sidebar.getByRole('button', { name: 'The Lantern Market', exact: true })
+    const invoice = sidebar.getByRole('button', { name: 'Blue-glass Invoice', exact: true })
 
     await market.click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Bookmark' }).click()
-    await sidebar.getByRole('button', { name: 'Bookmarks' }).click()
+    await sidebar.getByRole('button', { name: 'Show bookmarks' }).click()
     await expect(market).toBeVisible()
-    await expect(sidebar.getByRole('button', { name: 'Blue-glass Invoice' })).toBeHidden()
+    await expect(
+      sidebar.getByRole('button', { name: 'Blue-glass Invoice', exact: true }),
+    ).toBeHidden()
 
-    await sidebar.getByRole('button', { name: 'Bookmarks' }).click()
-    await sidebar.getByRole('combobox', { name: 'Sort resources' }).selectOption({
-      label: 'Title Z–A',
-    })
+    await sidebar.getByRole('button', { name: 'Exit bookmarks' }).click()
+    await sidebar.getByRole('button', { name: 'Sort resources' }).click()
+    await page.getByRole('menuitemradio', { name: 'File name (Z to A)' }).click()
     await expect(sidebar.locator('[data-resource-id]').first()).toContainText('The Lantern Market')
 
     await page.keyboard.press('Control+k')
@@ -71,10 +77,7 @@ test.describe('resource mechanics', () => {
   }) => {
     await openWorkspace(page)
 
-    await page.getByRole('button', { name: 'Create resource' }).click()
-    await page.getByRole('textbox', { name: 'New resource title' }).fill('Operations')
-    await page.getByRole('menuitem', { name: 'Folder' }).click()
-    await expect(page.getByText('Folder created')).toBeVisible()
+    await createNamedResource(page, 'Folder', 'Operations')
     await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Create New' })).toBeVisible()
     await expect(page.getByText('Create from Template')).toBeVisible()
@@ -83,17 +86,14 @@ test.describe('resource mechanics', () => {
     await page.getByRole('button', { name: 'Note', exact: true }).click()
     await expect(page.getByText('Note created')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('heading', { name: 'Untitled note' })).toBeVisible()
-    await page.getByRole('button', { name: 'More options' }).click()
-    await page.getByRole('menuitem', { name: 'Edit details' }).click()
-    await page.getByRole('textbox', { name: 'Resource title' }).fill('Clue: North / South')
-    await page.getByRole('textbox', { name: 'Resource icon' }).fill('Compass')
-    await page.getByRole('textbox', { name: 'Resource color' }).fill('indigo')
-    await page.getByRole('button', { name: 'Save' }).click()
+    await renameCurrentResource(page, 'Untitled note', 'Clue: North / South')
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Undo Edit resource' }).click()
+    let history = await openSidebarHistoryMenu(page)
+    await history.getByRole('menuitem', { name: 'Undo rename' }).click()
     await expect(page.getByRole('heading', { name: 'Untitled note' })).toBeVisible()
-    await page.getByRole('button', { name: 'Redo Edit resource' }).click()
+    history = await openSidebarHistoryMenu(page)
+    await history.getByRole('menuitem', { name: 'Redo rename' }).click()
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
 
     await page.getByRole('button', { name: 'More options' }).click()
@@ -106,9 +106,9 @@ test.describe('resource mechanics', () => {
   }) => {
     const workspace = await openWorkspace(page)
     const sidebar = workspace.getByRole('navigation', { name: 'Sidebar' })
-    const invoice = sidebar.getByRole('button', { name: 'Blue-glass Invoice' })
-    const canvas = sidebar.getByRole('button', { name: 'Harbor Heist Board' })
-    const map = sidebar.getByRole('button', { name: 'Moonwell Docks' })
+    const invoice = sidebar.getByRole('button', { name: 'Blue-glass Invoice', exact: true })
+    const canvas = sidebar.getByRole('button', { name: 'Harbor Heist Board', exact: true })
+    const map = sidebar.getByRole('button', { name: 'Moonwell Docks', exact: true })
 
     await canvas.click()
     await invoice.click({ modifiers: ['Shift'] })
@@ -118,10 +118,12 @@ test.describe('resource mechanics', () => {
     await expect(canvas).toBeHidden()
     await expect(map).toBeHidden()
 
-    await page.getByRole('button', { name: 'Undo Trash resources' }).click()
+    let history = await openSidebarHistoryMenu(page)
+    await history.getByRole('menuitem', { name: 'Undo move 3 resources to Trash' }).click()
     await expect(canvas).toBeVisible()
     await expect(map).toBeVisible()
-    await page.getByRole('button', { name: 'Redo Trash resources' }).click()
+    history = await openSidebarHistoryMenu(page)
+    await history.getByRole('menuitem', { name: 'Redo move 3 resources to Trash' }).click()
     await expect(canvas).toBeHidden()
     await expect(map).toBeHidden()
 

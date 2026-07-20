@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { sidebarResource } from './helpers/editor-resource-helpers'
 
 test.describe('canvas context menus', () => {
   test.setTimeout(60_000)
 
   test('targets pane, node, edge, arrange, reorder, and clipboard actions', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const editor = page.getByRole('application', {
       name: 'Harbor Heist Board canvas editor',
     })

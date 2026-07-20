@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { createNamedResource } from './helpers/editor-resource-helpers'
 import type { Locator, Page } from '@playwright/test'
 
 test.describe('note link and embed parity', () => {
@@ -58,9 +59,7 @@ async function openScratchNote(page: Page, noteTitle: string) {
   const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
   await expect(workspace).toHaveAttribute('aria-busy', 'false', { timeout: 45_000 })
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-  await page.getByRole('textbox', { name: 'New resource title' }).fill(noteTitle)
-  await page.getByRole('menuitem', { name: 'Note' }).click()
+  await createNamedResource(page, 'Note', noteTitle)
   const editor = page.getByRole('textbox', { name: `${noteTitle} note editor` })
   await expect(editor).toBeVisible()
   return { editor, noteTitle, sidebar }

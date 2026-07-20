@@ -1,14 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { createNamedResource, sidebarResource } from './helpers/editor-resource-helpers'
 
 test.describe('readonly canvas', () => {
   test('uses a static canvas icon in the folder dashboard', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-    await page.getByRole('textbox', { name: 'New resource title' }).fill('Preview folder')
-    await page.getByRole('menuitem', { name: 'Folder' }).click()
-    const folder = page
-      .getByLabel('resources resource drop zone')
-      .getByRole('button', { name: 'Preview folder', exact: true })
+    const folder = await createNamedResource(page, 'Folder', 'Preview folder')
     await folder.click()
     await page.getByRole('button', { name: 'Canvas', exact: true }).click()
     await folder.click()
@@ -24,7 +20,7 @@ test.describe('readonly canvas', () => {
     page,
   }) => {
     await page.goto('/demo?scenario=revealed-in-play', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
 
     const editor = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
     const surface = editor.getByRole('region', { name: 'Canvas surface' })

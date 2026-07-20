@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { sidebarResource } from './helpers/editor-resource-helpers'
 import type { Locator, Page } from '@playwright/test'
 
 test.describe('canvas rich text', () => {
@@ -10,7 +11,7 @@ test.describe('canvas rich text', () => {
     await expect(canvas).toBeVisible()
     const surface = canvas.getByRole('region', { name: 'Canvas surface' })
 
-    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     await page
       .getByRole('button', { name: 'The Lantern Market', exact: true })
       .dragTo(surface, { targetPosition: { x: 420, y: 280 } })
@@ -64,7 +65,7 @@ test.describe('canvas rich text', () => {
     await expect(canvas).toBeVisible()
     let surface = canvas.getByRole('region', { name: 'Canvas surface' })
 
-    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     await page
       .getByRole('button', { name: 'The Lantern Market', exact: true })
       .dragTo(surface, { targetPosition: { x: 420, y: 280 } })
@@ -128,7 +129,7 @@ test.describe('canvas rich text', () => {
     await expect(textEditor).toContainText('Alpha beta gamma!')
 
     await textEditor.press('Escape')
-    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     await page
       .getByRole('button', { name: 'The Lantern Market', exact: true })
       .dragTo(surface, { targetPosition: { x: 420, y: 280 } })
@@ -175,7 +176,7 @@ test.describe('canvas rich text', () => {
     page,
   }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const canvas = page.getByRole('application', { name: 'Harbor Heist Board canvas editor' })
     const nodes = canvas.getByTestId('canvas-node')
     await expect(nodes).toHaveCount(2)
@@ -230,8 +231,8 @@ test.describe('canvas rich text', () => {
     await expect(formattedText).toHaveCSS('font-style', 'italic')
     expect(await formattedText.evaluate((element) => element.closest('strong') !== null)).toBe(true)
 
-    await page.getByRole('button', { name: 'Moonwell Docks' }).click()
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Moonwell Docks').click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const reopenedCanvas = page.getByRole('application', {
       name: 'Harbor Heist Board canvas editor',
     })

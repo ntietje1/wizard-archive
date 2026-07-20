@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { dragPointer, openDemoCanvas, visibleBox } from './helpers/editor-canvas-helpers'
+import { sidebarResource } from './helpers/editor-resource-helpers'
 
 test.describe('canvas gesture parity', () => {
   test('adds one embed for each repeated sidebar resource drop', async ({ page }) => {
     const { nodes, surface } = await openDemoCanvas(page)
-    const note = page.getByRole('button', { name: 'The Lantern Market', exact: true })
-    await page.getByRole('button', { name: 'Harbor Heist Board', exact: true }).click()
+    const note = sidebarResource(page, 'The Lantern Market')
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const initialCount = await nodes.count()
 
     await note.dragTo(surface, { targetPosition: { x: 360, y: 220 } })

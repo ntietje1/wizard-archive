@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { createNamedResource } from './helpers/editor-resource-helpers'
 import type { Locator, Page } from '@playwright/test'
 
 test.describe('note authoring mechanics', () => {
@@ -355,9 +356,7 @@ async function openNoteEditor(page: Page) {
   await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
   const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
   await expect(workspace).toHaveAttribute('aria-busy', 'false', { timeout: 45_000 })
-  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-  await page.getByRole('textbox', { name: 'New resource title' }).fill('Formatting scratchpad')
-  await page.getByRole('menuitem', { name: 'Note' }).click()
+  await createNamedResource(page, 'Note', 'Formatting scratchpad')
   await expect(page.getByRole('heading', { name: 'Formatting scratchpad' })).toBeVisible()
   const editor = page.getByRole('textbox', { name: 'Formatting scratchpad note editor' })
   await expect(editor).toBeVisible()

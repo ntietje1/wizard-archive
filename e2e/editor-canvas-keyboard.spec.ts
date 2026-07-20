@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { sidebarResource } from './helpers/editor-resource-helpers'
 
 test.describe('canvas keyboard and clipboard', () => {
   test('selects, copies, cuts, pastes, and switches tools through the real editor', async ({
     page,
   }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'Harbor Heist Board' }).click()
+    await sidebarResource(page, 'Harbor Heist Board').click()
     const editor = page.getByRole('application', {
       name: 'Harbor Heist Board canvas editor',
     })

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { createNamedResource, viewAsYourself } from './helpers/editor-resource-helpers'
 import type { Locator, Page } from '@playwright/test'
 
 test.describe('canonical note values', () => {
@@ -48,8 +49,7 @@ test.describe('canonical note values', () => {
     await page.mouse.up()
     await expect(page.locator(`[data-note-value-id="${sourceId}"]`)).toHaveCount(1)
 
-    await page.getByRole('button', { name: 'Viewer' }).click()
-    await expect(page.getByText('Viewer mode — editing is disabled')).toBeVisible()
+    await viewAsYourself(page)
     await expect(page.getByRole('toolbar', { name: 'Note formatting toolbar' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Armor: 7' })).toBeVisible()
     await page.getByRole('button', { name: 'Armor: 7' }).click()
@@ -61,9 +61,7 @@ async function openFreshNote(page: Page) {
   await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
   const workspace = page.getByRole('region', { name: 'Demo workspace', exact: true })
   await expect(workspace).toHaveAttribute('aria-busy', 'false')
-  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-  await page.getByRole('textbox', { name: 'New resource title' }).fill('Value scratchpad')
-  await page.getByRole('menuitem', { name: 'Note' }).click()
+  await createNamedResource(page, 'Note', 'Value scratchpad')
   await expect(page.getByRole('heading', { name: 'Value scratchpad' })).toBeVisible()
   const editor = page.getByRole('textbox', { name: 'Value scratchpad note editor' })
   await expect(editor).toBeVisible()
