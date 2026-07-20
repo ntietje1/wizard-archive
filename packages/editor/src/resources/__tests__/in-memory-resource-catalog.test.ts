@@ -62,7 +62,6 @@ describe('InMemoryResourceCatalog snapshots', () => {
     expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Renamed note')
 
     unsubscribe()
-    await operations.assignAssetsFolder(campaignId, null)
     expect(listener).toHaveBeenCalledOnce()
   })
 
@@ -139,7 +138,6 @@ describe('in-memory resource operations deep copy', () => {
       rawPath: 'Note.md',
       normalizedPath: 'Note.md',
     })
-    await operations.assignAssetsFolder(campaignId, sourceRootId)
     const listener = vi.fn()
     catalog.subscribe(campaignId, listener)
 
@@ -203,7 +201,6 @@ describe('in-memory resource operations deep copy', () => {
     )
     const snapshot = catalog.getSnapshot(campaignId)
     expect(snapshot.aliases.filter((alias) => alias.resourceId === copiedChild!.id)).toEqual([])
-    expect(snapshot.assetsFolderId).toBe(sourceRootId)
     expect(listener).toHaveBeenCalledOnce()
   })
 

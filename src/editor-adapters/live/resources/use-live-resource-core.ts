@@ -27,8 +27,6 @@ import { createLiveResourceAccessGateway } from './live-resource-access-gateway'
 import { createLiveNoteBlockAccessGateway } from './live-note-block-access-gateway'
 import { executeResourceWrite, resourceQueryScope } from './resource-query-scope'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
-import { createLiveResourceAssetsFolderGateway } from './live-resource-assets-folder'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createLiveResourceReferenceSource } from './live-resource-references'
 import { createLiveResourcePreviewSource } from './live-resource-preview-source'
 import {
@@ -266,6 +264,8 @@ function createScopedLiveResourceRuntime(
           resourceId,
         }),
       discard: discardUpload,
+      createAsset: (args) =>
+        write(() => convex.action(api.resources.actions.createAssetFile, args)),
       replace: (args) => write(() => convex.action(api.resources.actions.replaceFileContent, args)),
       upload: uploadFile,
     },
@@ -382,20 +382,6 @@ function createScopedLiveResourceRuntime(
         }
       : null,
   )
-  const assets =
-    currentScope.projection === 'dm'
-      ? createLiveResourceAssetsFolderGateway(currentScope.campaignId, async (args) => {
-          const result = await write(() =>
-            convex.mutation(api.resources.mutations.ensureResourceAssetsFolder, args),
-          )
-          return result.status === 'completed'
-            ? {
-                status: 'completed',
-                resourceId: assertDomainId(DOMAIN_ID_KIND.resource, result.resourceId),
-              }
-            : result
-        })
-      : null
   const references = createLiveResourceReferenceSource(
     base.applyProjection,
     (resourceId, apply) => {
@@ -437,10 +423,6 @@ function createScopedLiveResourceRuntime(
     currentScope.projection === 'dm'
       ? { status: 'available', value: noteBlockAccess }
       : { status: 'unavailable', reason: 'unauthorized' }
-  const assetsCapability: EditorRuntime['resources']['assets'] =
-    assets === null
-      ? { status: 'unavailable', reason: 'unauthorized' }
-      : { status: 'available', value: assets }
   const content = { notes, files, maps, canvases }
   const transfers =
     currentScope.projection === 'dm'
@@ -524,7 +506,6 @@ function createScopedLiveResourceRuntime(
           currentScope.projection === 'dm'
             ? ({ status: 'available', value: bookmarks.gateway } as const)
             : unsupported,
-        assets: assetsCapability,
         previews: { status: 'available', value: previews.source },
         references: referencesCapability,
         undo: undoCapability,

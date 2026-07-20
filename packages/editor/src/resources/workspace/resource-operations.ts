@@ -351,26 +351,44 @@ async function createWorkspaceAssetFile(
   signal?: AbortSignal,
 ): Promise<WorkspaceCreationSettlement> {
   if (signal?.aborted) return { status: 'cancelled' }
-  const assets = runtime.resources.assets
-  if (assets.status !== 'available') {
-    return { status: 'rejected', reason: assets.reason }
+  if (runtime.resources.structure.status !== 'available') {
+    return { status: 'rejected', reason: 'read_only' }
   }
-  let resolution
+  const validation = validateFileUploadSize(file.size)
+  if (!validation.valid) return { status: 'rejected', reason: validation.error }
+  let bytes
   try {
-    resolution = await assets.value.ensure()
+    bytes = new Uint8Array(await file.arrayBuffer())
   } catch {
     if (signal?.aborted) return { status: 'cancelled' }
-    return {
-      status: 'failed',
-      reason: 'provider_failure',
-      retry: () => createWorkspaceAssetFile(runtime, file, report, signal),
-    }
+    return { status: 'rejected', reason: 'file_read_failed' }
   }
   if (signal?.aborted) return { status: 'cancelled' }
-  if (resolution.status === 'rejected') {
-    return { status: 'rejected', reason: resolution.reason }
+  return await settleAssetFileCreation(
+    await runtime.content.files.createAsset({ bytes, fileName: file.name }),
+    report,
+    signal,
+  )
+}
+
+function settleAssetFileCreation(
+  result: Awaited<ReturnType<EditorRuntime['content']['files']['createAsset']>>,
+  report: WorkspaceReport,
+  signal?: AbortSignal,
+): Promise<WorkspaceCreationSettlement> {
+  if (signal?.aborted) return Promise.resolve({ status: 'cancelled' })
+  if (result.status === 'completed') {
+    report('File uploaded')
+    return Promise.resolve(result)
   }
-  return await createWorkspaceFile(runtime, resolution.resourceId, file, report, signal)
+  if (result.status === 'retryable') {
+    return Promise.resolve({
+      status: 'indeterminate',
+      reason: result.reason,
+      retry: async () => await settleAssetFileCreation(await result.retry(), report),
+    })
+  }
+  return Promise.resolve({ status: 'rejected', reason: result.reason })
 }
 
 async function downloadWorkspaceResource(

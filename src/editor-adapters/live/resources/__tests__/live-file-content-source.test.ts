@@ -21,6 +21,43 @@ type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 afterEach(() => vi.unstubAllGlobals())
 
 describe('LiveFileContentSource', () => {
+  it('retries authored creation with the same server upload identity', async () => {
+    const campaignId = testDomainId('campaign', 'asset-create-campaign')
+    const resourceId = testDomainId('resource', 'asset-create-resource')
+    const sessionId = 'asset-create-session' as Id<'fileStorage'>
+    const upload = vi.fn(() => Promise.resolve(sessionId))
+    const createAsset = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('response lost'))
+      .mockResolvedValueOnce({ status: 'completed', resourceId })
+    const discard = vi.fn()
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        load: vi.fn(() => Promise.reject(new Error('projection not loaded'))),
+        watch: vi.fn(() => () => undefined),
+        discard,
+        createAsset,
+        download: vi.fn(),
+        replace: vi.fn(),
+        upload,
+      },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
+    )
+
+    const first = await source.createAsset({
+      bytes: new TextEncoder().encode('asset'),
+      fileName: 'Asset.txt',
+    })
+    if (first.status !== 'retryable') throw new TypeError('Expected retryable creation')
+    await expect(first.retry()).resolves.toEqual({ status: 'completed', resourceId })
+    expect(upload).toHaveBeenCalledOnce()
+    expect(createAsset).toHaveBeenCalledTimes(2)
+    expect(createAsset.mock.calls[1]).toEqual(createAsset.mock.calls[0])
+    expect(discard).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
   it('rejects replacement before upload when the canonical resource permission is read only', async () => {
     const resourceId = testDomainId('resource', 'readonly-file')
     const upload = vi.fn()
@@ -32,6 +69,7 @@ describe('LiveFileContentSource', () => {
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         discard: vi.fn(),
+        createAsset: vi.fn(),
         download: vi.fn(),
         replace,
         upload,
@@ -70,6 +108,7 @@ describe('LiveFileContentSource', () => {
           return unsubscribe
         },
         discard: vi.fn(),
+        createAsset: vi.fn(),
         download: vi.fn(),
         replace: vi.fn(),
         upload: vi.fn(),
@@ -140,6 +179,7 @@ describe('LiveFileContentSource', () => {
         load: () => Promise.resolve(snapshot),
         watch: vi.fn(() => () => undefined),
         discard: vi.fn(),
+        createAsset: vi.fn(),
         download: () =>
           Promise.resolve({ status: 'ready', url: 'https://files.test/evidence', version }),
         replace: vi.fn(),
@@ -186,6 +226,7 @@ describe('LiveFileContentSource', () => {
           }),
         watch: vi.fn(() => () => undefined),
         discard: vi.fn(),
+        createAsset: vi.fn(),
         download: () =>
           Promise.resolve({ status: 'ready', url: 'https://files.test/tampered', version }),
         replace: vi.fn(),
@@ -237,6 +278,7 @@ describe('LiveFileContentSource', () => {
         load,
         watch: vi.fn(() => () => undefined),
         discard,
+        createAsset: vi.fn(),
         download: vi.fn(),
         replace,
         upload: vi.fn(() => Promise.resolve(sessionId)),
@@ -283,6 +325,7 @@ describe('LiveFileContentSource', () => {
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         discard,
+        createAsset: vi.fn(),
         download: vi.fn(),
         replace: vi.fn(() =>
           Promise.resolve({

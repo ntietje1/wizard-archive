@@ -32,7 +32,6 @@ export type ResourceCatalogSnapshot = Readonly<{
   resources: ReadonlyArray<ResourceRecord>
   tombstones: ReadonlyArray<ResourceTombstone>
   aliases: ReadonlyArray<SourcePathAlias>
-  assetsFolderId: ResourceId | null
 }>
 
 export interface ResourceCatalogReader {
@@ -52,7 +51,6 @@ export interface ResourceCatalogReader {
     campaignId: CampaignId,
     resourceId: ResourceId,
   ): Promise<ReadonlyArray<SourcePathAlias>>
-  getAssetsFolder(campaignId: CampaignId): Promise<ResourceId | null>
   readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot>
 }
 

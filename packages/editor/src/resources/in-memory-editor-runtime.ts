@@ -41,6 +41,7 @@ import type {
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type { EditorRuntime, ResourceNavigation } from './editor-runtime-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
 import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
@@ -50,6 +51,7 @@ import type { ResourceProjectionScope } from './resource-index-contract'
 import type { GrantedResourcePermission } from './resource-access-policy'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource } from './resource-source-classifier'
+import { canonicalizeResourceTitle } from './resource-record'
 import { ResourceSessionStore } from './resource-session-store'
 import {
   applyWorkspacePreferencePatch,
@@ -79,7 +81,6 @@ import type {
   PlainTransferProgress,
   PlainTransferReceipt,
 } from './transfer-job-contract'
-import { createInMemoryResourceAssetsFolderGateway } from './in-memory-resource-assets-folder'
 import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
 import { createInMemoryResourcePreviewSource } from './in-memory-resource-preview'
 import { markdownToNoteYDoc } from '../notes/document/headless-yjs'
@@ -241,11 +242,18 @@ class InMemoryFileContentSource
 {
   readonly #bytes = new Map<ResourceId, Uint8Array>()
 
-  constructor(ready: ReadonlyArray<ReadyFileContent>) {
+  constructor(
+    ready: ReadonlyArray<ReadyFileContent>,
+    private readonly createAssetFile: FileContentSource['createAsset'],
+  ) {
     super({ status: 'loading' })
     for (const entry of ready) {
       this.setReady(entry.resourceId, entry.content, entry.version, entry.bytes)
     }
+  }
+
+  createAsset(source: FileResourceSource) {
+    return this.createAssetFile(source)
   }
 
   export(resourceId: ResourceId): ContentExportResult {
@@ -698,11 +706,17 @@ function exportPendingState(
   return state
 }
 
-function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
+function rejectedStructureDelivery(
+  reason: Extract<ResourceStructureCommandResult, { status: 'rejected' }>['reason'],
+): CommandDelivery<ResourceStructureCommandResult> {
   return {
     status: 'received',
-    result: { status: 'rejected', reason: 'invalid_command' },
+    result: { status: 'rejected', reason },
   }
+}
+
+function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult> {
+  return rejectedStructureDelivery('invalid_command')
 }
 
 function isCompletedCreate(
@@ -976,7 +990,10 @@ export function createInMemoryEditorRuntime({
   const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const files = new InMemoryFileContentSource(content.files ?? [])
+  let createAssetFile: FileContentSource['createAsset']
+  const files = new InMemoryFileContentSource(content.files ?? [], (source) =>
+    createAssetFile(source),
+  )
   let currentCatalogSnapshot = () => snapshot
   const maps = new InMemoryMapSessionSource(
     { status: 'loading' },
@@ -1033,11 +1050,23 @@ export function createInMemoryEditorRuntime({
     status: 'unavailable',
     reason: 'capability_not_supported',
   } as const
+  let assetsFolderId: ResourceId | null = null
   const workspaceStructure: ResourceStructureCommandGateway = {
-    execute: (envelope) =>
-      envelope.command.type === 'create' && envelope.command.kind !== 'folder'
-        ? Promise.resolve(invalidCreateDelivery())
-        : undo.structure.execute(envelope),
+    execute: (envelope) => {
+      if (envelope.command.type === 'create' && envelope.command.kind !== 'folder') {
+        return Promise.resolve(invalidCreateDelivery())
+      }
+      if (
+        assetsFolderId !== null &&
+        (envelope.command.type === 'move' ||
+          envelope.command.type === 'trash' ||
+          envelope.command.type === 'permanentlyDelete') &&
+        envelope.command.resourceIds.includes(assetsFolderId)
+      ) {
+        return Promise.resolve(rejectedStructureDelivery('protected_resource'))
+      }
+      return undo.structure.execute(envelope)
+    },
   }
   const structure = canEdit
     ? ({ status: 'available', value: workspaceStructure } as const)
@@ -1072,12 +1101,89 @@ export function createInMemoryEditorRuntime({
   const search = createInMemoryWorkspaceSearch(catalogResources, notes, async (resourceIds) => {
     await Promise.all(resourceIds.map((resourceId) => resources.loader.ensureResource(resourceId)))
   })
-  const assetsFolder = createInMemoryResourceAssetsFolderGateway({
-    campaignId: scope.campaignId,
-    readSnapshot: resources.catalogSnapshot,
-    execute: (envelope) => structureWithKindIndex.execute(envelope),
-    assign: (resourceId) => resources.assignAssetsFolder(resourceId),
-  })
+  let pendingAssetsFolder: Promise<ResourceId> | null = null
+  const resolveAssetsFolder = () => {
+    if (assetsFolderId !== null) return Promise.resolve(assetsFolderId)
+    if (pendingAssetsFolder) return pendingAssetsFolder
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    pendingAssetsFolder = structureWithKindIndex
+      .execute({
+        campaignId: scope.campaignId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'folder',
+          parentId: null,
+          title: canonicalizeResourceTitle('Assets'),
+          icon: 'Box',
+          color: null,
+        },
+      })
+      .then((delivery) => {
+        if (
+          delivery.status !== 'received' ||
+          delivery.result.status !== 'completed' ||
+          delivery.result.receipt.result.type !== 'created' ||
+          delivery.result.receipt.result.resourceId !== resourceId
+        ) {
+          throw new TypeError('Could not create the local Assets folder')
+        }
+        assetsFolderId = resourceId
+        return resourceId
+      })
+      .finally(() => {
+        pendingAssetsFolder = null
+      })
+    return pendingAssetsFolder
+  }
+  createAssetFile = async (source) => {
+    let parentId
+    try {
+      parentId = await resolveAssetsFolder()
+    } catch {
+      return { status: 'rejected', reason: 'content_integrity_failure' }
+    }
+    const metadata = classifyFileResourceSource(source)
+    if (metadata.classification === 'rejected') {
+      return { status: 'rejected', reason: 'invalid_file' }
+    }
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const delivery = await executeStructure({
+      campaignId: scope.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'file',
+        parentId,
+        title: canonicalizeResourceTitle(source.fileName || 'Untitled file'),
+        icon: null,
+        color: null,
+      },
+    })
+    if (
+      delivery.status !== 'received' ||
+      delivery.result.status !== 'completed' ||
+      delivery.result.receipt.result.type !== 'created' ||
+      delivery.result.receipt.result.resourceId !== resourceId
+    ) {
+      return {
+        status: 'rejected',
+        reason:
+          delivery.status === 'received' && delivery.result.status !== 'completed'
+            ? delivery.result.reason
+            : 'content_integrity_failure',
+      }
+    }
+    files.setReady(
+      resourceId,
+      { ...metadata, attachment: 'attached' },
+      await initialFileContentVersion(source.bytes, metadata),
+      source.bytes,
+    )
+    return { status: 'completed', resourceId }
+  }
   const previews = createInMemoryResourcePreviewSource(snapshot.resources, content.notes ?? [])
   const transfers = createInMemoryPlainTransferGateway({
     appendAlias: resources.appendAlias,
@@ -1097,9 +1203,6 @@ export function createInMemoryEditorRuntime({
         access: unsupported,
         noteBlockAccess: unsupported,
         bookmarks: { status: 'available', value: bookmarks },
-        assets: canEdit
-          ? { status: 'available', value: assetsFolder }
-          : { status: 'unavailable', reason: 'unauthorized' },
         previews: { status: 'available', value: previews.source },
         references: { status: 'available', value: references.source },
         undo: canEdit

@@ -58,11 +58,11 @@ import type * as resources_functions_accessOperation from "../resources/function
 import type * as resources_functions_assetContent from "../resources/functions/assetContent.js";
 import type * as resources_functions_assetContentState from "../resources/functions/assetContentState.js";
 import type * as resources_functions_authorizeResourceContent from "../resources/functions/authorizeResourceContent.js";
+import type * as resources_functions_campaignAssetsFolder from "../resources/functions/campaignAssetsFolder.js";
 import type * as resources_functions_campaignPlayer from "../resources/functions/campaignPlayer.js";
 import type * as resources_functions_canvasContent from "../resources/functions/canvasContent.js";
 import type * as resources_functions_contentCopyTypes from "../resources/functions/contentCopyTypes.js";
 import type * as resources_functions_contentVersion from "../resources/functions/contentVersion.js";
-import type * as resources_functions_ensureResourceAssetsFolder from "../resources/functions/ensureResourceAssetsFolder.js";
 import type * as resources_functions_executeMapContentCommand from "../resources/functions/executeMapContentCommand.js";
 import type * as resources_functions_executeNoteBlockAccessCommand from "../resources/functions/executeNoteBlockAccessCommand.js";
 import type * as resources_functions_executeResourceAccessCommand from "../resources/functions/executeResourceAccessCommand.js";
@@ -201,11 +201,11 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/assetContent": typeof resources_functions_assetContent;
   "resources/functions/assetContentState": typeof resources_functions_assetContentState;
   "resources/functions/authorizeResourceContent": typeof resources_functions_authorizeResourceContent;
+  "resources/functions/campaignAssetsFolder": typeof resources_functions_campaignAssetsFolder;
   "resources/functions/campaignPlayer": typeof resources_functions_campaignPlayer;
   "resources/functions/canvasContent": typeof resources_functions_canvasContent;
   "resources/functions/contentCopyTypes": typeof resources_functions_contentCopyTypes;
   "resources/functions/contentVersion": typeof resources_functions_contentVersion;
-  "resources/functions/ensureResourceAssetsFolder": typeof resources_functions_ensureResourceAssetsFolder;
   "resources/functions/executeMapContentCommand": typeof resources_functions_executeMapContentCommand;
   "resources/functions/executeNoteBlockAccessCommand": typeof resources_functions_executeNoteBlockAccessCommand;
   "resources/functions/executeResourceAccessCommand": typeof resources_functions_executeResourceAccessCommand;

@@ -20,7 +20,11 @@ import type { VersionStamp } from '@wizard-archive/editor/resources/component-ve
 import type { FileOwnedMetadata } from '@wizard-archive/editor/resources/file-content-contract'
 import { assertContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type { SourcePathAlias } from '@wizard-archive/editor/resources/catalog-contract'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  generateDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignInternalMutation, campaignMutation, dmMutation } from '../functions'
 import type { CampaignInternalMutationCtx, CampaignMutationCtx } from '../functions'
@@ -31,6 +35,7 @@ import {
 } from './functions/executeStructureCommand'
 import {
   fileOwnedMetadataValidators,
+  fileAssetCreationResultValidator,
   fileContentReplaceResultValidator,
   mapContentMutationResultValidator,
   mapContentCommandValidator,
@@ -47,7 +52,6 @@ import {
   resourcePresenceHeartbeatResultValidator,
   resourcePresenceReleaseResultValidator,
   resourcePresenceUpdateResultValidator,
-  resourceAssetsFolderResolutionValidator,
   versionStampValidator,
   plainTransferManifestEntryValidator,
   plainTransferPlanSnapshotValidator,
@@ -88,7 +92,10 @@ import {
   appendResourceSourcePathAlias,
   findResourceSourcePathAlias,
 } from './functions/resourceCatalogMetadata'
-import { ensureResourceAssetsFolder as ensureResourceAssetsFolderFn } from './functions/ensureResourceAssetsFolder'
+import {
+  createCampaignAssetsFolder,
+  requireCampaignAssetsFolder,
+} from './functions/campaignAssetsFolder'
 import {
   cancelPlainTransfer as cancelPlainTransferFn,
   finishPlainTransfer as finishPlainTransferFn,
@@ -104,6 +111,9 @@ import {
   recordItemHistoryEvent,
   restoreItemHistoryCheckpoint as restoreItemHistoryCheckpointFn,
 } from './functions/itemHistory'
+import { getUserUploadSession } from '../storage/functions/getUserUploadSession'
+import { CAMPAIGN_MEMBER_ROLE } from '../../shared/campaigns/types'
+import { findCanonicalResource } from './functions/findCanonicalResource'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 type StoredResourceCompensationResult = Infer<typeof resourceCompensationResultValidator>
@@ -115,6 +125,7 @@ type StoredResourceStructureCommand = Infer<typeof resourceStructureCommandValid
 type StoredResourceAccessCommand = Infer<typeof resourceAccessCommandValidator>
 type StoredNoteBlockAccessCommand = Infer<typeof noteBlockAccessCommandValidator>
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
+type StoredFileAssetCreationResult = Infer<typeof fileAssetCreationResultValidator>
 type StoredVersionStamp = Infer<typeof versionStampValidator>
 
 type FileResourceCreationArgs = Readonly<{
@@ -392,15 +403,6 @@ export const executeStructureCommand = campaignMutation({
     })
     return storedResult(result)
   },
-})
-
-export const ensureResourceAssetsFolder = dmMutation({
-  args: {
-    operationId: operationIdValidator,
-    resourceId: resourceIdValidator,
-  },
-  returns: resourceAssetsFolderResolutionValidator,
-  handler: async (ctx, args) => await ensureResourceAssetsFolderFn(ctx, args),
 })
 
 export const compensateResourceOperation = campaignMutation({
@@ -948,6 +950,137 @@ async function commitFreshFileCreation(
   })
   await appendResourceSourcePathAlias(ctx, alias)
   return storedResult(result)
+}
+
+export const commitAssetFileCreation = campaignInternalMutation({
+  args: {
+    uploadSessionId: v.id('fileStorage'),
+    metadata: v.object(fileOwnedMetadataValidators),
+    version: versionStampValidator,
+  },
+  returns: fileAssetCreationResultValidator,
+  handler: async (ctx, args): Promise<StoredFileAssetCreationResult> => {
+    if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+      return { status: 'rejected', reason: 'unauthorized' }
+    }
+    const upload = await getUserUploadSession(ctx, args.uploadSessionId, ctx.membership.userId)
+    if (!upload || upload.assetUuid === null || upload.storageId === null) {
+      return { status: 'rejected', reason: 'invalid_file' }
+    }
+    const version = assertVersionStamp(args.version)
+    if (version.revision !== 1) return { status: 'rejected', reason: 'invalid_file' }
+    if (upload.status === 'committed') {
+      return await replayAssetFileCreation(ctx, upload, args.metadata, version)
+    }
+
+    let parentId
+    try {
+      parentId = await resolveCampaignAssetsFolder(ctx)
+    } catch {
+      return { status: 'rejected', reason: 'content_integrity_failure' }
+    }
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const claim = await prepareResourceUploadClaim(ctx, {
+      campaignId: ctx.resourceScope.campaignId,
+      resourceId,
+      sessionId: args.uploadSessionId,
+    })
+    if (claim.status !== 'available') return { status: 'rejected', reason: 'invalid_file' }
+    let title
+    try {
+      title = canonicalizeResourceTitle(upload.originalFileName ?? 'Untitled file')
+    } catch {
+      return { status: 'rejected', reason: 'invalid_file' }
+    }
+    const result = await executeStructureCommandFn(ctx, {
+      operationId,
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'file',
+        parentId,
+        title,
+        icon: null,
+        color: null,
+      },
+    })
+    if (result.status !== 'completed') {
+      return { status: 'rejected', reason: result.reason }
+    }
+    const committed = await commitResourceUploadClaim(ctx, claim, {
+      campaignId: ctx.resourceScope.campaignId,
+      resourceId,
+      expectedByteSize: args.metadata.byteSize,
+    })
+    await ctx.db.insert('resourceFileContents', {
+      campaignUuid: ctx.resourceScope.campaignId,
+      resourceUuid: resourceId,
+      state: 'ready',
+      assetUuid: committed.assetId,
+      ...args.metadata,
+      version,
+    })
+    return { status: 'completed', resourceId }
+  },
+})
+
+async function resolveCampaignAssetsFolder(ctx: CampaignInternalMutationCtx): Promise<ResourceId> {
+  const { campaignId, actorId } = ctx.resourceScope
+  if (ctx.campaign.assetsFolderUuid !== undefined) {
+    return await requireCampaignAssetsFolder(
+      ctx,
+      campaignId,
+      assertDomainId(DOMAIN_ID_KIND.resource, ctx.campaign.assetsFolderUuid),
+    )
+  }
+  const resourceId = await createCampaignAssetsFolder(
+    ctx,
+    campaignId,
+    actorId,
+    ctx.campaign.resourceAccessDefaults.folderInheritance,
+  )
+  await ctx.db.patch('campaigns', ctx.campaign._id, { assetsFolderUuid: resourceId })
+  return resourceId
+}
+
+async function replayAssetFileCreation(
+  ctx: CampaignInternalMutationCtx,
+  upload: Doc<'fileStorage'>,
+  metadata: FileOwnedMetadata,
+  version: VersionStamp,
+): Promise<StoredFileAssetCreationResult> {
+  const owner = await ctx.db
+    .query('resourceAssetOwners')
+    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetUuid!))
+    .unique()
+  if (!owner || owner.campaignUuid !== ctx.resourceScope.campaignId) {
+    return { status: 'rejected', reason: 'invalid_file' }
+  }
+  const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, owner.resourceUuid)
+  const [resource, content] = await Promise.all([
+    findCanonicalResource(ctx.db, resourceId),
+    ctx.db
+      .query('resourceFileContents')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+      .unique(),
+  ])
+  if (
+    !resource ||
+    resource.campaignUuid !== ctx.resourceScope.campaignId ||
+    resource.kind !== 'file' ||
+    !content ||
+    !existingFileContentMatches(content, {
+      campaignId: ctx.resourceScope.campaignId,
+      metadata,
+      upload,
+      userId: ctx.membership.userId,
+      version,
+    })
+  ) {
+    return { status: 'rejected', reason: 'invalid_file' }
+  }
+  return { status: 'completed', resourceId }
 }
 
 export const commitFileContentReplacement = campaignInternalMutation({

@@ -643,6 +643,16 @@ function structuredResult(
   }
 }
 
+function targetsProtectedCampaignResource(
+  command: ResourceStructureCommand,
+  protectedResourceId: ResourceId,
+) {
+  return (
+    (command.type === 'move' || command.type === 'trash' || command.type === 'permanentlyDelete') &&
+    command.resourceIds.includes(protectedResourceId)
+  )
+}
+
 async function applyCommand(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
@@ -699,6 +709,12 @@ async function execute(
   ])
   const replay = replayStoredOperation(stored, actorId, fingerprint)
   if (replay) return replay
+  if (ctx.campaign.assetsFolderUuid !== undefined) {
+    const assetsFolderId = assertDomainId(DOMAIN_ID_KIND.resource, ctx.campaign.assetsFolderUuid)
+    if (targetsProtectedCampaignResource(command, assetsFolderId)) {
+      return { status: 'rejected', reason: 'protected_resource' }
+    }
+  }
 
   try {
     const applied = await applyCommand(ctx, campaignId, actorId, operationId, command)

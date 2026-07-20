@@ -51,7 +51,6 @@ async function historyPreviewFixture(state: ItemHistoryState) {
       resources: [resource],
       tombstones: [],
       aliases: [],
-      assetsFolderId: null,
     },
     navigation,
   })

@@ -59,14 +59,12 @@ export type InMemoryResourceOperationsOptions<TContentCopyPlan = never> = Readon
 interface InMemoryResourceOperations
   extends AuthoritativeResourceOperationExecutor, AuthoritativeResourceCompensationExecutor {
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
-  assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void>
 }
 
 type CatalogState = {
   resources: Map<ResourceId, ResourceRecord>
   tombstones: Map<ResourceId, ResourceTombstone>
   aliases: Map<ResourceId, Array<SourcePathAlias>>
-  assetsFolders: Map<CampaignId, ResourceId>
 }
 
 type InMemoryResourceCatalogBackend = {
@@ -81,7 +79,6 @@ function emptyCatalogState(): CatalogState {
     resources: new Map(),
     tombstones: new Map(),
     aliases: new Map(),
-    assetsFolders: new Map(),
   }
 }
 
@@ -92,7 +89,6 @@ function cloneCatalogState(state: CatalogState): CatalogState {
     aliases: new Map(
       Array.from(state.aliases, ([resourceId, aliases]) => [resourceId, [...aliases]]),
     ),
-    assetsFolders: new Map(state.assetsFolders),
   }
 }
 
@@ -148,22 +144,12 @@ function addSnapshotAliases(state: CatalogState, snapshot: ResourceCatalogSnapsh
   }
 }
 
-function addSnapshotAssetsFolder(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
-  if (snapshot.assetsFolderId === null) return
-  const resource = state.resources.get(snapshot.assetsFolderId)
-  if (!resource || resource.campaignId !== snapshot.campaignId || resource.kind !== 'folder') {
-    throw new TypeError('Invalid initial resource catalog assets folder')
-  }
-  state.assetsFolders.set(snapshot.campaignId, snapshot.assetsFolderId)
-}
-
 function catalogStateFromSnapshot(snapshot: ResourceCatalogSnapshot): CatalogState {
   const state = emptyCatalogState()
   addSnapshotResources(state, snapshot)
   addSnapshotTombstones(state, snapshot)
   validateSnapshotHierarchy(state, snapshot.campaignId)
   addSnapshotAliases(state, snapshot)
-  addSnapshotAssetsFolder(state, snapshot)
   return state
 }
 
@@ -287,7 +273,6 @@ export class InMemoryResourceCatalog {
         .flat()
         .filter((alias) => alias.campaignId === campaignId)
         .sort(byAlias),
-      assetsFolderId: backend.state.assetsFolders.get(campaignId) ?? null,
     } satisfies ResourceCatalogSnapshot
     backend.snapshotCache.set(campaignId, snapshot)
     return snapshot
@@ -337,19 +322,6 @@ class InMemoryResourceOperationExecutor<
       this.#backend.state.aliases.set(alias.resourceId, [...current, alias])
       this.#publish(alias.campaignId)
       return alias
-    })
-  }
-
-  assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void> {
-    return this.#enqueue(() => {
-      if (resourceId !== null) {
-        const resource = ownedResource(this.#backend.state, campaignId, resourceId)
-        if (resource.kind !== 'folder') throw new TypeError('Assets must be assigned to a folder')
-      }
-      if ((this.#backend.state.assetsFolders.get(campaignId) ?? null) === resourceId) return
-      if (resourceId === null) this.#backend.state.assetsFolders.delete(campaignId)
-      else this.#backend.state.assetsFolders.set(campaignId, resourceId)
-      this.#publish(campaignId)
     })
   }
 
@@ -679,11 +651,6 @@ class InMemoryResourceOperationExecutor<
     for (const resourceId of transition.deletedResourceIds) {
       state.resources.delete(resourceId)
       state.aliases.delete(resourceId)
-    }
-    const deletedIds = new Set(transition.deletedResourceIds)
-    const assetsFolderId = state.assetsFolders.get(envelope.campaignId)
-    if (assetsFolderId !== undefined && deletedIds.has(assetsFolderId)) {
-      state.assetsFolders.delete(envelope.campaignId)
     }
     return { status: 'completed', receipt: transition.receipt }
   }

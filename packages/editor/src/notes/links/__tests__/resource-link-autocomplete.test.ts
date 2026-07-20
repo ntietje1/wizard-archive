@@ -116,7 +116,6 @@ async function runtimeFixture() {
       resources: [source, note, map],
       tombstones: [],
       aliases: [],
-      assetsFolderId: null,
     },
     content: {
       notes: [

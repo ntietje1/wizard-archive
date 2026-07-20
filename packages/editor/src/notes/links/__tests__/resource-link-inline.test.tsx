@@ -40,7 +40,6 @@ describe('NoteResourceLinkInline', () => {
         ],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: navigation(open),
     })

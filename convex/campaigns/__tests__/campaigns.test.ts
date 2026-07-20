@@ -61,6 +61,21 @@ describe('createCampaign', () => {
       expect(campaign!.status).toBe('Active')
       expect(campaign!.acceptedMemberCount).toBe(1)
       expect(isUuidV7(campaign!.campaignUuid)).toBe(true)
+      expect(isUuidV7(campaign!.assetsFolderUuid!)).toBe(true)
+      const assetsFolder = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) =>
+          query.eq('resourceUuid', campaign!.assetsFolderUuid!),
+        )
+        .unique()
+      expect(assetsFolder).toMatchObject({
+        campaignUuid: campaign!.campaignUuid,
+        parentResourceUuid: null,
+        kind: 'folder',
+        title: 'Assets',
+        icon: 'Box',
+        lifecycle: 'active',
+      })
 
       const members = await ctx.db
         .query('campaignMembers')

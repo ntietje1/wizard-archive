@@ -74,7 +74,6 @@ export function createSampleLocalWorkspaceFixture({
       resources: sampleResources(),
       tombstones: [],
       aliases: [],
-      assetsFolderId: null,
     },
     content: {
       notes: [

@@ -71,7 +71,6 @@ describe('ResourceRightSidebar note outline', () => {
         resources: [resource],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       content: { notes: [{ resourceId, content: noteDocument, version }] },
       navigation,
@@ -158,7 +157,6 @@ describe('ResourceRightSidebar references', () => {
         resources: records,
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       content: {
         notes: [
@@ -261,7 +259,6 @@ describe('ResourceRightSidebar item history', () => {
         resources: [resource],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation,
     })

@@ -22,6 +22,7 @@ import { internal } from '../_generated/api'
 import type { Id } from '../_generated/dataModel'
 import {
   fileContentReplaceResultValidator,
+  fileAssetCreationResultValidator,
   mapContentMutationResultValidator,
   plainTransferReceiptValidator,
   versionStampValidator,
@@ -307,6 +308,25 @@ function pathDepth(path: string): number {
 }
 
 type StoredFileContentReplaceResult = Infer<typeof fileContentReplaceResultValidator>
+type StoredFileAssetCreationResult = Infer<typeof fileAssetCreationResultValidator>
+
+export const createAssetFile = action({
+  args: {
+    campaignId: v.string(),
+    uploadSessionId: v.id('fileStorage'),
+  },
+  returns: fileAssetCreationResultValidator,
+  handler: async (ctx, args): Promise<StoredFileAssetCreationResult> => {
+    const upload = await loadClassifiedFileUpload(ctx, args.campaignId, args.uploadSessionId)
+    if (!upload) return { status: 'rejected', reason: 'invalid_file' }
+    return await ctx.runMutation(internal.resources.mutations.commitAssetFileCreation, {
+      campaignId: upload.upload.campaignId,
+      uploadSessionId: args.uploadSessionId,
+      metadata: upload.metadata,
+      version: await initialFileContentVersion(upload.bytes, upload.metadata),
+    })
+  },
+})
 
 export const replaceFileContent = action({
   args: {

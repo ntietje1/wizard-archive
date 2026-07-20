@@ -9,6 +9,7 @@ import { prepareCampaignName } from '../validation'
 import type { AuthMutationCtx } from '../../functions'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
+import { createCampaignAssetsFolder } from '../../resources/functions/campaignAssetsFolder'
 
 export async function createCampaign(
   ctx: AuthMutationCtx,
@@ -25,9 +26,12 @@ export async function createCampaign(
 
   const profile = ctx.user.profile
   const campaignUuid = generateDomainId(DOMAIN_ID_KIND.campaign)
+  const campaignMemberUuid = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+  const assetsFolderUuid = generateDomainId(DOMAIN_ID_KIND.resource)
 
   const campaignId = await ctx.db.insert('campaigns', {
     campaignUuid,
+    assetsFolderUuid,
     name: preparedName,
     description: preparedDescription ?? '',
     dmUserId: profile._id,
@@ -38,12 +42,19 @@ export async function createCampaign(
   })
 
   await ctx.db.insert('campaignMembers', {
-    campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+    campaignMemberUuid,
     userId: profile._id,
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.DM,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
   })
+  await createCampaignAssetsFolder(
+    ctx,
+    campaignUuid,
+    campaignMemberUuid,
+    DEFAULT_RESOURCE_ACCESS_DEFAULTS.folderInheritance,
+    assetsFolderUuid,
+  )
 
   return campaignUuid
 }

@@ -1625,7 +1625,6 @@ async function shellRuntime(
       resources: [resource],
       tombstones: [],
       aliases: [],
-      assetsFolderId: null,
     },
     ...(kind === 'note'
       ? {

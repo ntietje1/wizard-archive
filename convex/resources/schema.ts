@@ -907,6 +907,11 @@ export const fileContentReplaceResultValidator = v.union(
   }),
 )
 
+export const fileAssetCreationResultValidator = v.union(
+  v.object({ status: v.literal('completed'), resourceId: resourceIdValidator }),
+  v.object({ status: v.literal('rejected'), reason: v.string() }),
+)
+
 export const resourceProjectionScopeValidator = v.object({
   campaignId: campaignIdValidator,
   actorId: campaignMemberIdValidator,
@@ -1121,6 +1126,7 @@ export const resourceStructureCommandResultValidator = v.union(
       'hierarchy_cycle',
       'invalid_lifecycle',
       'invalid_root_selection',
+      'protected_resource',
       'closure_too_large',
       'content_unavailable',
       'content_integrity_failure',
@@ -1131,38 +1137,6 @@ export const resourceStructureCommandResultValidator = v.union(
   v.object({
     status: v.literal('unavailable'),
     reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
-  }),
-)
-
-export const resourceAssetsFolderResolutionValidator = v.union(
-  v.object({
-    status: v.literal('completed'),
-    resourceId: resourceIdValidator,
-  }),
-  v.object({
-    status: v.literal('rejected'),
-    reason: literals(
-      'integrity_error',
-      'invalid_command',
-      'invalid_uuid',
-      'invalid_title',
-      'ownership_mismatch',
-      'unauthorized',
-      'resource_missing',
-      'invalid_parent',
-      'invalid_parent_kind',
-      'hierarchy_cycle',
-      'invalid_lifecycle',
-      'invalid_root_selection',
-      'closure_too_large',
-      'content_unavailable',
-      'content_integrity_failure',
-      'version_exhausted',
-      'operation_id_reused',
-      'capability_not_supported',
-      'dependency_unavailable',
-      'scope_unavailable',
-    ),
   }),
 )
 
@@ -1435,13 +1409,6 @@ export const resourceTables = {
       'sourceRootId',
       'normalizedPath',
     ]),
-
-  resourceAssetsFolders: defineTable({
-    campaignUuid: campaignIdValidator,
-    resourceUuid: resourceIdValidator,
-  })
-    .index('by_campaign', ['campaignUuid'])
-    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceOperations: defineTable({
     campaignUuid: campaignIdValidator,

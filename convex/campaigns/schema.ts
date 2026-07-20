@@ -19,6 +19,7 @@ export const campaignMemberIdValidator = v.string()
 
 const campaignFields = {
   campaignUuid: campaignIdValidator,
+  assetsFolderUuid: v.optional(v.string()),
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),

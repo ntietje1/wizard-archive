@@ -178,16 +178,8 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
     return aliases.map(toAlias)
   }
 
-  async getAssetsFolder(campaignId: CampaignId): Promise<ResourceId | null> {
-    const assignment = await this.db
-      .query('resourceAssetsFolders')
-      .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-      .unique()
-    return assignment ? assertDomainId(DOMAIN_ID_KIND.resource, assignment.resourceUuid) : null
-  }
-
   async readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
-    const [resources, tombstones, aliases, assetsFolderId] = await Promise.all([
+    const [resources, tombstones, aliases] = await Promise.all([
       this.db
         .query('resources')
         .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
@@ -200,14 +192,12 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
         .query('resourceSourcePathAliases')
         .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
         .collect(),
-      this.getAssetsFolder(campaignId),
     ])
     return {
       campaignId,
       resources: resources.map(resourceRecordFromRow),
       tombstones: tombstones.map(toTombstone),
       aliases: aliases.map(toAlias),
-      assetsFolderId,
     }
   }
 }

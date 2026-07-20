@@ -42,7 +42,6 @@ describe('resource application workflows', () => {
         resources,
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: navigation(resources[0]!.id),
     })
@@ -88,7 +87,6 @@ describe('resource application workflows', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
@@ -139,7 +137,6 @@ describe('resource application workflows', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: { ...navigation(generateDomainId(DOMAIN_ID_KIND.resource)), open },
     })
@@ -208,7 +205,6 @@ describe('resource application workflows', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: navigationGateway,
     })
@@ -237,7 +233,7 @@ describe('resource application workflows', () => {
     core.dispose()
   })
 
-  it('replays a committed transfer after response loss even when the initiating surface aborts', async () => {
+  it('replays an authored upload after response loss even when the initiating surface aborts', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const core = createInMemoryEditorRuntime({
@@ -248,26 +244,32 @@ describe('resource application workflows', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
-    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
-    const transfers = core.runtime.transfers.value
-    let attempts = 0
-    let committedDelivery: Awaited<ReturnType<typeof transfers.execute>> | null = null
-    const commitTransfer = vi.fn((...args: Parameters<typeof transfers.execute>) =>
-      transfers.execute(...args),
-    )
-    const execute = vi.fn(async (...args: Parameters<typeof transfers.execute>) => {
-      attempts += 1
-      if (attempts > 1 && committedDelivery) return committedDelivery
-      committedDelivery = await commitTransfer(...args)
-      return { status: 'indeterminate', reason: 'response_lost' } as const
-    })
+    const createAsset = core.runtime.content.files.createAsset.bind(core.runtime.content.files)
+    const retry = vi.fn(createAsset)
     const runtime = {
       ...core.runtime,
-      transfers: { status: 'available' as const, value: { execute } },
+      content: {
+        ...core.runtime.content,
+        files: {
+          createAsset: vi.fn((source) =>
+            Promise.resolve({
+              status: 'retryable' as const,
+              reason: 'response_lost' as const,
+              retry: () => retry(source),
+            }),
+          ),
+          dispose: () => core.runtime.content.files.dispose(),
+          export: (resourceId) => core.runtime.content.files.export(resourceId),
+          get: (resourceId) => core.runtime.content.files.get(resourceId),
+          replace: (resourceId, version, source) =>
+            core.runtime.content.files.replace(resourceId, version, source),
+          subscribe: (resourceId, listener) =>
+            core.runtime.content.files.subscribe(resourceId, listener),
+        },
+      },
     } satisfies EditorRuntime
     const controller = new AbortController()
     const settlement = await createWorkspaceActions(runtime, vi.fn()).createAssetFile(
@@ -282,10 +284,8 @@ describe('resource application workflows', () => {
     const replay = await settlement.retry()
 
     if (replay.status !== 'completed') throw new Error('Expected a completed replay')
-    expect(execute).toHaveBeenCalledTimes(2)
-    expect(commitTransfer).toHaveBeenCalledOnce()
-    expect(execute.mock.calls[1]?.[0]).toEqual(execute.mock.calls[0]?.[0])
-    expect(execute.mock.calls[1]?.[3]).toBeUndefined()
+    expect(runtime.content.files.createAsset).toHaveBeenCalledOnce()
+    expect(retry).toHaveBeenCalledOnce()
     const file = runtime.resources.index.getSnapshot().lookup(replay.resourceId)
     expect(file).toMatchObject({ state: 'known', value: { kind: 'file', title: 'Once.txt' } })
     if (file.state !== 'known' || file.value.displayParentId === null) {
@@ -305,7 +305,6 @@ describe('resource application workflows', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
@@ -331,6 +330,19 @@ describe('resource application workflows', () => {
     expect(snapshot.lookup(assetsFolderId)).toMatchObject({
       state: 'known',
       value: { kind: 'folder', title: 'Assets', displayParentId: null, icon: 'Box' },
+    })
+    if (core.runtime.resources.structure.status !== 'available') {
+      throw new TypeError('Expected editable structure')
+    }
+    await expect(
+      core.runtime.resources.structure.value.execute({
+        campaignId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: { type: 'trash', resourceIds: [assetsFolderId] },
+      }),
+    ).resolves.toEqual({
+      status: 'received',
+      result: { status: 'rejected', reason: 'protected_resource' },
     })
     core.dispose()
   })

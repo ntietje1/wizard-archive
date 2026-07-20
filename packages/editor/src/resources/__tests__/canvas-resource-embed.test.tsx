@@ -284,6 +284,7 @@ describe('CanvasResourceEmbed', () => {
       version,
     }
     const files = {
+      createAsset: () => Promise.resolve({ status: 'rejected' as const, reason: 'unsupported' }),
       get: () => fileState,
       subscribe: () => () => {},
       export: exportFile,
@@ -637,6 +638,7 @@ function previewRuntime({
     suppliedFiles ??
     ({
       ...unavailable,
+      createAsset: () => Promise.resolve({ status: 'rejected' as const, reason: 'unsupported' }),
       export: () => ({
         status: 'unavailable' as const,
         reason: 'capability_not_supported' as const,
@@ -667,7 +669,6 @@ function previewRuntime({
       access: unsupported,
       noteBlockAccess: unsupported,
       bookmarks: unsupported,
-      assets: unsupported,
       previews: unsupported,
       references: unsupported,
       undo: unsupported,

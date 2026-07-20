@@ -28,7 +28,6 @@ type ResourceDeletionPlan = {
   noteBlockAccessCleanupIntents: Array<Doc<'noteBlockAccessCleanupIntents'>>
   itemHistoryCaptureIntents: Array<Doc<'itemHistoryCaptureIntents'>>
   aliases: Array<Doc<'resourceSourcePathAliases'>>
-  assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
   fileContents: Array<Doc<'resourceFileContents'>>
   mapContents: Array<Doc<'resourceMapContents'>>
@@ -53,7 +52,6 @@ function createPlan(campaignId: CampaignId): ResourceDeletionPlan {
     noteBlockAccessCleanupIntents: [],
     itemHistoryCaptureIntents: [],
     aliases: [],
-    assetsFolders: [],
     noteContents: [],
     fileContents: [],
     mapContents: [],
@@ -83,7 +81,6 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.noteBlockAccessCleanupIntents,
     plan.itemHistoryCaptureIntents,
     plan.aliases,
-    plan.assetsFolders,
     plan.noteContents,
     plan.fileContents,
     plan.mapContents,
@@ -202,14 +199,6 @@ export async function planResourceDeletion(
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
-    plan.assetsFolders.push(
-      ...(await ctx.db
-        .query('resourceAssetsFolders')
-        .withIndex('by_campaign_and_resource', (query) =>
-          query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
-        )
-        .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
-    )
     plan.assetCopyIntents.push(
       ...(await ctx.db
         .query('resourceAssetCopyIntents')
@@ -278,7 +267,6 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'accessOperations',
   'tombstones',
   'transferMetadata',
-  'assetsFolders',
   'operations',
   'noteContents',
   'fileContents',
@@ -311,7 +299,6 @@ type CampaignResourceRow =
   | Doc<'resourceTransferEntries'>
   | Doc<'resourceTransferJobs'>
   | Doc<'resourceSourcePathAliases'>
-  | Doc<'resourceAssetsFolders'>
   | Doc<'resourceOperations'>
   | Doc<'resourceNoteContents'>
   | Doc<'resourceFileContents'>
@@ -408,11 +395,6 @@ async function loadCampaignResourceDeletionBatch(
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'transferMetadata':
       return await loadCampaignTransferMetadataDeletionBatch(ctx, campaignId)
-    case 'assetsFolders':
-      return await ctx.db
-        .query('resourceAssetsFolders')
-        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'operations':
       return await ctx.db
         .query('resourceOperations')

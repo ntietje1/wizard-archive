@@ -54,7 +54,6 @@ describe('in-memory resource runtime', () => {
       ],
       tombstones: [],
       aliases: [],
-      assetsFolderId: null,
     }
     const runtime = createInMemoryResourceRuntime({
       scope,
@@ -96,7 +95,6 @@ describe('in-memory resource runtime', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        assetsFolderId: null,
       },
       authorize: () => authorization,
       now: () => 10,

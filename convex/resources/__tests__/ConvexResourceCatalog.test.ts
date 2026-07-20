@@ -30,10 +30,7 @@ import type {
 } from '../../../shared/test/resource-catalog-conformance'
 import { ConvexResourceCatalog } from '../functions/ConvexResourceCatalog'
 import { executeStructureCommand } from '../functions/executeStructureCommand'
-import {
-  assignResourceAssetsFolder,
-  appendResourceSourcePathAlias,
-} from '../functions/resourceCatalogMetadata'
+import { appendResourceSourcePathAlias } from '../functions/resourceCatalogMetadata'
 
 const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) => {
   const test = createTestContext()
@@ -50,10 +47,6 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).getTombstone(...args)),
     listAliases: async (...args) =>
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).listAliases(...args)),
-    getAssetsFolder: async (...args) =>
-      await test.run(
-        async (ctx) => await new ConvexResourceCatalog(ctx.db).getAssetsFolder(...args),
-      ),
     readSnapshot: async (...args) =>
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).readSnapshot(...args)),
   }
@@ -96,13 +89,6 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
       },
       appendAlias: async (alias: Parameters<typeof appendResourceSourcePathAlias>[1]) =>
         await test.run(async (ctx) => await appendResourceSourcePathAlias(ctx, alias)),
-      assignAssetsFolder: async (
-        campaignId: Parameters<typeof assignResourceAssetsFolder>[1],
-        resourceId: Parameters<typeof assignResourceAssetsFolder>[2],
-      ) =>
-        await test.run(
-          async (ctx) => await assignResourceAssetsFolder(ctx, campaignId, resourceId),
-        ),
     },
   } as unknown as ResourceCatalogConformanceRuntime
 }

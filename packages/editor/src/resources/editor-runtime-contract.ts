@@ -16,9 +16,7 @@ import type {
 } from './domain-id'
 import type { CanonicalTarget } from './authored-destination-contract'
 import type {
-  CapabilityUnavailableReason,
   ResourceAccessCommandGateway,
-  ResourceStructureRejection,
   ResourceStructureCommandGateway,
   NoteBlockAccessCommandGateway,
 } from './resource-command-contract'
@@ -117,17 +115,6 @@ export type ResourceReferenceState =
 export interface ResourceReferenceSource {
   get(resourceId: ResourceId): ResourceReferenceState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
-}
-
-export type ResourceAssetsFolderResolution =
-  | Readonly<{ status: 'completed'; resourceId: ResourceId }>
-  | Readonly<{
-      status: 'rejected'
-      reason: ResourceStructureRejection | CapabilityUnavailableReason | 'integrity_error'
-    }>
-
-export interface ResourceAssetsFolderGateway {
-  ensure(): Promise<ResourceAssetsFolderResolution>
 }
 
 export interface ResourceNavigation {
@@ -388,7 +375,6 @@ export interface EditorRuntime {
     readonly access: ResourceCapability<ResourceAccessGateway>
     readonly noteBlockAccess: ResourceCapability<NoteBlockAccessGateway>
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
-    readonly assets: ResourceCapability<ResourceAssetsFolderGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>
     readonly references: ResourceCapability<ResourceReferenceSource>
     readonly undo: ResourceCapability<ResourceUndoHistory>

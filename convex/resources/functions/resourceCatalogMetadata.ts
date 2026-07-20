@@ -69,31 +69,3 @@ export async function findResourceSourcePathAlias(
     .unique()
   return row ? sourcePathAliasFromRow(row) : null
 }
-
-export async function assignResourceAssetsFolder(
-  ctx: MutationCtx,
-  campaignId: CampaignId,
-  resourceId: ResourceId | null,
-): Promise<void> {
-  if (resourceId !== null) {
-    const resource = await requireOwnedResource(ctx, campaignId, resourceId)
-    if (resource.kind !== 'folder') throw new TypeError('Assets must be assigned to a folder')
-  }
-  const existing = await ctx.db
-    .query('resourceAssetsFolders')
-    .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
-    .unique()
-  if (existing?.resourceUuid === resourceId || (!existing && resourceId === null)) return
-  if (resourceId === null) {
-    if (existing) await ctx.db.delete('resourceAssetsFolders', existing._id)
-    return
-  }
-  if (existing) {
-    await ctx.db.patch('resourceAssetsFolders', existing._id, { resourceUuid: resourceId })
-    return
-  }
-  await ctx.db.insert('resourceAssetsFolders', {
-    campaignUuid: campaignId,
-    resourceUuid: resourceId,
-  })
-}

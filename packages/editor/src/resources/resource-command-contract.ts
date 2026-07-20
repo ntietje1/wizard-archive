@@ -136,6 +136,7 @@ export type ResourceStructureRejection =
   | 'hierarchy_cycle'
   | 'invalid_lifecycle'
   | 'invalid_root_selection'
+  | 'protected_resource'
   | 'closure_too_large'
   | 'content_unavailable'
   | 'content_integrity_failure'

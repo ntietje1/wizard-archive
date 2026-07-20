@@ -19,7 +19,7 @@ import { findCanonicalResource } from './findCanonicalResource'
 import { resourceRecordFromRow } from './resourceRecordRow'
 
 export async function syncResourceSearchProjection(
-  ctx: CampaignMutationCtx,
+  ctx: Pick<CampaignMutationCtx, 'db'>,
   resource: ResourceRecord,
   noteProjection?: Readonly<{ body: string; preview: ResourcePreview }>,
 ): Promise<void> {
@@ -113,14 +113,20 @@ export async function syncNoteSearchProjection(
   )
 }
 
-async function findResourceSearchDocument(ctx: CampaignMutationCtx, resourceId: ResourceId) {
+async function findResourceSearchDocument(
+  ctx: Pick<CampaignMutationCtx, 'db'>,
+  resourceId: ResourceId,
+) {
   return await ctx.db
     .query('resourceSearchDocuments')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
 }
 
-async function loadNoteSearchProjection(ctx: CampaignMutationCtx, resourceId: ResourceId) {
+async function loadNoteSearchProjection(
+  ctx: Pick<CampaignMutationCtx, 'db'>,
+  resourceId: ResourceId,
+) {
   const content = await ctx.db
     .query('resourceNoteContents')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))

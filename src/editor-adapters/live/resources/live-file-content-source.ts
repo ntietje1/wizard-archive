@@ -12,6 +12,7 @@ import type {
   FileResourceSource,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
@@ -19,6 +20,8 @@ import type { LiveResourceContentAuthority } from './live-resource-content-autho
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 type ReplaceFileArgs = FunctionArgs<typeof api.resources.actions.replaceFileContent>
 type ReplaceFileResult = FunctionReturnType<typeof api.resources.actions.replaceFileContent>
+type CreateAssetFileArgs = FunctionArgs<typeof api.resources.actions.createAssetFile>
+type CreateAssetFileResult = FunctionReturnType<typeof api.resources.actions.createAssetFile>
 type FileSnapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 
 type LiveFileContentBackend = Readonly<{
@@ -26,6 +29,7 @@ type LiveFileContentBackend = Readonly<{
   watch(resourceId: ResourceId, apply: (snapshot: FileSnapshot) => void): () => void
   download(resourceId: ResourceId): Promise<FileDownloadResult>
   discard(sessionId: Id<'fileStorage'>): Promise<void>
+  createAsset(args: CreateAssetFileArgs): Promise<CreateAssetFileResult>
   replace(args: ReplaceFileArgs): Promise<ReplaceFileResult>
   upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
 }>
@@ -114,6 +118,30 @@ export function createLiveFileContentSource(
         extension: state.content.extension ?? 'bin',
         mediaType: state.content.mediaType,
       }
+    },
+    createAsset: async (source) => {
+      let sessionId: Id<'fileStorage'>
+      try {
+        sessionId = await backend.upload(source)
+      } catch {
+        return { status: 'rejected', reason: 'upload_failed' }
+      }
+      const commit = async (): ReturnType<FileContentSource['createAsset']> => {
+        let result: CreateAssetFileResult
+        try {
+          result = await backend.createAsset({ campaignId, uploadSessionId: sessionId })
+        } catch {
+          return { status: 'retryable', reason: 'response_lost', retry: commit }
+        }
+        if (result.status === 'rejected') {
+          await backend.discard(sessionId).catch(() => undefined)
+          return result
+        }
+        const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, result.resourceId)
+        await content.load(resourceId).catch(() => undefined)
+        return { status: 'completed', resourceId }
+      }
+      return await commit()
     },
     replace: async (resourceId, expectedVersion, source) => {
       if (!authority.canEdit(resourceId)) {

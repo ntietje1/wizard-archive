@@ -29,7 +29,6 @@ type ResourceOperationAuthorizer = (
 
 type CatalogUnderTest = AuthoritativeResourceOperationExecutor & {
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
-  assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void>
 }
 
 export type ResourceCatalogConformanceFactory = (input: {
@@ -513,7 +512,7 @@ export function defineResourceCatalogConformance(
       )
     })
 
-    it('deduplicates equivalent import entries and assigns one assets folder', async () => {
+    it('deduplicates equivalent import entries', async () => {
       const { catalog, operations } = await createCatalog({ authorize: () => true, now: () => 70 })
       const resourceId = domainId(DOMAIN_ID_KIND.resource, 70)
       expectCompleted(
@@ -532,11 +531,6 @@ export function defineResourceCatalogConformance(
       expect(await operations.appendAlias(first)).toEqual(first)
       expect(await operations.appendAlias(repeated)).toEqual(repeated)
       expect(await catalog.listAliases(campaignId, resourceId)).toEqual([first, repeated])
-
-      await operations.assignAssetsFolder(campaignId, resourceId)
-      expect(await catalog.getAssetsFolder(campaignId)).toBe(resourceId)
-      await operations.assignAssetsFolder(campaignId, null)
-      expect(await catalog.getAssetsFolder(campaignId)).toBeNull()
     })
 
     it('rejects closures above the synchronous operation limit without partial lifecycle changes', async () => {

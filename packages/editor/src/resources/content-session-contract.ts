@@ -293,6 +293,15 @@ export type FileResourceSource = Readonly<{
   fileName: string
 }>
 
+export type FileAssetCreationResult =
+  | Readonly<{ status: 'completed'; resourceId: ResourceId }>
+  | Readonly<{
+      status: 'retryable'
+      reason: 'response_lost'
+      retry(): Promise<FileAssetCreationResult>
+    }>
+  | Readonly<{ status: 'rejected'; reason: string }>
+
 export interface NoteSessionSource {
   get(resourceId: ResourceId): NoteSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
@@ -308,6 +317,7 @@ export interface FileContentSource {
   get(resourceId: ResourceId): FileContentState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
+  createAsset(source: FileResourceSource): Promise<FileAssetCreationResult>
   replace(
     resourceId: ResourceId,
     expectedVersion: VersionStamp,

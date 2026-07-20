@@ -181,8 +181,6 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
 
   return {
     appendAlias: (alias: SourcePathAlias) => operations.appendAlias(alias),
-    assignAssetsFolder: (resourceId: ResourceId | null) =>
-      operations.assignAssetsFolder(scope.campaignId, resourceId),
     catalogSnapshot: () => catalog.getSnapshot(scope.campaignId),
     subscribeCatalog: (listener: () => void) => catalog.subscribe(scope.campaignId, listener),
     dispose: () => {

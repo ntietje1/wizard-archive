@@ -25,7 +25,6 @@ function emptySnapshot(): ResourceCatalogSnapshot {
     resources: [],
     tombstones: [],
     aliases: [],
-    assetsFolderId: null,
   }
 }
 

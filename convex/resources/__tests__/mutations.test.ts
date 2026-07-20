@@ -9,6 +9,7 @@ import {
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
+import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
 import type { FunctionArgs } from 'convex/server'
 import { api, internal } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
@@ -43,6 +44,7 @@ import {
 } from '@wizard-archive/editor/resources/authored-destination'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
+import { createCampaignAssetsFolder } from '../functions/campaignAssetsFolder'
 import {
   ITEM_HISTORY_ACTION,
   ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
@@ -81,49 +83,7 @@ describe('resource structure commands', () => {
 
   afterEach(() => vi.useRealTimers())
 
-  it('atomically creates and assigns one Assets folder for concurrent resolutions', async () => {
-    const campaign = await setupCampaignContext(t)
-    const firstCandidate = generateDomainId(DOMAIN_ID_KIND.resource)
-    const secondCandidate = generateDomainId(DOMAIN_ID_KIND.resource)
-
-    const [first, second] = await Promise.all([
-      asDm(campaign).mutation(api.resources.mutations.ensureResourceAssetsFolder, {
-        campaignId: campaign.campaignDomainId,
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        resourceId: firstCandidate,
-      }),
-      asDm(campaign).mutation(api.resources.mutations.ensureResourceAssetsFolder, {
-        campaignId: campaign.campaignDomainId,
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        resourceId: secondCandidate,
-      }),
-    ])
-
-    expect(first.status).toBe('completed')
-    expect(second).toEqual(first)
-    await t.run(async (ctx) => {
-      const assignment = await ctx.db
-        .query('resourceAssetsFolders')
-        .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaign.campaignDomainId))
-        .unique()
-      const folders = await ctx.db
-        .query('resources')
-        .withIndex('by_campaign_and_parent', (query) =>
-          query.eq('campaignUuid', campaign.campaignDomainId).eq('parentResourceUuid', null),
-        )
-        .take(3)
-      expect(folders).toHaveLength(1)
-      expect(folders[0]).toMatchObject({
-        resourceUuid: assignment?.resourceUuid,
-        kind: 'folder',
-        lifecycle: 'active',
-        title: 'Assets',
-        icon: 'Box',
-      })
-    })
-  })
-
-  it('keeps same-title folders unrelated and restores the canonical assignment', async () => {
+  it('protects the campaign-owned Assets folder without treating same-title folders specially', async () => {
     const campaign = await setupCampaignContext(t)
     const unrelatedAssetsId = await createResource(
       campaign,
@@ -132,38 +92,94 @@ describe('resource structure commands', () => {
       null,
       'Assets',
     )
-    const adopted = await asDm(campaign).mutation(
-      api.resources.mutations.ensureResourceAssetsFolder,
-      {
-        campaignId: campaign.campaignDomainId,
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
-      },
-    )
-    if (adopted.status !== 'completed') throw new TypeError('Expected Assets assignment')
-    expect(adopted.resourceId).not.toBe(unrelatedAssetsId)
-
-    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
-      campaignId: campaign.campaignDomainId,
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-      command: { type: 'trash', resourceIds: [adopted.resourceId] },
+    const assetsFolderId = await t.run(async (ctx) => {
+      const resourceId = await createCampaignAssetsFolder(
+        ctx,
+        campaign.campaignDomainId,
+        campaign.dm.memberDomainId,
+        DEFAULT_RESOURCE_ACCESS_DEFAULTS.folderInheritance,
+      )
+      await ctx.db.patch('campaigns', campaign.campaignId, { assetsFolderUuid: resourceId })
+      return resourceId
     })
-    const restored = await asDm(campaign).mutation(
-      api.resources.mutations.ensureResourceAssetsFolder,
-      {
+    expect(assetsFolderId).not.toBe(unrelatedAssetsId)
+
+    for (const command of [
+      { type: 'move' as const, resourceIds: [assetsFolderId], destinationParentId: null },
+      { type: 'trash' as const, resourceIds: [assetsFolderId] },
+      { type: 'permanentlyDelete' as const, resourceIds: [assetsFolderId] },
+    ]) {
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+          campaignId: campaign.campaignDomainId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+          command,
+        }),
+      ).resolves.toEqual({ status: 'rejected', reason: 'protected_resource' })
+    }
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
         campaignId: campaign.campaignDomainId,
         operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
-      },
-    )
-
-    expect(restored).toEqual({ status: 'completed', resourceId: adopted.resourceId })
-    await t.run(async (ctx) => {
-      const resource = await ctx.db
+        command: { type: 'trash', resourceIds: [unrelatedAssetsId] },
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    const canonical = await t.run(async (ctx) => {
+      return await ctx.db
         .query('resources')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', adopted.resourceId))
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', assetsFolderId))
         .unique()
-      expect(resource?.lifecycle).toBe('active')
+    })
+    expect(canonical).toMatchObject({
+      lifecycle: 'active',
+      parentResourceUuid: null,
+      title: 'Assets',
+      icon: 'Box',
+    })
+  })
+
+  it('replays one server-identified asset file and lazily backfills one campaign folder', async () => {
+    const campaign = await setupCampaignContext(t)
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['asset file'], { type: 'text/plain' }),
+      'Evidence.txt',
+    )
+    const args = {
+      campaignId: campaign.campaignDomainId,
+      uploadSessionId: upload.sessionId,
+    }
+
+    const [first, replay] = await Promise.all([
+      asDm(campaign).action(api.resources.actions.createAssetFile, args),
+      asDm(campaign).action(api.resources.actions.createAssetFile, args),
+    ])
+
+    expect(first).toEqual(replay)
+    expect(first.status).toBe('completed')
+    if (first.status !== 'completed') throw new TypeError('Expected asset file creation')
+    await t.run(async (ctx) => {
+      const campaignRow = await ctx.db.get('campaigns', campaign.campaignId)
+      expect(campaignRow?.assetsFolderUuid).toBeDefined()
+      const roots = await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) =>
+          query.eq('campaignUuid', campaign.campaignDomainId).eq('parentResourceUuid', null),
+        )
+        .collect()
+      expect(
+        roots.filter((resource) => resource.resourceUuid === campaignRow?.assetsFolderUuid),
+      ).toEqual([expect.objectContaining({ kind: 'folder', title: 'Assets', lifecycle: 'active' })])
+      const file = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', first.resourceId))
+        .unique()
+      expect(file).toMatchObject({
+        kind: 'file',
+        parentResourceUuid: campaignRow?.assetsFolderUuid,
+        title: 'Evidence.txt',
+      })
     })
   })
 
@@ -3746,10 +3762,6 @@ describe('resource structure commands', () => {
         rawPath: 'Notes/Child.md',
         normalizedPath: 'Notes/Child.md',
       })
-      await ctx.db.insert('resourceAssetsFolders', {
-        campaignUuid,
-        resourceUuid: deleteRootId,
-      })
     })
     await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [deleteRootId] })
     const deleted = await execute(campaign, campaignUuid, {
@@ -3787,14 +3799,6 @@ describe('resource structure commands', () => {
           .query('resourceSourcePathAliases')
           .withIndex('by_campaign_and_resource', (query) =>
             query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteChildId),
-          )
-          .take(1),
-      ).toHaveLength(0)
-      expect(
-        await ctx.db
-          .query('resourceAssetsFolders')
-          .withIndex('by_campaign_and_resource', (query) =>
-            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteRootId),
           )
           .take(1),
       ).toHaveLength(0)
