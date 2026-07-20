@@ -819,6 +819,7 @@ describe('item history checkpoints', () => {
   })
 
   it('replays one durable restore receipt without overwriting an intervening edit', async () => {
+    vi.useFakeTimers()
     const campaign = await setupCampaignContext(t)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const historicalDocument = noteBlocksToYDoc(
@@ -901,17 +902,6 @@ describe('item history checkpoints', () => {
           resourceId,
         }),
       ).resolves.toEqual(beforeReplay)
-      await expect(
-        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
-          ...request,
-          entryId: generateDomainId(DOMAIN_ID_KIND.historyEntry),
-        }),
-      ).resolves.toEqual({
-        status: 'rejected',
-        operationId,
-        reason: 'operation_id_reused',
-      })
-
       await t.run(async (ctx) => {
         const [operations, restoredEntries] = await Promise.all([
           ctx.db
@@ -932,6 +922,34 @@ describe('item history checkpoints', () => {
         ])
         expect(operations).toHaveLength(1)
         expect(restoredEntries).toHaveLength(1)
+      })
+
+      await expect(
+        executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+          type: 'trash',
+          resourceIds: [resourceId],
+        }),
+      ).resolves.toMatchObject({ status: 'completed' })
+      await expect(
+        executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
+          type: 'permanentlyDelete',
+          resourceIds: [resourceId],
+        }),
+      ).resolves.toMatchObject({ status: 'completed' })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, request),
+      ).resolves.toEqual(receipt)
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+          ...request,
+          entryId: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+        }),
+      ).resolves.toEqual({
+        status: 'rejected',
+        operationId,
+        reason: 'operation_id_reused',
       })
     } finally {
       historicalDocument.destroy()

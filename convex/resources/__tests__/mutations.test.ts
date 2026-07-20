@@ -1970,7 +1970,7 @@ describe('resource structure commands', () => {
         resourceIds: [resourceId],
       }),
     ).resolves.toMatchObject({ status: 'completed' })
-    let cleanupStage: ItemHistoryCleanupStage | null = 'restoreOperations'
+    let cleanupStage: ItemHistoryCleanupStage | null = 'entries'
     while (cleanupStage) {
       const stage: ItemHistoryCleanupStage = cleanupStage
       cleanupStage = await t.run(
@@ -2002,7 +2002,10 @@ describe('resource structure commands', () => {
             query.eq('campaignUuid', campaignUuid).eq('resourceUuid', resourceId),
           )
           .unique(),
-      ).resolves.toBeNull()
+      ).resolves.toMatchObject({
+        operationUuid: restoreOperationId,
+        resourceUuid: resourceId,
+      })
       await expect(
         ctx.db
           .query('itemHistoryCheckpointAssets')

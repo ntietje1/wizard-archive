@@ -249,7 +249,7 @@ export async function applyResourceDeletion(
         campaignId: plan.historyCampaignId,
         resourceIds: plan.historyResourceIds,
         resourceIndex: 0,
-        stage: 'restoreOperations',
+        stage: 'entries',
       },
     )
   }
