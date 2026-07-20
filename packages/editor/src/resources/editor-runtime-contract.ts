@@ -18,11 +18,11 @@ import type { CanonicalTarget } from './authored-destination-contract'
 import type {
   CapabilityUnavailableReason,
   ResourceAccessCommandGateway,
-  ResourceBookmarkCommandGateway,
   ResourceStructureRejection,
   ResourceStructureCommandGateway,
   NoteBlockAccessCommandGateway,
 } from './resource-command-contract'
+import type { ResourceBookmarkMutationResult } from './resource-bookmarks'
 import type { ResourceAccessPresentation, ResourcePermission } from './resource-access-policy'
 import type { NoteBlockAccessPresentation } from './note-block-access-policy'
 import type {
@@ -66,9 +66,13 @@ export interface NoteBlockAccessGateway extends NoteBlockAccessCommandGateway {
   ): () => void
 }
 
-export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway {
+export interface ResourceBookmarkGateway {
   get(): ResourceKnowledge<ReadonlySet<ResourceId>>
   subscribe(listener: () => void): () => void
+  setBookmarkState(
+    resourceIds: ReadonlyArray<ResourceId>,
+    bookmarked: boolean,
+  ): Promise<ResourceBookmarkMutationResult>
 }
 
 export type ResourcePreviewOutlineEntry = Readonly<{

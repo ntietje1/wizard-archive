@@ -102,6 +102,10 @@
       "types": "./dist/resources/resource-access-policy.d.mts",
       "default": "./dist/resources/resource-access-policy.mjs"
     },
+    "./resources/bookmarks": {
+      "types": "./dist/resources/resource-bookmarks.d.mts",
+      "default": "./dist/resources/resource-bookmarks.mjs"
+    },
     "./resources/note-block-access-policy": {
       "types": "./dist/resources/note-block-access-policy.d.mts",
       "default": "./dist/resources/note-block-access-policy.mjs"

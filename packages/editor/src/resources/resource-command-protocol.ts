@@ -7,7 +7,6 @@ import type {
   MoveResourcesCommand,
   NoteBlockAccessCommand,
   ResourceAccessCommand,
-  ResourceBookmarkCommand,
   ResourceStructureCommand,
   ResourceStructureRejection,
   RestoreResourcesCommand,
@@ -15,7 +14,6 @@ import type {
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
 import { normalizeNoteBlockAccessSelection } from './note-block-access-policy'
-import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from './resource-command-contract'
 import {
   FOLDER_ACCESS_INHERITANCE,
   MAX_RESOURCE_ACCESS_COMMAND_RESOURCES,
@@ -213,20 +211,6 @@ export function normalizeResourceAccessCommand(
   }
 }
 
-export function normalizeResourceBookmarkCommand(
-  command: ResourceBookmarkCommand,
-): ResourceBookmarkCommand {
-  const resourceIds = normalizeResourceIdSet(command.resourceIds)
-  if (resourceIds.length > MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES) {
-    throw new TypeError('Bookmark selection is too large')
-  }
-  return {
-    type: 'setBookmarkState',
-    resourceIds,
-    bookmarked: normalizeBoolean(command.bookmarked, 'bookmark state'),
-  }
-}
-
 export function normalizeNoteBlockAccessCommand(
   command: NoteBlockAccessCommand,
 ): NoteBlockAccessCommand {
@@ -286,12 +270,6 @@ export async function fingerprintResourceAccessCommand(
   command: ResourceAccessCommand,
 ): Promise<Sha256Digest> {
   return await sha256Digest(encodeCommand('access', normalizeResourceAccessCommand(command)))
-}
-
-export async function fingerprintResourceBookmarkCommand(
-  command: ResourceBookmarkCommand,
-): Promise<Sha256Digest> {
-  return await sha256Digest(encodeCommand('bookmark', normalizeResourceBookmarkCommand(command)))
 }
 
 export async function fingerprintNoteBlockAccessCommand(

@@ -1,12 +1,39 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { NoteSessionState, NoteSessionSource } from '../content-session-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
-import { createInMemoryWorkspaceSearch } from '../in-memory-workspace-discovery'
+import {
+  createInMemoryBookmarks,
+  createInMemoryWorkspaceSearch,
+} from '../in-memory-workspace-discovery'
 import type { ResourceRecord } from '../resource-record'
 import { canonicalizeResourceTitle } from '../resource-record'
 import { initialVersion, sha256Digest } from '../component-version'
 import { createInMemoryNoteSession } from '../in-memory-note-session'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
+
+describe('in-memory bookmarks', () => {
+  it('converges repeated state changes and rejects mixed missing batches atomically', async () => {
+    const first = generateDomainId(DOMAIN_ID_KIND.resource)
+    const second = generateDomainId(DOMAIN_ID_KIND.resource)
+    const missing = generateDomainId(DOMAIN_ID_KIND.resource)
+    const resources = new Set([first, second])
+    const gateway = createInMemoryBookmarks((resourceId) => resources.has(resourceId))
+
+    await expect(gateway.setBookmarkState([first, first], true)).resolves.toEqual({
+      status: 'completed',
+    })
+    await expect(gateway.setBookmarkState([first], true)).resolves.toEqual({
+      status: 'completed',
+    })
+    expect(gateway.get()).toEqual({ state: 'known', value: new Set([first]) })
+
+    await expect(gateway.setBookmarkState([second, missing], true)).resolves.toEqual({
+      status: 'rejected',
+      reason: 'resource_missing',
+    })
+    expect(gateway.get()).toEqual({ state: 'known', value: new Set([first]) })
+  })
+})
 
 describe('in-memory workspace search', () => {
   it('reads current note bodies only when the search plan reaches the body stage', async () => {

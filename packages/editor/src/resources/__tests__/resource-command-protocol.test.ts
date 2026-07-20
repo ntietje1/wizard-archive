@@ -1,21 +1,14 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from '../domain-id'
-import { MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES } from '../resource-command-contract'
 import { MAX_RESOURCE_ACCESS_COMMAND_RESOURCES } from '../resource-access-policy'
-import type {
-  NoteBlockAccessCommand,
-  ResourceAccessCommand,
-  ResourceBookmarkCommand,
-} from '../resource-command-contract'
+import type { NoteBlockAccessCommand, ResourceAccessCommand } from '../resource-command-contract'
 import {
   encodeResourceStructureCommand,
   fingerprintNoteBlockAccessCommand,
   fingerprintResourceAccessCommand,
-  fingerprintResourceBookmarkCommand,
   fingerprintResourceStructureCommand,
   normalizeNoteBlockAccessCommand,
   normalizeResourceAccessCommand,
-  normalizeResourceBookmarkCommand,
   normalizeResourceStructureCommand,
 } from '../resource-command-protocol'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-record'
@@ -112,18 +105,13 @@ describe('resource-command-v1 normalization', () => {
 })
 
 describe('separate command families', () => {
-  it('normalizes access, bookmarks, and note-block access independently', async () => {
+  it('normalizes access and note-block access independently', async () => {
     const access = {
       type: 'setMemberAccess',
       resourceIds: [resourceA],
       memberId,
       permission: 'view',
     } satisfies ResourceAccessCommand
-    const bookmark = {
-      type: 'setBookmarkState',
-      resourceIds: [resourceA],
-      bookmarked: true,
-    } satisfies ResourceBookmarkCommand
     const blockAccess = {
       type: 'setNoteBlockMemberAccess',
       noteId: resourceA,
@@ -141,25 +129,16 @@ describe('separate command families', () => {
         resourceIds: [resourceB, resourceA, resourceB],
       }),
     ).toEqual({ type: 'clearAudienceAccess', resourceIds: [resourceA, resourceB] })
-    expect(normalizeResourceBookmarkCommand(bookmark)).toEqual(bookmark)
     expect(normalizeNoteBlockAccessCommand(blockAccess)).toEqual(blockAccess)
 
     const fingerprints = await Promise.all([
       fingerprintResourceAccessCommand(access),
-      fingerprintResourceBookmarkCommand(bookmark),
       fingerprintNoteBlockAccessCommand(blockAccess),
     ])
-    expect(new Set(fingerprints).size).toBe(3)
+    expect(new Set(fingerprints).size).toBe(2)
   })
 
-  it('rejects non-boolean family state at the protocol boundary', () => {
-    expect(() =>
-      normalizeResourceBookmarkCommand({
-        type: 'setBookmarkState',
-        resourceIds: [resourceA],
-        bookmarked: 'yes' as unknown as boolean,
-      }),
-    ).toThrow(/bookmark state/)
+  it('rejects non-boolean note-block access state at the protocol boundary', () => {
     expect(() =>
       normalizeNoteBlockAccessCommand({
         type: 'setNoteBlockAudienceAccess',
@@ -189,18 +168,6 @@ describe('separate command families', () => {
         inheritance: true as unknown as 'enabled',
       }),
     ).toThrow(/inheritance state/)
-  })
-
-  it('bounds bookmark command selections after normalization', () => {
-    expect(() =>
-      normalizeResourceBookmarkCommand({
-        type: 'setBookmarkState',
-        resourceIds: Array.from({ length: MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES + 1 }, () =>
-          generateDomainId(DOMAIN_ID_KIND.resource),
-        ),
-        bookmarked: true,
-      }),
-    ).toThrow(/too large/)
   })
 
   it('bounds access selections after deduplication', () => {

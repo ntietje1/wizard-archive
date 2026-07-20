@@ -943,38 +943,11 @@ export const workspaceSearchResultValidator = v.object({
   ),
 })
 
-export const resourceBookmarkCommandValidator = v.object({
-  type: v.literal('setBookmarkState'),
-  resourceIds: v.array(resourceIdValidator),
-  bookmarked: v.boolean(),
-})
-
-const resourceBookmarkReceiptValidator = v.object({
-  campaignId: campaignIdValidator,
-  operationId: operationIdValidator,
-  resourceIds: v.array(resourceIdValidator),
-  bookmarked: v.boolean(),
-})
-
-export const resourceBookmarkCommandResultValidator = v.union(
-  v.object({
-    status: v.literal('completed'),
-    receipt: resourceBookmarkReceiptValidator,
-  }),
+export const resourceBookmarkMutationResultValidator = v.union(
+  v.object({ status: v.literal('completed') }),
   v.object({
     status: v.literal('rejected'),
-    reason: literals(
-      'invalid_command',
-      'selection_too_large',
-      'ownership_mismatch',
-      'unauthorized',
-      'resource_missing',
-      'operation_id_reused',
-    ),
-  }),
-  v.object({
-    status: v.literal('unavailable'),
-    reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
+    reason: literals('invalid_request', 'selection_too_large', 'resource_missing'),
   }),
 )
 
@@ -1571,17 +1544,6 @@ export const resourceTables = {
     protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
     fingerprint: v.string(),
     receipt: resourceAccessReceiptValidator,
-  })
-    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
-    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
-
-  resourceBookmarkOperations: defineTable({
-    campaignUuid: campaignIdValidator,
-    actorMemberUuid: campaignMemberIdValidator,
-    operationUuid: operationIdValidator,
-    protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
-    fingerprint: v.string(),
-    receipt: resourceBookmarkReceiptValidator,
   })
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),

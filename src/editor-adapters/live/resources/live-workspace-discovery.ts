@@ -12,15 +12,14 @@ import type {
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { WorkspaceSearchOutcome } from '@wizard-archive/editor/resources/search-policy'
 import type { ResourceLoadResult } from '@wizard-archive/editor/resources/index-contract'
-import type { ResourceBookmarkCommandResult } from '@wizard-archive/editor/resources/command-contract'
 import {
   addLiveRecentResource,
   getLiveRecentResources,
   subscribeToLiveRecentResources,
 } from '../live-recent-resources'
 
-type BookmarkArgs = FunctionArgs<typeof api.resources.mutations.executeBookmarkCommand>
-type BookmarkResult = FunctionReturnType<typeof api.resources.mutations.executeBookmarkCommand>
+type BookmarkArgs = FunctionArgs<typeof api.resources.mutations.setBookmarkState>
+type BookmarkResult = FunctionReturnType<typeof api.resources.mutations.setBookmarkState>
 type BookmarkProjection = FunctionReturnType<typeof api.resources.queries.loadBookmarks>
 type SearchProjection = FunctionReturnType<typeof api.resources.queries.searchResources>
 type StoredProjection = BookmarkProjection['snapshot']
@@ -30,7 +29,7 @@ export function createLiveResourceBookmarks(
   campaignId: CampaignId,
   applyProjection: ApplyProjection,
   backend: Readonly<{
-    execute(args: BookmarkArgs): Promise<BookmarkResult>
+    setBookmarkState(args: BookmarkArgs): Promise<BookmarkResult>
     watch(apply: (projection: BookmarkProjection) => void): () => void
   }>,
 ): Readonly<{ gateway: ResourceBookmarkGateway; start(): void; dispose(): void }> {
@@ -48,30 +47,12 @@ export function createLiveResourceBookmarks(
         listeners.add(listener)
         return () => listeners.delete(listener)
       },
-      execute: async (envelope) => {
-        if (envelope.campaignId !== campaignId) {
-          return {
-            status: 'received',
-            result: { status: 'unavailable', reason: 'scope_unavailable' },
-          }
-        }
-        try {
-          const result = readBookmarkResult(
-            await backend.execute({
-              campaignId,
-              operationId: envelope.operationId,
-              command: {
-                type: 'setBookmarkState',
-                resourceIds: [...envelope.command.resourceIds],
-                bookmarked: envelope.command.bookmarked,
-              },
-            }),
-          )
-          return { status: 'received', result }
-        } catch {
-          return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
-        }
-      },
+      setBookmarkState: async (resourceIds, bookmarked) =>
+        await backend.setBookmarkState({
+          campaignId,
+          resourceIds: [...resourceIds],
+          bookmarked,
+        }),
     },
     start: () => {
       if (unsubscribe) return
@@ -123,19 +104,6 @@ export function createLiveWorkspaceSearch(
     recent: () => getLiveRecentResources(campaignId, actorId),
     subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, actorId, listener),
     recordOpened: (id) => addLiveRecentResource(campaignId, actorId, id),
-  }
-}
-
-function readBookmarkResult(result: BookmarkResult): ResourceBookmarkCommandResult {
-  if (result.status !== 'completed') return result
-  return {
-    status: 'completed',
-    receipt: {
-      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, result.receipt.campaignId),
-      operationId: assertDomainId(DOMAIN_ID_KIND.operation, result.receipt.operationId),
-      resourceIds: result.receipt.resourceIds.map(resourceId),
-      bookmarked: result.receipt.bookmarked,
-    },
   }
 }
 

@@ -41,7 +41,6 @@ import {
   parseSerializedAuthoredDestination,
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
-import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
 import {
@@ -57,6 +56,7 @@ import { replaceResourceReferenceProjection } from '../functions/resourceReferen
 import { deleteResourceItemHistoryBatch } from '../functions/itemHistoryCleanup'
 import type { ItemHistoryCleanupStage } from '../functions/itemHistoryCleanup'
 import { PLAIN_TRANSFER_LIMITS } from '@wizard-archive/editor/resources/plain-transfer-inventory'
+import { MAX_RESOURCE_BOOKMARK_MUTATION_RESOURCES } from '@wizard-archive/editor/resources/bookmarks'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -3895,50 +3895,118 @@ describe('resource structure commands', () => {
     ).resolves.toEqual({ status: 'rejected', reason: 'invalid_title' })
   })
 
-  it('stores actor-scoped bookmarks through an idempotent command', async () => {
+  it('sets actor-scoped bookmark state idempotently without operation storage', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = await createResource(campaign, campaignUuid, 'folder', null, 'Reference')
-    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const args = {
       campaignId: campaignUuid,
-      operationId,
-      command: {
-        type: 'setBookmarkState' as const,
-        resourceIds: [resourceId],
-        bookmarked: true,
-      },
+      resourceIds: [resourceId],
+      bookmarked: true,
     }
 
-    const first = await asDm(campaign).mutation(
-      api.resources.mutations.executeBookmarkCommand,
-      args,
-    )
-    const replay = await asDm(campaign).mutation(
-      api.resources.mutations.executeBookmarkCommand,
-      args,
-    )
+    const first = await asDm(campaign).mutation(api.resources.mutations.setBookmarkState, args)
+    const repeated = await asDm(campaign).mutation(api.resources.mutations.setBookmarkState, args)
 
-    expect(first).toEqual(replay)
-    expect(first).toMatchObject({ status: 'completed', receipt: { resourceIds: [resourceId] } })
+    expect(first).toEqual({ status: 'completed' })
+    expect(repeated).toEqual({ status: 'completed' })
     await t.run(async (ctx) => {
-      const operation = await ctx.db
-        .query('resourceBookmarkOperations')
-        .withIndex('by_campaign_and_operation', (query) =>
-          query.eq('campaignUuid', campaignUuid).eq('operationUuid', operationId),
+      const bookmarks = await ctx.db
+        .query('resourceBookmarks')
+        .withIndex('by_member_and_resource', (query) =>
+          query
+            .eq('campaignUuid', campaignUuid)
+            .eq('memberUuid', campaign.dm.memberDomainId)
+            .eq('resourceUuid', resourceId),
         )
-        .unique()
-      expect(operation).toMatchObject({
-        protocolVersion: RESOURCE_COMMAND_PROTOCOL_VERSION,
-        fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
-        receipt: { operationId, resourceIds: [resourceId], bookmarked: true },
-      })
+        .collect()
+      expect(bookmarks).toHaveLength(1)
     })
     await expect(
       asDm(campaign).query(api.resources.queries.loadBookmarks, { campaignId: campaignUuid }),
     ).resolves.toMatchObject({
       resourceIds: [resourceId],
       snapshot: { resources: [{ id: resourceId }], missingResourceIds: [], collections: [] },
+    })
+  })
+
+  it('rejects mixed missing targets atomically', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'folder', null, 'Reference')
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.setBookmarkState, {
+        campaignId: campaignUuid,
+        resourceIds: [resourceId, generateDomainId(DOMAIN_ID_KIND.resource)],
+        bookmarked: true,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'resource_missing' })
+
+    await t.run(async (ctx) => {
+      const bookmarks = await ctx.db
+        .query('resourceBookmarks')
+        .withIndex('by_member', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('memberUuid', campaign.dm.memberDomainId),
+        )
+        .collect()
+      expect(bookmarks).toEqual([])
+    })
+  })
+
+  it('rejects limit overflow and unauthorized mutation without partial writes', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'folder', null, 'Reference')
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.setBookmarkState, {
+        campaignId: campaignUuid,
+        resourceIds: Array.from({ length: MAX_RESOURCE_BOOKMARK_MUTATION_RESOURCES + 1 }, () =>
+          generateDomainId(DOMAIN_ID_KIND.resource),
+        ),
+        bookmarked: true,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'selection_too_large' })
+
+    await t.run(async (ctx) => {
+      await Promise.all(
+        Array.from({ length: 1_000 }, (_, index) =>
+          ctx.db.insert('resourceBookmarks', {
+            campaignUuid,
+            memberUuid: campaign.dm.memberDomainId,
+            resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
+            bookmarkedAt: index,
+          }),
+        ),
+      )
+    })
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.setBookmarkState, {
+        campaignId: campaignUuid,
+        resourceIds: [resourceId],
+        bookmarked: true,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'selection_too_large' })
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.setBookmarkState, {
+        campaignId: campaignUuid,
+        resourceIds: [resourceId],
+        bookmarked: true,
+      }),
+    ).rejects.toThrow(/DM/)
+
+    await t.run(async (ctx) => {
+      const target = await ctx.db
+        .query('resourceBookmarks')
+        .withIndex('by_member_and_resource', (query) =>
+          query
+            .eq('campaignUuid', campaignUuid)
+            .eq('memberUuid', campaign.dm.memberDomainId)
+            .eq('resourceUuid', resourceId),
+        )
+        .unique()
+      expect(target).toBeNull()
     })
   })
 

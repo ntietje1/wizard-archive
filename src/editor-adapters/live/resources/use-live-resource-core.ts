@@ -332,7 +332,7 @@ function createScopedLiveResourceRuntime(
   )
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
   const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, base.applyProjection, {
-    execute: (args) => convex.mutation(api.resources.mutations.executeBookmarkCommand, args),
+    setBookmarkState: (args) => convex.mutation(api.resources.mutations.setBookmarkState, args),
     watch: (apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadBookmarks, {
         campaignId: currentScope.campaignId,

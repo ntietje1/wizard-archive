@@ -7,7 +7,7 @@ import {
 import type { NoteBlockId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
-import { MAX_RESOURCE_BOOKMARKS_PER_ACTOR } from '@wizard-archive/editor/resources/command-contract'
+import { MAX_RESOURCE_BOOKMARKS_PER_ACTOR } from '@wizard-archive/editor/resources/bookmarks'
 import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-version'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import type { FunctionArgs } from 'convex/server'

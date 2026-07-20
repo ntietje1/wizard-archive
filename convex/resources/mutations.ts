@@ -37,8 +37,7 @@ import {
   resourceCompensationResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
-  resourceBookmarkCommandResultValidator,
-  resourceBookmarkCommandValidator,
+  resourceBookmarkMutationResultValidator,
   resourceAccessCommandResultValidator,
   resourceAccessCommandValidator,
   noteBlockAccessCommandResultValidator,
@@ -68,7 +67,7 @@ import {
   operationIdValidator,
   resourceIdValidator,
 } from './validators'
-import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
+import { setActorBookmarkState } from './functions/resourceBookmarks'
 import { executeResourceAccessCommand as executeResourceAccessCommandFn } from './functions/executeResourceAccessCommand'
 import { executeNoteBlockAccessCommand as executeNoteBlockAccessCommandFn } from './functions/executeNoteBlockAccessCommand'
 import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
@@ -415,31 +414,13 @@ export const compensateResourceOperation = campaignMutation({
   },
 })
 
-export const executeBookmarkCommand = dmMutation({
+export const setBookmarkState = dmMutation({
   args: {
-    operationId: operationIdValidator,
-    command: resourceBookmarkCommandValidator,
+    resourceIds: v.array(resourceIdValidator),
+    bookmarked: v.boolean(),
   },
-  returns: resourceBookmarkCommandResultValidator,
-  handler: async (ctx, args) => {
-    const result = await executeBookmarkCommandFn(
-      ctx,
-      assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
-      {
-        type: args.command.type,
-        resourceIds: args.command.resourceIds.map((resourceId) =>
-          assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
-        ),
-        bookmarked: args.command.bookmarked,
-      },
-    )
-    return result.status === 'completed'
-      ? {
-          status: 'completed' as const,
-          receipt: { ...result.receipt, resourceIds: [...result.receipt.resourceIds] },
-        }
-      : result
-  },
+  returns: resourceBookmarkMutationResultValidator,
+  handler: async (ctx, args) => await setActorBookmarkState(ctx, args.resourceIds, args.bookmarked),
 })
 
 export const executeResourceAccessCommand = dmMutation({

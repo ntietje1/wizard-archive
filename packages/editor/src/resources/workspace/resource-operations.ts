@@ -721,29 +721,21 @@ async function setWorkspaceBookmarkState(
     report('Bookmarks are unavailable')
     return false
   }
-  const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-  const attempt = async (): Promise<boolean> => {
-    const delivery = await bookmarks.value.execute({
-      campaignId: runtime.scope.campaignId,
-      operationId,
-      command: { type: 'setBookmarkState', resourceIds, bookmarked },
-    })
-    if (delivery.status === 'indeterminate') {
-      report('Delivery is uncertain. Retry safely.', () => void attempt())
-      return false
-    }
-    if (delivery.status === 'not_committed') {
-      report(`Not committed: ${delivery.reason}`)
-      return false
-    }
-    if (delivery.result.status !== 'completed') {
-      report(`${delivery.result.status}: ${delivery.result.reason}`)
+  try {
+    const result = await bookmarks.value.setBookmarkState(resourceIds, bookmarked)
+    if (result.status !== 'completed') {
+      report(`rejected: ${result.reason}`)
       return false
     }
     report(bookmarked ? 'Bookmarked' : 'Bookmark removed')
     return true
+  } catch {
+    report(
+      'Bookmark update failed. Retry safely.',
+      () => void setWorkspaceBookmarkState(runtime, resourceIds, bookmarked, report),
+    )
+    return false
   }
-  return await attempt()
 }
 
 async function runResourceUndo(

@@ -276,7 +276,6 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'noteBlockAccessCleanupIntents',
   'noteBlockAccessOperations',
   'accessOperations',
-  'bookmarkOperations',
   'tombstones',
   'transferMetadata',
   'assetsFolders',
@@ -308,7 +307,6 @@ type CampaignResourceRow =
   | Doc<'noteBlockAccessCleanupIntents'>
   | Doc<'noteBlockAccessOperations'>
   | Doc<'resourceAccessOperations'>
-  | Doc<'resourceBookmarkOperations'>
   | Doc<'resourceTombstones'>
   | Doc<'resourceTransferEntries'>
   | Doc<'resourceTransferJobs'>
@@ -401,11 +399,6 @@ async function loadCampaignResourceDeletionBatch(
     case 'accessOperations':
       return await ctx.db
         .query('resourceAccessOperations')
-        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
-        .take(CAMPAIGN_DELETION_BATCH_SIZE)
-    case 'bookmarkOperations':
-      return await ctx.db
-        .query('resourceBookmarkOperations')
         .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
     case 'tombstones':

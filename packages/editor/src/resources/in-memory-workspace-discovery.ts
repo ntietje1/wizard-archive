@@ -2,9 +2,12 @@ import type { NoteBlock } from '../notes/document/model'
 import { noteBlocksPlainText } from '../notes/document/plain-text'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../notes/document/headless-yjs'
 import type { NoteSessionSource } from './content-session-contract'
-import type { CampaignId, ResourceId } from './domain-id'
+import type { ResourceId } from './domain-id'
 import type { ResourceBookmarkGateway, WorkspaceSearch } from './editor-runtime-contract'
-import type { CommandDelivery, ResourceBookmarkCommandResult } from './resource-command-contract'
+import {
+  MAX_RESOURCE_BOOKMARKS_PER_ACTOR,
+  parseResourceBookmarkSelection,
+} from './resource-bookmarks'
 import type { ResourceRecord } from './resource-record'
 import {
   createResourceSearchDocument,
@@ -19,7 +22,6 @@ import type {
 } from './resource-search-policy'
 
 export function createInMemoryBookmarks(
-  campaignId: CampaignId,
   resourceExists: (resourceId: ResourceId) => boolean,
 ): ResourceBookmarkGateway {
   let bookmarked = new Set<ResourceId>()
@@ -31,40 +33,28 @@ export function createInMemoryBookmarks(
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
-    execute: (envelope): Promise<CommandDelivery<ResourceBookmarkCommandResult>> => {
-      const resourceIds = Array.from(new Set(envelope.command.resourceIds))
-      if (envelope.campaignId !== campaignId) {
-        return Promise.resolve({
-          status: 'received',
-          result: { status: 'unavailable', reason: 'scope_unavailable' },
-        })
-      }
+    setBookmarkState: (inputResourceIds, bookmarkState) => {
+      const selection = parseResourceBookmarkSelection(inputResourceIds)
+      if (selection.status === 'rejected') return Promise.resolve(selection)
+      const { resourceIds } = selection
       if (resourceIds.some((resourceId) => !resourceExists(resourceId))) {
-        return Promise.resolve({
-          status: 'received',
-          result: { status: 'rejected', reason: 'resource_missing' },
-        })
+        return Promise.resolve({ status: 'rejected' as const, reason: 'resource_missing' as const })
       }
       const next = new Set(bookmarked)
       for (const resourceId of resourceIds) {
-        if (envelope.command.bookmarked) next.add(resourceId)
+        if (bookmarkState) next.add(resourceId)
         else next.delete(resourceId)
+      }
+      if (next.size > MAX_RESOURCE_BOOKMARKS_PER_ACTOR) {
+        return Promise.resolve({
+          status: 'rejected' as const,
+          reason: 'selection_too_large' as const,
+        })
       }
       bookmarked = next
       snapshot = { state: 'known', value: bookmarked }
       for (const listener of listeners) listener()
-      return Promise.resolve({
-        status: 'received',
-        result: {
-          status: 'completed',
-          receipt: {
-            campaignId,
-            operationId: envelope.operationId,
-            resourceIds,
-            bookmarked: envelope.command.bookmarked,
-          },
-        },
-      })
+      return Promise.resolve({ status: 'completed' as const })
     },
   }
 }

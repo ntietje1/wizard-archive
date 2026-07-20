@@ -92,15 +92,6 @@ export type ResourceAccessCommand =
       inheritance: FolderAccessInheritance
     }>
 
-export type ResourceBookmarkCommand = Readonly<{
-  type: 'setBookmarkState'
-  resourceIds: ReadonlyArray<ResourceId>
-  bookmarked: boolean
-}>
-
-export const MAX_RESOURCE_BOOKMARK_COMMAND_RESOURCES = 100
-export const MAX_RESOURCE_BOOKMARKS_PER_ACTOR = 1_000
-
 export type NoteBlockAccessCommand =
   | Readonly<{
       type: 'setNoteBlockAudienceAccess'
@@ -229,13 +220,6 @@ export type ResourceAccessReceipt = Readonly<{
   resourceIds: ReadonlyArray<ResourceId>
 }>
 
-export type ResourceBookmarkReceipt = Readonly<{
-  campaignId: CampaignId
-  operationId: OperationId
-  resourceIds: ReadonlyArray<ResourceId>
-  bookmarked: boolean
-}>
-
 export type NoteBlockAccessReceipt = Readonly<{
   campaignId: CampaignId
   operationId: OperationId
@@ -252,14 +236,6 @@ export type ResourceAccessRejection =
   | 'invalid_permission'
   | 'operation_id_reused'
 
-export type ResourceBookmarkRejection =
-  | 'invalid_command'
-  | 'selection_too_large'
-  | 'ownership_mismatch'
-  | 'unauthorized'
-  | 'resource_missing'
-  | 'operation_id_reused'
-
 export type NoteBlockAccessRejection =
   | 'invalid_command'
   | 'ownership_mismatch'
@@ -274,11 +250,6 @@ export type NoteBlockAccessRejection =
 export type ResourceAccessCommandResult = CommandResult<
   ResourceAccessReceipt,
   ResourceAccessRejection
->
-
-export type ResourceBookmarkCommandResult = CommandResult<
-  ResourceBookmarkReceipt,
-  ResourceBookmarkRejection
 >
 
 export type NoteBlockAccessCommandResult = CommandResult<
@@ -302,12 +273,6 @@ export interface ResourceAccessCommandGateway {
   execute(
     envelope: CommandEnvelope<ResourceAccessCommand>,
   ): Promise<CommandDelivery<ResourceAccessCommandResult>>
-}
-
-export interface ResourceBookmarkCommandGateway {
-  execute(
-    envelope: CommandEnvelope<ResourceBookmarkCommand>,
-  ): Promise<CommandDelivery<ResourceBookmarkCommandResult>>
 }
 
 export interface NoteBlockAccessCommandGateway {

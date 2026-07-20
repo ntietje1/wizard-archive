@@ -46,11 +46,28 @@ const snapshot: StoredProjection = {
 }
 
 describe('live workspace discovery', () => {
+  it('sets bookmark state without operation or replay metadata', async () => {
+    const setBookmarkState = vi.fn(() => Promise.resolve({ status: 'completed' as const }))
+    const bookmarks = createLiveResourceBookmarks(campaignId, vi.fn(), {
+      setBookmarkState,
+      watch: () => () => {},
+    })
+
+    await expect(bookmarks.gateway.setBookmarkState([resourceId], true)).resolves.toEqual({
+      status: 'completed',
+    })
+    expect(setBookmarkState).toHaveBeenCalledWith({
+      campaignId,
+      resourceIds: [resourceId],
+      bookmarked: true,
+    })
+  })
+
   it('hydrates bookmark resource knowledge before publishing bookmark ids', () => {
     let publish: ((value: BookmarkProjection) => void) | undefined
     const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
     const bookmarks = createLiveResourceBookmarks(campaignId, applyProjection, {
-      execute: vi.fn(),
+      setBookmarkState: vi.fn(),
       watch: (apply) => {
         publish = apply
         return () => {}
@@ -72,7 +89,7 @@ describe('live workspace discovery', () => {
     const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
     const listener = vi.fn()
     const bookmarks = createLiveResourceBookmarks(campaignId, applyProjection, {
-      execute: vi.fn(),
+      setBookmarkState: vi.fn(),
       watch: (apply) => {
         publish = apply
         return () => {}
@@ -97,7 +114,7 @@ describe('live workspace discovery', () => {
     const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
     const listener = vi.fn()
     const bookmarks = createLiveResourceBookmarks(campaignId, applyProjection, {
-      execute: vi.fn(),
+      setBookmarkState: vi.fn(),
       watch: (apply) => {
         publish = apply
         return () => {}
@@ -126,7 +143,7 @@ describe('live workspace discovery', () => {
     let publish: ((value: BookmarkProjection) => void) | undefined
     const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
     const bookmarks = createLiveResourceBookmarks(campaignId, applyProjection, {
-      execute: vi.fn(),
+      setBookmarkState: vi.fn(),
       watch: (apply) => {
         publish = apply
         return () => {}
