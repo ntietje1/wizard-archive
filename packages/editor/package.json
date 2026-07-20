@@ -14,6 +14,10 @@
       "types": "./dist/resources/resource-shell.d.mts",
       "default": "./dist/resources/resource-shell.mjs"
     },
+    "./resources/view-as-menu": {
+      "types": "./dist/resources/resource-view-as-menu.d.mts",
+      "default": "./dist/resources/resource-view-as-menu.mjs"
+    },
     "./resources/workspace-preferences": {
       "types": "./dist/resources/workspace-preferences.d.mts",
       "default": "./dist/resources/workspace-preferences.mjs"

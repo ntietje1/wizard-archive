@@ -44,6 +44,8 @@ import {
 } from '../workspace-resource-drag'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
+import { ResourceAppearancePopover } from './resource-appearance-popover'
+import { resourceDisplayIcon } from './resource-icon'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { useEnsureResourceCollection } from './resource-loading'
 import {
@@ -119,6 +121,7 @@ export function ResourceSidebar({
   bookmarks,
   canEdit,
   onClose,
+  onOpenBackgroundContextMenu,
   onOpenContextMenu,
   onSearch,
   onSelectionChange,
@@ -137,6 +140,7 @@ export function ResourceSidebar({
   bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
   canEdit: boolean
   onClose: () => void
+  onOpenBackgroundContextMenu: (position: Readonly<{ x: number; y: number }>) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSearch: () => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
@@ -242,6 +246,11 @@ export function ResourceSidebar({
         onDrop={
           canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, null) : undefined
         }
+        onContextMenu={(event) => {
+          if (!canEdit || event.target !== event.currentTarget) return
+          event.preventDefault()
+          onOpenBackgroundContextMenu({ x: event.clientX, y: event.clientY })
+        }}
       >
         {view === 'bookmarks' ? (
           <BookmarkedResourceCollection
@@ -470,6 +479,7 @@ function BookmarkedResourceCollection({
             data-selected={selection.selectedIds.includes(resource.id)}
             className="group flex min-w-0 items-center rounded-md px-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
           >
+            <ResourceAppearanceButton actions={actions} canEdit={canEdit} resource={resource} />
             <ResourceTreeButton
               actions={actions}
               ambiguous={ambiguous.has(resourcePresentationKey(resource))}
@@ -479,6 +489,7 @@ function BookmarkedResourceCollection({
               resource={resource}
               selectedResourceId={selectedResourceId}
               selection={selection}
+              showIcon={false}
               visibleIds={visibleIds}
               onSelectionChange={onSelectionChange}
               onOpenContextMenu={onOpenContextMenu}
@@ -622,11 +633,13 @@ function ResourceTreeRow({
           <FolderExpansionButton
             expanded={expanded}
             hasChildren={hasChildren}
-            icon={resourceKindIcon(resource.kind)}
+            resource={resource}
             title={resource.title}
             onToggle={() => expansion.setExpanded(resource.id, !expanded)}
           />
-        ) : null}
+        ) : (
+          <ResourceAppearanceButton actions={actions} canEdit={canEdit} resource={resource} />
+        )}
         <ResourceTreeButton
           actions={actions}
           ambiguous={ambiguous}
@@ -642,7 +655,7 @@ function ResourceTreeRow({
           resource={resource}
           selectedResourceId={selectedResourceId}
           selection={selection}
-          showIcon={resource.kind !== 'folder'}
+          showIcon={false}
           visibleIds={visibleIds}
         />
       </div>
@@ -682,16 +695,17 @@ function SidebarIndentGuides({ depth }: { depth: number }) {
 function FolderExpansionButton({
   expanded,
   hasChildren,
-  icon: Icon,
   onToggle,
+  resource,
   title,
 }: {
   expanded: boolean
   hasChildren: boolean
-  icon: ReturnType<typeof resourceKindIcon>
   onToggle: () => void
+  resource: AuthorizedResourceSummary
   title: string
 }) {
+  const Icon = resourceDisplayIcon(resource)
   return (
     <button
       type="button"
@@ -705,6 +719,7 @@ function FolderExpansionButton({
             ? 'size-4 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0'
             : 'size-4'
         }
+        style={{ color: resource.color ?? undefined }}
       />
       {hasChildren &&
         (expanded ? (
@@ -713,6 +728,41 @@ function FolderExpansionButton({
           <ChevronRight className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
         ))}
     </button>
+  )
+}
+
+function ResourceAppearanceButton({
+  actions,
+  canEdit,
+  resource,
+}: {
+  actions: WorkspaceActions
+  canEdit: boolean
+  resource: AuthorizedResourceSummary
+}) {
+  const Icon = resourceDisplayIcon(resource)
+  if (!canEdit) {
+    return (
+      <span className="inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground">
+        <Icon className="size-4" style={{ color: resource.color ?? undefined }} />
+      </span>
+    )
+  }
+  return (
+    <ResourceAppearancePopover
+      actions={actions}
+      resource={resource}
+      side="right"
+      trigger={
+        <button
+          type="button"
+          aria-label={`Edit icon and color for ${resource.title}`}
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <Icon className="size-4" style={{ color: resource.color ?? undefined }} />
+        </button>
+      }
+    />
   )
 }
 

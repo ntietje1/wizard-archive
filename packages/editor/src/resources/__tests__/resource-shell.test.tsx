@@ -211,7 +211,7 @@ describe('ResourceShell', () => {
         name: `${viewerPreference.resource.title} note editor`,
       }),
     ).toHaveAttribute('contenteditable', 'false')
-    expect(screen.getByText('Viewer mode — editing is disabled')).toBeInTheDocument()
+    expect(screen.getByText('Viewing as yourself — editing is disabled')).toBeInTheDocument()
     viewerPreference.core.dispose()
   })
 
@@ -335,7 +335,7 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('updates natural title, icon, and color through one metadata command', async () => {
+  it('renames from the topbar and edits appearance from the resource context menu', async () => {
     const { core, resource } = await shellRuntime(true)
 
     render(
@@ -346,24 +346,40 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    fireEvent.click(
+      within(await screen.findByRole('heading', { name: resource.title })).getByRole('button'),
+    )
     fireEvent.change(screen.getByRole('textbox', { name: 'Resource title' }), {
       target: { value: 'Renamed folder' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Resource icon' }), {
-      target: { value: 'Book' },
-    })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Resource color' }), {
-      target: { value: '#123456' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Resource title' }))
 
     expect(await screen.findByRole('heading', { name: 'Renamed folder' })).toBeInTheDocument()
-    expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
-      state: 'known',
-      value: { title: 'Renamed folder', icon: 'Book', color: '#123456' },
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(sidebar.getByRole('button', { name: 'Renamed folder' }), {
+      clientX: 40,
+      clientY: 50,
     })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit icon and color' }))
+    const appearance = await screen.findByRole('dialog', {
+      name: 'Edit icon and color for Renamed folder',
+    })
+    fireEvent.click(within(appearance).getByRole('button', { name: 'BookOpen resource icon' }))
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { icon: 'BookOpen' },
+      }),
+    )
+    const red = within(appearance).getByRole('button', { name: 'Red resource color' })
+    await waitFor(() => expect(red).toBeEnabled())
+    fireEvent.click(red)
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { title: 'Renamed folder', icon: 'BookOpen', color: '#f15b64' },
+      }),
+    )
     core.dispose()
   })
 
@@ -376,17 +392,27 @@ describe('ResourceShell', () => {
         workspaceName="DM view"
       />,
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    fireEvent.click(
+      within(await screen.findByRole('heading', { name: resource.title })).getByRole('button'),
+    )
     fireEvent.change(screen.getByRole('textbox', { name: 'Resource title' }), {
       target: { value: 'Undoable name' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByRole('button', { name: 'Undo Edit resource' })).toBeEnabled()
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Resource title' }))
+    expect(await screen.findByRole('heading', { name: 'Undoable name' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
 
-    fireEvent.keyDown(screen.getByLabelText('Editable resources'), { key: 'z', ctrlKey: true })
+    fireEvent.contextMenu(screen.getByLabelText('resources resource drop zone'), {
+      clientX: 10,
+      clientY: 100,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Undo rename' }))
     expect(await screen.findByRole('heading', { name: resource.title })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Redo Edit resource' }))
+    fireEvent.contextMenu(screen.getByLabelText('resources resource drop zone'), {
+      clientX: 10,
+      clientY: 100,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Redo rename' }))
     expect(await screen.findByRole('heading', { name: 'Undoable name' })).toBeInTheDocument()
     core.dispose()
   })
@@ -1039,7 +1065,8 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.contextMenu(await screen.findByRole('button', { name: resource.title }), {
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(await sidebar.findByRole('button', { name: resource.title }), {
       clientX: 40,
       clientY: 50,
     })
@@ -1054,7 +1081,6 @@ describe('ResourceShell', () => {
       value: { kind: 'map', displayParentId: resource.id, title: 'Untitled map' },
     })
 
-    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
     fireEvent.click(sidebar.getByRole('button', { name: resource.title }))
     fireEvent.click(screen.getByRole('button', { name: 'Enter close-all-folders mode' }))
     expect(sidebar.queryByRole('button', { name: 'Untitled map' })).not.toBeInTheDocument()
@@ -1063,9 +1089,7 @@ describe('ResourceShell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Enter close-all-folders mode' }))
     act(() => navigation.open({ kind: 'resource', resourceId: createdId }))
     await waitFor(() => expect(sidebar.getByRole('button', { name: 'Untitled map' })).toBeVisible())
-    expect(
-      screen.getByRole('button', { name: 'Enter close-all-folders mode' }),
-    ).not.toBePressed()
+    expect(screen.getByRole('button', { name: 'Enter close-all-folders mode' })).not.toBePressed()
     core.dispose()
   })
 
@@ -1176,8 +1200,9 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: 'viewer' }))
-    expect(await screen.findByText('Viewer mode — editing is disabled')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'View as...' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'View as yourself' }))
+    expect(await screen.findByText('Viewing as yourself — editing is disabled')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Create resource' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'More options' }))
     expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).not.toBeInTheDocument()
@@ -1185,6 +1210,8 @@ describe('ResourceShell', () => {
       status: 'ready',
       value: { mode: 'viewer' },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Exit view as' }))
+    expect(await screen.findByRole('button', { name: 'Create resource' })).toBeInTheDocument()
     core.dispose()
   })
 
@@ -1227,9 +1254,10 @@ describe('ResourceShell', () => {
 
     await createFolderForTest(core.runtime, 'Second folder')
     await createFolderForTest(core.runtime, 'Third folder')
-    const first = screen.getByRole('button', { name: resource.title })
-    const second = screen.getByRole('button', { name: 'Second folder' })
-    const third = screen.getByRole('button', { name: 'Third folder' })
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    const first = sidebar.getByRole('button', { name: resource.title })
+    const second = sidebar.getByRole('button', { name: 'Second folder' })
+    const third = sidebar.getByRole('button', { name: 'Third folder' })
 
     fireEvent.click(first)
     fireEvent.click(second, { ctrlKey: true })
@@ -1258,12 +1286,13 @@ describe('ResourceShell', () => {
     )
 
     await createFolderForTest(core.runtime, 'Destination')
-    fireEvent.contextMenu(screen.getByRole('button', { name: resource.title }), {
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(sidebar.getByRole('button', { name: resource.title }), {
       clientX: 40,
       clientY: 50,
     })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Copy' }))
-    fireEvent.contextMenu(screen.getByRole('button', { name: 'Destination' }), {
+    fireEvent.contextMenu(sidebar.getByRole('button', { name: 'Destination' }), {
       clientX: 80,
       clientY: 90,
     })
@@ -1305,15 +1334,16 @@ describe('ResourceShell', () => {
     if (roots.state !== 'known') throw new Error('expected loaded roots')
     const destinationId = roots.items.find((item) => item.title === 'Destination')?.id
     if (!destinationId) throw new Error('expected destination folder')
-    fireEvent.contextMenu(screen.getByRole('button', { name: resource.title }), {
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(sidebar.getByRole('button', { name: resource.title }), {
       clientX: 40,
       clientY: 50,
     })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Move…' }))
 
     const dialog = within(screen.getByRole('dialog', { name: 'Move resources' }))
-    expect(dialog.getByRole('button', { name: 'Workspace root' })).toBeDisabled()
-    fireEvent.click(dialog.getByRole('button', { name: 'Destination' }))
+    expect(dialog.getByRole('option', { name: /Workspace root/ })).toBeDisabled()
+    fireEvent.click(dialog.getByRole('option', { name: /Destination/ }))
 
     await waitFor(() =>
       expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
@@ -1339,10 +1369,11 @@ describe('ResourceShell', () => {
     )
 
     await createFolderForTest(core.runtime, 'Keyboard source')
-    const source = screen.getByRole('button', { name: 'Keyboard source' })
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    const source = sidebar.getByRole('button', { name: 'Keyboard source' })
     fireEvent.click(source)
     fireEvent.keyDown(source, { key: 'c', ctrlKey: true })
-    const destination = screen.getByRole('button', { name: resource.title })
+    const destination = sidebar.getByRole('button', { name: resource.title })
     fireEvent.click(destination)
     fireEvent.keyDown(destination, { key: 'v', ctrlKey: true })
 
@@ -1464,7 +1495,8 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.contextMenu(await screen.findByRole('button', { name: resource.title }), {
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(await sidebar.findByRole('button', { name: resource.title }), {
       clientX: 40,
       clientY: 50,
     })
@@ -1476,7 +1508,7 @@ describe('ResourceShell', () => {
       'aria-pressed',
       'true',
     )
-    expect(screen.getByRole('button', { name: resource.title })).toBeInTheDocument()
+    expect(sidebar.getByRole('button', { name: resource.title })).toBeInTheDocument()
     core.dispose()
   })
 
@@ -1500,7 +1532,11 @@ describe('ResourceShell', () => {
         value: { lifecycle: 'active', displayParentId: null },
       }),
     )
-    expect(await screen.findByRole('button', { name: resource.title })).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('navigation', { name: 'Sidebar' })).findByRole('button', {
+        name: resource.title,
+      }),
+    ).toBeInTheDocument()
     core.dispose()
   })
 
@@ -1645,7 +1681,9 @@ describe('ResourceShell', () => {
 
 async function createFolderForTest(runtime: EditorRuntime, title: string) {
   await act(() => createWorkspaceActions(runtime, vi.fn()).create('folder', null, title))
-  await screen.findByRole('button', { name: title })
+  await within(screen.getByRole('navigation', { name: 'Sidebar' })).findByRole('button', {
+    name: title,
+  })
 }
 
 async function shellRuntime(

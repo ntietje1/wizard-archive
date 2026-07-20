@@ -1,22 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import {
-  ChevronRight,
-  Eye,
-  Menu,
-  MoreVertical,
-  PanelRightOpen,
-  Pencil,
-  Redo2,
-  Undo2,
-} from 'lucide-react'
+import { ChevronRight, Eye, FolderInput, Menu, MoreVertical, PanelRightOpen } from 'lucide-react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
-import type { WorkspacePreferences } from '../workspace-preferences'
 import type { WorkspaceActions } from './resource-operations'
 import { ResourceSharingControl } from './resource-sharing-control'
-import { useResourceUndoSnapshot } from './resource-undo'
-import { ResourceViewAsMenu } from './resource-view-as-menu'
+import { ResourceViewAsMenu } from '../resource-view-as-menu'
 
 export function ResourceTopbar({
   actions,
@@ -28,6 +17,7 @@ export function ResourceTopbar({
   onOpenHistory,
   onOpenLeftSidebar,
   onOpenRightSidebar,
+  onRequestMove,
   resource,
   runtime,
 }: {
@@ -35,11 +25,12 @@ export function ResourceTopbar({
   canEdit: boolean
   leftSidebarAvailable: boolean
   leftSidebarVisible: boolean
-  mode: WorkspacePreferences['mode']
-  onModeChange: (mode: WorkspacePreferences['mode']) => void
+  mode: 'editor' | 'viewer'
+  onModeChange: (mode: 'editor' | 'viewer') => void
   onOpenHistory: () => void
   onOpenLeftSidebar: () => void
   onOpenRightSidebar: () => void
+  onRequestMove: (resourceIds: ReadonlyArray<AuthorizedResourceSummary['id']>) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -48,6 +39,7 @@ export function ResourceTopbar({
   const ancestors = runtime.resources.index.getSnapshot().ancestors(resource.id)
   const breadcrumb = ancestors.state === 'known' ? ancestors.value : []
   const historyAvailable = runtime.history.status === 'available' && resource.permission === 'edit'
+  const viewAs = runtime.viewAs.status === 'available' ? runtime.viewAs.value : null
 
   return (
     <header className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border px-1">
@@ -70,14 +62,21 @@ export function ResourceTopbar({
           </span>
         ))}
         {editing ? (
-          <ResourceTitleForm
+          <ResourceTitleInput
             actions={actions}
             resource={resource}
-            onCancel={() => setEditing(false)}
+            onComplete={() => setEditing(false)}
           />
         ) : (
           <h1 className="min-w-0 truncate px-1 text-sm font-medium" title={resource.title}>
-            {resource.title}
+            <button
+              type="button"
+              className="max-w-full truncate rounded px-0.5 text-left hover:bg-muted disabled:pointer-events-none"
+              disabled={!canEdit || resource.lifecycle !== 'active'}
+              onClick={() => setEditing(true)}
+            >
+              {resource.title}
+            </button>
           </h1>
         )}
       </div>
@@ -91,26 +90,15 @@ export function ResourceTopbar({
           Edited {formatRelativeTime(resource.updatedAt)}
         </button>
       )}
-      {runtime.resources.structure.status === 'available' && (
-        <div
-          className="hidden items-center rounded-md border border-border p-0.5 sm:flex"
-          aria-label="Workspace mode"
-        >
-          {(['editor', 'viewer'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={mode === value}
-              className="rounded px-2 py-0.5 text-xs capitalize text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
-              onClick={() => onModeChange(value)}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-      )}
-      <ResourceViewAsMenu viewAs={runtime.viewAs} />
-      <ResourceUndoButtons actions={actions} runtime={runtime} />
+      <ResourceViewAsMenu
+        mode={mode}
+        participants={viewAs?.participants}
+        pending={viewAs?.pending}
+        projection={runtime.scope.projection}
+        selectedParticipantId={viewAs?.selectedParticipantId}
+        onModeChange={onModeChange}
+        onParticipantChange={(participantId) => viewAs?.select(participantId)}
+      />
       {runtime.scope.projection === 'player' && (
         <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
           <Eye className="size-3.5" /> Player view
@@ -132,10 +120,7 @@ export function ResourceTopbar({
             canEdit={canEdit}
             resource={resource}
             onClose={() => setMenuOpen(false)}
-            onEdit={() => {
-              setMenuOpen(false)
-              setEditing(true)
-            }}
+            onRequestMove={onRequestMove}
           />
         )}
       </div>
@@ -143,50 +128,17 @@ export function ResourceTopbar({
   )
 }
 
-function ResourceUndoButtons({
-  actions,
-  runtime,
-}: {
-  actions: WorkspaceActions
-  runtime: EditorRuntime
-}) {
-  const snapshot = useResourceUndoSnapshot(runtime.resources.undo)
-  if (runtime.resources.undo.status !== 'available') return null
-  return (
-    <div className="hidden items-center sm:flex" aria-label="Resource history">
-      <TopbarIcon
-        disabled={snapshot.status === 'running' || snapshot.undo === null}
-        label={
-          snapshot.status === 'ready' && snapshot.undo ? `Undo ${snapshot.undo.label}` : 'Undo'
-        }
-        onClick={() => void actions.undo('undo')}
-      >
-        <Undo2 className="size-4" />
-      </TopbarIcon>
-      <TopbarIcon
-        disabled={snapshot.status === 'running' || snapshot.redo === null}
-        label={
-          snapshot.status === 'ready' && snapshot.redo ? `Redo ${snapshot.redo.label}` : 'Redo'
-        }
-        onClick={() => void actions.undo('redo')}
-      >
-        <Redo2 className="size-4" />
-      </TopbarIcon>
-    </div>
-  )
-}
-
 function ResourceMenu({
   actions,
   canEdit,
   onClose,
-  onEdit,
+  onRequestMove,
   resource,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
   onClose: () => void
-  onEdit: () => void
+  onRequestMove: (resourceIds: ReadonlyArray<AuthorizedResourceSummary['id']>) => void
   resource: AuthorizedResourceSummary
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -201,17 +153,20 @@ function ResourceMenu({
     >
       {canEdit && resource.lifecycle === 'active' && (
         <>
-          <MenuButton onClick={onEdit}>Edit details</MenuButton>
           <MenuButton
             onClick={() => run(() => actions.duplicate([resource.id], resource.displayParentId))}
           >
             Duplicate
           </MenuButton>
-          {resource.displayParentId !== null && (
-            <MenuButton onClick={() => run(() => actions.move([resource.id], null))}>
-              Move to root
-            </MenuButton>
-          )}
+          <MenuButton
+            onClick={() => {
+              onClose()
+              onRequestMove([resource.id])
+            }}
+          >
+            <FolderInput className="mr-2 size-4" />
+            Move…
+          </MenuButton>
         </>
       )}
       <MenuButton onClick={() => run(() => actions.copyLink(resource))}>Copy link</MenuButton>
@@ -255,59 +210,45 @@ function ResourceMenu({
   )
 }
 
-function ResourceTitleForm({
+function ResourceTitleInput({
   actions,
-  onCancel,
+  onComplete,
   resource,
 }: {
   actions: WorkspaceActions
-  onCancel: () => void
+  onComplete: () => void
   resource: AuthorizedResourceSummary
 }) {
   const [title, setTitle] = useState<string>(resource.title)
-  const [icon, setIcon] = useState(resource.icon ?? '')
-  const [color, setColor] = useState(resource.color ?? '')
+  const cancelled = useRef(false)
+  const commit = () => {
+    if (cancelled.current || title === resource.title) {
+      onComplete()
+      return
+    }
+    void actions.update(resource.id, { title }).then((completed) => {
+      if (completed) onComplete()
+    })
+  }
   return (
-    <form
-      className="flex min-w-0 flex-1 items-center gap-1"
-      onSubmit={(event) => {
-        event.preventDefault()
-        void actions
-          .update(resource.id, { title, icon, color })
-          .then((completed) => completed && onCancel())
+    <input
+      autoFocus
+      aria-label="Resource title"
+      className="h-7 min-w-32 flex-1 rounded border border-input bg-background px-2 text-sm"
+      value={title}
+      onBlur={commit}
+      onChange={(event) => setTitle(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          cancelled.current = true
+          onComplete()
+        } else if (event.key === 'Enter') {
+          event.preventDefault()
+          event.currentTarget.blur()
+        }
       }}
-    >
-      <input
-        autoFocus
-        aria-label="Resource title"
-        className="h-7 min-w-32 flex-1 rounded border border-input bg-background px-2 text-sm"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <input
-        aria-label="Resource icon"
-        className="hidden h-7 w-20 rounded border border-input bg-background px-2 text-xs md:block"
-        placeholder="Icon"
-        value={icon}
-        onChange={(event) => setIcon(event.target.value)}
-      />
-      <input
-        aria-label="Resource color"
-        className="hidden h-7 w-20 rounded border border-input bg-background px-2 text-xs md:block"
-        placeholder="Color"
-        value={color}
-        onChange={(event) => setColor(event.target.value)}
-      />
-      <TopbarIcon label="Cancel editing" onClick={onCancel}>
-        <span className="text-xs">Cancel</span>
-      </TopbarIcon>
-      <button
-        type="submit"
-        className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2 text-xs text-primary-foreground"
-      >
-        <Pencil className="size-3" /> Save
-      </button>
-    </form>
+    />
   )
 }
 
@@ -347,7 +288,7 @@ function MenuButton({
   ariaLabel?: string
   children: ReactNode
   destructive?: boolean
-  onClick: () => void
+  onClick?: () => void
 }) {
   return (
     <button

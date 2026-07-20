@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Loader2, PanelRight, Search, X } from 'lucide-react'
+import { Folder, Loader2, PanelRight, Search, X } from 'lucide-react'
+import type { ResourceId } from '../domain-id'
 import type { EditorRuntime, WorkspaceSearch } from '../editor-runtime-contract'
 import type { WorkspaceSearchResult } from '../resource-search-policy'
-import type { AuthorizedResourceSummary, ResourceKnowledge } from '../resource-index-contract'
+import type {
+  AuthorizedResourceSummary,
+  ResourceKnowledge,
+  WorkspaceResourceIndexSnapshot,
+} from '../resource-index-contract'
 import type { ResourceKind } from '../resource-record'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
+import { useEnsureResourceCollection } from './resource-loading'
 import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'
 import { useWorkspaceCreation } from './use-workspace-creation'
@@ -23,21 +29,33 @@ type SearchState =
 
 type SearchDisplayItem =
   | Readonly<{ type: 'create'; kind: Exclude<ResourceKind, 'file'> }>
+  | Readonly<{ type: 'root' }>
   | Readonly<{ type: 'resource'; result: WorkspaceSearchResult }>
 
 const EMPTY_RESULTS: ReadonlyArray<WorkspaceSearchResult> = []
+const ROOT_FOLDER_QUERY = {
+  parentId: null,
+  lifecycle: 'active' as const,
+  kinds: ['folder' as const],
+}
+
+export type ResourceSearchPurpose =
+  | Readonly<{ type: 'open' }>
+  | Readonly<{ type: 'move'; resourceIds: ReadonlyArray<ResourceId> }>
 
 export function ResourceSearchDialog({
   actions,
   canEdit,
   onOpenChange,
   open,
+  purpose = { type: 'open' },
   runtime,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
   onOpenChange: (open: boolean) => void
   open: boolean
+  purpose?: ResourceSearchPurpose
   runtime: EditorRuntime
 }) {
   const search = runtime.search.status === 'available' ? runtime.search.value : null
@@ -46,6 +64,7 @@ export function ResourceSearchDialog({
     <OpenResourceSearchDialog
       actions={actions}
       canEdit={canEdit}
+      purpose={purpose}
       runtime={runtime}
       search={search}
       onOpenChange={onOpenChange}
@@ -57,12 +76,14 @@ function OpenResourceSearchDialog({
   actions,
   canEdit,
   onOpenChange,
+  purpose,
   runtime,
   search,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
   onOpenChange: (open: boolean) => void
+  purpose: ResourceSearchPurpose
   runtime: EditorRuntime
   search: WorkspaceSearch
 }) {
@@ -72,8 +93,10 @@ function OpenResourceSearchDialog({
   const [state, setState] = useState<SearchState>({ status: 'idle', results: EMPTY_RESULTS })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
+  const [moving, setMoving] = useState(false)
   const dialogRef = useModalDialog()
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, null)
+  useEnsureResourceCollection(runtime.resources.loader, ROOT_FOLDER_QUERY, purpose.type === 'move')
 
   useEffect(() => {
     setRecent(search.recent())
@@ -112,14 +135,29 @@ function OpenResourceSearchDialog({
     }
   }, [query, search])
 
-  const recentResults = recent.flatMap((resourceId) =>
-    snapshot.lookup(resourceId).state === 'known'
+  const recentResults = recent.flatMap((resourceId) => {
+    const resource = knownResource(snapshot.lookup(resourceId))
+    return resource && (purpose.type === 'open' || resource.kind === 'folder')
       ? [{ resourceId, match: { type: 'title' as const } }]
-      : [],
-  )
+      : []
+  })
+  const searchResults = (query.trim() ? state.results : recentResults).filter((result) => {
+    const resource = knownResource(snapshot.lookup(result.resourceId))
+    return purpose.type === 'open' || resource?.kind === 'folder'
+  })
+  const rootFolders = snapshot.list(ROOT_FOLDER_QUERY)
+  const browsableFolders =
+    purpose.type === 'move' && !query.trim() && rootFolders.state === 'known'
+      ? rootFolders.items.map((resource) => ({
+          resourceId: resource.id,
+          match: { type: 'title' as const },
+        }))
+      : []
+  const resourceResults = uniqueSearchResults([...browsableFolders, ...searchResults])
   const displayItems: ReadonlyArray<SearchDisplayItem> = [
-    ...matchingCreateCommands(query, canEdit),
-    ...(query.trim() ? state.results : recentResults).map((result) => ({
+    ...(purpose.type === 'move' ? ([{ type: 'root' }] as const) : []),
+    ...matchingCreateCommands(query, canEdit && purpose.type === 'open'),
+    ...resourceResults.map((result) => ({
       type: 'resource' as const,
       result,
     })),
@@ -130,6 +168,20 @@ function OpenResourceSearchDialog({
       ? knownResource(snapshot.lookup(selected.result.resourceId))
       : null
   const select = async (item: SearchDisplayItem) => {
+    if (purpose.type === 'move') {
+      const destinationParentId = item.type === 'resource' ? item.result.resourceId : null
+      if (
+        item.type === 'create' ||
+        !isEligibleMoveDestination(snapshot, purpose.resourceIds, destinationParentId)
+      ) {
+        return
+      }
+      setMoving(true)
+      const completed = await actions.move(purpose.resourceIds, destinationParentId)
+      setMoving(false)
+      if (completed) onOpenChange(false)
+      return
+    }
     if (item.type === 'create') {
       const settlement = await creation.run(item.kind, (signal) =>
         actions.create(item.kind, null, '', signal),
@@ -137,6 +189,7 @@ function OpenResourceSearchDialog({
       if (settlement.status === 'completed') onOpenChange(false)
       return
     }
+    if (item.type === 'root') return
     search.recordOpened(item.result.resourceId)
     actions.open(item.result.resourceId)
     onOpenChange(false)
@@ -160,7 +213,7 @@ function OpenResourceSearchDialog({
       ref={dialogRef}
       aria-describedby="resource-search-description"
       aria-labelledby="resource-search-title"
-      className={`${showPreview ? 'max-w-4xl' : 'max-w-xl'} m-auto h-[min(80vh,600px)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl backdrop:bg-black/40 open:flex`}
+      className={`${purpose.type === 'open' && showPreview ? 'max-w-4xl' : 'max-w-xl'} m-auto h-[min(80vh,600px)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-lg border border-border bg-popover p-0 text-popover-foreground shadow-xl backdrop:bg-black/40 open:flex`}
       onCancel={(event) => {
         event.preventDefault()
         onOpenChange(false)
@@ -171,10 +224,10 @@ function OpenResourceSearchDialog({
       }}
     >
       <h2 id="resource-search-title" className="sr-only">
-        Search
+        {purpose.type === 'move' ? 'Move resources' : 'Search'}
       </h2>
       <p id="resource-search-description" className="sr-only">
-        Search your vault
+        {purpose.type === 'move' ? 'Choose a destination folder' : 'Search your vault'}
       </p>
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
         <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -186,9 +239,9 @@ function OpenResourceSearchDialog({
           aria-autocomplete="list"
           aria-controls="resource-search-results"
           aria-expanded={displayItems.length > 0}
-          aria-label="Search"
+          aria-label={purpose.type === 'move' ? 'Search folders' : 'Search'}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          placeholder="Search…"
+          placeholder={purpose.type === 'move' ? 'Search folders…' : 'Search…'}
           role="combobox"
           value={query}
           onChange={(event) => {
@@ -196,15 +249,17 @@ function OpenResourceSearchDialog({
             setSelectedIndex(0)
           }}
         />
-        <button
-          type="button"
-          aria-label="Toggle preview"
-          aria-pressed={showPreview}
-          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={() => setShowPreview((value) => !value)}
-        >
-          <PanelRight className="size-3.5" />
-        </button>
+        {purpose.type === 'open' && (
+          <button
+            type="button"
+            aria-label="Toggle preview"
+            aria-pressed={showPreview}
+            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => setShowPreview((value) => !value)}
+          >
+            <PanelRight className="size-3.5" />
+          </button>
+        )}
         <button
           type="button"
           aria-label="Close"
@@ -234,10 +289,25 @@ function OpenResourceSearchDialog({
             >
               {displayItems.map((item, index) => (
                 <SearchItem
-                  key={item.type === 'create' ? `create-${item.kind}` : item.result.resourceId}
+                  key={
+                    item.type === 'create'
+                      ? `create-${item.kind}`
+                      : item.type === 'root'
+                        ? 'workspace-root'
+                        : item.result.resourceId
+                  }
                   id={`resource-search-${index}`}
                   item={item}
                   disabled={item.type === 'create' && creation.blocked}
+                  moveDisabled={
+                    purpose.type === 'move' &&
+                    !isEligibleMoveDestination(
+                      snapshot,
+                      purpose.resourceIds,
+                      item.type === 'resource' ? item.result.resourceId : null,
+                    )
+                  }
+                  moving={moving}
                   pending={item.type === 'create' && creation.pendingControlId === item.kind}
                   query={query}
                   resource={
@@ -258,11 +328,13 @@ function OpenResourceSearchDialog({
             </div>
           </div>
         </div>
-        {showPreview && <SearchPreview resource={selectedResource} runtime={runtime} />}
+        {purpose.type === 'open' && showPreview && (
+          <SearchPreview resource={selectedResource} runtime={runtime} />
+        )}
       </div>
       <div className="flex gap-3 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
         <span>↑↓ Navigate</span>
-        <span>↵ Open / Run</span>
+        <span>↵ {purpose.type === 'move' ? 'Move' : 'Open / Run'}</span>
         <span>Esc Close</span>
       </div>
     </dialog>
@@ -276,6 +348,8 @@ function SearchItem({
   onActivate,
   onHover,
   pending,
+  moveDisabled,
+  moving,
   query,
   resource,
   selected,
@@ -286,35 +360,43 @@ function SearchItem({
   onActivate: () => void
   onHover: () => void
   pending: boolean
+  moveDisabled: boolean
+  moving: boolean
   query: string
   resource: AuthorizedResourceSummary | null
   selected: boolean
 }) {
   const kind = item.type === 'create' ? item.kind : resource?.kind
-  const Icon = kind ? resourceKindIcon(kind) : Search
+  const Icon = item.type === 'root' ? Folder : kind ? resourceKindIcon(kind) : Search
   const title =
-    item.type === 'create' ? `New ${resourceKindLabel(item.kind)}` : (resource?.title ?? 'Loading…')
+    item.type === 'root'
+      ? 'Workspace root'
+      : item.type === 'create'
+        ? `New ${resourceKindLabel(item.kind)}`
+        : (resource?.title ?? 'Loading…')
   const subtitle =
-    item.type === 'create'
-      ? 'Create at workspace root'
-      : item.result.match.type === 'body'
-        ? item.result.match.text
-        : resource
-          ? resourceKindLabel(resource.kind)
-          : ''
+    item.type === 'root'
+      ? 'Campaign root'
+      : item.type === 'create'
+        ? 'Create at workspace root'
+        : item.result.match.type === 'body'
+          ? item.result.match.text
+          : resource
+            ? resourceKindLabel(resource.kind)
+            : ''
   return (
     <button
       id={id}
       role="option"
       type="button"
       aria-selected={selected}
-      aria-busy={pending}
-      disabled={disabled}
+      aria-busy={pending || moving}
+      disabled={disabled || moveDisabled || moving}
       className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted aria-selected:bg-muted"
       onClick={onActivate}
       onMouseEnter={onHover}
     >
-      {pending ? (
+      {pending || (moving && selected) ? (
         <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground" />
       ) : (
         <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -364,6 +446,42 @@ function matchingCreateCommands(query: string, canEdit: boolean): ReadonlyArray<
     const text = `new ${kind} create ${kind}`
     return terms.every((term) => text.includes(term)) ? [{ type: 'create' as const, kind }] : []
   })
+}
+
+function uniqueSearchResults(
+  results: ReadonlyArray<WorkspaceSearchResult>,
+): ReadonlyArray<WorkspaceSearchResult> {
+  const seen = new Set<ResourceId>()
+  return results.filter((result) => {
+    if (seen.has(result.resourceId)) return false
+    seen.add(result.resourceId)
+    return true
+  })
+}
+
+function isEligibleMoveDestination(
+  snapshot: WorkspaceResourceIndexSnapshot,
+  resourceIds: ReadonlyArray<ResourceId>,
+  destinationParentId: ResourceId | null,
+): boolean {
+  const resourceIdSet = new Set(resourceIds)
+  if (destinationParentId !== null) {
+    if (resourceIdSet.has(destinationParentId)) return false
+    const ancestors = snapshot.ancestors(destinationParentId)
+    if (
+      ancestors.state !== 'known' ||
+      ancestors.value.some((ancestor) => resourceIdSet.has(ancestor.id))
+    ) {
+      return false
+    }
+  }
+  let changesParent = false
+  for (const resourceId of resourceIds) {
+    const resource = snapshot.lookup(resourceId)
+    if (resource.state !== 'known') return false
+    if (resource.value.displayParentId !== destinationParentId) changesParent = true
+  }
+  return changesParent
 }
 
 function knownResource(

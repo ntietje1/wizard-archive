@@ -11,6 +11,7 @@ import {
   FolderInput,
   Hash,
   Loader2,
+  Palette,
   Plus,
   RotateCcw,
   Scissors,
@@ -23,6 +24,7 @@ import type { ResourceNavigation } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
+import { ResourceAppearancePopover } from './resource-appearance-popover'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import { useWorkspaceCreation } from './use-workspace-creation'
@@ -65,7 +67,9 @@ export function ResourceContextMenu({
   useEffect(() => {
     menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus()
     const close = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node)) onClose()
+      const target = event.target as Element
+      if (!menu.current?.contains(target) && !target.closest('[data-resource-appearance]'))
+        onClose()
     }
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
@@ -93,6 +97,22 @@ export function ResourceContextMenu({
           clipboard={clipboard}
           creation={creation}
           onClipboardChange={onClipboardChange}
+        />
+      )}
+      {canEdit && active && resourceIds.length === 1 && (
+        <ResourceAppearancePopover
+          actions={workspace}
+          resource={resource}
+          trigger={
+            <button
+              role="menuitem"
+              type="button"
+              className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted"
+            >
+              <Palette className="size-4" />
+              Edit icon and color
+            </button>
+          }
         />
       )}
       {resourceIds.length === 1 && <ResourceLinkMenuItems actions={actions} />}
@@ -376,7 +396,7 @@ function MenuItem({
   disabled?: boolean
   icon: ReactNode
   label: string
-  onActivate: () => void
+  onActivate?: () => void
   shortcut?: string
 }) {
   return (

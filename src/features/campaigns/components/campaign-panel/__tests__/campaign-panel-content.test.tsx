@@ -29,6 +29,24 @@ beforeEach(() => {
 })
 
 describe('CampaignPanelContent session actions', () => {
+  it('shows workspace controls and opens campaign settings', async () => {
+    const onClose = vi.fn()
+    render(
+      <CampaignPanelContent
+        onClose={onClose}
+        onSwitchCampaign={vi.fn()}
+        source={createPanelSource()}
+        workspaceControls={<button type="button">View as...</button>}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'View as...' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+
+    expect(settingsStoreMocks.open).toHaveBeenCalledWith('campaign-general')
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
   it('shows session loading without empty-session actions', () => {
     renderPanel(createPanelSource({ isLoadingSessions: true }))
 

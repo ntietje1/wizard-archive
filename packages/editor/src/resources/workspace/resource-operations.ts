@@ -87,8 +87,10 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
     paste: (clipboard: WorkspaceClipboard, destinationParentId: ResourceId) =>
       pasteWorkspaceClipboard(runtime, clipboard, destinationParentId, report),
     report,
-    update: (resourceId: ResourceId, values: { title: string; icon: string; color: string }) =>
-      updateWorkspaceResource(runtime, resourceId, values, report),
+    update: (
+      resourceId: ResourceId,
+      values: Readonly<{ title?: string; icon?: string; color?: string }>,
+    ) => updateWorkspaceResource(runtime, resourceId, values, report),
     undo: (direction: 'redo' | 'undo') => {
       const history = runtime.resources.undo
       if (history.status !== 'available') {
@@ -550,22 +552,28 @@ async function completeWorkspaceTransfer(
 async function updateWorkspaceResource(
   runtime: EditorRuntime,
   resourceId: ResourceId,
-  values: { title: string; icon: string; color: string },
+  values: Readonly<{ title?: string; icon?: string; color?: string }>,
   report: WorkspaceReport,
 ) {
-  let title
-  try {
-    title = canonicalizeResourceTitle(values.title)
-  } catch {
-    report('Invalid resource title')
-    return false
+  let title: ReturnType<typeof canonicalizeResourceTitle> | undefined
+  if (values.title !== undefined) {
+    try {
+      title = canonicalizeResourceTitle(values.title)
+    } catch {
+      report('Invalid resource title')
+      return false
+    }
   }
   return await executeWorkspaceStructureCommand(
     runtime,
     {
       type: 'updateMetadata',
       resourceId,
-      changes: { title, icon: values.icon || null, color: values.color || null },
+      changes: {
+        ...(title === undefined ? {} : { title }),
+        ...(values.icon === undefined ? {} : { icon: values.icon || null }),
+        ...(values.color === undefined ? {} : { color: values.color || null }),
+      },
     },
     report,
   )

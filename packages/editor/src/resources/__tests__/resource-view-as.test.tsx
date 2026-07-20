@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import { ResourceViewAsBanner } from '../workspace/resource-view-as-banner'
-import { ResourceViewAsMenu } from '../workspace/resource-view-as-menu'
+import { ResourceViewAsMenu } from '../resource-view-as-menu'
 
 const participantId = testDomainId('campaignMember', 'view-as-ui')
 const participant = {
@@ -28,8 +28,17 @@ describe('resource view-as controls', () => {
       },
     }
 
-    render(<ResourceViewAsMenu viewAs={viewAs} />)
-    const trigger = screen.getByRole('button', { name: 'View as player' })
+    render(
+      <ResourceViewAsMenu
+        mode="editor"
+        participants={viewAs.value.participants}
+        projection="dm"
+        selectedParticipantId={viewAs.value.selectedParticipantId}
+        onModeChange={vi.fn()}
+        onParticipantChange={select}
+      />,
+    )
+    const trigger = screen.getByRole('button', { name: 'View as...' })
     trigger.focus()
     await user.keyboard('{ArrowDown}')
     await user.click(await screen.findByRole('menuitemcheckbox', { name: /Avery Player/ }))
@@ -42,26 +51,38 @@ describe('resource view-as controls', () => {
     const select = vi.fn()
     render(
       <ResourceViewAsMenu
-        viewAs={availableViewAs({ select, selectedParticipantId: participantId })}
+        mode="editor"
+        participants={[participant]}
+        projection="view_as_player"
+        selectedParticipantId={participantId}
+        onModeChange={vi.fn()}
+        onParticipantChange={select}
       />,
     )
 
-    const trigger = screen.getByRole('button', { name: 'View as player' })
-    trigger.focus()
-    await user.keyboard('{ArrowDown}')
-    await user.click(await screen.findByRole('menuitem', { name: 'Stop viewing as player' }))
+    await user.click(screen.getByRole('button', { name: 'Exit view as' }))
 
     expect(select).toHaveBeenCalledExactlyOnceWith(null)
   })
 
   it('disables and labels the trigger while the participant list is pending', () => {
-    render(<ResourceViewAsMenu viewAs={availableViewAs({ pending: true })} />)
+    render(<ResourceViewAsMenu mode="editor" pending projection="dm" onModeChange={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Loading players' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Loading players' })).toHaveAttribute(
       'aria-busy',
       'true',
     )
+  })
+
+  it('offers a read-only self projection and exits it directly', async () => {
+    const user = userEvent.setup()
+    const onModeChange = vi.fn()
+    render(<ResourceViewAsMenu mode="editor" projection="dm" onModeChange={onModeChange} />)
+
+    await user.click(screen.getByRole('button', { name: 'View as...' }))
+    await user.click(screen.getByRole('menuitem', { name: 'View as yourself' }))
+    expect(onModeChange).toHaveBeenCalledWith('viewer')
   })
 
   it('identifies the active player and exits from the bottom banner', async () => {

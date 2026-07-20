@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ArrowLeftRight, History, Play, Square, UserPlus } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ArrowLeftRight, History, Play, Settings, Square, UserPlus } from 'lucide-react'
 import type { Session } from 'shared/sessions/types'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
 import { handleError } from '~/shared/utils/logger'
@@ -16,10 +17,12 @@ export function CampaignPanelContent({
   onClose,
   onSwitchCampaign,
   source,
+  workspaceControls,
 }: {
   onClose: () => void
   onSwitchCampaign: () => void
   source: CampaignPanelSource
+  workspaceControls?: ReactNode
 }) {
   const openSettings = useSettingsStore((s) => s.open)
   const [showResume, setShowResume] = useState(false)
@@ -150,6 +153,18 @@ export function CampaignPanelContent({
 
         <div className="border-t my-1" />
 
+        {workspaceControls}
+        <button
+          type="button"
+          className={menuItemClass}
+          onClick={() => {
+            openSettings('campaign-general')
+            onClose()
+          }}
+        >
+          <Settings className="size-4" />
+          Settings
+        </button>
         <button
           type="button"
           className={menuItemClass}

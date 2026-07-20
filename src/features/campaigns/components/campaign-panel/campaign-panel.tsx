@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { CampaignPanelContent } from './campaign-panel-content'
 import {
@@ -12,9 +13,11 @@ import { getSessionStatusDotColor } from './session-status-dot'
 export function CampaignPanel({
   onSwitchCampaign,
   source,
+  workspaceControls,
 }: {
   onSwitchCampaign: () => void
   source: CampaignPanelSource
+  workspaceControls?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
 
@@ -43,6 +46,7 @@ export function CampaignPanel({
       <PopoverContent side="right" sideOffset={8} align="end" className="p-0 w-64">
         <CampaignPanelContent
           source={source}
+          workspaceControls={workspaceControls}
           onClose={() => setOpen(false)}
           onSwitchCampaign={onSwitchCampaign}
         />

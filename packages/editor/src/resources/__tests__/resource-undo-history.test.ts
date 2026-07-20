@@ -141,7 +141,7 @@ describe('resource undo history', () => {
     expect(undo.history.getSnapshot()).toEqual({
       status: 'ready',
       undo: null,
-      redo: { label: 'Edit resource' },
+      redo: { label: 'rename' },
     })
   })
 })

@@ -1,0 +1,81 @@
+import {
+  Apple,
+  Axe,
+  Beef,
+  Bird,
+  BookOpen,
+  BowArrow,
+  Box,
+  Calendar,
+  Cat,
+  Cherry,
+  Dog,
+  File,
+  FileText,
+  Flame,
+  Folder,
+  Gem,
+  Grid2x2Plus,
+  Heart,
+  Locate,
+  MapPin,
+  MessageCircleWarning,
+  Moon,
+  Mountain,
+  Music,
+  Notebook,
+  Share2,
+  Shield,
+  Sparkles,
+  Squirrel,
+  Star,
+  Sun,
+  Sword,
+  User,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { AuthorizedResourceSummary } from '../resource-index-contract'
+import { resourceKindIcon } from './resource-presentation'
+
+export const RESOURCE_ICONS = {
+  Apple,
+  Axe,
+  Beef,
+  Bird,
+  BookOpen,
+  BowArrow,
+  Box,
+  Calendar,
+  Cat,
+  Cherry,
+  Dog,
+  File,
+  FileText,
+  Flame,
+  Folder,
+  Gem,
+  Grid2x2Plus,
+  Heart,
+  Locate,
+  MapPin,
+  MessageCircleWarning,
+  Moon,
+  Mountain,
+  Music,
+  Notebook,
+  Share2,
+  Shield,
+  Sparkles,
+  Squirrel,
+  Star,
+  Sun,
+  Sword,
+  User,
+} satisfies Record<string, LucideIcon>
+
+export function resourceDisplayIcon(resource: AuthorizedResourceSummary): LucideIcon {
+  if (resource.icon && resource.icon in RESOURCE_ICONS) {
+    return RESOURCE_ICONS[resource.icon as keyof typeof RESOURCE_ICONS]
+  }
+  return resourceKindIcon(resource.kind)
+}

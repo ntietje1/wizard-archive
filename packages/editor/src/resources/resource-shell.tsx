@@ -21,8 +21,8 @@ import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
 import { useEnsureResource, useEnsureResourceCollection } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
-import { ResourceMoveDialog } from './workspace/resource-move-dialog'
 import { ResourceSidebar } from './workspace/resource-sidebar'
+import { ResourceSidebarContextMenu } from './workspace/resource-sidebar-context-menu'
 import { ResourceTopbar } from './workspace/resource-topbar'
 import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
 import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
@@ -86,6 +86,10 @@ export function ResourceShell({
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
   const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
+  const [sidebarContextMenu, setSidebarContextMenu] = useState<Readonly<{
+    x: number
+    y: number
+  }> | null>(null)
   const [contextMenu, setContextMenu] = useState<
     | Readonly<{ status: 'closed' }>
     | Readonly<{
@@ -123,6 +127,7 @@ export function ResourceShell({
       ? selection.selectedIds
       : [request.resource.id]
     changeSelection({ type: 'normalizeContext', resourceId: request.resource.id })
+    setSidebarContextMenu(null)
     setContextMenu({ status: 'open', request, resourceIds })
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
@@ -217,6 +222,10 @@ export function ResourceShell({
             onViewChange={changeSidebarView}
             onSearch={() => setSearchOpen(true)}
             onClose={() => patchPreference({ field: 'leftPanelVisible', value: false })}
+            onOpenBackgroundContextMenu={(position) => {
+              closeContextMenu()
+              setSidebarContextMenu(position)
+            }}
             onOpenContextMenu={openContextMenu}
             onSelectionChange={changeSelection}
             onSortChange={(sort) => patchPreference({ field: 'sort', value: sort })}
@@ -247,6 +256,7 @@ export function ResourceShell({
           onOpenLeftSidebar={() => patchPreference({ field: 'leftPanelVisible', value: true })}
           onOpenRightSidebar={() => patchPreference({ field: 'rightPanelVisible', value: true })}
           onOpenContextMenu={openContextMenu}
+          onRequestMove={setMoveResourceIds}
           onSelectionChange={changeSelection}
         />
       </div>
@@ -271,9 +281,15 @@ export function ResourceShell({
         <ResourceSearchDialog
           actions={actions}
           canEdit={canEditStructure}
-          open={searchOpen}
+          open={searchOpen || moveResourceIds !== null}
+          purpose={
+            moveResourceIds ? { type: 'move', resourceIds: moveResourceIds } : { type: 'open' }
+          }
           runtime={runtime}
-          onOpenChange={setSearchOpen}
+          onOpenChange={(open) => {
+            setSearchOpen(open)
+            if (!open) setMoveResourceIds(null)
+          }}
         />
       )}
       {contextMenu.status === 'open' && (
@@ -292,13 +308,13 @@ export function ResourceShell({
           onRequestMove={setMoveResourceIds}
         />
       )}
-      {moveResourceIds && (
-        <ResourceMoveDialog
+      {sidebarContextMenu && runtime.resources.undo.status === 'available' && (
+        <ResourceSidebarContextMenu
           actions={actions}
-          resourceIds={moveResourceIds}
           runtime={runtime}
-          snapshot={snapshot}
-          onClose={() => setMoveResourceIds(null)}
+          x={sidebarContextMenu.x}
+          y={sidebarContextMenu.y}
+          onClose={() => setSidebarContextMenu(null)}
         />
       )}
       <ResourceViewAsBanner viewAs={runtime.viewAs} />
@@ -470,6 +486,7 @@ function SelectedResource({
   onOpenContextMenu,
   onOpenLeftSidebar,
   onOpenRightSidebar,
+  onRequestMove,
   onSelectionChange,
   resourceId,
   runtime,
@@ -491,6 +508,7 @@ function SelectedResource({
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onOpenLeftSidebar: () => void
   onOpenRightSidebar: () => void
+  onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resourceId: ResourceId | null
   runtime: EditorRuntime
@@ -563,10 +581,11 @@ function SelectedResource({
         onOpenHistory={onOpenHistory}
         onOpenLeftSidebar={onOpenLeftSidebar}
         onOpenRightSidebar={onOpenRightSidebar}
+        onRequestMove={onRequestMove}
       />
       {!canEditViewport && (
         <div className="shrink-0 border-b border-border bg-muted/50 px-3 py-1 text-center text-xs text-muted-foreground">
-          {mode === 'viewer' ? 'Viewer mode — editing is disabled' : 'Read only'}
+          {mode === 'viewer' ? 'Viewing as yourself — editing is disabled' : 'Read only'}
         </div>
       )}
       {runtime.history.status === 'available' && resource.permission === 'edit' ? (

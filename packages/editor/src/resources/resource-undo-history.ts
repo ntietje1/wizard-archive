@@ -38,22 +38,57 @@ const EMPTY_DELIVERY: CommandDelivery<ResourceCompensationResult> = {
 }
 const MAX_HISTORY_ENTRIES = 100
 
-function historyLabel(receipt: ResourceCommandReceipt): string {
+function receiptHistoryLabel(receipt: ResourceCommandReceipt): string {
   switch (receipt.result.type) {
     case 'created':
-      return 'Create resource'
+      return 'create resource'
     case 'metadataUpdated':
-      return 'Edit resource'
+      return 'edit resource'
     case 'moved':
-      return receipt.result.resourceIds.length === 1 ? 'Move resource' : 'Move resources'
+      return receipt.result.resourceIds.length === 1 ? 'move' : 'move resources'
     case 'trashed':
-      return receipt.result.resourceIds.length === 1 ? 'Trash resource' : 'Trash resources'
+      return receipt.result.resourceIds.length === 1 ? 'move to Trash' : 'move resources to Trash'
     case 'restored':
-      return receipt.result.resourceIds.length === 1 ? 'Restore resource' : 'Restore resources'
+      return receipt.result.resourceIds.length === 1 ? 'restore' : 'restore resources'
     case 'deepCopied':
-      return receipt.result.roots.length === 1 ? 'Duplicate resource' : 'Duplicate resources'
+      return receipt.result.roots.length === 1 ? 'duplicate' : 'duplicate resources'
     case 'permanentlyDeleted':
-      return 'Permanently delete resources'
+      return 'permanently delete'
+  }
+}
+
+function commandHistoryLabel(command: ResourceStructureCommand): string {
+  switch (command.type) {
+    case 'create':
+      return `create ${command.kind}`
+    case 'updateMetadata': {
+      const changesTitle = command.changes.title !== undefined
+      const changesIcon = command.changes.icon !== undefined
+      const changesColor = command.changes.color !== undefined
+      if (changesTitle && !changesIcon && !changesColor) return 'rename'
+      if (!changesTitle && changesIcon && !changesColor) return 'change icon'
+      if (!changesTitle && !changesIcon && changesColor) return 'change color'
+      if (!changesTitle && changesIcon && changesColor) return 'change icon and color'
+      return 'edit resource'
+    }
+    case 'move':
+      return command.resourceIds.length === 1
+        ? 'move'
+        : `move ${command.resourceIds.length} resources`
+    case 'trash':
+      return command.resourceIds.length === 1
+        ? 'move to Trash'
+        : `move ${command.resourceIds.length} resources to Trash`
+    case 'restore':
+      return command.resourceIds.length === 1
+        ? 'restore'
+        : `restore ${command.resourceIds.length} resources`
+    case 'deepCopy':
+      return command.sourceRootIds.length === 1
+        ? 'duplicate'
+        : `duplicate ${command.sourceRootIds.length} resources`
+    case 'permanentlyDelete':
+      return 'permanently delete'
   }
 }
 
@@ -84,7 +119,7 @@ export function createResourceUndoHistory(
     for (const listener of listeners) listener()
   }
 
-  const recordCompleted = (receipt: ResourceCommandReceipt) => {
+  const recordCompleted = (receipt: ResourceCommandReceipt, label?: string) => {
     if (
       undoStack.some((entry) => entry.operationId === receipt.operationId) ||
       redoStack.some((entry) => entry.operationId === receipt.operationId)
@@ -95,7 +130,10 @@ export function createResourceUndoHistory(
     if (receipt.result.type === 'permanentlyDeleted') {
       undoStack.length = 0
     } else {
-      undoStack.push({ operationId: receipt.operationId, label: historyLabel(receipt) })
+      undoStack.push({
+        operationId: receipt.operationId,
+        label: label ?? receiptHistoryLabel(receipt),
+      })
       if (undoStack.length > MAX_HISTORY_ENTRIES) undoStack.shift()
     }
     publish()
@@ -146,7 +184,7 @@ export function createResourceUndoHistory(
     undo: () => execute('undo'),
     redo: () => execute('redo'),
   }
-  const beginRecording = () => {
+  const beginRecording = (label?: string) => {
     let active = true
     return {
       abandon: () => {
@@ -155,7 +193,7 @@ export function createResourceUndoHistory(
       completed: (receipt: ResourceCommandReceipt) => {
         if (!active) return
         active = false
-        recordCompleted(receipt)
+        recordCompleted(receipt, label)
       },
     } satisfies ResourceUndoRecording
   }
@@ -164,7 +202,7 @@ export function createResourceUndoHistory(
     history,
     structure: {
       execute: async (envelope: CommandEnvelope<ResourceStructureCommand>) => {
-        const undoRecording = beginRecording()
+        const undoRecording = beginRecording(commandHistoryLabel(envelope.command))
         const delivery = await structure.execute(envelope)
         if (delivery.status === 'received' && delivery.result.status === 'completed') {
           undoRecording.completed(delivery.result.receipt)
