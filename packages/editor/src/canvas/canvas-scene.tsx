@@ -1,4 +1,5 @@
 import type { CSSProperties, MouseEvent, PointerEvent, RefObject } from 'react'
+import { memo } from 'react'
 import type { CanvasBounds } from './canvas-bounds'
 import type { CanvasDocumentController, CanvasDocumentNodeUpdate } from './document-controller'
 import type {
@@ -79,6 +80,7 @@ export function CanvasScene({
   const defaultNodeZIndex = new Map(
     content.nodes.map((node, index) => [node.id, index + 1] as const),
   )
+  const documentNodeById = new Map(content.nodes.map((node) => [node.id, node]))
   const activeNodeZIndex =
     [...content.nodes, ...content.edges].reduce(
       (highest, element, index) => Math.max(highest, element.zIndex ?? index + 1),
@@ -168,7 +170,7 @@ export function CanvasScene({
                   : null
               }
               interactionController={interactionController}
-              node={node}
+              node={documentNodeById.get(node.id) ?? node}
               onOpenContextMenu={onOpenContextMenu}
               renderEmbed={renderEmbed}
               exclusivelySelected={
@@ -193,6 +195,7 @@ export function CanvasScene({
                   ? activeNodeZIndex
                   : (node.zIndex ?? defaultNodeZIndex.get(node.id) ?? 0)
               }
+              visualNode={node}
             />
           ))}
         </div>
@@ -243,7 +246,7 @@ function canvasVisualNode(
   return position === node.position ? node : { ...node, position }
 }
 
-function CanvasNode({
+const CanvasNode = memo(function CanvasNode({
   canEdit,
   committedSelected,
   content,
@@ -262,6 +265,7 @@ function CanvasNode({
   surface,
   tool,
   viewport,
+  visualNode,
   zIndex,
 }: {
   canEdit: boolean
@@ -282,11 +286,12 @@ function CanvasNode({
   surface: RefObject<HTMLElement | null>
   tool: CanvasInteractionSnapshot['tool']
   viewport: CanvasInteractionSnapshot['viewport']
+  visualNode: CanvasDocumentNode
   zIndex: number
 }) {
   if (node.hidden) return null
-  const position = node.position
-  const size = canvasNodeSize(node)
+  const position = visualNode.position
+  const size = canvasNodeSize(visualNode)
   return (
     <div
       className={`absolute touch-none select-none rounded-md ${node.type === 'stroke' ? 'pointer-events-none' : ''}`}
@@ -297,6 +302,7 @@ function CanvasNode({
       data-testid="canvas-node"
       style={{
         contain: 'layout style',
+        willChange: committedSelected ? 'transform' : undefined,
         width: size.width,
         height: size.height,
         transform: `translate(${position.x}px, ${position.y}px)`,
@@ -361,16 +367,16 @@ function CanvasNode({
       {canEdit && tool === 'edge' && node.type !== 'stroke' && (
         <CanvasNodeConnectionHandles
           interactionController={interactionController}
-          node={node}
+          node={visualNode}
           snappedHandle={snappedConnectionHandle}
           surface={surface}
         />
       )}
     </div>
   )
-}
+})
 
-function CanvasNodeContent({
+const CanvasNodeContent = memo(function CanvasNodeContent({
   canEdit,
   committedSelected,
   documentController,
@@ -449,7 +455,7 @@ function CanvasNodeContent({
       }
     />
   )
-}
+})
 
 function CanvasNodeConnectionHandles({
   interactionController,
