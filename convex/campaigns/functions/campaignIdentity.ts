@@ -37,6 +37,14 @@ export async function requireCampaignMemberRowForCampaign(
   campaignId: CampaignId,
   campaignMemberId: CampaignMemberId,
 ) {
+  return (await requireCampaignAndMemberRows(ctx, campaignId, campaignMemberId)).member
+}
+
+export async function requireCampaignAndMemberRows(
+  ctx: CampaignIdentityCtx,
+  campaignId: CampaignId,
+  campaignMemberId: CampaignMemberId,
+) {
   const [campaign, member] = await Promise.all([
     requireCampaignRow(ctx, campaignId),
     requireCampaignMemberRow(ctx, campaignMemberId),
@@ -44,5 +52,5 @@ export async function requireCampaignMemberRowForCampaign(
   if (member.campaignId !== campaign._id) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign member not found')
   }
-  return member
+  return { campaign, member }
 }

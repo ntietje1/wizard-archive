@@ -92,6 +92,17 @@ function visibleAncestorIds(
   return ancestors.state === 'known' ? ancestors.value.map((resource) => resource.id) : []
 }
 
+function parseWorkspaceSort(value: string): WorkspaceSort | null {
+  const [by, direction] = value.split(':')
+  if (
+    (by === 'created' || by === 'title' || by === 'updated') &&
+    (direction === 'ascending' || direction === 'descending')
+  ) {
+    return { by, direction }
+  }
+  return null
+}
+
 export function ResourceSidebar({
   actions,
   bookmarks,
@@ -191,64 +202,16 @@ export function ResourceSidebar({
           </button>
         </div>
       </div>
-      <div className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1">
-        {canEdit && (
-          <ResourceCreateMenu
-            actions={actions}
-            label="Create resource"
-            parentId={null}
-            runtime={runtime}
-          />
-        )}
-        <button
-          type="button"
-          aria-label="Search resources"
-          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          disabled={runtime.search.status !== 'available'}
-          title={
-            runtime.search.status === 'available'
-              ? 'Search resources'
-              : 'Search is unavailable in this workspace'
-          }
-          onClick={onSearch}
-        >
-          <Search className="size-4" />
-        </button>
-        <div className="flex-1" />
-        {view !== 'bookmarks' && (
-          <button
-            type="button"
-            aria-label="Collapse all folders"
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => setTreeExpansion({ defaultExpanded: false, exceptions: new Set() })}
-          >
-            <ListCollapse className="size-4" />
-          </button>
-        )}
-        <label className="sr-only" htmlFor="workspace-resource-sort">
-          Sort resources
-        </label>
-        <select
-          id="workspace-resource-sort"
-          aria-label="Sort resources"
-          className="h-7 max-w-28 rounded-md border-0 bg-transparent px-1 text-xs text-muted-foreground hover:bg-muted"
-          value={`${sort.by}:${sort.direction}`}
-          onChange={(event) => {
-            const [by, direction] = event.target.value.split(':')
-            if (
-              (by === 'created' || by === 'title' || by === 'updated') &&
-              (direction === 'ascending' || direction === 'descending')
-            ) {
-              onSortChange({ by, direction })
-            }
-          }}
-        >
-          <option value="title:ascending">Title A–Z</option>
-          <option value="title:descending">Title Z–A</option>
-          <option value="updated:descending">Recently edited</option>
-          <option value="created:descending">Recently created</option>
-        </select>
-      </div>
+      <ResourceSidebarControls
+        actions={actions}
+        canEdit={canEdit}
+        runtime={runtime}
+        sort={sort}
+        view={view}
+        onCollapseAll={() => setTreeExpansion({ defaultExpanded: false, exceptions: new Set() })}
+        onSearch={onSearch}
+        onSortChange={onSortChange}
+      />
       <div
         aria-label={`${view} resource drop zone`}
         data-external-file-drop-disabled={view === 'trash' ? 'true' : undefined}
@@ -313,6 +276,79 @@ export function ResourceSidebar({
       </div>
       {slots?.footer && <div className="shrink-0 border-t border-border">{slots.footer}</div>}
     </nav>
+  )
+}
+
+function ResourceSidebarControls({
+  actions,
+  canEdit,
+  onCollapseAll,
+  onSearch,
+  onSortChange,
+  runtime,
+  sort,
+  view,
+}: {
+  actions: WorkspaceActions
+  canEdit: boolean
+  onCollapseAll: () => void
+  onSearch: () => void
+  onSortChange: (sort: WorkspaceSort) => void
+  runtime: EditorRuntime
+  sort: WorkspaceSort
+  view: 'bookmarks' | 'resources' | 'trash'
+}) {
+  const searchAvailable = runtime.search.status === 'available'
+  return (
+    <div className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1">
+      {canEdit && (
+        <ResourceCreateMenu
+          actions={actions}
+          label="Create resource"
+          parentId={null}
+          runtime={runtime}
+        />
+      )}
+      <button
+        type="button"
+        aria-label="Search resources"
+        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        disabled={!searchAvailable}
+        title={searchAvailable ? 'Search resources' : 'Search is unavailable in this workspace'}
+        onClick={onSearch}
+      >
+        <Search className="size-4" />
+      </button>
+      <div className="flex-1" />
+      {view !== 'bookmarks' && (
+        <button
+          type="button"
+          aria-label="Collapse all folders"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={onCollapseAll}
+        >
+          <ListCollapse className="size-4" />
+        </button>
+      )}
+      <label className="sr-only" htmlFor="workspace-resource-sort">
+        Sort resources
+      </label>
+      <select
+        id="workspace-resource-sort"
+        aria-label="Sort resources"
+        className="h-7 max-w-28 rounded-md border-0 bg-transparent px-1 text-xs text-muted-foreground hover:bg-muted"
+        value={`${sort.by}:${sort.direction}`}
+        onChange={(event) => {
+          const nextSort = parseWorkspaceSort(event.target.value)
+          if (nextSort) onSortChange(nextSort)
+        }}
+      >
+        <option value="title:ascending">Title A–Z</option>
+        <option value="title:descending">Title Z–A</option>
+        <option value="updated:descending">Recently edited</option>
+        <option value="created:descending">Recently created</option>
+      </select>
+    </div>
   )
 }
 

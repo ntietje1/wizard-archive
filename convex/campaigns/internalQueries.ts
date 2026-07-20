@@ -1,9 +1,7 @@
 import { v } from 'convex/values'
 import { internalQuery } from '../_generated/server'
 import { campaignIdValidator, campaignMemberIdValidator } from './schema'
-import { requireCampaignMemberRow, requireCampaignRow } from './functions/campaignIdentity'
-import { ERROR_CODE } from '../../shared/errors/client'
-import { throwClientError } from '../errors'
+import { requireCampaignAndMemberRows, requireCampaignRow } from './functions/campaignIdentity'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 export const resolveCampaignRowId = internalQuery({
@@ -25,13 +23,11 @@ export const resolveCampaignAndMemberRowIds = internalQuery({
   handler: async (ctx, args) => {
     const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId)
     const campaignMemberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, args.campaignMemberId)
-    const [campaign, member] = await Promise.all([
-      requireCampaignRow(ctx, campaignId),
-      requireCampaignMemberRow(ctx, campaignMemberId),
-    ])
-    if (member.campaignId !== campaign._id) {
-      throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign member not found')
-    }
+    const { campaign, member } = await requireCampaignAndMemberRows(
+      ctx,
+      campaignId,
+      campaignMemberId,
+    )
     return { campaignId: campaign._id, campaignMemberId: member._id }
   },
 })

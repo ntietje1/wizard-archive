@@ -104,11 +104,7 @@ async function loadSelectedNoteBlockPolicies(
   >()
   for (const row of memberRows) {
     if (!row) continue
-    const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid)
-    const memberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, row.memberUuid)
-    const entries = memberVisibility.get(blockId) ?? []
-    entries.push([memberId, row.visibility])
-    memberVisibility.set(blockId, entries)
+    addMemberVisibility(memberVisibility, row)
   }
   return { audienceVisibility, memberVisibility }
 }
@@ -318,13 +314,7 @@ async function loadNoteBlockPolicies(ctx: CampaignQueryCtx, noteId: ResourceId) 
     NoteBlockId,
     Array<readonly [CampaignMemberId, NoteBlockVisibility]>
   >()
-  for (const row of memberRows) {
-    const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid)
-    const memberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, row.memberUuid)
-    const entries = memberVisibility.get(blockId) ?? []
-    entries.push([memberId, row.visibility])
-    memberVisibility.set(blockId, entries)
-  }
+  for (const row of memberRows) addMemberVisibility(memberVisibility, row)
   if (
     audienceVisibility.size !== audienceRows.length ||
     Array.from(memberVisibility.values()).some((entries) => entries.length !== 1)
@@ -339,6 +329,21 @@ async function loadNoteBlockPolicies(ctx: CampaignQueryCtx, noteId: ResourceId) 
     audienceVisibility,
     memberVisibility,
   }
+}
+
+function addMemberVisibility(
+  visibilityByBlock: Map<NoteBlockId, Array<readonly [CampaignMemberId, NoteBlockVisibility]>>,
+  row: Readonly<{
+    blockUuid: string
+    memberUuid: string
+    visibility: NoteBlockVisibility
+  }>,
+): void {
+  const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, row.blockUuid)
+  const memberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, row.memberUuid)
+  const entries = visibilityByBlock.get(blockId) ?? []
+  entries.push([memberId, row.visibility])
+  visibilityByBlock.set(blockId, entries)
 }
 
 function filterVisibleBlocks(
