@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { assertSha256Digest } from '../component-version'
@@ -7,9 +7,7 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
-import { createResourcePreview } from '../resource-preview'
-import { parseSafeHttpsUrl } from '../authored-destination-contract'
-import { ResourcePreviewSurface } from '../workspace/resource-preview-surface'
+import { EmbeddedResourceSurface } from '../workspace/embedded-resource-surface'
 import { indexRevision } from '../workspace-resource-index'
 
 vi.mock('../../canvas/canvas-readonly-preview', () => ({
@@ -30,7 +28,7 @@ vi.mock('../../maps/map-embed-preview', () => ({
   ),
 }))
 
-describe('ResourcePreviewSurface', () => {
+describe('EmbeddedResourceSurface', () => {
   it('owns the current-resource switch for all five canonical kinds', () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
@@ -88,12 +86,12 @@ describe('ResourcePreviewSurface', () => {
       },
     } as unknown as EditorRuntime
 
-    const view = render(<ResourcePreviewSurface resource={note} runtime={runtime} />)
+    const view = render(<EmbeddedResourceSurface resource={note} runtime={runtime} />)
     expect(screen.getByLabelText('Note preview')).toHaveTextContent('Static note content')
     expect(screen.getByLabelText('Note preview')).toHaveTextContent('Other note content')
 
     view.rerender(
-      <ResourcePreviewSurface
+      <EmbeddedResourceSurface
         resource={note}
         runtime={runtime}
         target={{
@@ -107,13 +105,13 @@ describe('ResourcePreviewSurface', () => {
     expect(screen.getByLabelText('Note preview')).toHaveTextContent('Static note content')
     expect(screen.getByLabelText('Note preview')).not.toHaveTextContent('Other note content')
 
-    view.rerender(<ResourcePreviewSurface resource={folder} runtime={runtime} />)
+    view.rerender(<EmbeddedResourceSurface resource={folder} runtime={runtime} />)
     expect(screen.getByRole('list', { name: 'Folder contents' })).toHaveTextContent('Child')
 
-    view.rerender(<ResourcePreviewSurface resource={map} runtime={runtime} />)
+    view.rerender(<EmbeddedResourceSurface resource={map} runtime={runtime} />)
     expect(screen.getByTestId('map-preview')).toHaveTextContent('Map')
     view.rerender(
-      <ResourcePreviewSurface
+      <EmbeddedResourceSurface
         resource={map}
         runtime={runtime}
         target={{ kind: 'mapPin', resourceId: map.id, pinId }}
@@ -121,13 +119,13 @@ describe('ResourcePreviewSurface', () => {
     )
     expect(screen.getByTestId('map-preview')).toHaveAttribute('data-focused-pin', pinId)
 
-    view.rerender(<ResourcePreviewSurface resource={file} runtime={runtime} />)
+    view.rerender(<EmbeddedResourceSurface resource={file} runtime={runtime} />)
     expect(screen.getByTestId('file-preview')).toHaveTextContent('File')
 
-    view.rerender(<ResourcePreviewSurface resource={canvas} runtime={runtime} />)
+    view.rerender(<EmbeddedResourceSurface resource={canvas} runtime={runtime} />)
     expect(screen.getByTestId('canvas-preview')).toBeInTheDocument()
     view.rerender(
-      <ResourcePreviewSurface
+      <EmbeddedResourceSurface
         resource={canvas}
         runtime={runtime}
         target={{ kind: 'canvasNode', resourceId: canvas.id, nodeId }}
@@ -155,7 +153,7 @@ describe('ResourcePreviewSurface', () => {
     } as unknown as EditorRuntime
 
     render(
-      <ResourcePreviewSurface
+      <EmbeddedResourceSurface
         resource={note}
         runtime={runtime}
         renderNote={({ resource: rendered }) => (
@@ -166,108 +164,6 @@ describe('ResourcePreviewSurface', () => {
 
     expect(screen.getByTestId('interactive-note')).toHaveTextContent('Note')
     noteDocument.destroy()
-  })
-
-  it('uses actor-safe text, authoritative images, and deterministic card fallbacks', () => {
-    const note = resource('note', 'Note')
-    const file = resource('file', 'Image')
-    const pdf = resource('file', 'Rules.pdf')
-    const canvas = resource('canvas', 'Canvas')
-    const imageUrl = parseSafeHttpsUrl('https://example.com/image.png')
-    if (!imageUrl) throw new TypeError('Expected a safe test URL')
-    const canvasPreviewState = { status: 'ready' as const, document: {}, version: {} }
-    const previews = new Map([
-      [
-        note.id,
-        {
-          status: 'ready' as const,
-          imageUrl: null,
-          preview: createResourcePreview('note', 'Canonical excerpt', []),
-        },
-      ],
-      [
-        file.id,
-        {
-          status: 'ready' as const,
-          imageUrl,
-          preview: createResourcePreview('file', '', []),
-        },
-      ],
-      [
-        pdf.id,
-        {
-          status: 'ready' as const,
-          imageUrl: null,
-          preview: createResourcePreview('file', '', []),
-        },
-      ],
-      [
-        canvas.id,
-        {
-          status: 'ready' as const,
-          imageUrl: null,
-          preview: createResourcePreview('canvas', '', []),
-        },
-      ],
-    ])
-    const runtime = {
-      resources: {
-        previews: {
-          status: 'available',
-          value: {
-            get: (resourceId: AuthorizedResourceSummary['id']) => previews.get(resourceId)!,
-            subscribe: () => () => undefined,
-          },
-        },
-      },
-      content: {
-        canvases: {
-          previews: {
-            get: () => canvasPreviewState,
-            subscribe: () => () => undefined,
-          },
-        },
-      },
-    } as unknown as EditorRuntime
-
-    const view = render(<ResourcePreviewSurface mode="card" resource={note} runtime={runtime} />)
-    expect(screen.getByText('Canonical excerpt')).toBeInTheDocument()
-    expect(screen.queryByRole('img')).not.toBeInTheDocument()
-
-    view.rerender(<ResourcePreviewSurface mode="card" resource={file} runtime={runtime} />)
-    const image = screen.getByRole('img', { name: 'Preview of Image' })
-    expect(image).toHaveAttribute('src', imageUrl)
-    fireEvent.error(image)
-    expect(screen.queryByRole('img', { name: 'Preview of Image' })).not.toBeInTheDocument()
-    expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
-
-    view.rerender(<ResourcePreviewSurface mode="card" resource={pdf} runtime={runtime} />)
-    expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
-
-    view.rerender(<ResourcePreviewSurface mode="card" resource={canvas} runtime={runtime} />)
-    expect(screen.getByTestId('canvas-preview')).toBeInTheDocument()
-  })
-
-  it('keeps unauthorized card previews content-free', () => {
-    const file = resource('file', 'Private file')
-    const previewState = { status: 'unavailable' as const, reason: 'unauthorized' as const }
-    const runtime = {
-      resources: {
-        previews: {
-          status: 'available',
-          value: {
-            get: () => previewState,
-            subscribe: () => () => undefined,
-          },
-        },
-      },
-    } as unknown as EditorRuntime
-
-    render(<ResourcePreviewSurface mode="card" resource={file} runtime={runtime} />)
-
-    expect(screen.getByText('File preview unavailable')).toBeInTheDocument()
-    expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 })
 

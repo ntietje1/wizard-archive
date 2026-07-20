@@ -68,7 +68,6 @@ function previewState(
     return {
       status: 'ready',
       preview: createResourcePreview(resource.kind, '', []),
-      imageUrl: null,
     }
   }
   if (!note) return { status: 'unavailable', reason: 'integrity_error' }
@@ -81,7 +80,6 @@ function previewState(
         noteBlocksPlainText(blocks),
         noteDocumentOutline(blocks),
       ),
-      imageUrl: null,
     }
   } catch {
     return { status: 'unavailable', reason: 'integrity_error' }

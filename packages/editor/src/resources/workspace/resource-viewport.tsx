@@ -375,7 +375,6 @@ function FolderViewport({
             canEdit={canEdit}
             key={resource.id}
             resource={resource}
-            runtime={runtime}
             selected={selectedIds.has(resource.id)}
             selection={selection}
             visibleIds={visibleIds}

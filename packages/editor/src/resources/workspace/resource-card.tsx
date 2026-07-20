@@ -1,7 +1,5 @@
 import { MoreVertical } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import type { MouseEvent } from 'react'
-import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from '../workspace-selection'
 import { workspaceSelectionIntent } from '../workspace-selection'
@@ -11,7 +9,6 @@ import type { ResourceContextMenuRequest } from './resource-context-menu-request
 import { resourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceKindLabel } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
-import { ResourcePreviewSurface } from './resource-preview-surface'
 
 const FOLDER_CARD_HEIGHT = 140
 const FOLDER_CARD_WIDTH = 400
@@ -48,7 +45,6 @@ export function ResourceCard({
   onSelectionChange,
   onOpenContextMenu,
   resource,
-  runtime,
   selected,
   selection,
   visibleIds,
@@ -59,7 +55,6 @@ export function ResourceCard({
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
   selected: boolean
   selection: WorkspaceSelection
   visibleIds: ReadonlyArray<AuthorizedResourceSummary['id']>
@@ -111,7 +106,7 @@ export function ResourceCard({
         <span className="flex min-w-0 items-center gap-2 pr-8">
           <span className="min-w-0 flex-1 truncate p-1 text-sm font-medium">{resource.title}</span>
         </span>
-        <ResourceCardPreview resource={resource} runtime={runtime} />
+        <ResourceCardIcon resource={resource} />
         {ambiguous && (
           <span className="mt-1 truncate px-1 text-xs text-muted-foreground">
             {resourceKindLabel(resource.kind)} · {resource.id.slice(-6)}
@@ -132,43 +127,13 @@ export function ResourceCard({
   )
 }
 
-function ResourceCardPreview({
-  resource,
-  runtime,
-}: {
-  resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
-}) {
-  const [element, setElement] = useState<HTMLDivElement | null>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    if (!element) return
-    if (typeof IntersectionObserver === 'undefined') {
-      setVisible(true)
-      return
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry?.isIntersecting === true),
-      { rootMargin: '140px' },
-    )
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [element])
+function ResourceCardIcon({ resource }: { resource: AuthorizedResourceSummary }) {
   const Icon = resourceKindIcon(resource.kind)
   return (
-    <div
-      ref={setElement}
-      inert
-      aria-hidden="true"
-      className="min-h-0 flex-1 overflow-hidden rounded-sm bg-muted"
-    >
-      {visible ? (
-        <ResourcePreviewSurface mode="card" resource={resource} runtime={runtime} />
-      ) : (
-        <span className="flex size-full items-center justify-center">
-          <Icon className="size-12 text-muted-foreground" aria-hidden="true" />
-        </span>
-      )}
+    <div inert aria-hidden="true" className="min-h-0 flex-1 overflow-hidden rounded-sm bg-muted">
+      <span className="flex size-full items-center justify-center">
+        <Icon className="size-12 text-muted-foreground" aria-hidden="true" />
+      </span>
     </div>
   )
 }

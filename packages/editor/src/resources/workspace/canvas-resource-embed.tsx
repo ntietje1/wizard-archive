@@ -9,7 +9,7 @@ import type { EditorRuntime } from '../editor-runtime-contract'
 import type { ResourceId } from '../domain-id'
 import type { EmbedMediaLayoutReporter } from '../embed-media-layout'
 import { RESOURCE_PERMISSION, resourcePermissionAllows } from '../resource-access-policy'
-import { ResourcePreviewSurface } from './resource-preview-surface'
+import { EmbeddedResourceSurface } from './embedded-resource-surface'
 import { useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
 import { CanvasFloatingFormattingToolbar } from '../../canvas/canvas-floating-formatting-toolbar'
@@ -69,7 +69,7 @@ export function CanvasResourceEmbed({
           onDefaultTextColorChange={onDefaultTextColorChange}
         />
       )}
-      <ResourcePreviewSurface
+      <EmbeddedResourceSurface
         onMediaLayout={onMediaLayout}
         resource={resource.value}
         runtime={runtime}

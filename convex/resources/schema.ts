@@ -146,7 +146,6 @@ export const resourcePreviewStateValidator = v.union(
   v.object({
     status: v.literal('ready'),
     preview: resourcePreviewValidator,
-    imageUrl: v.nullable(v.string()),
   }),
 )
 const grantedResourcePermissionValidator = literals(

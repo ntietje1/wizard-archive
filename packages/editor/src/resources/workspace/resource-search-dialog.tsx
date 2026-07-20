@@ -12,7 +12,7 @@ import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
-import { ResourcePreviewSurface } from './resource-preview-surface'
+import { EmbeddedResourceSurface } from './embedded-resource-surface'
 
 type SearchState =
   | Readonly<{ status: 'idle'; results: ReadonlyArray<WorkspaceSearchResult> }>
@@ -349,7 +349,7 @@ function SearchPreview({
         <p className="text-sm text-muted-foreground">{resourceKindLabel(resource.kind)}</p>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <ResourcePreviewSurface resource={resource} runtime={runtime} />
+        <EmbeddedResourceSurface resource={resource} runtime={runtime} />
       </div>
     </div>
   )

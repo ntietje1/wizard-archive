@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('readonly canvas', () => {
-  test('projects a render-only canvas thumbnail in the folder dashboard', async ({ page }) => {
+  test('uses a static canvas icon in the folder dashboard', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
     await page.getByRole('button', { name: 'Create resource', exact: true }).click()
     await page.getByRole('textbox', { name: 'New resource title' }).fill('Preview folder')
@@ -13,11 +13,11 @@ test.describe('readonly canvas', () => {
     await page.getByRole('button', { name: 'Canvas', exact: true }).click()
     await folder.click()
 
-    const preview = page.getByTestId('canvas-readonly-preview')
-    await expect(preview).toBeVisible()
-    await expect(preview.getByTestId('canvas-preview-node')).toHaveCount(0)
-    await expect(preview.getByRole('textbox')).not.toBeVisible()
-    await expect(preview.getByRole('toolbar')).not.toBeVisible()
+    const card = page.locator('article').filter({
+      has: page.getByRole('button', { name: 'Untitled canvas', exact: true }),
+    })
+    await expect(card.locator('div[inert] svg')).toBeVisible()
+    await expect(card.getByTestId('canvas-readonly-preview')).toHaveCount(0)
   })
 
   test('renders canonical content while allowing navigation but no mutation path', async ({

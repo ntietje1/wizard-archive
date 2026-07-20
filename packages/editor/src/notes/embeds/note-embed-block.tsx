@@ -27,7 +27,7 @@ import type { EmbedMediaLayout } from '../../resources/embed-media-layout'
 import { EmbeddedMedia } from '../../resources/embedded-media'
 import { presentExternalUrl } from '../../resources/external-url-presentation'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
-import { ResourcePreviewSurface } from '../../resources/workspace/resource-preview-surface'
+import { EmbeddedResourceSurface } from '../../resources/workspace/embedded-resource-surface'
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
 import { useNoteResourceRuntime } from '../use-note-resource-runtime'
 import { settleNoteEmbedResourceCreation } from './note-embed-insertion'
@@ -459,7 +459,7 @@ function InternalResourceEmbed({
     <>
       <InternalResourceHeader resource={resource.value} runtime={runtime} target={target} />
       <NoteEmbedBody height={height} mediaLayout={mediaLayout}>
-        <ResourcePreviewSurface
+        <EmbeddedResourceSurface
           onMediaLayout={onMediaLayout}
           renderNote={({ resource: note, state }) =>
             renderNote ? (

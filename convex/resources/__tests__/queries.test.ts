@@ -715,7 +715,6 @@ describe('authorized resource projection', () => {
         excerpt: expect.stringContaining('Hidden heading'),
         outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
       },
-      imageUrl: null,
     })
 
     await executeBlockAccess(campaign, campaignUuid, {
@@ -734,7 +733,6 @@ describe('authorized resource projection', () => {
         excerpt: expect.stringContaining('Visible heading'),
         outline: [{ blockId: visibleBlockId }],
       },
-      imageUrl: null,
     })
     if (playerPreview.status !== 'ready') throw new TypeError('Expected player preview')
     expect(playerPreview.preview.excerpt).not.toContain('Hidden heading')
@@ -756,7 +754,6 @@ describe('authorized resource projection', () => {
         excerpt: expect.stringContaining('Hidden heading'),
         outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
       },
-      imageUrl: null,
     })
 
     await executeAccess(campaign, campaignUuid, {

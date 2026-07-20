@@ -14,7 +14,7 @@ import type {
   ResourceId,
   SnapshotId,
 } from './domain-id'
-import type { CanonicalTarget, SafeHttpsUrl } from './authored-destination-contract'
+import type { CanonicalTarget } from './authored-destination-contract'
 import type {
   CapabilityUnavailableReason,
   ResourceAccessCommandGateway,
@@ -89,7 +89,7 @@ export type ResourcePreviewState =
       status: 'unavailable'
       reason: 'scope_unavailable' | 'unauthorized' | 'integrity_error'
     }>
-  | Readonly<{ status: 'ready'; preview: ResourcePreview; imageUrl: SafeHttpsUrl | null }>
+  | Readonly<{ status: 'ready'; preview: ResourcePreview }>
 
 export interface ResourcePreviewSource {
   get(resourceId: ResourceId): ResourcePreviewState
