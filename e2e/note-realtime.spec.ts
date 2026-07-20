@@ -42,16 +42,19 @@ test.describe.serial('canonical note collaboration', () => {
     await page.keyboard.insertText('Recovered across immediate reload')
     const pendingOutbox = await page.evaluate(() => {
       const key = Object.keys(sessionStorage).find((candidate) =>
-        candidate.startsWith('wizard-archive:note-update-outbox:v2:'),
+        candidate.startsWith('wizard-archive:note-update-outbox:v4:'),
       )
       return key ? sessionStorage.getItem(key) : null
     })
     expect(pendingOutbox).not.toBeNull()
     const generationSeparator = pendingOutbox!.indexOf(':')
-    expect(generationSeparator).toBeGreaterThan(0)
-    expect(Number(pendingOutbox!.slice(0, generationSeparator))).toBe(INITIAL_CONTENT_GENERATION)
+    const updateSeparator = pendingOutbox!.indexOf(':', generationSeparator + 1)
+    expect(pendingOutbox!.slice(0, generationSeparator)).toBe('pending')
+    expect(Number(pendingOutbox!.slice(generationSeparator + 1, updateSeparator))).toBe(
+      INITIAL_CONTENT_GENERATION,
+    )
     const pendingUpdate = Uint8Array.from(
-      Buffer.from(pendingOutbox!.slice(generationSeparator + 1), 'base64'),
+      Buffer.from(pendingOutbox!.slice(updateSeparator + 1), 'base64'),
     )
     decodeNoteYjsUpdatesToBlocks(
       [{ update: created.update }, { update: pendingUpdate.buffer }],
