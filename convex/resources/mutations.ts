@@ -48,6 +48,7 @@ import {
   noteBlockAccessCommandResultValidator,
   noteBlockAccessCommandValidator,
   contentProviderSaveResultValidator,
+  contentRecoveryActionResultValidator,
   itemHistoryRestoreResultValidator,
   resourcePresenceHeartbeatResultValidator,
   resourcePresenceReleaseResultValidator,
@@ -60,6 +61,7 @@ import {
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
 import { saveCanvasContent as saveCanvasContentFn } from './functions/saveCanvasContent'
+import { reapplyYjsRecovery as reapplyYjsRecoveryFn } from './functions/reapplyYjsRecovery'
 import {
   disconnectResourcePresence as disconnectResourcePresenceFn,
   heartbeatResourcePresence as heartbeatResourcePresenceFn,
@@ -545,6 +547,25 @@ export const saveCanvasContent = campaignMutation({
       generation: assertContentGeneration(args.generation),
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       update: args.update,
+    }),
+})
+
+export const reapplyYjsRecovery = campaignMutation({
+  args: {
+    expectedGeneration: v.number(),
+    expectedVersion: versionStampValidator,
+    resourceId: resourceIdValidator,
+    snapshotUpdate: v.bytes(),
+    snapshotVersion: versionStampValidator,
+  },
+  returns: contentRecoveryActionResultValidator,
+  handler: async (ctx, args) =>
+    await reapplyYjsRecoveryFn(ctx, {
+      expectedGeneration: assertContentGeneration(args.expectedGeneration),
+      expectedVersion: assertVersionStamp(args.expectedVersion),
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      snapshotUpdate: args.snapshotUpdate,
+      snapshotVersion: assertVersionStamp(args.snapshotVersion),
     }),
 })
 

@@ -1186,6 +1186,20 @@ export const contentProviderSaveResultValidator = v.union(
   }),
 )
 
+export const contentRecoveryActionResultValidator = v.union(
+  v.object({ status: v.literal('completed') }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'content_changed',
+      'resource_unavailable',
+      'snapshot_incompatible',
+      'scope_unavailable',
+      'unauthorized',
+    ),
+  }),
+)
+
 const contentUnavailableSnapshotValidator = v.object({
   status: v.literal('unavailable'),
   reason: literals('capability_not_supported', 'unauthorized'),

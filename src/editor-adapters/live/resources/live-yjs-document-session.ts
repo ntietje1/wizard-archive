@@ -92,7 +92,10 @@ class LiveYjsDocumentSession {
 
     const recovered = this.#outbox.load()
     if (recovered.status === 'unavailable') throw new YjsUpdateOutboxUnavailableError()
-    if (recovered.entry && recovered.entry.generation !== this.#generation) {
+    if (
+      recovered.entry &&
+      (recovered.entry.generation !== this.#generation || recovered.entry.state === 'recovery')
+    ) {
       throw new YjsUpdateGenerationConflictError()
     }
     if (recovered.entry) {
@@ -334,9 +337,15 @@ class LiveYjsDocumentSession {
 
   #fail(result: RejectedYjsSave): void {
     if (this.#terminal) return
-    this.#terminal = result
+    const terminal =
+      result.reason === 'content_generation_conflict' &&
+      this.#outbox.preserve(this.#generation, Y.encodeStateAsUpdate(this.document)).status !==
+        'accepted'
+        ? ({ status: 'rejected', reason: 'scope_unavailable' } as const)
+        : result
+    this.#terminal = terminal
     this.#close()
-    this.#failed(result)
+    this.#failed(terminal)
     if (!this.#drainPromise) this.#destroy()
   }
 

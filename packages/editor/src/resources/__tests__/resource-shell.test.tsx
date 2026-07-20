@@ -744,6 +744,59 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('offers export, checked reapply, and discard for conflicted note edits', async () => {
+    const { core } = await shellRuntime(true, 'active', 'edit', 'note')
+    const recovery = {
+      export: vi.fn(() => ({
+        status: 'ready' as const,
+        bytes: new TextEncoder().encode('Recovered note'),
+        extension: 'md',
+        mediaType: 'text/markdown',
+      })),
+      reapply: vi.fn(() =>
+        Promise.resolve({ status: 'rejected' as const, reason: 'content_changed' as const }),
+      ),
+      discard: vi.fn(() => ({ status: 'completed' as const })),
+    }
+    const recoveryState = {
+      status: 'recovery_required' as const,
+      issue: 'version_mismatch' as const,
+      recovery,
+    }
+    const runtime = {
+      ...core.runtime,
+      content: {
+        ...core.runtime.content,
+        notes: {
+          ...core.runtime.content.notes,
+          get: () => recoveryState,
+          subscribe: () => () => undefined,
+        },
+      },
+    }
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:recovery')
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    render(
+      <ResourceShell ariaLabel="Recovery workspace" runtime={runtime} workspaceName="DM view" />,
+    )
+
+    expect(await screen.findByText('Unsaved edits need your attention')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Export edits' }))
+    expect(recovery.export).toHaveBeenCalledOnce()
+    expect(createObjectUrl).toHaveBeenCalledOnce()
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:recovery')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reapply edits' }))
+    expect(await screen.findByText('content_changed')).toBeVisible()
+    expect(recovery.reapply).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Discard edits' }))
+    expect(recovery.discard).toHaveBeenCalledOnce()
+
+    createObjectUrl.mockRestore()
+    revokeObjectUrl.mockRestore()
+    core.dispose()
+  })
+
   it('retires an unresolved create when navigation leaves its invoking surface', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
     if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')

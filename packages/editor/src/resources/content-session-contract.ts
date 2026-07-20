@@ -41,6 +41,30 @@ export type ContentExportResult =
       mediaType: string
     }>
 
+export type ContentRecoveryActionResult =
+  | Readonly<{ status: 'completed' }>
+  | Readonly<{
+      status: 'rejected'
+      reason:
+        | 'content_changed'
+        | 'resource_unavailable'
+        | 'snapshot_incompatible'
+        | 'scope_unavailable'
+        | 'unauthorized'
+    }>
+
+export type ContentRecovery = Readonly<{
+  export(): ContentExportResult
+  reapply(): Promise<ContentRecoveryActionResult>
+  discard(): ContentRecoveryActionResult
+}>
+
+export type ContentRecoveryState = Readonly<{
+  status: 'recovery_required'
+  issue: 'version_mismatch'
+  recovery: ContentRecovery
+}>
+
 export type SessionAwareness =
   | { readonly status: 'unavailable' }
   | { readonly status: 'available'; readonly collaboratorIds: ReadonlyArray<CampaignMemberId> }
@@ -223,6 +247,7 @@ export interface MapPreview {
 
 export type NoteSessionState =
   | ContentUnavailableState
+  | ContentRecoveryState
   | { readonly status: 'empty'; readonly reason: 'no_visible_blocks' }
   | { readonly status: 'initializing'; readonly operationId: OperationId; readonly local: Y.Doc }
   | {
@@ -254,6 +279,7 @@ export type MapPreviewState =
 
 export type CanvasSessionState =
   | ContentPendingState
+  | ContentRecoveryState
   | {
       readonly status: 'ready'
       readonly session: CanvasSession

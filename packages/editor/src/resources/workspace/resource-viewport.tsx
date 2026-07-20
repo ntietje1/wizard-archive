@@ -1,5 +1,5 @@
 import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import type { AuthoredDestination, CanonicalTarget } from '../authored-destination-contract'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -39,6 +39,7 @@ import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigati
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
 import { ResourceCard } from './resource-card'
+import type { ContentRecovery, ContentRecoveryActionResult } from '../content-session-contract'
 
 export function ResourceViewport({
   actions,
@@ -574,6 +575,15 @@ function ContentState({
       )
     case 'unavailable':
       return <ViewportState icon={Icon} title="Content unavailable" description={state.reason} />
+    case 'recovery_required':
+      return (
+        <ViewportState
+          icon={Icon}
+          title="Unsaved edits need your attention"
+          description="A restore replaced this item while you had unsaved edits. The restored item has not been changed."
+          action={<ContentRecoveryActions recovery={state.recovery} resource={resource} />}
+        />
+      )
     case 'integrity_error':
       return (
         <ViewportState
@@ -583,6 +593,75 @@ function ContentState({
         />
       )
   }
+}
+
+function ContentRecoveryActions({
+  recovery,
+  resource,
+}: {
+  recovery: ContentRecovery
+  resource: AuthorizedResourceSummary
+}) {
+  const [pending, setPending] = useState<'discard' | 'reapply' | null>(null)
+  const [result, setResult] = useState<ContentRecoveryActionResult | null>(null)
+  const reapply = async () => {
+    setPending('reapply')
+    const next = await recovery.reapply()
+    setResult(next)
+    if (next.status !== 'completed') setPending(null)
+  }
+  const discard = () => {
+    setPending('discard')
+    const next = recovery.discard()
+    setResult(next)
+    if (next.status !== 'completed') setPending(null)
+  }
+  return (
+    <div className="mt-4">
+      <div className="flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          className="rounded-md border border-border px-3 py-1.5 text-sm"
+          disabled={pending !== null}
+          onClick={() => downloadRecovery(recovery, resource)}
+        >
+          Export edits
+        </button>
+        <button
+          type="button"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+          disabled={pending !== null}
+          onClick={() => void reapply()}
+        >
+          {pending === 'reapply' ? 'Reapplying…' : 'Reapply edits'}
+        </button>
+        <button
+          type="button"
+          className="rounded-md px-3 py-1.5 text-sm text-destructive"
+          disabled={pending !== null}
+          onClick={discard}
+        >
+          {pending === 'discard' ? 'Discarding…' : 'Discard edits'}
+        </button>
+      </div>
+      {result?.status === 'rejected' && (
+        <p className="mt-2 text-sm text-destructive">{result.reason}</p>
+      )}
+    </div>
+  )
+}
+
+function downloadRecovery(recovery: ContentRecovery, resource: AuthorizedResourceSummary): void {
+  const result = recovery.export()
+  if (result.status !== 'ready') return
+  const url = URL.createObjectURL(
+    new Blob([Uint8Array.from(result.bytes).buffer], { type: result.mediaType }),
+  )
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${resource.title} recovered edits.${result.extension}`
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 export function ViewportState({

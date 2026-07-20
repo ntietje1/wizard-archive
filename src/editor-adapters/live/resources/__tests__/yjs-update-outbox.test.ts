@@ -99,6 +99,29 @@ describe('YjsUpdateOutbox', () => {
     })
   })
 
+  it('freezes one complete recovery artifact that pending updates cannot mutate', () => {
+    const storage = new QuotaStorage()
+    const ledger = outbox(storage, 'note', 'recovery')
+    const pending = updateWithText('pending', 10)
+    const complete = updateWithText('complete', 20)
+
+    expect(ledger.merge(INITIAL_CONTENT_GENERATION, pending)).toEqual({ status: 'accepted' })
+    expect(ledger.preserve(INITIAL_CONTENT_GENERATION, complete)).toEqual({
+      status: 'accepted',
+    })
+    expect(ledger.load()).toMatchObject({
+      status: 'available',
+      entry: {
+        generation: INITIAL_CONTENT_GENERATION,
+        state: 'recovery',
+        update: { byteLength: complete.byteLength },
+      },
+    })
+    expect(ledger.merge(INITIAL_CONTENT_GENERATION, pending)).toEqual({
+      status: 'generation_conflict',
+    })
+  })
+
   it('reports storage and malformed-update failures instead of throwing', () => {
     const unavailable = {
       getItem: () => {
@@ -123,6 +146,10 @@ describe('YjsUpdateOutbox', () => {
     expect(ledger.clear()).toEqual({ status: 'unavailable' })
     expect(ledger.replace(INITIAL_CONTENT_GENERATION, new Uint8Array(600_000))).toEqual({
       status: 'unavailable',
+    })
+    const recovery = outbox(new QuotaStorage(), 'canvas', 'larger-recovery')
+    expect(recovery.preserve(INITIAL_CONTENT_GENERATION, new Uint8Array(600_000))).toEqual({
+      status: 'accepted',
     })
   })
 

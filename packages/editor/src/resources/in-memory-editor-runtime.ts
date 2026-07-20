@@ -644,7 +644,9 @@ class InMemoryCanvasSessionSource
         ? { status: 'ready', document: state.session.document, version: state.session.version }
         : state.status === 'initializing'
           ? { status: 'loading' }
-          : state,
+          : state.status === 'recovery_required'
+            ? { status: 'integrity_error', issue: state.issue }
+            : state,
     )
   }
 
@@ -702,6 +704,9 @@ function exportPendingState(
       extension: 'md',
       mediaType: 'text/markdown',
     }
+  }
+  if (state.status === 'recovery_required') {
+    return { status: 'integrity_error', issue: state.issue }
   }
   return state
 }

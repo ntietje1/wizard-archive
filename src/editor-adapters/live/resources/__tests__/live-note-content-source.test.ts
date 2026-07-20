@@ -5,6 +5,7 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
+import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import {
   advanceContentGeneration,
@@ -30,7 +31,8 @@ function createLiveNoteContentSource(
   campaign: Parameters<typeof createSource>[0],
   member: Parameters<typeof createSource>[1],
   collaborationUser: Parameters<typeof createSource>[2],
-  provider: Parameters<typeof createSource>[3],
+  provider: Omit<Parameters<typeof createSource>[3], 'reapply'> &
+    Partial<Pick<Parameters<typeof createSource>[3], 'reapply'>>,
   beginUndo: Parameters<typeof createSource>[4],
   readonly = false,
 ) {
@@ -38,7 +40,10 @@ function createLiveNoteContentSource(
     campaign,
     member,
     collaborationUser,
-    provider,
+    {
+      reapply: () => Promise.resolve({ status: 'rejected', reason: 'resource_unavailable' }),
+      ...provider,
+    },
     beginUndo,
     createLiveResourceContentAuthorityFixture(!readonly).authority,
   )
@@ -130,9 +135,12 @@ function backend() {
   }
   const load: LiveNoteContentBackend['load'] = () =>
     Promise.resolve({ status: 'integrity_error', issue: 'content_missing' })
+  const reapply: LiveNoteContentBackend['reapply'] = () =>
+    Promise.resolve({ status: 'rejected', reason: 'resource_unavailable' })
   return {
     create: vi.fn(create),
     load: vi.fn(load),
+    reapply: vi.fn(reapply),
     heartbeatPresence: vi.fn(() =>
       Promise.resolve({
         status: 'active' as const,
@@ -363,6 +371,7 @@ describe('LiveNoteContentSource', () => {
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new TypeError('Expected editable note')
     noteTextType(ready.session.document).insert(14, ' with pending work')
+    noteTextType(ready.session.document).delete(0, 7)
     expect(outbox.load()).toMatchObject({
       status: 'available',
       entry: { generation: INITIAL_CONTENT_GENERATION },
@@ -374,13 +383,19 @@ describe('LiveNoteContentSource', () => {
       update: restoredUpdate,
       version: restoredVersion,
     })
-    expect(source.get(resourceId)).toEqual({
-      status: 'integrity_error',
+    const recovery = source.get(resourceId)
+    expect(recovery).toMatchObject({
+      status: 'recovery_required',
       issue: 'version_mismatch',
     })
+    if (recovery.status !== 'recovery_required') throw new TypeError('Expected note recovery')
+    const exported = recovery.recovery.export()
+    expect(exported.status).toBe('ready')
+    if (exported.status !== 'ready') throw new TypeError('Expected recovery export')
+    expect(new TextDecoder().decode(exported.bytes)).toContain('restore with pending work')
     expect(outbox.load()).toMatchObject({
       status: 'available',
-      entry: { generation: INITIAL_CONTENT_GENERATION },
+      entry: { generation: INITIAL_CONTENT_GENERATION, state: 'recovery' },
     })
     expect(provider.save).not.toHaveBeenCalled()
 
@@ -398,20 +413,245 @@ describe('LiveNoteContentSource', () => {
       update: restoredUpdate,
       version: restoredVersion,
     })
-    expect(reloaded.get(resourceId)).toEqual({
-      status: 'integrity_error',
+    const reloadedRecovery = reloaded.get(resourceId)
+    expect(reloadedRecovery).toMatchObject({
+      status: 'recovery_required',
       issue: 'version_mismatch',
     })
+    if (reloadedRecovery.status !== 'recovery_required') {
+      throw new TypeError('Expected reloaded note recovery')
+    }
+    const reloadedExport = reloadedRecovery.recovery.export()
+    expect(reloadedExport.status).toBe('ready')
+    if (reloadedExport.status !== 'ready') throw new TypeError('Expected reloaded export')
+    expect(new TextDecoder().decode(reloadedExport.bytes)).toContain('restore with pending work')
     expect(outbox.load()).toMatchObject({
       status: 'available',
-      entry: { generation: INITIAL_CONTENT_GENERATION },
+      entry: { generation: INITIAL_CONTENT_GENERATION, state: 'recovery' },
     })
     expect(provider.save).not.toHaveBeenCalled()
+    provider.load.mockResolvedValue({
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    expect(reloadedRecovery.recovery.discard()).toEqual({ status: 'completed' })
+    await vi.waitFor(() => expect(reloaded.get(resourceId).status).toBe('ready'))
+    const afterDiscard = reloaded.get(resourceId)
+    if (afterDiscard.status !== 'ready') throw new TypeError('Expected restored note')
+    expect(noteTextType(afterDiscard.session.document).toString()).toBe('Restored state')
+    expect(outbox.load()).toEqual({ status: 'available', entry: null })
 
     initialDocument.destroy()
     restoredDocument.destroy()
     source.dispose()
     reloaded.dispose()
+  })
+
+  it('freezes a complete note draft when a restore wins against an in-flight save', async () => {
+    sessionStorage.clear()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    let settleSave:
+      | ((result: Awaited<ReturnType<LiveNoteContentBackend['save']>>) => void)
+      | undefined
+    provider.save.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          settleSave = resolve
+        }),
+    )
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    const initialDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Base text' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const restoredDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Restored text' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const initialUpdate = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+    const restoredUpdate = arrayBuffer(Y.encodeStateAsUpdate(restoredDocument))
+    const initialVersion = await versionFor(initialUpdate)
+    const restoredGeneration = advanceContentGeneration(INITIAL_CONTENT_GENERATION)
+    const restoredVersion = {
+      ...(await versionFor(restoredUpdate)),
+      revision: initialVersion.revision + 1,
+    }
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update: initialUpdate,
+      version: initialVersion,
+    })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected editable note')
+    noteTextType(ready.session.document).delete(0, 4)
+    noteTextType(ready.session.document).insert(0, 'Draft')
+    const drain = ready.session.flush()
+    await vi.waitFor(() => expect(provider.save).toHaveBeenCalledOnce())
+
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    const recovery = source.get(resourceId)
+    if (recovery.status !== 'recovery_required') throw new TypeError('Expected note recovery')
+    const exported = recovery.recovery.export()
+    if (exported.status !== 'ready') throw new TypeError('Expected recovery export')
+    expect(new TextDecoder().decode(exported.bytes)).toContain('Draft text')
+
+    settleSave?.({ status: 'rejected', reason: 'content_generation_conflict' })
+    await expect(drain).resolves.toEqual({
+      status: 'rejected',
+      reason: 'content_generation_conflict',
+    })
+    expect(createYjsUpdateOutbox('note', campaignId, resourceId, memberId).load()).toMatchObject({
+      status: 'available',
+      entry: { generation: INITIAL_CONTENT_GENERATION, state: 'recovery' },
+    })
+
+    const reloaded = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    reloaded.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    const reloadedRecovery = reloaded.get(resourceId)
+    if (reloadedRecovery.status !== 'recovery_required') {
+      throw new TypeError('Expected reloaded note recovery')
+    }
+    const reloadedExport = reloadedRecovery.recovery.export()
+    if (reloadedExport.status !== 'ready') throw new TypeError('Expected reloaded export')
+    expect(new TextDecoder().decode(reloadedExport.bytes)).toContain('Draft text')
+
+    initialDocument.destroy()
+    restoredDocument.destroy()
+    source.dispose()
+    reloaded.dispose()
+  })
+
+  it('reapplies a complete recovery artifact only against the loaded generation and version', async () => {
+    sessionStorage.clear()
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const initialDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Original draft' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const restoredDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Restored copy' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const initialUpdate = arrayBuffer(Y.encodeStateAsUpdate(initialDocument))
+    const restoredUpdate = arrayBuffer(Y.encodeStateAsUpdate(restoredDocument))
+    const initialVersion = await versionFor(initialUpdate)
+    const restoredGeneration = advanceContentGeneration(INITIAL_CONTENT_GENERATION)
+    const restoredVersion = {
+      ...(await versionFor(restoredUpdate)),
+      revision: initialVersion.revision + 1,
+    }
+    let reapplied:
+      | Readonly<{
+          generation: ReturnType<typeof assertContentGeneration>
+          update: ArrayBuffer
+          version: VersionStamp
+        }>
+      | undefined
+    provider.load.mockImplementation(() =>
+      Promise.resolve(
+        reapplied
+          ? {
+              status: 'ready',
+              generation: reapplied.generation,
+              update: reapplied.update,
+              version: reapplied.version,
+            }
+          : {
+              status: 'ready',
+              generation: restoredGeneration,
+              update: restoredUpdate,
+              version: restoredVersion,
+            },
+      ),
+    )
+    provider.reapply.mockImplementation((args) => {
+      reapplied = {
+        generation: advanceContentGeneration(assertContentGeneration(args.expectedGeneration)),
+        update: args.snapshotUpdate,
+        version: assertVersionStamp({
+          ...args.snapshotVersion,
+          revision: args.expectedVersion.revision + 1,
+        }),
+      }
+      return Promise.resolve({ status: 'completed' as const })
+    })
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
+    source.subscribe(resourceId, () => {})
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: INITIAL_CONTENT_GENERATION,
+      update: initialUpdate,
+      version: initialVersion,
+    })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new TypeError('Expected editable note')
+    noteTextType(ready.session.document).delete(0, 8)
+    noteTextType(ready.session.document).insert(0, 'Recovered')
+    provider.emit(resourceId, {
+      status: 'ready',
+      generation: restoredGeneration,
+      update: restoredUpdate,
+      version: restoredVersion,
+    })
+    const recovery = source.get(resourceId)
+    if (recovery.status !== 'recovery_required') throw new TypeError('Expected note recovery')
+
+    await expect(recovery.recovery.reapply()).resolves.toEqual({ status: 'completed' })
+    expect(provider.reapply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId,
+        expectedGeneration: restoredGeneration,
+        expectedVersion: restoredVersion,
+        resourceId,
+      }),
+    )
+    await vi.waitFor(() => expect(source.get(resourceId).status).toBe('ready'))
+    const recovered = source.get(resourceId)
+    if (recovered.status !== 'ready') throw new TypeError('Expected recovered note')
+    expect(noteTextType(recovered.session.document).toString()).toBe('Recovered draft')
+    expect(createYjsUpdateOutbox('note', campaignId, resourceId, memberId).load()).toEqual({
+      status: 'available',
+      entry: null,
+    })
+
+    initialDocument.destroy()
+    restoredDocument.destroy()
+    source.dispose()
   })
 
   it('replaces readonly projections so hidden blocks cannot survive a Yjs merge', async () => {
@@ -1098,7 +1338,7 @@ describe('LiveNoteContentSource', () => {
     let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
-      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v2:')) {
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:note-update-outbox:v3:')) {
         return
       }
       outboxKey = key

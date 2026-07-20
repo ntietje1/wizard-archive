@@ -24,7 +24,8 @@ function createLiveCanvasSessionSource(
   campaign: Parameters<typeof createSource>[0],
   member: Parameters<typeof createSource>[1],
   collaborationUser: Parameters<typeof createSource>[2],
-  backend: Parameters<typeof createSource>[3],
+  backend: Omit<Parameters<typeof createSource>[3], 'reapply'> &
+    Partial<Pick<Parameters<typeof createSource>[3], 'reapply'>>,
   beginUndo: Parameters<typeof createSource>[4],
   readonly = false,
 ) {
@@ -32,7 +33,10 @@ function createLiveCanvasSessionSource(
     campaign,
     member,
     collaborationUser,
-    backend,
+    {
+      reapply: () => Promise.resolve({ status: 'rejected', reason: 'resource_unavailable' }),
+      ...backend,
+    },
     beginUndo,
     createLiveResourceContentAuthorityFixture(!readonly).authority,
   )
@@ -99,6 +103,11 @@ describe('LiveCanvasSessionSource', () => {
         watchPresence,
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        reapply: () =>
+          Promise.resolve({
+            status: 'rejected' as const,
+            reason: 'resource_unavailable' as const,
+          }),
         refresh: vi.fn(),
         save,
         watch: (_resourceId, updateSnapshot) => {
@@ -285,15 +294,25 @@ describe('LiveCanvasSessionSource', () => {
       update: restoredUpdate,
       version: { ...version, revision: 2, digest: 'b'.repeat(64) },
     })
-    expect(source.get(resourceId)).toEqual({
-      status: 'integrity_error',
+    expect(source.get(resourceId)).toMatchObject({
+      status: 'recovery_required',
       issue: 'version_mismatch',
     })
     const outbox = createYjsUpdateOutbox('canvas', campaignId, resourceId, memberId)
-    expect(outbox.load()).toMatchObject({
+    const stored = outbox.load()
+    expect(stored).toMatchObject({
       status: 'available',
-      entry: { generation },
+      entry: { generation, state: 'recovery' },
     })
+    if (stored.status !== 'available' || !stored.entry) {
+      throw new TypeError('Expected canvas recovery artifact')
+    }
+    const recoveredDocument = new Y.Doc()
+    Y.applyUpdate(recoveredDocument, stored.entry.update)
+    expect(readCanvasDocumentContent(recoveredDocument).nodes).toEqual([
+      expect.objectContaining({ id: localNodeId }),
+    ])
+    recoveredDocument.destroy()
 
     settleSave?.({
       status: 'rejected',
@@ -305,7 +324,7 @@ describe('LiveCanvasSessionSource', () => {
     })
     expect(outbox.load()).toMatchObject({
       status: 'available',
-      entry: { generation },
+      entry: { generation, state: 'recovery' },
     })
     source.dispose()
   })
@@ -336,6 +355,11 @@ describe('LiveCanvasSessionSource', () => {
         heartbeatPresence,
         create: vi.fn(),
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
+        reapply: () =>
+          Promise.resolve({
+            status: 'rejected' as const,
+            reason: 'resource_unavailable' as const,
+          }),
         refresh: vi.fn(),
         save,
         watch: (_resourceId, updateSnapshot) => {
@@ -887,7 +911,7 @@ describe('LiveCanvasSessionSource', () => {
     let outboxKey: string | null = null
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
       removeItem(key)
-      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v2:')) {
+      if (!queueSettlingUpdate || !key.startsWith('wizard-archive:canvas-update-outbox:v3:')) {
         return
       }
       outboxKey = key

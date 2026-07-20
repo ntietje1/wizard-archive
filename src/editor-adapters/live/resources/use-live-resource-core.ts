@@ -180,6 +180,8 @@ function createScopedLiveResourceRuntime(
       create: (args) =>
         write(() => convex.mutation(api.resources.mutations.createNoteResource, args)),
       refresh,
+      reapply: (args) =>
+        write(() => convex.mutation(api.resources.mutations.reapplyYjsRecovery, args)),
       save: (args) => write(() => convex.mutation(api.resources.mutations.saveNoteContent, args)),
       load: (resourceId) =>
         convex.query(api.resources.queries.loadNoteContent, {
@@ -324,6 +326,8 @@ function createScopedLiveResourceRuntime(
       },
       create: (args) =>
         write(() => convex.mutation(api.resources.mutations.createCanvasResource, args)),
+      reapply: (args) =>
+        write(() => convex.mutation(api.resources.mutations.reapplyYjsRecovery, args)),
       save: (args) => write(() => convex.mutation(api.resources.mutations.saveCanvasContent, args)),
       refresh,
     },

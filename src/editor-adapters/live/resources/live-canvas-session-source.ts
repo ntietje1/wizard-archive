@@ -6,7 +6,11 @@ import {
   replaceCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import { encodeWizardCanvasDocument } from '@wizard-archive/editor/canvas/native-document'
-import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import {
+  assertVersionStamp,
+  initialVersion,
+  sha256Digest,
+} from '@wizard-archive/editor/resources/component-version'
 import {
   assertContentGeneration,
   INITIAL_CONTENT_GENERATION,
@@ -49,6 +53,7 @@ import {
   createLiveAuthorityBoundYjsSession,
   createYjsSessionAuthorityBinding,
 } from './live-resource-content-authority'
+import { createLiveYjsRecovery } from './live-yjs-recovery'
 import type {
   LiveResourceContentAuthority,
   YjsSessionAuthorityBinding,
@@ -57,11 +62,16 @@ import type {
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
 type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
 type SaveCanvasContentResult = FunctionReturnType<typeof api.resources.mutations.saveCanvasContent>
+type ReapplyYjsRecoveryArgs = FunctionArgs<typeof api.resources.mutations.reapplyYjsRecovery>
+type ReapplyYjsRecoveryResult = FunctionReturnType<
+  typeof api.resources.mutations.reapplyYjsRecovery
+>
 
 type LiveCanvasBackend = LiveFixedContentCreateBackend &
   LiveResourcePresenceBackend &
   Readonly<{
     load(resourceId: ResourceId): Promise<CanvasSnapshot>
+    reapply(args: ReapplyYjsRecoveryArgs): Promise<ReapplyYjsRecoveryResult>
     watch(resourceId: ResourceId, apply: (snapshot: CanvasSnapshot) => void): () => void
     save(args: SaveCanvasContentArgs): Promise<SaveCanvasContentResult>
   }>
@@ -176,7 +186,11 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     this.#apply(resourceId, await this.backend.load(resourceId))
     const state = this.get(resourceId)
     if (state.status !== 'ready') {
-      return state.status === 'initializing' ? { status: 'loading' } : state
+      if (state.status === 'initializing') return { status: 'loading' }
+      if (state.status === 'recovery_required') {
+        return { status: 'integrity_error', issue: state.issue }
+      }
+      return state
     }
     return {
       status: 'ready',
@@ -208,6 +222,10 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     }
     const { document, generation, version } = decoded
     this.#authorityBinding.reconcile(resourceId)
+    if (this.#setRecovery(resourceId)) {
+      document.destroy()
+      return
+    }
     if (!this.authority.canEdit(resourceId)) {
       this.#applyReadonly(resourceId, document, version, generation)
       return
@@ -325,7 +343,9 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     if (this.#sessions.get(resourceId) !== session) return
     this.#sessions.delete(resourceId)
     this.#generations.delete(resourceId)
-    this.#store.set(resourceId, failedYjsSessionState(result))
+    if (result.reason !== 'content_generation_conflict' || !this.#setRecovery(resourceId)) {
+      this.#store.set(resourceId, failedYjsSessionState(result))
+    }
   }
 
   #replaceState(resourceId: ResourceId, state: CanvasSessionState): void {
@@ -340,6 +360,39 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     if (state.status === 'ready') this.#previewDocuments.set(resourceId, state.document)
     else this.#previewDocuments.delete(resourceId)
     this.#previewStore.set(resourceId, state)
+  }
+
+  #setRecovery(resourceId: ResourceId): boolean {
+    const reload = () => {
+      this.#store.set(resourceId, { status: 'loading' })
+      void this.backend
+        .load(resourceId)
+        .then((snapshot) => this.#apply(resourceId, snapshot))
+        .catch(() =>
+          this.#store.set(resourceId, {
+            status: 'unavailable',
+            reason: 'scope_unavailable',
+          }),
+        )
+    }
+    const recovery = createLiveYjsRecovery({
+      kind: 'canvas',
+      campaignId: this.campaignId,
+      memberId: this.memberId,
+      resourceId,
+      load: () => this.backend.load(resourceId),
+      reapply: (args) => this.backend.reapply(args),
+      reload,
+      exportArtifact: exportRecoveryCanvas,
+      versionArtifact: async (artifact) => initialVersion(await sha256Digest(artifact)),
+    })
+    if (!recovery) return false
+    this.#store.set(resourceId, {
+      status: 'recovery_required',
+      issue: 'version_mismatch',
+      recovery,
+    })
+    return true
   }
 }
 
@@ -366,6 +419,26 @@ function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): DecodedCanvasSna
   } catch {
     document.destroy()
     return { status: 'integrity_error', issue: 'content_corrupt' }
+  }
+}
+
+function exportRecoveryCanvas(update: Uint8Array): ContentExportResult {
+  const document = new Y.Doc()
+  try {
+    Y.applyUpdate(document, update)
+    if (!parseCanvasDocumentContent(document)) {
+      return { status: 'integrity_error', issue: 'content_corrupt' }
+    }
+    return {
+      status: 'ready',
+      bytes: encodeWizardCanvasDocument(document),
+      extension: 'wizardcanvas',
+      mediaType: 'application/vnd.wizard-archive.canvas',
+    }
+  } catch {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  } finally {
+    document.destroy()
   }
 }
 

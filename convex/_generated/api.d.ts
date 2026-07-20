@@ -84,6 +84,7 @@ import type * as resources_functions_noteContent from "../resources/functions/no
 import type * as resources_functions_plainTransfer from "../resources/functions/plainTransfer.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_functions_projectResourceReferences from "../resources/functions/projectResourceReferences.js";
+import type * as resources_functions_reapplyYjsRecovery from "../resources/functions/reapplyYjsRecovery.js";
 import type * as resources_functions_replaceCanvasContent from "../resources/functions/replaceCanvasContent.js";
 import type * as resources_functions_replaceMapContent from "../resources/functions/replaceMapContent.js";
 import type * as resources_functions_replaceMapImage from "../resources/functions/replaceMapImage.js";
@@ -227,6 +228,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/plainTransfer": typeof resources_functions_plainTransfer;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/functions/projectResourceReferences": typeof resources_functions_projectResourceReferences;
+  "resources/functions/reapplyYjsRecovery": typeof resources_functions_reapplyYjsRecovery;
   "resources/functions/replaceCanvasContent": typeof resources_functions_replaceCanvasContent;
   "resources/functions/replaceMapContent": typeof resources_functions_replaceMapContent;
   "resources/functions/replaceMapImage": typeof resources_functions_replaceMapImage;

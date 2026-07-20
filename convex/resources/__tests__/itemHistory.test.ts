@@ -1270,6 +1270,114 @@ describe('item history checkpoints', () => {
     })
   })
 
+  it('reapplies a recovery snapshot only at the exact content frontier', async () => {
+    const campaign = await setupCampaignContext(t)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const currentDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Restored current' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const recoveryDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Recovered draft' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const currentUpdate = encodeUpdate(currentDocument)
+    const recoveryUpdate = encodeUpdate(recoveryDocument)
+    await createNote(campaign, resourceId, currentUpdate)
+    const current = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+    })
+    if (current.status !== 'ready') throw new TypeError('Expected current note')
+    const snapshotVersion = await initialNoteContentVersion(new Uint8Array(recoveryUpdate))
+    const request = {
+      campaignId: campaign.campaignDomainId,
+      expectedGeneration: current.generation,
+      expectedVersion: current.version,
+      resourceId,
+      snapshotUpdate: recoveryUpdate,
+      snapshotVersion,
+    }
+
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, request),
+    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, request),
+    ).resolves.toEqual({ status: 'completed' })
+
+    const recovered = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+    })
+    expect(recovered).toMatchObject({
+      status: 'ready',
+      generation: current.generation + 1,
+      version: { revision: current.version.revision + 1, digest: snapshotVersion.digest },
+    })
+    if (recovered.status !== 'ready') throw new TypeError('Expected recovered note')
+    expect(bytes(recovered.update)).toEqual(bytes(recoveryUpdate))
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, request),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_changed' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+      }),
+    ).resolves.toEqual(recovered)
+
+    currentDocument.destroy()
+    recoveryDocument.destroy()
+  })
+
+  it('reapplies a valid canvas recovery through the same checked replacement owner', async () => {
+    const campaign = await setupCampaignContext(t)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    await createCanvas(campaign, resourceId)
+    const current = await asDm(campaign).query(api.resources.queries.loadCanvasContent, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+    })
+    if (current.status !== 'ready') throw new TypeError('Expected current canvas')
+    const recoveryDocument = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
+          type: 'text',
+          position: { x: 10, y: 20 },
+          data: {},
+        },
+      ],
+      edges: [],
+    })
+    const snapshotUpdate = encodeUpdate(recoveryDocument)
+    const snapshotVersion = initialVersion(await sha256Digest(new Uint8Array(snapshotUpdate)))
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.reapplyYjsRecovery, {
+        campaignId: campaign.campaignDomainId,
+        expectedGeneration: current.generation,
+        expectedVersion: current.version,
+        resourceId,
+        snapshotUpdate,
+        snapshotVersion,
+      }),
+    ).resolves.toEqual({ status: 'completed' })
+    const recovered = await asDm(campaign).query(api.resources.queries.loadCanvasContent, {
+      campaignId: campaign.campaignDomainId,
+      resourceId,
+    })
+    expect(recovered).toMatchObject({
+      status: 'ready',
+      generation: current.generation + 1,
+      version: { revision: current.version.revision + 1, digest: snapshotVersion.digest },
+    })
+    if (recovered.status !== 'ready') throw new TypeError('Expected recovered canvas')
+    expect(bytes(recovered.update)).toEqual(bytes(snapshotUpdate))
+    recoveryDocument.destroy()
+  })
+
   async function createNote(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     resourceId: ResourceId,

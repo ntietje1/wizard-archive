@@ -58,6 +58,7 @@ import {
   createLiveAuthorityBoundYjsSession,
   createYjsSessionAuthorityBinding,
 } from './live-resource-content-authority'
+import { createLiveYjsRecovery } from './live-yjs-recovery'
 import type {
   LiveResourceContentAuthority,
   YjsSessionAuthorityTransition,
@@ -69,6 +70,10 @@ type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteReso
 type CreateNoteResult = FunctionReturnType<typeof api.resources.mutations.createNoteResource>
 type SaveNoteContentArgs = FunctionArgs<typeof api.resources.mutations.saveNoteContent>
 type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.saveNoteContent>
+type ReapplyYjsRecoveryArgs = FunctionArgs<typeof api.resources.mutations.reapplyYjsRecovery>
+type ReapplyYjsRecoveryResult = FunctionReturnType<
+  typeof api.resources.mutations.reapplyYjsRecovery
+>
 
 type LiveNoteContentBackend = LiveResourcePresenceBackend &
   Readonly<{
@@ -76,6 +81,7 @@ type LiveNoteContentBackend = LiveResourcePresenceBackend &
     watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
     create(args: CreateNoteArgs): Promise<CreateNoteResult>
     refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
+    reapply(args: ReapplyYjsRecoveryArgs): Promise<ReapplyYjsRecoveryResult>
     save(args: SaveNoteContentArgs): Promise<SaveNoteContentResult>
   }>
 
@@ -461,6 +467,10 @@ class LiveNoteSessionSource implements NoteSessionSource {
     collaboration?: ContentCollaboration,
   ): LiveNoteSession | ReadonlyYjsSession | null {
     this.#clearSession(resourceId)
+    if (this.#setRecovery(resourceId)) {
+      document.destroy()
+      return null
+    }
     if (!this.authority.canEdit(resourceId)) {
       const session = createReadonlyYjsSession(document, version, this.user, collaboration)
       this.#sessions.set(resourceId, session)
@@ -488,7 +498,9 @@ class LiveNoteSessionSource implements NoteSessionSource {
           if (this.#sessions.get(resourceId) !== session) return
           this.#sessions.delete(resourceId)
           this.#awaitingEditable.delete(resourceId)
-          this.#setState(resourceId, failedYjsSessionState(result))
+          if (result.reason !== 'content_generation_conflict' || !this.#setRecovery(resourceId)) {
+            this.#setState(resourceId, failedYjsSessionState(result))
+          }
         },
         collaboration,
       )
@@ -535,6 +547,39 @@ class LiveNoteSessionSource implements NoteSessionSource {
     this.#store.set(resourceId, state)
   }
 
+  #setRecovery(resourceId: ResourceId): boolean {
+    const reload = () => {
+      this.#setState(resourceId, { status: 'loading' })
+      void this.backend
+        .load(resourceId)
+        .then((snapshot) => this.#apply(resourceId, snapshot))
+        .catch(() =>
+          this.#setState(resourceId, {
+            status: 'unavailable',
+            reason: 'scope_unavailable',
+          }),
+        )
+    }
+    const recovery = createLiveYjsRecovery({
+      kind: 'note',
+      campaignId: this.campaignId,
+      memberId: this.memberId,
+      resourceId,
+      load: () => this.backend.load(resourceId),
+      reapply: (args) => this.backend.reapply(args),
+      reload,
+      exportArtifact: exportRecoveryNote,
+      versionArtifact: initialNoteContentVersion,
+    })
+    if (!recovery) return false
+    this.#setState(resourceId, {
+      status: 'recovery_required',
+      issue: 'version_mismatch',
+      recovery,
+    })
+    return true
+  }
+
   #startLocalCreate(
     resourceId: ResourceId,
     operationId: OperationId,
@@ -547,7 +592,11 @@ class LiveNoteSessionSource implements NoteSessionSource {
     }
     const initialUpdate = Y.encodeStateAsUpdate(doc)
     try {
-      if (recovered.entry && recovered.entry.generation !== INITIAL_CONTENT_GENERATION) {
+      if (
+        recovered.entry &&
+        (recovered.entry.generation !== INITIAL_CONTENT_GENERATION ||
+          recovered.entry.state !== 'pending')
+      ) {
         return { status: 'unavailable', issue: 'content_corrupt' }
       }
       if (recovered.entry) Y.applyUpdate(doc, recovered.entry.update)
@@ -570,6 +619,18 @@ class LiveNoteSessionSource implements NoteSessionSource {
     }
     doc.on('update', onUpdate)
     return { status: 'ready', create }
+  }
+}
+
+function exportRecoveryNote(update: Uint8Array): ContentExportResult {
+  const document = new Y.Doc()
+  try {
+    Y.applyUpdate(document, update)
+    return exportNoteDocument(document)
+  } catch {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  } finally {
+    document.destroy()
   }
 }
 

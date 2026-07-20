@@ -322,6 +322,8 @@ function EmbeddedResourceState({
       return <EmbeddedContentState label="No visible note content" />
     case 'unavailable':
       return <EmbeddedContentState label={`${kind} unavailable`} />
+    case 'recovery_required':
+      return <EmbeddedContentState label={`Open ${kind} to recover unsaved edits`} />
     case 'integrity_error':
       return <EmbeddedContentState label={`${kind} could not be verified`} />
   }
