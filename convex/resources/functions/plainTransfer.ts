@@ -214,7 +214,9 @@ export async function settlePlainTransferEntry(
     | Readonly<{ status: 'rejected'; reason: string }>,
 ): Promise<void> {
   if (entry.status !== 'pending') return
-  if (outcome.status === 'completed' && outcome.kind === 'note') {
+  const retiresUpload =
+    outcome.status === 'rejected' || (outcome.status === 'completed' && outcome.kind === 'note')
+  if (retiresUpload) {
     await discardReservedUpload(ctx, entry.uploadSessionUuid)
   }
   await ctx.db.patch('resourceTransferEntries', entry._id, {
@@ -222,8 +224,7 @@ export async function settlePlainTransferEntry(
     resourceUuid: outcome.status === 'completed' ? outcome.resourceId : null,
     status: outcome.status,
     rejectionReason: outcome.status === 'rejected' ? outcome.reason : null,
-    uploadSessionUuid:
-      outcome.status === 'completed' && outcome.kind === 'note' ? null : entry.uploadSessionUuid,
+    uploadSessionUuid: retiresUpload ? null : entry.uploadSessionUuid,
   })
 }
 

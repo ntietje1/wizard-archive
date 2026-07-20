@@ -849,6 +849,100 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('retires a bound upload when one transfer entry rejects terminally', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
+    const sourceId = 'invalid-note'
+    const sourcePath = 'invalid.md'
+    const invalidUpdate = Uint8Array.from([255])
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob([invalidUpdate]),
+      sourcePath,
+    )
+    const reservation = await asDm(campaign).mutation(
+      api.resources.mutations.reservePlainTransfer,
+      {
+        campaignId: campaignUuid,
+        jobId,
+        destinationParentId: null,
+        textFileHandling: 'notes',
+        sources: [{ id: sourceId, kind: 'file', name: sourcePath }],
+        entries: [
+          {
+            sourceId,
+            path: sourcePath,
+            type: 'file',
+            byteSize: invalidUpdate.byteLength,
+          },
+        ],
+      },
+    )
+    if (reservation.status !== 'reserved' || !reservation.uploadTargets[0]) {
+      throw new TypeError('Expected transfer upload reservation')
+    }
+    await t.run(async (ctx) => {
+      const entry = await ctx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .unique()
+      if (!entry) throw new TypeError('Expected transfer entry')
+      await ctx.db.delete('fileStorage', reservation.uploadTargets[0]!.sessionId)
+      await ctx.db.patch('resourceTransferEntries', entry._id, {
+        uploadSessionUuid: upload.sessionId,
+      })
+    })
+    await asDm(campaign).mutation(internal.resources.mutations.startPlainTransfer, {
+      campaignId: campaign.campaignId,
+      jobId,
+    })
+    await expect(
+      asDm(campaign).mutation(internal.resources.mutations.commitPlainTransferNote, {
+        campaignId: campaign.campaignId,
+        jobId,
+        sourceId,
+        sourcePath,
+        update: invalidUpdate.buffer,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_command' })
+    await t.run(async (ctx) => {
+      const entry = await ctx.db
+        .query('resourceTransferEntries')
+        .withIndex('by_campaign_and_job', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('importJobUuid', jobId),
+        )
+        .unique()
+      expect(entry).toMatchObject({
+        status: 'rejected',
+        rejectionReason: 'content_integrity_failure',
+        uploadSessionUuid: null,
+      })
+      await expect(ctx.db.get('fileStorage', upload.sessionId)).resolves.toBeNull()
+      await expect(ctx.storage.get(upload.storageId)).resolves.toBeNull()
+    })
+    const settled = await asDm(campaign).mutation(
+      internal.resources.mutations.finishPlainTransfer,
+      {
+        campaignId: campaign.campaignId,
+        jobId,
+      },
+    )
+    expect(settled).toMatchObject({
+      status: 'settled',
+      entries: [{ status: 'rejected', reason: 'content_integrity_failure' }],
+    })
+    await expect(
+      asDm(campaign).mutation(internal.resources.mutations.finishPlainTransfer, {
+        campaignId: campaign.campaignId,
+        jobId,
+      }),
+    ).resolves.toEqual(settled)
+  })
+
   it('resumes pending entries after a completed note source has been retired', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
