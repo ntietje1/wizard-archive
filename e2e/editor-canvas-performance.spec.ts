@@ -4,7 +4,18 @@ import { openDemoCanvas, visibleBox, visibleCanvasNodePoint } from './helpers/ed
 
 const CANVAS_GESTURE_MEASURE = 'wizard-archive:canvas-gesture-frame'
 const MAX_HANDLER_DURATION_MS = 8
-const MAX_FRAME_DURATION_MS = 1_500
+const MAX_TYPICAL_FRAME_DURATION_MS: Readonly<Record<CanvasGesture, number>> = {
+  connecting: 125,
+  dragging: 125,
+  drawing: 125,
+  erasing: 125,
+  lasso: 200,
+  marquee: 200,
+  resizing: 125,
+}
+const MAX_OUTLIER_FRAME_DURATION_MS = 300
+const WARMUP_SAMPLES = 2
+const MIN_GESTURE_SAMPLES = 6
 
 type CanvasGesture =
   | 'connecting'
@@ -24,12 +35,27 @@ type CanvasPerformanceSample = Readonly<{
 type CanvasPerformanceSummary = Readonly<{
   gesture: CanvasGesture
   samples: number
+  lateFrameDurations: ReadonlyArray<number>
+  lateHandlerDurations: ReadonlyArray<number>
   lateMaxFrameDuration: number
+  lateMedianFrameDuration: number
   lateMaxHandlerDuration: number
 }>
 
 test.describe('canvas performance smoke', () => {
-  test.setTimeout(90_000)
+  test.setTimeout(60_000)
+
+  test('rejects a representative long-frame control', () => {
+    const samples = Array.from({ length: MIN_GESTURE_SAMPLES }, (_, index) => ({
+      duration: index === MIN_GESTURE_SAMPLES - 1 ? MAX_OUTLIER_FRAME_DURATION_MS + 1 : 16,
+      gesture: 'dragging' as const,
+      handlerDuration: 1,
+    }))
+
+    expect(() => assertCanvasPerformance(summarizeCanvasPerformance('dragging', samples))).toThrow(
+      /missed its next-frame bound/,
+    )
+  })
 
   test('measures maximum canonical gestures and keeps viewport culling exact', async ({
     page,
@@ -213,18 +239,12 @@ test.describe('canvas performance smoke', () => {
     await page.keyboard.press('Backspace')
     await expect(nodes).toHaveCount(0)
     const surfaceBox = await visibleBox(surface)
-    const evidence: Array<CanvasPerformanceSummary> = []
-
     await editor.getByRole('button', { name: 'Draw' }).click()
-    evidence.push(
-      await measureCanvasGesture(page, 'drawing', () =>
-        dragPointerOnFrames(
-          page,
-          { x: surfaceBox.x + 100, y: surfaceBox.y + surfaceBox.height / 2 },
-          { x: surfaceBox.x + 260, y: surfaceBox.y + surfaceBox.height / 2 + 24 },
-          2,
-        ),
-      ),
+    await dragPointerOnFrames(
+      page,
+      { x: surfaceBox.x + 100, y: surfaceBox.y + surfaceBox.height / 2 },
+      { x: surfaceBox.x + 260, y: surfaceBox.y + surfaceBox.height / 2 },
+      2,
     )
     const strokes = editor.locator('[data-testid="canvas-node"][data-node-type="stroke"]')
     await expect(strokes).toHaveCount(1)
@@ -243,20 +263,49 @@ test.describe('canvas performance smoke', () => {
     await editor.getByRole('button', { name: 'Fit zoom' }).click()
     const strokeBox = await visibleBox(strokes.first())
     await editor.getByRole('button', { name: 'Eraser' }).click()
-    evidence.push(
-      await measureCanvasGesture(page, 'erasing', () =>
-        dragPointerOnFrames(
-          page,
-          { x: strokeBox.x - 8, y: strokeBox.y + strokeBox.height / 2 },
-          { x: strokeBox.x + strokeBox.width + 8, y: strokeBox.y + strokeBox.height / 2 },
-          6,
-        ),
+    const evidence = await measureCanvasGesture(page, 'erasing', () =>
+      dragPointerOnFrames(
+        page,
+        { x: strokeBox.x - 8, y: strokeBox.y + strokeBox.height / 2 - 12 },
+        {
+          x: strokeBox.x + strokeBox.width + 8,
+          y: strokeBox.y + strokeBox.height / 2 + 12,
+        },
+        6,
       ),
     )
     await expect.poll(() => strokes.count()).toBeLessThan(512)
 
     await testInfo.attach('canvas-eraser-performance.json', {
-      body: JSON.stringify(evidence, null, 2),
+      body: JSON.stringify([evidence], null, 2),
+      contentType: 'application/json',
+    })
+  })
+
+  test('measures repeated drawing frames', async ({ page }, testInfo) => {
+    const { editor, nodes, surface } = await openDemoCanvas(page)
+    await editor.focus()
+    await page.keyboard.press('Control+a')
+    await page.keyboard.press('Backspace')
+    await expect(nodes).toHaveCount(0)
+    const surfaceBox = await visibleBox(surface)
+    await editor.getByRole('button', { name: 'Draw' }).click()
+
+    const evidence = await measureCanvasGesture(page, 'drawing', async () => {
+      for (let index = 0; index < 3; index += 1) {
+        await dragPointerOnFrames(
+          page,
+          { x: surfaceBox.x + 100, y: surfaceBox.y + surfaceBox.height / 2 + index * 12 },
+          { x: surfaceBox.x + 260, y: surfaceBox.y + surfaceBox.height / 2 + index * 12 },
+          2,
+        )
+      }
+    })
+    await expect(
+      editor.locator('[data-testid="canvas-node"][data-node-type="stroke"]'),
+    ).toHaveCount(3)
+    await testInfo.attach('canvas-drawing-performance.json', {
+      body: JSON.stringify([evidence], null, 2),
       contentType: 'application/json',
     })
   })
@@ -297,25 +346,49 @@ async function measureCanvasGesture(
     return samples
   }, CANVAS_GESTURE_MEASURE)
   const samples = allSamples.filter((sample) => sample.gesture === gesture)
-  expect(
-    samples.length,
-    `${gesture} did not produce pointer-frame samples: ${JSON.stringify(allSamples)}`,
-  ).toBeGreaterThanOrEqual(2)
-  const late = samples.slice(-Math.min(4, samples.length))
-  const lateMaxHandlerDuration = Math.max(...late.map((sample) => sample.handlerDuration))
-  const lateMaxFrameDuration = Math.max(...late.map((sample) => sample.duration))
-  expect(lateMaxHandlerDuration, `${gesture} pointer handler exceeded its bound`).toBeLessThan(
-    MAX_HANDLER_DURATION_MS,
-  )
-  expect(
-    lateMaxFrameDuration,
-    `${gesture} missed its next-frame bound: ${JSON.stringify(samples)}`,
-  ).toBeLessThan(MAX_FRAME_DURATION_MS)
+  const summary = summarizeCanvasPerformance(gesture, samples)
+  assertCanvasPerformance(summary)
+  return summary
+}
+
+function summarizeCanvasPerformance(
+  gesture: CanvasGesture,
+  samples: ReadonlyArray<CanvasPerformanceSample>,
+): CanvasPerformanceSummary {
+  if (samples.length < MIN_GESTURE_SAMPLES) {
+    throw new Error(
+      `${gesture} produced ${samples.length} pointer-frame samples; expected ${MIN_GESTURE_SAMPLES}`,
+    )
+  }
+  const late = samples.slice(WARMUP_SAMPLES)
+  const lateHandlerDurations = late.map((sample) => sample.handlerDuration)
+  const lateFrameDurations = late.map((sample) => sample.duration)
+  const sortedFrameDurations = [...lateFrameDurations].sort((left, right) => left - right)
   return {
     gesture,
     samples: samples.length,
-    lateMaxFrameDuration,
-    lateMaxHandlerDuration,
+    lateFrameDurations,
+    lateHandlerDurations,
+    lateMaxFrameDuration: Math.max(...lateFrameDurations),
+    lateMedianFrameDuration:
+      sortedFrameDurations[Math.floor(sortedFrameDurations.length / 2)] ?? Number.POSITIVE_INFINITY,
+    lateMaxHandlerDuration: Math.max(...lateHandlerDurations),
+  }
+}
+
+function assertCanvasPerformance(summary: CanvasPerformanceSummary) {
+  if (summary.lateMaxHandlerDuration >= MAX_HANDLER_DURATION_MS) {
+    throw new Error(
+      `${summary.gesture} pointer handler exceeded its bound: ${JSON.stringify(summary)}`,
+    )
+  }
+  if (summary.lateMedianFrameDuration >= MAX_TYPICAL_FRAME_DURATION_MS[summary.gesture]) {
+    throw new Error(
+      `${summary.gesture} typical frames exceeded their bound: ${JSON.stringify(summary)}`,
+    )
+  }
+  if (summary.lateMaxFrameDuration >= MAX_OUTLIER_FRAME_DURATION_MS) {
+    throw new Error(`${summary.gesture} missed its next-frame bound: ${JSON.stringify(summary)}`)
   }
 }
 
