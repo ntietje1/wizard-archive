@@ -579,6 +579,51 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('replaces the native resource drag image with live workspace feedback', async () => {
+    const { core, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    const row = await sidebar.findByRole('button', { name: resource.title })
+    const values = new Map<string, string>()
+    const dataTransfer = {
+      dropEffect: 'none' as DataTransfer['dropEffect'],
+      effectAllowed: 'uninitialized' as DataTransfer['effectAllowed'],
+      files: [],
+      getData: (type: string) => values.get(type) ?? '',
+      items: [],
+      setData: (type: string, value: string) => {
+        values.set(type, value)
+        dataTransfer.types = [...values.keys()]
+      },
+      setDragImage: vi.fn(),
+      types: [] as Array<string>,
+    }
+
+    fireEvent.dragStart(row, { clientX: 20, clientY: 30, dataTransfer })
+
+    expect(dataTransfer.setDragImage).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(resource.title)
+
+    fireEvent.dragOver(screen.getByLabelText('resources resource drop zone'), {
+      clientX: 40,
+      clientY: 50,
+      dataTransfer,
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent('Move'),
+    )
+
+    fireEvent.dragEnd(row, { dataTransfer })
+    expect(screen.queryByTestId('resource-drag-overlay')).not.toBeInTheDocument()
+    core.dispose()
+  })
+
   it('does not navigate when the invoking creation surface unmounts', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
     if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')

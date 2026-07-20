@@ -70,6 +70,7 @@ export function ResourceCard({
   })
   return (
     <article
+      data-resource-id={resource.id}
       data-resource-kind={resource.kind}
       data-selected={selected}
       {...interaction}

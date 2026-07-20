@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { KeyboardEvent, PointerEvent, ReactNode } from 'react'
+import type { DragEvent, KeyboardEvent, PointerEvent, ReactNode } from 'react'
 import { Menu } from 'lucide-react'
 import type { ResourceId } from './domain-id'
 import type { EditorRuntime } from './editor-runtime-contract'
@@ -18,12 +18,15 @@ import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
 import type { WorkspaceClipboard } from './workspace-clipboard'
 import { workspaceKeyboardCommand } from './workspace-keyboard'
 import type { WorkspaceKeyboardCommand } from './workspace-keyboard'
+import { readWorkspaceResourceDrag } from './workspace-resource-drag'
 import { useEnsureResource, useEnsureResourceCollection } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
 import { ResourceSidebar } from './workspace/resource-sidebar'
 import { ResourceSidebarContextMenu } from './workspace/resource-sidebar-context-menu'
 import { ResourceTopbar } from './workspace/resource-topbar'
+import { WorkspaceResourceDragOverlay } from './workspace/workspace-resource-drag-overlay'
+import type { WorkspaceResourceDragOverlayState } from './workspace/workspace-resource-drag-overlay'
 import { ResourceViewport, ViewportState } from './workspace/resource-viewport'
 import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
 import { ResourceSearchDialog } from './workspace/resource-search-dialog'
@@ -86,6 +89,7 @@ export function ResourceShell({
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
   const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
+  const [dragOverlay, setDragOverlay] = useState<WorkspaceResourceDragOverlayState>(null)
   const [sidebarContextMenu, setSidebarContextMenu] = useState<Readonly<{
     x: number
     y: number
@@ -105,6 +109,7 @@ export function ResourceShell({
   } | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const noteHeadingNavigation = useRef<NoteHeadingNavigation | null>(null)
+  const nativeDragPreview = useRef<HTMLDivElement>(null)
   const report: WorkspaceReport = (message, retry, progress) =>
     setNotice({
       message,
@@ -131,6 +136,51 @@ export function ResourceShell({
     setContextMenu({ status: 'open', request, resourceIds })
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
+  const beginResourceDragOverlay = (event: DragEvent<HTMLElement>) => {
+    const drag = readWorkspaceResourceDrag(event.dataTransfer)
+    if (!drag) return
+    const targetResourceId =
+      event.target instanceof Element
+        ? event.target.closest<HTMLElement>('[data-resource-id]')?.dataset.resourceId
+        : undefined
+    const sourceId =
+      drag.resourceIds.find((resourceId) => resourceId === targetResourceId) ?? drag.resourceIds[0]
+    const source = sourceId ? snapshot.lookup(sourceId) : null
+    if (!source || source.state !== 'known') return
+    if (nativeDragPreview.current) {
+      event.dataTransfer.setDragImage(nativeDragPreview.current, 0, 0)
+    }
+    setDragOverlay({
+      count: drag.resourceIds.length,
+      effect: null,
+      resource: source.value,
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }
+  const moveResourceDragOverlay = (event: DragEvent<HTMLElement>) => {
+    if (event.clientX === 0 && event.clientY === 0) return
+    setDragOverlay((current) =>
+      current ? { ...current, x: event.clientX, y: event.clientY } : null,
+    )
+  }
+  const updateResourceDragEffect = (event: DragEvent<HTMLElement>) => {
+    const dataTransfer = event.dataTransfer
+    const x = event.clientX
+    const y = event.clientY
+    queueMicrotask(() => {
+      setDragOverlay((current) => {
+        if (!current) return null
+        const effect =
+          dataTransfer.dropEffect === 'copy'
+            ? 'copy'
+            : dataTransfer.dropEffect === 'move'
+              ? 'move'
+              : 'blocked'
+        return { ...current, effect, x, y }
+      })
+    })
+  }
   const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented) return
     if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
@@ -199,6 +249,11 @@ export function ResourceShell({
       aria-label={ariaLabel}
       aria-busy="false"
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
+      onDrag={moveResourceDragOverlay}
+      onDragEnd={() => setDragOverlay(null)}
+      onDragOverCapture={updateResourceDragEffect}
+      onDragStart={beginResourceDragOverlay}
+      onDropCapture={() => setDragOverlay(null)}
       onKeyDown={handleWorkspaceKeyDown}
     >
       {leftVisible && (
@@ -317,6 +372,7 @@ export function ResourceShell({
           onClose={() => setSidebarContextMenu(null)}
         />
       )}
+      <WorkspaceResourceDragOverlay nativePreviewRef={nativeDragPreview} state={dragOverlay} />
       <ResourceViewAsBanner viewAs={runtime.viewAs} />
       {notice && (
         <div
