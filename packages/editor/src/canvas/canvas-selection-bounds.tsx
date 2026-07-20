@@ -19,21 +19,58 @@ const CANVAS_SELECTION_Z_INDEX = 30
 const MOUSE_RESIZE_HIT_SIZE_PX = 18
 const TOUCH_RESIZE_HIT_SIZE_PX = 36
 
-export function CanvasNodeSelectionIndicator({ zoom }: { zoom: number }) {
+export function CanvasNodeSelectionIndicators({
+  nodes,
+  selection,
+  zoom,
+}: {
+  nodes: ReadonlyArray<CanvasDocumentNode>
+  selection: CanvasSelection
+  zoom: number
+}) {
+  const selectedNodes = getSelectedNodes(nodes, selection)
+  if (selectedNodes.length === 0) return null
+  const path = selectedNodes
+    .map((node) => canvasSelectionIndicatorPath(canvasNodeBounds(node), zoom))
+    .join(' ')
   return (
-    <div
-      className="pointer-events-none absolute"
+    <svg
+      className="pointer-events-none absolute left-0 top-0 z-20 overflow-visible"
+      data-selected-node-count={selectedNodes.length}
       data-testid="canvas-node-selection-indicator"
-      style={{
-        borderColor: 'var(--canvas-selection-stroke)',
-        borderRadius: 2 / zoom,
-        borderStyle: 'solid',
-        borderWidth: CANVAS_SELECTION_STROKE_WIDTH_PX / zoom,
-        inset: -CANVAS_SELECTION_OUTSET_PX / zoom,
-        opacity: 'var(--canvas-selection-indicator-opacity)',
-      }}
-    />
+      width="1"
+      height="1"
+    >
+      <path
+        d={path}
+        fill="none"
+        stroke="var(--canvas-selection-stroke)"
+        strokeWidth={CANVAS_SELECTION_STROKE_WIDTH_PX / zoom}
+        opacity="var(--canvas-selection-indicator-opacity)"
+      />
+    </svg>
   )
+}
+
+function canvasSelectionIndicatorPath(bounds: CanvasBounds, zoom: number): string {
+  const inset = CANVAS_SELECTION_OUTSET_PX / zoom
+  const radius = 2 / zoom
+  const left = bounds.x - inset
+  const top = bounds.y - inset
+  const right = bounds.x + bounds.width + inset
+  const bottom = bounds.y + bounds.height + inset
+  return [
+    `M ${left + radius} ${top}`,
+    `H ${right - radius}`,
+    `Q ${right} ${top} ${right} ${top + radius}`,
+    `V ${bottom - radius}`,
+    `Q ${right} ${bottom} ${right - radius} ${bottom}`,
+    `H ${left + radius}`,
+    `Q ${left} ${bottom} ${left} ${bottom - radius}`,
+    `V ${top + radius}`,
+    `Q ${left} ${top} ${left + radius} ${top}`,
+    'Z',
+  ].join(' ')
 }
 
 export function CanvasSelectionBounds({

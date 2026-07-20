@@ -26,18 +26,18 @@ describe('createCanvasInteractionRenderStore', () => {
     expect(controllerInteraction.type).toBe('drawing')
     if (controllerInteraction.type !== 'drawing') throw new Error('Expected drawing interaction')
     expect(getCanvasDrawingPoints(controllerInteraction).at(-1)).toEqual([3, 3, 0.5])
-    expect(rendered).toHaveBeenCalledTimes(2)
+    expect(rendered).toHaveBeenCalledTimes(1)
 
     scheduled.render?.()
     const renderedInteraction = store.get().interaction
     expect(renderedInteraction.type).toBe('drawing')
     if (renderedInteraction.type !== 'drawing') throw new Error('Expected rendered drawing')
     expect(getCanvasDrawingPoints(renderedInteraction).at(-1)).toEqual([3, 3, 0.5])
-    expect(rendered).toHaveBeenCalledTimes(3)
+    expect(rendered).toHaveBeenCalledTimes(2)
 
     controller.commitDrawing(4)
     expect(store.get().interaction).toEqual({ type: 'idle' })
-    expect(rendered).toHaveBeenCalledTimes(4)
+    expect(rendered).toHaveBeenCalledTimes(3)
     store.dispose()
     controller.dispose()
   })

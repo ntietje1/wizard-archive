@@ -30,7 +30,6 @@ export function createCanvasInteractionRenderStore(
       return
     }
     if (cancelFrame) return
-    publish(latest)
     cancelFrame = scheduleFrame(() => {
       cancelFrame = null
       if (latest !== rendered) publish(latest)
@@ -59,7 +58,8 @@ function canvasRenderUpdateIsUrgent(
     previous.interaction.type !== next.interaction.type ||
     previous.tool !== next.tool ||
     previous.toolSettings !== next.toolSettings ||
-    previous.selection !== next.selection
+    previous.selection !== next.selection ||
+    (previous.viewport !== next.viewport && next.interaction.type !== 'panning')
   )
 }
 

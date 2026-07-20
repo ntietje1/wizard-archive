@@ -32,7 +32,7 @@ import {
   resolveCanvasEdgeStyle,
 } from './canvas-edge-style'
 import { projectCanvasResizeNodeBounds } from './canvas-resize-geometry'
-import { CanvasNodeSelectionIndicator, CanvasSelectionBounds } from './canvas-selection-bounds'
+import { CanvasNodeSelectionIndicators, CanvasSelectionBounds } from './canvas-selection-bounds'
 import { CanvasSnapGuides } from './canvas-snap-guides'
 import { canvasBoundsFromPoints } from './selection-geometry'
 import type { CanvasTextDocument } from './text/model'
@@ -178,13 +178,7 @@ export function CanvasScene({
                 interaction.selection.nodeIds.has(node.id)
               }
               committedSelected={interaction.selection.nodeIds.has(node.id)}
-              selected={visualSelection.nodeIds.has(node.id)}
-              showSelectionIndicator={
-                visualSelection.nodeIds.has(node.id) &&
-                (interaction.interaction.type === 'selecting' ||
-                  interaction.interaction.type === 'dragging' ||
-                  visualSelection.nodeIds.size > 1)
-              }
+              selected={interaction.selection.nodeIds.has(node.id)}
               surface={surface}
               tool={interaction.tool}
               viewport={interaction.viewport}
@@ -199,6 +193,15 @@ export function CanvasScene({
             />
           ))}
         </div>
+        {(interaction.interaction.type === 'selecting' ||
+          interaction.interaction.type === 'dragging' ||
+          visualSelection.nodeIds.size > 1) && (
+          <CanvasNodeSelectionIndicators
+            nodes={rendered.nodes}
+            selection={visualSelection}
+            zoom={interaction.viewport.zoom}
+          />
+        )}
         <CanvasCollaborationCursors
           collaboration={collaboration}
           zoom={interaction.viewport.zoom}
@@ -262,7 +265,6 @@ const CanvasNode = memo(function CanvasNode({
   renderEmbed,
   exclusivelySelected,
   selected,
-  showSelectionIndicator,
   snappedConnectionHandle,
   surface,
   tool,
@@ -283,7 +285,6 @@ const CanvasNode = memo(function CanvasNode({
   renderEmbed: CanvasEmbedRenderer
   exclusivelySelected: boolean
   selected: boolean
-  showSelectionIndicator: boolean
   snappedConnectionHandle: CanvasConnectionHandle | null
   surface: RefObject<HTMLElement | null>
   tool: CanvasInteractionSnapshot['tool']
@@ -371,7 +372,6 @@ const CanvasNode = memo(function CanvasNode({
         renderEmbed={renderEmbed}
         viewport={viewport}
       />
-      {showSelectionIndicator && <CanvasNodeSelectionIndicator zoom={viewport.zoom} />}
       {canEdit && tool === 'edge' && node.type !== 'stroke' && (
         <CanvasNodeConnectionHandles
           interactionController={interactionController}

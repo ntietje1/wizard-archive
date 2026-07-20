@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const isCI = !!process.env.CI
+const isProductCanvasPerformance = process.env.WA_CANVAS_PERFORMANCE_TARGET === 'product'
 
 export default defineConfig({
   testDir: './e2e',
@@ -32,9 +33,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'vp dev .',
+    command: isProductCanvasPerformance
+      ? 'vp exec wrangler dev --config dist/server/wrangler.json --port 3000'
+      : 'vp dev .',
     url: 'http://localhost:3000',
-    reuseExistingServer: !isCI,
+    reuseExistingServer: !isCI && !isProductCanvasPerformance,
     timeout: 120 * 1000,
   },
 })

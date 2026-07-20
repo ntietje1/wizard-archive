@@ -1066,24 +1066,29 @@ describe('CanvasEditor', () => {
     expect(surface).toHaveFocus()
     fireEvent.pointerMove(surface, { clientX: 600, clientY: 220, pointerId: 7 })
 
-    expect(screen.getByTestId('canvas-marquee')).toHaveStyle({
-      left: '0px',
-      top: '0px',
-      width: '600px',
-      height: '220px',
-    })
+    await waitFor(() =>
+      expect(screen.getByTestId('canvas-marquee')).toHaveStyle({
+        left: '0px',
+        top: '0px',
+        width: '600px',
+        height: '220px',
+      }),
+    )
     expect(screen.getByRole('status')).toHaveTextContent('Selecting 2 nodes and 1 edge')
     expect(screen.getByTestId('canvas-pending-selection-preview-wrapper')).toHaveStyle({
       height: '160px',
       transform: 'translate(20px, 20px)',
       width: '520px',
     })
-    expect(screen.getAllByTestId('canvas-node-selection-indicator')).toHaveLength(2)
+    expect(screen.getByTestId('canvas-node-selection-indicator')).toHaveAttribute(
+      'data-selected-node-count',
+      '2',
+    )
     expect(screen.queryByTestId('canvas-selection-resize-wrapper')).not.toBeInTheDocument()
     expect(
       screen
         .getAllByTestId('canvas-node')
-        .every((node) => node.getAttribute('data-selected') === 'true'),
+        .every((node) => node.getAttribute('data-selected') === 'false'),
     ).toBe(true)
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-selected', 'true')
     expect(screen.getByTestId('canvas-edge-primary-path')).toHaveAttribute(
@@ -1132,7 +1137,12 @@ describe('CanvasEditor', () => {
       pointerId: 10,
       shiftKey: true,
     })
-    expect(screen.getByTestId('canvas-marquee')).toHaveStyle({ width: '100px', height: '100px' })
+    await waitFor(() =>
+      expect(screen.getByTestId('canvas-marquee')).toHaveStyle({
+        width: '100px',
+        height: '100px',
+      }),
+    )
     fireEvent.pointerCancel(surface, { pointerId: 10 })
     expect(screen.queryByTestId('canvas-marquee')).not.toBeInTheDocument()
 
@@ -1286,7 +1296,10 @@ describe('CanvasEditor', () => {
       right: '9px',
       top: '-9px',
     })
-    expect(screen.getAllByTestId('canvas-node-selection-indicator')).toHaveLength(2)
+    expect(screen.getByTestId('canvas-node-selection-indicator')).toHaveAttribute(
+      'data-selected-node-count',
+      '2',
+    )
     expect(screen.getAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
     fireEvent.pointerDown(screen.getByTestId('canvas-selection-resize-zone-bottom-right'), {
       button: 0,
@@ -1300,7 +1313,12 @@ describe('CanvasEditor', () => {
       clientY: 190,
       pointerId: 15,
     })
-    expect(screen.getAllByTestId('canvas-node')[0]).toHaveStyle({ width: '360px', height: '160px' })
+    await waitFor(() =>
+      expect(screen.getAllByTestId('canvas-node')[0]).toHaveStyle({
+        width: '360px',
+        height: '160px',
+      }),
+    )
     expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
       width: 180,
       height: 80,
@@ -1358,7 +1376,7 @@ describe('CanvasEditor', () => {
       pointerId: 16,
     })
 
-    expect(node).toHaveStyle({ transform: 'translate(100px, 0px)' })
+    await waitFor(() => expect(node).toHaveStyle({ transform: 'translate(100px, 0px)' }))
     expect(screen.getByTestId('canvas-drag-snap-guide')).toHaveAttribute('x1', '200')
     expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({
       position: { x: 0, y: 0 },
@@ -1423,7 +1441,7 @@ describe('CanvasEditor', () => {
       pointerId: 18,
     })
 
-    expect(node).toHaveStyle({ width: '300px' })
+    await waitFor(() => expect(node).toHaveStyle({ width: '300px' }))
     expect(screen.getByTestId('canvas-drag-snap-guide')).toHaveAttribute('x1', '300')
     expect(readCanvasDocumentContent(session.document).nodes[0]).toMatchObject({ width: 180 })
 
