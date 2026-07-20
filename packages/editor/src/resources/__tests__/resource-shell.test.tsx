@@ -1239,7 +1239,7 @@ describe('ResourceShell', () => {
     expect(second).toHaveAttribute('data-selected', 'true')
     expect(third).toHaveAttribute('data-selected', 'true')
 
-    fireEvent.keyDown(third, { key: 'ArrowUp' })
+    fireEvent.keyDown(third, { key: 'ArrowDown' })
     expect(second).toHaveFocus()
     expect(first).toHaveAttribute('data-selected', 'false')
     expect(second).toHaveAttribute('data-selected', 'true')
