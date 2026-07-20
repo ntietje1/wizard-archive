@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { Loader2, PanelRight, Search, X } from 'lucide-react'
 import type { EditorRuntime, WorkspaceSearch } from '../editor-runtime-contract'
@@ -67,17 +67,18 @@ function OpenResourceSearchDialog({
   search: WorkspaceSearch
 }) {
   const snapshot = useResourceSnapshot(runtime)
-  const recent = useSyncExternalStore(
-    (listener) => search?.subscribeRecent(listener) ?? (() => {}),
-    () => search?.recent() ?? [],
-    () => search?.recent() ?? [],
-  )
+  const [recent, setRecent] = useState(() => search.recent())
   const [query, setQuery] = useState('')
   const [state, setState] = useState<SearchState>({ status: 'idle', results: EMPTY_RESULTS })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const dialogRef = useModalDialog()
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, null)
+
+  useEffect(() => {
+    setRecent(search.recent())
+    return search.subscribeRecent(() => setRecent(search.recent()))
+  }, [search])
 
   useEffect(() => {
     void Promise.all(

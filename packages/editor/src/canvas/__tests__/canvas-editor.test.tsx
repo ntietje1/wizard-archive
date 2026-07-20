@@ -57,7 +57,9 @@ describe('CanvasEditor', () => {
 
     const nodes = screen.getAllByTestId('canvas-node')
     await waitFor(() => expect(nodes[1]).toHaveAttribute('data-selected', 'true'))
+    expect(nodes[1]).toHaveClass('cursor-grab')
     expect(nodes[0]).toHaveAttribute('data-selected', 'false')
+    expect(nodes[0]).not.toHaveClass('cursor-grab')
     view.unmount()
     session.dispose()
   })

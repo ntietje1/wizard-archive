@@ -296,7 +296,13 @@ const CanvasNode = memo(function CanvasNode({
   const size = canvasNodeSize(visualNode)
   return (
     <div
-      className={`absolute touch-none select-none rounded-md ${node.type === 'stroke' ? 'pointer-events-none' : ''}`}
+      className={`absolute touch-none select-none rounded-md ${
+        node.type === 'stroke'
+          ? 'pointer-events-none'
+          : canEdit && tool === 'select' && selected && !editing
+            ? 'cursor-grab active:cursor-grabbing'
+            : ''
+      }`}
       data-node-id={node.id}
       data-node-type={node.type}
       data-erasing={erasing}

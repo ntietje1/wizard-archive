@@ -1389,6 +1389,34 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('opens search when the recent-resource provider returns a fresh array snapshot', async () => {
+    const { core, resource } = await shellRuntime(true)
+    if (core.runtime.search.status !== 'available') throw new TypeError('Search is unavailable')
+    const runtime = {
+      ...core.runtime,
+      search: {
+        status: 'available' as const,
+        value: {
+          ...core.runtime.search.value,
+          recent: () => [resource.id],
+        },
+      },
+    }
+
+    render(
+      <ResourceShell ariaLabel="Fresh recent resources" runtime={runtime} workspaceName="DM" />,
+    )
+
+    fireEvent.keyDown(screen.getByRole('region', { name: 'Fresh recent resources' }), {
+      key: 'k',
+      ctrlKey: true,
+    })
+
+    expect(await screen.findByRole('dialog', { name: 'Search' })).toBeVisible()
+    expect(screen.getByRole('option', { name: /Campaign folder/ })).toBeVisible()
+    core.dispose()
+  })
+
   it('reports an incomplete bounded search without discarding rank-safe results', async () => {
     const { core, resource } = await shellRuntime(true)
     if (core.runtime.search.status !== 'available') throw new TypeError('Search is unavailable')
