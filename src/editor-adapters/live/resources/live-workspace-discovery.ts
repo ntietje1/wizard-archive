@@ -88,6 +88,7 @@ export function createLiveWorkspaceSearch(
     args: FunctionArgs<typeof api.resources.queries.searchResources>,
   ) => Promise<SearchProjection>,
 ): WorkspaceSearch {
+  let recentResources = getLiveRecentResources(campaignId, actorId)
   return {
     search: async (query) => {
       const projection = await search({ campaignId, query })
@@ -101,8 +102,12 @@ export function createLiveWorkspaceSearch(
       }
       return { status: projection.status, results }
     },
-    recent: () => getLiveRecentResources(campaignId, actorId),
-    subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, actorId, listener),
+    recent: () => recentResources,
+    subscribeRecent: (listener) =>
+      subscribeToLiveRecentResources(campaignId, actorId, () => {
+        recentResources = getLiveRecentResources(campaignId, actorId)
+        listener()
+      }),
     recordOpened: (id) => addLiveRecentResource(campaignId, actorId, id),
   }
 }

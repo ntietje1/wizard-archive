@@ -219,9 +219,8 @@ function ResourceTitleInput({
   onComplete: () => void
   resource: AuthorizedResourceSummary
 }) {
-  const [title, setTitle] = useState<string>(resource.title)
   const cancelled = useRef(false)
-  const commit = () => {
+  const commit = (title: string) => {
     if (cancelled.current || title === resource.title) {
       onComplete()
       return
@@ -235,9 +234,8 @@ function ResourceTitleInput({
       autoFocus
       aria-label="Resource title"
       className="h-7 min-w-32 flex-1 rounded border border-input bg-background px-2 text-sm"
-      value={title}
-      onBlur={commit}
-      onChange={(event) => setTitle(event.target.value)}
+      defaultValue={resource.title}
+      onBlur={(event) => commit(event.currentTarget.value)}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault()

@@ -89,7 +89,7 @@ export function ResourceShell({
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
   const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
-  const [dragOverlay, setDragOverlay] = useState<WorkspaceResourceDragOverlayState>(null)
+  const resourceDrag = useWorkspaceResourceDragOverlay(snapshot)
   const [sidebarContextMenu, setSidebarContextMenu] = useState<Readonly<{
     x: number
     y: number
@@ -109,7 +109,6 @@ export function ResourceShell({
   } | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const noteHeadingNavigation = useRef<NoteHeadingNavigation | null>(null)
-  const nativeDragPreview = useRef<HTMLDivElement>(null)
   const report: WorkspaceReport = (message, retry, progress) =>
     setNotice({
       message,
@@ -136,49 +135,6 @@ export function ResourceShell({
     setContextMenu({ status: 'open', request, resourceIds })
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
-  const beginResourceDragOverlay = (event: DragEvent<HTMLElement>) => {
-    const drag = readWorkspaceResourceDrag(event.dataTransfer)
-    if (!drag) return
-    const targetResourceId =
-      event.target instanceof Element
-        ? event.target.closest<HTMLElement>('[data-resource-id]')?.dataset.resourceId
-        : undefined
-    const sourceId =
-      drag.resourceIds.find((resourceId) => resourceId === targetResourceId) ?? drag.resourceIds[0]
-    const source = sourceId ? snapshot.lookup(sourceId) : null
-    if (!source || source.state !== 'known') return
-    if (nativeDragPreview.current) {
-      event.dataTransfer.setDragImage(nativeDragPreview.current, 0, 0)
-    }
-    setDragOverlay({
-      count: drag.resourceIds.length,
-      effect: null,
-      resource: source.value,
-      x: event.clientX,
-      y: event.clientY,
-    })
-  }
-  const moveResourceDragOverlay = (event: DragEvent<HTMLElement>) => {
-    if (event.clientX === 0 && event.clientY === 0) return
-    setDragOverlay((current) =>
-      current ? { ...current, x: event.clientX, y: event.clientY } : null,
-    )
-  }
-  const updateResourceDragEffect = (event: DragEvent<HTMLElement>) => {
-    const target = event.target instanceof Element ? event.target : null
-    const x = event.clientX
-    const y = event.clientY
-    queueMicrotask(() => {
-      setDragOverlay((current) => {
-        if (!current) return null
-        const dropOperation =
-          target?.closest<HTMLElement>('[data-drop-target=true]')?.dataset.dropOperation
-        const effect =
-          dropOperation === 'copy' ? 'copy' : dropOperation === 'move' ? 'move' : 'blocked'
-        return { ...current, effect, x, y }
-      })
-    })
-  }
   const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented) return
     if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
@@ -247,12 +203,12 @@ export function ResourceShell({
       aria-label={ariaLabel}
       aria-busy="false"
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
-      onDrag={moveResourceDragOverlay}
-      onDragEnd={() => setDragOverlay(null)}
-      onDragEnterCapture={updateResourceDragEffect}
-      onDragOverCapture={updateResourceDragEffect}
-      onDragStart={beginResourceDragOverlay}
-      onDropCapture={() => setDragOverlay(null)}
+      onDrag={resourceDrag.move}
+      onDragEnd={resourceDrag.end}
+      onDragEnterCapture={resourceDrag.updateEffect}
+      onDragOverCapture={resourceDrag.updateEffect}
+      onDragStart={resourceDrag.begin}
+      onDropCapture={resourceDrag.end}
       onKeyDown={handleWorkspaceKeyDown}
     >
       {leftVisible && (
@@ -371,34 +327,100 @@ export function ResourceShell({
           onClose={() => setSidebarContextMenu(null)}
         />
       )}
-      <WorkspaceResourceDragOverlay nativePreviewRef={nativeDragPreview} state={dragOverlay} />
+      <WorkspaceResourceDragOverlay
+        nativePreviewRef={resourceDrag.nativePreviewRef}
+        state={resourceDrag.state}
+      />
       <ResourceViewAsBanner viewAs={runtime.viewAs} />
-      {notice && (
-        <div
-          role="status"
-          className="absolute bottom-3 left-1/2 z-50 min-w-72 -translate-x-1/2 rounded-md border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg"
-        >
-          <div className="flex items-center gap-2">
-            <span className="min-w-0 flex-1 truncate">{notice.message}</span>
-            {notice.retry && (
-              <button type="button" className="font-medium underline" onClick={notice.retry}>
-                Retry
-              </button>
-            )}
-            <button
-              type="button"
-              aria-label="Dismiss notification"
-              className="text-muted-foreground"
-              onClick={() => setNotice(null)}
-            >
-              ×
-            </button>
-          </div>
-          {notice.progress && <WorkspaceTransferProgress progress={notice.progress} />}
-        </div>
-      )}
+      <WorkspaceNotice notice={notice} onDismiss={() => setNotice(null)} />
     </section>
   )
+}
+
+function WorkspaceNotice({
+  notice,
+  onDismiss,
+}: {
+  notice: {
+    message: string
+    retry?: () => void
+    progress?: PlainTransferProgress
+  } | null
+  onDismiss: () => void
+}) {
+  if (!notice) return null
+  return (
+    <div
+      role="status"
+      className="absolute bottom-3 left-1/2 z-50 min-w-72 -translate-x-1/2 rounded-md border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg"
+    >
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 truncate">{notice.message}</span>
+        {notice.retry && (
+          <button type="button" className="font-medium underline" onClick={notice.retry}>
+            Retry
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label="Dismiss notification"
+          className="text-muted-foreground"
+          onClick={onDismiss}
+        >
+          ×
+        </button>
+      </div>
+      {notice.progress && <WorkspaceTransferProgress progress={notice.progress} />}
+    </div>
+  )
+}
+
+function useWorkspaceResourceDragOverlay(snapshot: WorkspaceResourceIndexSnapshot) {
+  const [state, setState] = useState<WorkspaceResourceDragOverlayState>(null)
+  const nativePreviewRef = useRef<HTMLDivElement>(null)
+  const begin = (event: DragEvent<HTMLElement>) => {
+    const drag = readWorkspaceResourceDrag(event.dataTransfer)
+    if (!drag) return
+    const targetResourceId =
+      event.target instanceof Element
+        ? event.target.closest<HTMLElement>('[data-resource-id]')?.dataset.resourceId
+        : undefined
+    const sourceId =
+      drag.resourceIds.find((resourceId) => resourceId === targetResourceId) ?? drag.resourceIds[0]
+    const source = sourceId ? snapshot.lookup(sourceId) : null
+    if (!source || source.state !== 'known') return
+    if (nativePreviewRef.current) {
+      event.dataTransfer.setDragImage(nativePreviewRef.current, 0, 0)
+    }
+    setState({
+      count: drag.resourceIds.length,
+      effect: null,
+      resource: source.value,
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }
+  const move = (event: DragEvent<HTMLElement>) => {
+    if (event.clientX === 0 && event.clientY === 0) return
+    setState((current) => (current ? { ...current, x: event.clientX, y: event.clientY } : null))
+  }
+  const updateEffect = (event: DragEvent<HTMLElement>) => {
+    const target = event.target instanceof Element ? event.target : null
+    const x = event.clientX
+    const y = event.clientY
+    queueMicrotask(() => {
+      setState((current) => {
+        if (!current) return null
+        const dropOperation =
+          target?.closest<HTMLElement>('[data-drop-target=true]')?.dataset.dropOperation
+        const effect =
+          dropOperation === 'copy' ? 'copy' : dropOperation === 'move' ? 'move' : 'blocked'
+        return { ...current, effect, x, y }
+      })
+    })
+  }
+  const end = () => setState(null)
+  return { begin, end, move, nativePreviewRef, state, updateEffect }
 }
 
 function WorkspaceTransferProgress({ progress }: { progress: PlainTransferProgress }) {

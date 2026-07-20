@@ -83,7 +83,7 @@ describe('resource view-as controls', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'View as...' }))
-    await user.click(screen.getByRole('menuitem', { name: 'View as yourself' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'View as yourself' }))
     expect(onModeChange).toHaveBeenCalledWith('viewer')
 
     view.rerender(<ResourceViewAsMenu mode="viewer" projection="dm" onModeChange={onModeChange} />)

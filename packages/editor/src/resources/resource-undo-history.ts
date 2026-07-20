@@ -61,35 +61,59 @@ function commandHistoryLabel(command: ResourceStructureCommand): string {
   switch (command.type) {
     case 'create':
       return `create ${command.kind}`
-    case 'updateMetadata': {
-      const changesTitle = command.changes.title !== undefined
-      const changesIcon = command.changes.icon !== undefined
-      const changesColor = command.changes.color !== undefined
-      if (changesTitle && !changesIcon && !changesColor) return 'rename'
-      if (!changesTitle && changesIcon && !changesColor) return 'change icon'
-      if (!changesTitle && !changesIcon && changesColor) return 'change color'
-      if (!changesTitle && changesIcon && changesColor) return 'change icon and color'
-      return 'edit resource'
-    }
+    case 'updateMetadata':
+      return metadataHistoryLabel(command.changes)
     case 'move':
-      return command.resourceIds.length === 1
-        ? 'move'
-        : `move ${command.resourceIds.length} resources`
+      return singleOrPlural(
+        command.resourceIds.length,
+        'move',
+        `move ${command.resourceIds.length} resources`,
+      )
     case 'trash':
-      return command.resourceIds.length === 1
-        ? 'move to Trash'
-        : `move ${command.resourceIds.length} resources to Trash`
+      return singleOrPlural(
+        command.resourceIds.length,
+        'move to Trash',
+        `move ${command.resourceIds.length} resources to Trash`,
+      )
     case 'restore':
-      return command.resourceIds.length === 1
-        ? 'restore'
-        : `restore ${command.resourceIds.length} resources`
+      return singleOrPlural(
+        command.resourceIds.length,
+        'restore',
+        `restore ${command.resourceIds.length} resources`,
+      )
     case 'deepCopy':
-      return command.sourceRootIds.length === 1
-        ? 'duplicate'
-        : `duplicate ${command.sourceRootIds.length} resources`
+      return singleOrPlural(
+        command.sourceRootIds.length,
+        'duplicate',
+        `duplicate ${command.sourceRootIds.length} resources`,
+      )
     case 'permanentlyDelete':
       return 'permanently delete'
   }
+}
+
+function metadataHistoryLabel(
+  changes: Extract<ResourceStructureCommand, { type: 'updateMetadata' }>['changes'],
+): string {
+  const signature = (['title', 'icon', 'color'] as const)
+    .filter((field) => changes[field] !== undefined)
+    .join('+')
+  switch (signature) {
+    case 'title':
+      return 'rename'
+    case 'icon':
+      return 'change icon'
+    case 'color':
+      return 'change color'
+    case 'icon+color':
+      return 'change icon and color'
+    default:
+      return 'edit resource'
+  }
+}
+
+function singleOrPlural(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural
 }
 
 export function createResourceUndoHistory(

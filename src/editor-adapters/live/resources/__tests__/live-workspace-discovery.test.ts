@@ -176,6 +176,7 @@ describe('live workspace discovery', () => {
       ),
     )
 
+    expect(search.recent()).toBe(search.recent())
     await expect(search.search('discovery')).resolves.toEqual({
       status: 'complete',
       results: [{ resourceId, match: { type: 'title' } }],

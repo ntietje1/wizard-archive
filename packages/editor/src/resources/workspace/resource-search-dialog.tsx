@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { Folder, Loader2, PanelRight, Search, X } from 'lucide-react'
 import type { ResourceId } from '../domain-id'
@@ -39,7 +39,7 @@ const ROOT_FOLDER_QUERY = {
   kinds: ['folder' as const],
 }
 
-export type ResourceSearchPurpose =
+type ResourceSearchPurpose =
   | Readonly<{ type: 'open' }>
   | Readonly<{ type: 'move'; resourceIds: ReadonlyArray<ResourceId> }>
 
@@ -88,7 +88,11 @@ function OpenResourceSearchDialog({
   search: WorkspaceSearch
 }) {
   const snapshot = useResourceSnapshot(runtime)
-  const [recent, setRecent] = useState(() => search.recent())
+  const recent = useSyncExternalStore(
+    (listener) => search.subscribeRecent(listener),
+    () => search.recent(),
+    () => search.recent(),
+  )
   const [query, setQuery] = useState('')
   const [state, setState] = useState<SearchState>({ status: 'idle', results: EMPTY_RESULTS })
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -97,11 +101,6 @@ function OpenResourceSearchDialog({
   const dialogRef = useModalDialog()
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, null)
   useEnsureResourceCollection(runtime.resources.loader, ROOT_FOLDER_QUERY, purpose.type === 'move')
-
-  useEffect(() => {
-    setRecent(search.recent())
-    return search.subscribeRecent(() => setRecent(search.recent()))
-  }, [search])
 
   useEffect(() => {
     void Promise.all(
@@ -135,33 +134,14 @@ function OpenResourceSearchDialog({
     }
   }, [query, search])
 
-  const recentResults = recent.flatMap((resourceId) => {
-    const resource = knownResource(snapshot.lookup(resourceId))
-    return resource && (purpose.type === 'open' || resource.kind === 'folder')
-      ? [{ resourceId, match: { type: 'title' as const } }]
-      : []
+  const { displayItems, recentResults } = buildSearchDisplayItems({
+    canEdit,
+    purpose,
+    query,
+    recent,
+    snapshot,
+    state,
   })
-  const searchResults = (query.trim() ? state.results : recentResults).filter((result) => {
-    const resource = knownResource(snapshot.lookup(result.resourceId))
-    return purpose.type === 'open' || resource?.kind === 'folder'
-  })
-  const rootFolders = snapshot.list(ROOT_FOLDER_QUERY)
-  const browsableFolders =
-    purpose.type === 'move' && !query.trim() && rootFolders.state === 'known'
-      ? rootFolders.items.map((resource) => ({
-          resourceId: resource.id,
-          match: { type: 'title' as const },
-        }))
-      : []
-  const resourceResults = uniqueSearchResults([...browsableFolders, ...searchResults])
-  const displayItems: ReadonlyArray<SearchDisplayItem> = [
-    ...(purpose.type === 'move' ? ([{ type: 'root' }] as const) : []),
-    ...matchingCreateCommands(query, canEdit && purpose.type === 'open'),
-    ...resourceResults.map((result) => ({
-      type: 'resource' as const,
-      result,
-    })),
-  ]
   const selected = displayItems[selectedIndex] ?? null
   const selectedResource =
     selected?.type === 'resource'
@@ -366,24 +346,7 @@ function SearchItem({
   resource: AuthorizedResourceSummary | null
   selected: boolean
 }) {
-  const kind = item.type === 'create' ? item.kind : resource?.kind
-  const Icon = item.type === 'root' ? Folder : kind ? resourceKindIcon(kind) : Search
-  const title =
-    item.type === 'root'
-      ? 'Workspace root'
-      : item.type === 'create'
-        ? `New ${resourceKindLabel(item.kind)}`
-        : (resource?.title ?? 'Loading…')
-  const subtitle =
-    item.type === 'root'
-      ? 'Campaign root'
-      : item.type === 'create'
-        ? 'Create at workspace root'
-        : item.result.match.type === 'body'
-          ? item.result.match.text
-          : resource
-            ? resourceKindLabel(resource.kind)
-            : ''
+  const { Icon, subtitle, title } = searchItemPresentation(item, resource)
   return (
     <button
       id={id}
@@ -409,6 +372,33 @@ function SearchItem({
       </span>
     </button>
   )
+}
+
+function searchItemPresentation(
+  item: SearchDisplayItem,
+  resource: AuthorizedResourceSummary | null,
+) {
+  switch (item.type) {
+    case 'root':
+      return { Icon: Folder, subtitle: 'Campaign root', title: 'Workspace root' }
+    case 'create':
+      return {
+        Icon: resourceKindIcon(item.kind),
+        subtitle: 'Create at workspace root',
+        title: `New ${resourceKindLabel(item.kind)}`,
+      }
+    case 'resource':
+      return {
+        Icon: resource ? resourceKindIcon(resource.kind) : Search,
+        subtitle:
+          item.result.match.type === 'body'
+            ? item.result.match.text
+            : resource
+              ? resourceKindLabel(resource.kind)
+              : '',
+        title: resource?.title ?? 'Loading…',
+      }
+  }
 }
 
 function SearchPreview({
@@ -446,6 +436,55 @@ function matchingCreateCommands(query: string, canEdit: boolean): ReadonlyArray<
     const text = `new ${kind} create ${kind}`
     return terms.every((term) => text.includes(term)) ? [{ type: 'create' as const, kind }] : []
   })
+}
+
+function buildSearchDisplayItems({
+  canEdit,
+  purpose,
+  query,
+  recent,
+  snapshot,
+  state,
+}: {
+  canEdit: boolean
+  purpose: ResourceSearchPurpose
+  query: string
+  recent: ReadonlyArray<ResourceId>
+  snapshot: WorkspaceResourceIndexSnapshot
+  state: SearchState
+}) {
+  const recentResults = recent.flatMap((resourceId) => {
+    const resource = knownResource(snapshot.lookup(resourceId))
+    return resource && (purpose.type === 'open' || resource.kind === 'folder')
+      ? [{ resourceId, match: { type: 'title' as const } }]
+      : []
+  })
+  const searching = query.trim().length > 0
+  const searchResults = (searching ? state.results : recentResults).filter((result) => {
+    const resource = knownResource(snapshot.lookup(result.resourceId))
+    return purpose.type === 'open' || resource?.kind === 'folder'
+  })
+  const rootFolders = snapshot.list(ROOT_FOLDER_QUERY)
+  const browsableFolders =
+    purpose.type === 'move' && !searching && rootFolders.state === 'known'
+      ? rootFolders.items.map((resource) => ({
+          resourceId: resource.id,
+          match: { type: 'title' as const },
+        }))
+      : []
+  const resources = uniqueSearchResults([...browsableFolders, ...searchResults]).map((result) => ({
+    type: 'resource' as const,
+    result,
+  }))
+  const destinations = purpose.type === 'move' ? ([{ type: 'root' }] as const) : []
+  return {
+    displayItems: [
+      ...destinations,
+      ...matchingCreateCommands(query, canEdit && purpose.type === 'open'),
+      ...resources,
+    ] satisfies ReadonlyArray<SearchDisplayItem>,
+    recentResults,
+  }
 }
 
 function uniqueSearchResults(

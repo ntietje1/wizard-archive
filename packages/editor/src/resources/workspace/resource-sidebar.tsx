@@ -470,13 +470,14 @@ function BookmarkedResourceCollection({
   }
   const initialFocusId = selectedResourceId ?? resources[0]?.id ?? null
   const ambiguous = duplicateResourceKeys(resources)
+  const selectedIds = new Set(selection.selectedIds)
   return (
     <ul className="space-y-0.5">
       {resources.map((resource) => (
         <li key={resource.id}>
           <div
             aria-current={selectedResourceId === resource.id ? 'page' : undefined}
-            data-selected={selection.selectedIds.includes(resource.id)}
+            data-selected={selectedIds.has(resource.id)}
             className="group flex min-w-0 items-center rounded-md px-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
           >
             <ResourceAppearanceButton actions={actions} canEdit={canEdit} resource={resource} />

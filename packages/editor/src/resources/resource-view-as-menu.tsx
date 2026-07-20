@@ -19,6 +19,17 @@ type ResourceViewAsParticipant<TParticipantId extends string> = Readonly<{
   imageUrl: string | null
 }>
 
+type ResourceViewAsMenuProps<TParticipantId extends string> = Readonly<{
+  mode: 'editor' | 'viewer'
+  onModeChange: (mode: 'editor' | 'viewer') => void
+  onParticipantChange?: (participantId: TParticipantId | null) => void
+  participants?: ReadonlyArray<ResourceViewAsParticipant<TParticipantId>>
+  pending?: boolean
+  presentation?: 'menu-item' | 'topbar'
+  projection: 'dm' | 'local' | 'player' | 'view_as_player'
+  selectedParticipantId?: TParticipantId | null
+}>
+
 export function ResourceViewAsMenu<TParticipantId extends string>({
   mode,
   onModeChange,
@@ -28,52 +39,84 @@ export function ResourceViewAsMenu<TParticipantId extends string>({
   presentation = 'topbar',
   projection,
   selectedParticipantId = null,
-}: {
-  mode: 'editor' | 'viewer'
-  onModeChange: (mode: 'editor' | 'viewer') => void
-  onParticipantChange?: (participantId: TParticipantId | null) => void
-  participants?: ReadonlyArray<ResourceViewAsParticipant<TParticipantId>>
-  pending?: boolean
-  presentation?: 'menu-item' | 'topbar'
-  projection: 'dm' | 'local' | 'player' | 'view_as_player'
-  selectedParticipantId?: TParticipantId | null
-}) {
-  const [open, setOpen] = useState(false)
+}: ResourceViewAsMenuProps<TParticipantId>) {
   const viewingPlayer = projection === 'view_as_player' || selectedParticipantId !== null
   const viewingSelf = mode === 'viewer' && !viewingPlayer
-  const active = viewingPlayer || viewingSelf
-  const exit = () => {
-    if (viewingPlayer) onParticipantChange?.(null)
-    if (viewingSelf) onModeChange('editor')
-    setOpen(false)
+
+  if (viewingPlayer) {
+    return (
+      <ViewAsExitButton presentation={presentation} onExit={() => onParticipantChange?.(null)} />
+    )
   }
-  const label = active ? 'Exit view as' : pending ? 'Loading players' : 'View as...'
-  const Icon = active ? Eye : pending ? LoaderCircle : PencilLine
-  const triggerClassName =
-    presentation === 'menu-item'
-      ? `flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm hover:bg-muted ${
-          active ? 'text-primary' : ''
-        }`
-      : `inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 hover:bg-muted disabled:opacity-40 ${
-          active ? 'bg-muted text-primary' : 'text-muted-foreground'
-        }`
+  if (viewingSelf) {
+    return <ViewAsExitButton presentation={presentation} onExit={() => onModeChange('editor')} />
+  }
+  return (
+    <ViewAsPicker
+      participants={participants}
+      pending={pending}
+      presentation={presentation}
+      selectedParticipantId={selectedParticipantId}
+      onModeChange={onModeChange}
+      onParticipantChange={onParticipantChange}
+    />
+  )
+}
+
+function ViewAsExitButton({
+  onExit,
+  presentation,
+}: {
+  onExit: () => void
+  presentation: 'menu-item' | 'topbar'
+}) {
+  return (
+    <button
+      type="button"
+      role={presentation === 'menu-item' ? 'menuitem' : undefined}
+      aria-label="Exit view as"
+      title="Exit view as"
+      className={viewAsTriggerClassName(presentation, true)}
+      onClick={onExit}
+    >
+      <Eye className="size-4 shrink-0" />
+      {presentation === 'menu-item' && <span>Exit view as</span>}
+    </button>
+  )
+}
+
+function ViewAsPicker<TParticipantId extends string>({
+  onModeChange,
+  onParticipantChange,
+  participants,
+  pending,
+  presentation,
+  selectedParticipantId,
+}: {
+  onModeChange: (mode: 'editor' | 'viewer') => void
+  onParticipantChange?: (participantId: TParticipantId | null) => void
+  participants: ReadonlyArray<ResourceViewAsParticipant<TParticipantId>>
+  pending: boolean
+  presentation: 'menu-item' | 'topbar'
+  selectedParticipantId: TParticipantId | null
+}) {
+  const [open, setOpen] = useState(false)
+  const label = pending ? 'Loading players' : 'View as...'
+  const Icon = pending ? LoaderCircle : PencilLine
   const trigger = (
     <button
       type="button"
       role={presentation === 'menu-item' ? 'menuitem' : undefined}
       aria-busy={pending}
       aria-label={label}
-      disabled={pending && !active}
+      disabled={pending}
       title={label}
-      className={triggerClassName}
-      onClick={active ? exit : undefined}
+      className={viewAsTriggerClassName(presentation, false)}
     >
-      <Icon className={`size-4 shrink-0 ${pending && !active ? 'animate-spin' : ''}`} />
-      {presentation === 'menu-item' && <span>{active ? 'Exit view as' : 'View as...'}</span>}
+      <Icon className={`size-4 shrink-0 ${pending ? 'animate-spin' : ''}`} />
+      {presentation === 'menu-item' && <span>View as...</span>}
     </button>
   )
-
-  if (active) return trigger
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -116,6 +159,17 @@ export function ResourceViewAsMenu<TParticipantId extends string>({
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+function viewAsTriggerClassName(presentation: 'menu-item' | 'topbar', active: boolean): string {
+  if (presentation === 'menu-item') {
+    return `flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm hover:bg-muted ${
+      active ? 'text-primary' : ''
+    }`
+  }
+  return `inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 hover:bg-muted disabled:opacity-40 ${
+    active ? 'bg-muted text-primary' : 'text-muted-foreground'
+  }`
 }
 
 function ParticipantRow<TParticipantId extends string>({

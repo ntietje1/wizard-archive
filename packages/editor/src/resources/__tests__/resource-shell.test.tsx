@@ -1464,16 +1464,17 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('opens search when the recent-resource provider returns a fresh array snapshot', async () => {
+  it('opens search with a recent-resource snapshot', async () => {
     const { core, resource } = await shellRuntime(true)
     if (core.runtime.search.status !== 'available') throw new TypeError('Search is unavailable')
+    const recentResources = [resource.id]
     const runtime = {
       ...core.runtime,
       search: {
         status: 'available' as const,
         value: {
           ...core.runtime.search.value,
-          recent: () => [resource.id],
+          recent: () => recentResources,
         },
       },
     }
