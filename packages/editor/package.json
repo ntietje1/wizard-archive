@@ -18,6 +18,10 @@
       "types": "./dist/resources/workspace-preferences.d.mts",
       "default": "./dist/resources/workspace-preferences.mjs"
     },
+    "./resources/workspace-panel-geometry": {
+      "types": "./dist/resources/workspace-panel-geometry.d.mts",
+      "default": "./dist/resources/workspace-panel-geometry.mjs"
+    },
     "./canvas/document-contract": {
       "types": "./dist/canvas/document-contract.d.mts",
       "default": "./dist/canvas/document-contract.mjs"

@@ -8,41 +8,26 @@ export const workspaceSortValidator = v.object({
   direction: literals('ascending', 'descending'),
 })
 
-export const workspacePanelPreferenceValidator = v.object({
-  size: v.number(),
-  visible: v.boolean(),
-})
-
 export const workspacePreferencesValueValidator = v.object({
   mode: literals('editor', 'viewer'),
   sort: workspaceSortValidator,
   panels: v.object({
-    left: workspacePanelPreferenceValidator,
-    right: workspacePanelPreferenceValidator,
+    leftVisible: v.boolean(),
+    rightVisible: v.boolean(),
   }),
 })
 
-export const workspacePreferencesSnapshotValidator = v.object({
-  revision: v.number(),
-  value: workspacePreferencesValueValidator,
-})
-
-export const workspacePreferenceChangeValidator = v.union(
-  v.object({ type: v.literal('mode'), mode: literals('editor', 'viewer') }),
-  v.object({ type: v.literal('sort'), sort: workspaceSortValidator }),
-  v.object({
-    type: v.literal('panel'),
-    panel: literals('left', 'right'),
-    size: v.optional(v.number()),
-    visible: v.optional(v.boolean()),
-  }),
+export const workspacePreferencePatchValidator = v.union(
+  v.object({ field: v.literal('mode'), value: literals('editor', 'viewer') }),
+  v.object({ field: v.literal('sort'), value: workspaceSortValidator }),
+  v.object({ field: v.literal('leftPanelVisible'), value: v.boolean() }),
+  v.object({ field: v.literal('rightPanelVisible'), value: v.boolean() }),
 )
 
 export const workspacePreferencesTables = {
   workspacePreferences: defineTable({
     campaignUuid: campaignIdValidator,
     userId: v.id('userProfiles'),
-    revision: v.number(),
     value: workspacePreferencesValueValidator,
   })
     .index('by_campaign_user', ['campaignUuid', 'userId'])

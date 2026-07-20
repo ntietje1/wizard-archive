@@ -198,7 +198,7 @@ describe('ResourceShell', () => {
     viewAs.core.dispose()
 
     const viewerPreference = await shellRuntime(false, 'active', 'edit', 'note')
-    await viewerPreference.core.runtime.preferences.change({ type: 'mode', mode: 'viewer' })
+    await viewerPreference.core.runtime.preferences.patch({ field: 'mode', value: 'viewer' })
     render(
       <ResourceShell
         ariaLabel="Viewer preference"
@@ -1131,7 +1131,7 @@ describe('ResourceShell', () => {
     expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).not.toBeInTheDocument()
     expect(core.runtime.preferences.get()).toMatchObject({
       status: 'ready',
-      snapshot: { value: { mode: 'viewer' } },
+      value: { mode: 'viewer' },
     })
     core.dispose()
   })
@@ -1157,7 +1157,7 @@ describe('ResourceShell', () => {
     expect(panel).toHaveTextContent(resource.id)
     expect(core.runtime.preferences.get()).toMatchObject({
       status: 'ready',
-      snapshot: { value: { panels: { left: { visible: true }, right: { visible: true } } } },
+      value: { panels: { leftVisible: true, rightVisible: true } },
     })
     core.dispose()
   })

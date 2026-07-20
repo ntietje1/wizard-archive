@@ -10,7 +10,8 @@ import type {
   WorkspaceResourceIndexSnapshot,
 } from './resource-index-contract'
 import { DEFAULT_WORKSPACE_PREFERENCES } from './workspace-preferences'
-import type { WorkspacePanelPreference, WorkspacePreferenceChange } from './workspace-preferences'
+import type { WorkspacePreferencePatch } from './workspace-preferences'
+import { normalizeWorkspacePanelGeometry } from './workspace-panel-geometry'
 import { EMPTY_WORKSPACE_SELECTION, updateWorkspaceSelection } from './workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
 import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
@@ -28,6 +29,7 @@ import { ResourceRightSidebar } from './workspace/resource-right-sidebar'
 import { ResourceSearchDialog } from './workspace/resource-search-dialog'
 import { ResourceHistoryPreview } from './workspace/resource-history-preview'
 import { useResourceSnapshot } from './workspace/use-resource-snapshot'
+import { useWorkspacePanelGeometry } from './workspace/use-workspace-panel-geometry'
 import { ResourceViewAsBanner } from './workspace/resource-view-as-banner'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
 import { createWorkspaceActions } from './workspace/resource-operations'
@@ -71,9 +73,10 @@ export function ResourceShell({
   const bookmarks = useResourceBookmarks(runtime)
   const preferencesState = useWorkspacePreferences(runtime)
   const preferences =
-    preferencesState.status === 'ready'
-      ? preferencesState.snapshot.value
-      : DEFAULT_WORKSPACE_PREFERENCES
+    preferencesState.status === 'ready' ? preferencesState.value : DEFAULT_WORKSPACE_PREFERENCES
+  const { geometry: panelGeometry, setPanelSize: changePanelSize } = useWorkspacePanelGeometry(
+    runtime.scope,
+  )
   const selectedLoad = useEnsureResource(runtime, selectedResourceId)
   const selected: ResourceKnowledge<AuthorizedResourceSummary> = selectedResourceId
     ? snapshot.lookup(selectedResourceId)
@@ -105,8 +108,8 @@ export function ResourceShell({
       ...(progress ? { progress } : {}),
     })
   const actions = createWorkspaceActions(runtime, report)
-  const leftVisible = showResourcePanel && preferences.panels.left.visible
-  const rightVisible = selected.state === 'known' && preferences.panels.right.visible
+  const leftVisible = showResourcePanel && preferences.panels.leftVisible
+  const rightVisible = selected.state === 'known' && preferences.panels.rightVisible
   const canEditStructure =
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
   const changeSelection = (action: WorkspaceSelectionAction) =>
@@ -157,20 +160,17 @@ export function ResourceShell({
     })
   }
 
-  const changePreference = (change: WorkspacePreferenceChange) => {
-    void runtime.preferences.change(change).then((result) => {
-      if (result.status === 'failed') report('Could not save workspace preference')
-    })
+  const patchPreference = (patch: WorkspacePreferencePatch) => {
+    void runtime.preferences.patch(patch).catch(() => report('Could not save workspace preference'))
   }
-
   const previousResourceId = useRef(selectedResourceId)
   useEffect(() => {
     if (previousResourceId.current === selectedResourceId) return
     previousResourceId.current = selectedResourceId
-    if (preferences.panels.right.visible) {
-      void runtime.preferences.change({ type: 'panel', panel: 'right', visible: false })
+    if (preferences.panels.rightVisible) {
+      void runtime.preferences.patch({ field: 'rightPanelVisible', value: false })
     }
-  }, [preferences.panels.right.visible, runtime.preferences, selectedResourceId])
+  }, [preferences.panels.rightVisible, runtime.preferences, selectedResourceId])
 
   useEffect(() => {
     if (selectedResourceId && runtime.search.status === 'available') {
@@ -199,8 +199,8 @@ export function ResourceShell({
       {leftVisible && (
         <ResizableWorkspacePanel
           panel="left"
-          preference={preferences.panels.left}
-          onCommit={(size) => changePreference({ type: 'panel', panel: 'left', size })}
+          size={panelGeometry.left}
+          onCommit={(size) => changePanelSize('left', size)}
         >
           <ResourceSidebar
             actions={actions}
@@ -216,10 +216,10 @@ export function ResourceShell({
             workspaceName={workspaceName}
             onViewChange={changeSidebarView}
             onSearch={() => setSearchOpen(true)}
-            onClose={() => changePreference({ type: 'panel', panel: 'left', visible: false })}
+            onClose={() => patchPreference({ field: 'leftPanelVisible', value: false })}
             onOpenContextMenu={openContextMenu}
             onSelectionChange={changeSelection}
-            onSortChange={(sort) => changePreference({ type: 'sort', sort })}
+            onSortChange={(sort) => patchPreference({ field: 'sort', value: sort })}
           />
         </ResizableWorkspacePanel>
       )}
@@ -239,17 +239,13 @@ export function ResourceShell({
           snapshot={snapshot}
           sort={preferences.sort}
           target={selectedTarget}
-          onModeChange={(mode) => changePreference({ type: 'mode', mode })}
+          onModeChange={(mode) => patchPreference({ field: 'mode', value: mode })}
           onOpenHistory={() => {
             setRightPanel('history')
-            changePreference({ type: 'panel', panel: 'right', visible: true })
+            patchPreference({ field: 'rightPanelVisible', value: true })
           }}
-          onOpenLeftSidebar={() =>
-            changePreference({ type: 'panel', panel: 'left', visible: true })
-          }
-          onOpenRightSidebar={() =>
-            changePreference({ type: 'panel', panel: 'right', visible: true })
-          }
+          onOpenLeftSidebar={() => patchPreference({ field: 'leftPanelVisible', value: true })}
+          onOpenRightSidebar={() => patchPreference({ field: 'rightPanelVisible', value: true })}
           onOpenContextMenu={openContextMenu}
           onSelectionChange={changeSelection}
         />
@@ -257,8 +253,8 @@ export function ResourceShell({
       {rightVisible && (
         <ResizableWorkspacePanel
           panel="right"
-          preference={preferences.panels.right}
-          onCommit={(size) => changePreference({ type: 'panel', panel: 'right', size })}
+          size={panelGeometry.right}
+          onCommit={(size) => changePanelSize('right', size)}
         >
           <ResourceRightSidebar
             actions={actions}
@@ -267,7 +263,7 @@ export function ResourceShell({
             resource={selected.value}
             runtime={runtime}
             onActivePanelChange={setRightPanel}
-            onClose={() => changePreference({ type: 'panel', panel: 'right', visible: false })}
+            onClose={() => patchPreference({ field: 'rightPanelVisible', value: false })}
           />
         </ResizableWorkspacePanel>
       )}
@@ -685,16 +681,16 @@ function ResizableWorkspacePanel({
   children,
   onCommit,
   panel,
-  preference,
+  size,
 }: {
   children: ReactNode
   onCommit: (size: number) => void
   panel: 'left' | 'right'
-  preference: WorkspacePanelPreference
+  size: number
 }) {
   const panelElement = useRef<HTMLDivElement>(null)
-  const resize = (size: number) => {
-    const bounded = boundedPanelSize(size)
+  const resize = (requestedSize: number) => {
+    const bounded = normalizeWorkspacePanelGeometry({ [panel]: requestedSize })[panel]
     if (panelElement.current) panelElement.current.style.width = `${bounded}px`
     return bounded
   }
@@ -702,7 +698,7 @@ function ResizableWorkspacePanel({
   const startResize = (event: PointerEvent<HTMLDivElement>) => {
     event.preventDefault()
     const startX = event.clientX
-    const startSize = panelElement.current?.getBoundingClientRect().width ?? preference.size
+    const startSize = panelElement.current?.getBoundingClientRect().width ?? size
     const move = (moveEvent: globalThis.PointerEvent) => {
       const delta = moveEvent.clientX - startX
       resize(startSize + (panel === 'left' ? delta : -delta))
@@ -722,7 +718,7 @@ function ResizableWorkspacePanel({
     <div
       ref={panelElement}
       className={`relative z-20 h-full min-h-0 shrink-0 ${panel === 'left' ? 'border-r' : 'border-l'} border-border max-md:absolute max-md:inset-y-0 ${panel === 'left' ? 'max-md:left-0' : 'max-md:right-0'}`}
-      style={{ width: preference.size }}
+      style={{ width: size }}
     >
       {children}
       <div
@@ -731,14 +727,14 @@ function ResizableWorkspacePanel({
         aria-orientation="vertical"
         aria-valuemax={600}
         aria-valuemin={200}
-        aria-valuenow={preference.size}
+        aria-valuenow={size}
         className={`absolute inset-y-0 z-30 w-1 cursor-col-resize touch-none ${panel === 'left' ? '-right-0.5' : '-left-0.5'}`}
         tabIndex={0}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
           event.preventDefault()
           const direction = event.key === 'ArrowRight' ? 1 : -1
-          const currentSize = panelElement.current?.getBoundingClientRect().width ?? preference.size
+          const currentSize = panelElement.current?.getBoundingClientRect().width ?? size
           const nextSize = resize(currentSize + direction * (panel === 'left' ? 10 : -10))
           onCommit(nextSize)
         }}
@@ -746,10 +742,6 @@ function ResizableWorkspacePanel({
       />
     </div>
   )
-}
-
-function boundedPanelSize(size: number) {
-  return Math.min(600, Math.max(200, Math.round(size)))
 }
 
 function useResourceSelection(runtime: EditorRuntime) {

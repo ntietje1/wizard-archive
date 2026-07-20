@@ -30,15 +30,9 @@ describe('useLiveResourceCore', () => {
     convex.watchQuery.mockReset()
     convex.watchQuery.mockReturnValue({
       localQueryResult: () => ({
-        revision: 0,
-        value: {
-          mode: 'editor',
-          sort: { by: 'title', direction: 'ascending' },
-          panels: {
-            left: { size: 288, visible: true },
-            right: { size: 280, visible: false },
-          },
-        },
+        mode: 'editor',
+        sort: { by: 'title', direction: 'ascending' },
+        panels: { leftVisible: true, rightVisible: false },
       }),
       onUpdate: () => () => {},
     })

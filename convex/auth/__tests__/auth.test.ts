@@ -314,14 +314,10 @@ describe('onDeleteUser', () => {
         await ctx.db.insert('workspacePreferences', {
           campaignUuid: generateDomainId(DOMAIN_ID_KIND.campaign),
           userId: user.profile._id,
-          revision: 0,
           value: {
             mode: 'editor',
             sort: { by: 'title', direction: 'ascending' },
-            panels: {
-              left: { size: 288, visible: true },
-              right: { size: 280, visible: false },
-            },
+            panels: { leftVisible: true, rightVisible: false },
           },
         })
       }

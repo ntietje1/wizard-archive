@@ -681,7 +681,7 @@ function previewRuntime({
     preferences: {
       get: () => ({ status: 'unavailable', reason: 'scope_unavailable' }),
       subscribe: () => () => {},
-      change: () => Promise.resolve({ status: 'failed', retryable: false }),
+      patch: () => Promise.resolve(),
     },
     search: unsupported,
     history: unsupported,

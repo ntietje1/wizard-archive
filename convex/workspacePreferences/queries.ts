@@ -1,9 +1,9 @@
 import { campaignQuery } from '../functions'
 import { loadWorkspacePreferences } from './functions'
-import { workspacePreferencesSnapshotValidator } from './schema'
+import { workspacePreferencesValueValidator } from './schema'
 
 export const get = campaignQuery({
   args: {},
-  returns: workspacePreferencesSnapshotValidator,
+  returns: workspacePreferencesValueValidator,
   handler: loadWorkspacePreferences,
 })

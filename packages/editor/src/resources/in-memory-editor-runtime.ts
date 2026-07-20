@@ -52,11 +52,10 @@ import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource } from './resource-source-classifier'
 import { ResourceSessionStore } from './resource-session-store'
 import {
-  applyWorkspacePreferenceChange,
+  applyWorkspacePreferencePatch,
   DEFAULT_WORKSPACE_PREFERENCES,
-  WorkspacePreferencesController,
 } from './workspace-preferences'
-import type { WorkspacePreferencesSnapshot } from './workspace-preferences'
+import type { WorkspacePreferencesSource } from './workspace-preferences'
 import {
   createInMemoryBookmarks,
   createInMemoryWorkspaceSearch,
@@ -1044,20 +1043,23 @@ export function createInMemoryEditorRuntime({
     ? ({ status: 'available', value: workspaceStructure } as const)
     : ({ status: 'unavailable', reason: 'unauthorized' } as const)
   const contentSources = { notes, files, maps, canvases }
-  let preferencesSnapshot: WorkspacePreferencesSnapshot = {
-    revision: 0,
-    value: DEFAULT_WORKSPACE_PREFERENCES,
-  }
-  const preferences = new WorkspacePreferencesController({
-    save: (change) => {
-      preferencesSnapshot = {
-        revision: preferencesSnapshot.revision + 1,
-        value: applyWorkspacePreferenceChange(preferencesSnapshot.value, change),
-      }
-      return Promise.resolve(preferencesSnapshot)
+  let preferenceState = { status: 'ready' as const, value: DEFAULT_WORKSPACE_PREFERENCES }
+  const preferenceListeners = new Set<() => void>()
+  const preferences: WorkspacePreferencesSource = {
+    get: () => preferenceState,
+    subscribe: (listener) => {
+      preferenceListeners.add(listener)
+      return () => preferenceListeners.delete(listener)
     },
-  })
-  preferences.hydrate(preferencesSnapshot)
+    patch: (patch) => {
+      preferenceState = {
+        status: 'ready',
+        value: applyWorkspacePreferencePatch(preferenceState.value, patch),
+      }
+      for (const listener of preferenceListeners) listener()
+      return Promise.resolve()
+    },
+  }
   const catalogResources = () => resources.catalogSnapshot().resources
   const references = createInMemoryResourceReferenceSource(
     resources.index,

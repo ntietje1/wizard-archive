@@ -6,65 +6,67 @@ import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.hel
 describe('workspace preferences', () => {
   const t = createTestContext()
 
-  it('persists finite workspace state independently for each campaign member', async () => {
+  it('persists last-write-wins field patches independently for each campaign member', async () => {
     const context = await setupCampaignContext(t)
 
-    expect(
-      await asDm(context).query(api.workspacePreferences.queries.get, {
+    await expect(
+      asDm(context).query(api.workspacePreferences.queries.get, {
         campaignId: context.campaignDomainId,
       }),
-    ).toEqual({
-      revision: 0,
-      value: {
-        mode: 'editor',
-        sort: { by: 'title', direction: 'ascending' },
-        panels: {
-          left: { size: 288, visible: true },
-          right: { size: 280, visible: false },
-        },
+    ).resolves.toEqual({
+      mode: 'editor',
+      sort: { by: 'title', direction: 'ascending' },
+      panels: { leftVisible: true, rightVisible: false },
+    })
+
+    await asDm(context).mutation(api.workspacePreferences.mutations.patch, {
+      campaignId: context.campaignDomainId,
+      patch: {
+        field: 'sort',
+        value: { by: 'updated', direction: 'descending' },
       },
     })
-
-    await asDm(context).mutation(api.workspacePreferences.mutations.change, {
+    await asDm(context).mutation(api.workspacePreferences.mutations.patch, {
       campaignId: context.campaignDomainId,
-      change: { type: 'sort', sort: { by: 'updated', direction: 'descending' } },
-    })
-    await asDm(context).mutation(api.workspacePreferences.mutations.change, {
-      campaignId: context.campaignDomainId,
-      change: { type: 'panel', panel: 'right', visible: true, size: 340 },
+      patch: { field: 'rightPanelVisible', value: true },
     })
 
-    const dmPreferences = await asDm(context).query(api.workspacePreferences.queries.get, {
-      campaignId: context.campaignDomainId,
+    await expect(
+      asDm(context).query(api.workspacePreferences.queries.get, {
+        campaignId: context.campaignDomainId,
+      }),
+    ).resolves.toEqual({
+      mode: 'editor',
+      sort: { by: 'updated', direction: 'descending' },
+      panels: { leftVisible: true, rightVisible: true },
     })
-    expect(dmPreferences).toMatchObject({
-      revision: 2,
-      value: {
-        sort: { by: 'updated', direction: 'descending' },
-        panels: { right: { visible: true, size: 340 } },
-      },
+    await expect(
+      asPlayer(context).query(api.workspacePreferences.queries.get, {
+        campaignId: context.campaignDomainId,
+      }),
+    ).resolves.toEqual({
+      mode: 'editor',
+      sort: { by: 'title', direction: 'ascending' },
+      panels: { leftVisible: true, rightVisible: false },
     })
-
-    const playerPreferences = await asPlayer(context).query(api.workspacePreferences.queries.get, {
-      campaignId: context.campaignDomainId,
-    })
-    expect(playerPreferences.revision).toBe(0)
-    expect(playerPreferences.value.sort).toEqual({ by: 'title', direction: 'ascending' })
   })
 
-  it('bounds persisted panel sizes', async () => {
+  it('uses server execution order as last-write-wins without revisions', async () => {
     const context = await setupCampaignContext(t)
 
-    const small = await asDm(context).mutation(api.workspacePreferences.mutations.change, {
+    await asDm(context).mutation(api.workspacePreferences.mutations.patch, {
       campaignId: context.campaignDomainId,
-      change: { type: 'panel', panel: 'left', size: 1 },
+      patch: { field: 'mode', value: 'viewer' },
     })
-    const large = await asDm(context).mutation(api.workspacePreferences.mutations.change, {
+    await asDm(context).mutation(api.workspacePreferences.mutations.patch, {
       campaignId: context.campaignDomainId,
-      change: { type: 'panel', panel: 'right', size: 1000 },
+      patch: { field: 'mode', value: 'editor' },
     })
 
-    expect(small.value.panels.left.size).toBe(200)
-    expect(large.value.panels.right.size).toBe(600)
+    await expect(
+      asDm(context).query(api.workspacePreferences.queries.get, {
+        campaignId: context.campaignDomainId,
+      }),
+    ).resolves.toMatchObject({ mode: 'editor' })
   })
 })

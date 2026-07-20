@@ -1,18 +1,13 @@
 import {
-  applyWorkspacePreferenceChange,
+  applyWorkspacePreferencePatch,
   DEFAULT_WORKSPACE_PREFERENCES,
+  normalizeWorkspacePreferences,
 } from '@wizard-archive/editor/resources/workspace-preferences'
 import type {
-  WorkspacePreferenceChange,
-  WorkspacePreferencesSnapshot,
+  WorkspacePreferencePatch,
+  WorkspacePreferences,
 } from '@wizard-archive/editor/resources/workspace-preferences'
-import type { Doc } from '../_generated/dataModel'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
-
-const DEFAULT_WORKSPACE_PREFERENCES_SNAPSHOT: WorkspacePreferencesSnapshot = {
-  revision: 0,
-  value: DEFAULT_WORKSPACE_PREFERENCES,
-}
 
 type WorkspacePreferencesCtx = CampaignQueryCtx | CampaignMutationCtx
 
@@ -27,34 +22,28 @@ async function findWorkspacePreferences(ctx: WorkspacePreferencesCtx) {
 
 export async function loadWorkspacePreferences(
   ctx: CampaignQueryCtx,
-): Promise<WorkspacePreferencesSnapshot> {
+): Promise<WorkspacePreferences> {
   const row = await findWorkspacePreferences(ctx)
-  return row ? snapshot(row) : DEFAULT_WORKSPACE_PREFERENCES_SNAPSHOT
+  return row ? normalizeWorkspacePreferences(row.value) : DEFAULT_WORKSPACE_PREFERENCES
 }
 
-export async function changeWorkspacePreferences(
+export async function patchWorkspacePreferences(
   ctx: CampaignMutationCtx,
-  change: WorkspacePreferenceChange,
-): Promise<WorkspacePreferencesSnapshot> {
+  patch: WorkspacePreferencePatch,
+): Promise<void> {
   const current = await findWorkspacePreferences(ctx)
-  const currentSnapshot = current ? snapshot(current) : DEFAULT_WORKSPACE_PREFERENCES_SNAPSHOT
-  const next: WorkspacePreferencesSnapshot = {
-    revision: currentSnapshot.revision + 1,
-    value: applyWorkspacePreferenceChange(currentSnapshot.value, change),
-  }
+  const next = applyWorkspacePreferencePatch(
+    current ? normalizeWorkspacePreferences(current.value) : DEFAULT_WORKSPACE_PREFERENCES,
+    patch,
+  )
 
   if (current) {
-    await ctx.db.patch('workspacePreferences', current._id, next)
+    await ctx.db.patch('workspacePreferences', current._id, { value: next })
   } else {
     await ctx.db.insert('workspacePreferences', {
       campaignUuid: ctx.resourceScope.campaignId,
       userId: ctx.membership.userId,
-      ...next,
+      value: next,
     })
   }
-  return next
-}
-
-function snapshot(row: Doc<'workspacePreferences'>): WorkspacePreferencesSnapshot {
-  return { revision: row.revision, value: row.value }
 }

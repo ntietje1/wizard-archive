@@ -1,9 +1,13 @@
+import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { changeWorkspacePreferences } from './functions'
-import { workspacePreferenceChangeValidator, workspacePreferencesSnapshotValidator } from './schema'
+import { patchWorkspacePreferences } from './functions'
+import { workspacePreferencePatchValidator } from './schema'
 
-export const change = campaignMutation({
-  args: { change: workspacePreferenceChangeValidator },
-  returns: workspacePreferencesSnapshotValidator,
-  handler: async (ctx, args) => await changeWorkspacePreferences(ctx, args.change),
+export const patch = campaignMutation({
+  args: { patch: workspacePreferencePatchValidator },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await patchWorkspacePreferences(ctx, args.patch)
+    return null
+  },
 })
