@@ -9,15 +9,16 @@ import {
 
 export function useLiveResourceNavigation(): ResourceNavigation {
   const selectedTarget = useLiveWorkspaceSelectedTarget()
-  const { navigateToTarget } = useLiveWorkspaceNavigation()
+  const { clearWorkspaceContent, navigateToTarget } = useLiveWorkspaceNavigation()
   const selectedRef = useRef(selectedTarget)
-  const navigateRef = useRef(navigateToTarget)
+  const navigateRef = useRef({ clear: clearWorkspaceContent, navigateToTarget })
   const listenersRef = useRef(new Set<() => void>())
   const navigationRef = useRef<ResourceNavigation>(null)
 
   navigationRef.current ??= {
     current: () => selectedRef.current,
-    open: (target: CanonicalTarget) => void navigateRef.current(target),
+    open: (target: CanonicalTarget | null) =>
+      void (target ? navigateRef.current.navigateToTarget(target) : navigateRef.current.clear()),
     subscribe: (listener) => {
       listenersRef.current.add(listener)
       return () => listenersRef.current.delete(listener)
@@ -25,8 +26,8 @@ export function useLiveResourceNavigation(): ResourceNavigation {
   }
 
   useEffect(() => {
-    navigateRef.current = navigateToTarget
-  }, [navigateToTarget])
+    navigateRef.current = { navigateToTarget, clear: clearWorkspaceContent }
+  }, [clearWorkspaceContent, navigateToTarget])
 
   useEffect(() => {
     if (

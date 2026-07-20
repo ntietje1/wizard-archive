@@ -73,6 +73,7 @@ describe('resource application workflows', () => {
         (resource) => runtime.resources.index.getSnapshot().lookup(resource.id).state === 'missing',
       ),
     ).toBe(true)
+    expect(runtime.navigation.current()).toBeNull()
     core.dispose()
   })
 
@@ -349,9 +350,15 @@ describe('resource application workflows', () => {
 })
 
 function navigation(initialResourceId: ResourceRecord['id']): ResourceNavigation {
+  let target: ReturnType<ResourceNavigation['current']> = {
+    kind: 'resource',
+    resourceId: initialResourceId,
+  }
   return {
-    current: () => ({ kind: 'resource', resourceId: initialResourceId }),
-    open: () => {},
+    current: () => target,
+    open: (nextTarget) => {
+      target = nextTarget
+    },
     subscribe: () => () => {},
   }
 }

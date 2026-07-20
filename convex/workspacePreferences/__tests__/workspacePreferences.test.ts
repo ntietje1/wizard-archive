@@ -15,7 +15,7 @@ describe('workspace preferences', () => {
       }),
     ).resolves.toEqual({
       mode: 'editor',
-      sort: { by: 'title', direction: 'ascending' },
+      sort: { by: 'created', direction: 'descending' },
       panels: { leftVisible: true, rightVisible: false },
     })
 
@@ -46,7 +46,7 @@ describe('workspace preferences', () => {
       }),
     ).resolves.toEqual({
       mode: 'editor',
-      sort: { by: 'title', direction: 'ascending' },
+      sort: { by: 'created', direction: 'descending' },
       panels: { leftVisible: true, rightVisible: false },
     })
   })

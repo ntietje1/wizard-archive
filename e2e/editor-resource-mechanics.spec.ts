@@ -36,7 +36,11 @@ test.describe('resource mechanics', () => {
     const result = page.getByRole('option').filter({ hasText: 'The Lantern Market' })
     await expect(result).toContainText('third tide bell')
     await page.getByRole('button', { name: 'Toggle preview' }).click()
-    await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Search' })
+        .getByRole('heading', { name: 'The Lantern Market' }),
+    ).toBeVisible()
     await search.press('Enter')
 
     await expect(
@@ -106,9 +110,8 @@ test.describe('resource mechanics', () => {
     const canvas = sidebar.getByRole('button', { name: 'Harbor Heist Board' })
     const map = sidebar.getByRole('button', { name: 'Moonwell Docks' })
 
-    await invoice.click()
-    await canvas.click({ modifiers: ['Control'] })
-    await map.click({ modifiers: ['Shift'] })
+    await canvas.click()
+    await invoice.click({ modifiers: ['Shift'] })
     await invoice.click({ button: 'right' })
     await expect(page.getByRole('menuitem', { name: 'Copy 3 items' })).toBeVisible()
     await page.getByRole('menuitem', { name: 'Move 3 items to Trash' }).click()
@@ -130,6 +133,6 @@ test.describe('resource mechanics', () => {
     await trash.getByRole('button', { name: 'Empty Trash' }).click()
     await trash.getByRole('button', { name: 'Confirm empty trash' }).click()
     await expect(trash).toContainText('Trash is empty')
-    await expect(page.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
   })
 })

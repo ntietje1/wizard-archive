@@ -34,7 +34,7 @@ export interface WorkspacePreferencesSource {
 
 export const DEFAULT_WORKSPACE_PREFERENCES: WorkspacePreferences = {
   mode: 'editor',
-  sort: { by: 'title', direction: 'ascending' },
+  sort: { by: 'created', direction: 'descending' },
   panels: {
     leftVisible: true,
     rightVisible: false,
@@ -64,8 +64,14 @@ export function normalizeWorkspacePreferences(value: unknown): WorkspacePreferen
   return {
     mode: preferences.mode === 'viewer' ? 'viewer' : 'editor',
     sort: {
-      by: sort.by === 'created' || sort.by === 'updated' ? sort.by : 'title',
-      direction: sort.direction === 'descending' ? 'descending' : 'ascending',
+      by:
+        sort.by === 'created' || sort.by === 'title' || sort.by === 'updated'
+          ? sort.by
+          : DEFAULT_WORKSPACE_PREFERENCES.sort.by,
+      direction:
+        sort.direction === 'ascending' || sort.direction === 'descending'
+          ? sort.direction
+          : DEFAULT_WORKSPACE_PREFERENCES.sort.direction,
     },
     panels: {
       leftVisible: typeof panels.leftVisible === 'boolean' ? panels.leftVisible : true,

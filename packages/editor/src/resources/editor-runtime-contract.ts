@@ -119,7 +119,7 @@ export interface ResourceReferenceSource {
 
 export interface ResourceNavigation {
   current(): CanonicalTarget | null
-  open(target: CanonicalTarget): void
+  open(target: CanonicalTarget | null): void
   subscribe(listener: () => void): () => void
 }
 

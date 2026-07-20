@@ -147,7 +147,7 @@ describe('LocalDemoRouteContent', () => {
     )
   })
 
-  it('mounts the editor host without a requested resource when URL state is absent', () => {
+  it('opens the campaign-home resource when URL state is absent', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
 
@@ -156,7 +156,7 @@ describe('LocalDemoRouteContent', () => {
     expect(screen.getByLabelText('Demo workspace')).toBeInTheDocument()
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialResourceId: null,
+        initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
           snapshot: scenario.workspace.snapshot,

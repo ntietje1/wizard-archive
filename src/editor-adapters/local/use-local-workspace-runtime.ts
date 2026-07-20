@@ -37,7 +37,13 @@ function createLocalResourceNavigation(initialResourceId: ResourceId | null): Re
   return {
     current: () => currentTarget,
     open: (target) => {
-      if (currentTarget && canonicalTargetsEqual(target, currentTarget)) return
+      if (
+        currentTarget === null
+          ? target === null
+          : target !== null && canonicalTargetsEqual(target, currentTarget)
+      ) {
+        return
+      }
       currentTarget = target
       for (const listener of listeners) listener()
     },

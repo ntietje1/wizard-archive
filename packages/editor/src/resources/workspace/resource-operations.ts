@@ -590,7 +590,15 @@ async function changeWorkspaceResourcesLifecycle(
   type: 'permanentlyDelete' | 'restore' | 'trash',
   report: WorkspaceReport,
 ) {
-  return await executeWorkspaceStructureCommand(runtime, { type, resourceIds }, report)
+  return await executeWorkspaceStructureCommand(
+    runtime,
+    { type, resourceIds },
+    report,
+    (delivery) => {
+      clearDeletedTarget(runtime, delivery)
+      report(deliveryMessage(delivery))
+    },
+  )
 }
 
 async function emptyWorkspaceTrash(
@@ -634,9 +642,27 @@ async function emptyWorkspaceTrash(
       report(`Deleted ${completed} of ${resourceIds.length}; ${deliveryMessage(delivery)}`)
       return
     }
+    clearDeletedTarget(runtime, delivery)
     await run(batchIndex + 1, newOperationId())
   }
   await run(0, newOperationId())
+}
+
+function clearDeletedTarget(
+  runtime: EditorRuntime,
+  delivery: CommandDelivery<ResourceStructureCommandResult>,
+) {
+  if (
+    delivery.status !== 'received' ||
+    delivery.result.status !== 'completed' ||
+    delivery.result.receipt.result.type !== 'permanentlyDeleted'
+  ) {
+    return
+  }
+  const target = runtime.navigation.current()
+  if (target && delivery.result.receipt.result.resourceIds.includes(target.resourceId)) {
+    runtime.navigation.open(null)
+  }
 }
 
 function newOperationId() {

@@ -54,7 +54,7 @@ const TEMPLATE_BODY = [
 export function createPublicDemoScenario(id: PublicDemoScenarioId): PublicDemoScenario {
   switch (id) {
     case PUBLIC_DEMO_SCENARIO_IDS.campaignHome:
-      return scenario(id, null)
+      return scenario(id, SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
     case PUBLIC_DEMO_SCENARIO_IDS.privatePrep:
     case PUBLIC_DEMO_SCENARIO_IDS.revealReady:
       return scenario(id, SAMPLE_LOCAL_RESOURCE_IDS.marketNote, PRIVATE_PREP_BODY)
