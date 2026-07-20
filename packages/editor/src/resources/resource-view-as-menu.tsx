@@ -57,74 +57,63 @@ export function ResourceViewAsMenu<TParticipantId extends string>({
       : `inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 hover:bg-muted disabled:opacity-40 ${
           active ? 'bg-muted text-primary' : 'text-muted-foreground'
         }`
+  const trigger = (
+    <button
+      type="button"
+      role={presentation === 'menu-item' ? 'menuitem' : undefined}
+      aria-busy={pending}
+      aria-label={label}
+      disabled={pending && !active}
+      title={label}
+      className={triggerClassName}
+      onClick={active ? exit : undefined}
+    >
+      <Icon className={`size-4 shrink-0 ${pending && !active ? 'animate-spin' : ''}`} />
+      {presentation === 'menu-item' && <span>{active ? 'Exit view as' : 'View as...'}</span>}
+    </button>
+  )
+
+  if (active) return trigger
 
   return (
-    <DropdownMenu
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!active) setOpen(nextOpen)
-      }}
-    >
-      <DropdownMenuTrigger
-        nativeButton
-        render={
-          <button
-            type="button"
-            role={presentation === 'menu-item' ? 'menuitem' : undefined}
-            aria-busy={pending}
-            aria-label={label}
-            disabled={pending && !active}
-            title={label}
-            className={triggerClassName}
-            onClick={(event) => {
-              if (!active) return
-              event.preventDefault()
-              exit()
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger nativeButton render={trigger} />
+      <DropdownMenuContent
+        align={presentation === 'menu-item' ? 'start' : 'end'}
+        side={presentation === 'menu-item' ? 'right' : 'bottom'}
+        className="z-[80] max-h-[var(--radix-dropdown-menu-content-available-height)] w-max min-w-56 max-w-[min(24rem,calc(100vw-1rem))] overflow-y-auto"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="pb-0 pt-0.5">View as...</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => {
+              onParticipantChange?.(null)
+              onModeChange('viewer')
+              setOpen(false)
             }}
           >
-            <Icon className={`size-4 shrink-0 ${pending && !active ? 'animate-spin' : ''}`} />
-            {presentation === 'menu-item' && <span>{active ? 'Exit view as' : 'View as...'}</span>}
-          </button>
-        }
-      />
-      {!active && (
-        <DropdownMenuContent
-          align={presentation === 'menu-item' ? 'start' : 'end'}
-          side={presentation === 'menu-item' ? 'right' : 'bottom'}
-          className="z-[80] max-h-[var(--radix-dropdown-menu-content-available-height)] w-max min-w-56 max-w-[min(24rem,calc(100vw-1rem))] overflow-y-auto"
-        >
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="pb-0 pt-0.5">View as...</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                onParticipantChange?.(null)
-                onModeChange('viewer')
+            <UserRound className="size-4" />
+            View as yourself
+          </DropdownMenuItem>
+          {participants.length > 0 && <DropdownMenuSeparator />}
+          {participants.map((participant) => (
+            <DropdownMenuCheckboxItem
+              key={participant.id}
+              checked={selectedParticipantId === participant.id}
+              onCheckedChange={(checked) => {
+                if (!checked) return
+                onModeChange('editor')
+                onParticipantChange?.(participant.id)
                 setOpen(false)
               }}
+              className="py-1.5 pl-2 pr-8 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
             >
-              <UserRound className="size-4" />
-              View as yourself
-            </DropdownMenuItem>
-            {participants.length > 0 && <DropdownMenuSeparator />}
-            {participants.map((participant) => (
-              <DropdownMenuCheckboxItem
-                key={participant.id}
-                checked={selectedParticipantId === participant.id}
-                onCheckedChange={(checked) => {
-                  if (!checked) return
-                  onModeChange('editor')
-                  onParticipantChange?.(participant.id)
-                  setOpen(false)
-                }}
-                className="py-1.5 pl-2 pr-8 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
-              >
-                <ParticipantRow participant={participant} />
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      )}
+              <ParticipantRow participant={participant} />
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
     </DropdownMenu>
   )
 }

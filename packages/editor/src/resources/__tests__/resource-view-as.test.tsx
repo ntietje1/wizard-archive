@@ -78,11 +78,20 @@ describe('resource view-as controls', () => {
   it('offers a read-only self projection and exits it directly', async () => {
     const user = userEvent.setup()
     const onModeChange = vi.fn()
-    render(<ResourceViewAsMenu mode="editor" projection="dm" onModeChange={onModeChange} />)
+    const view = render(
+      <ResourceViewAsMenu mode="editor" projection="dm" onModeChange={onModeChange} />,
+    )
 
     await user.click(screen.getByRole('button', { name: 'View as...' }))
     await user.click(screen.getByRole('menuitem', { name: 'View as yourself' }))
     expect(onModeChange).toHaveBeenCalledWith('viewer')
+
+    view.rerender(<ResourceViewAsMenu mode="viewer" projection="dm" onModeChange={onModeChange} />)
+    await user.click(screen.getByRole('button', { name: 'Exit view as' }))
+    view.rerender(<ResourceViewAsMenu mode="editor" projection="dm" onModeChange={onModeChange} />)
+
+    expect(onModeChange).toHaveBeenLastCalledWith('editor')
+    expect(screen.queryByRole('menu', { name: 'View as...' })).not.toBeInTheDocument()
   })
 
   it('identifies the active player and exits from the bottom banner', async () => {

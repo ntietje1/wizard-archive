@@ -14,6 +14,7 @@ function clearCanvasDropTarget(event: DragEvent<HTMLElement>) {
   const nextTarget = event.relatedTarget
   if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
   delete event.currentTarget.dataset.dropTarget
+  delete event.currentTarget.dataset.dropOperation
 }
 
 export function useCanvasDropTarget({
@@ -48,6 +49,7 @@ export function useCanvasDropTarget({
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'copy'
     event.currentTarget.dataset.dropTarget = 'true'
+    event.currentTarget.dataset.dropOperation = 'copy'
   }
 
   const onDrop = (event: DragEvent<HTMLElement>) => {

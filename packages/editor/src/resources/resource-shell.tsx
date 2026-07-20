@@ -165,18 +165,16 @@ export function ResourceShell({
     )
   }
   const updateResourceDragEffect = (event: DragEvent<HTMLElement>) => {
-    const dataTransfer = event.dataTransfer
+    const target = event.target instanceof Element ? event.target : null
     const x = event.clientX
     const y = event.clientY
     queueMicrotask(() => {
       setDragOverlay((current) => {
         if (!current) return null
+        const dropOperation =
+          target?.closest<HTMLElement>('[data-drop-target=true]')?.dataset.dropOperation
         const effect =
-          dataTransfer.dropEffect === 'copy'
-            ? 'copy'
-            : dataTransfer.dropEffect === 'move'
-              ? 'move'
-              : 'blocked'
+          dropOperation === 'copy' ? 'copy' : dropOperation === 'move' ? 'move' : 'blocked'
         return { ...current, effect, x, y }
       })
     })
@@ -251,6 +249,7 @@ export function ResourceShell({
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
       onDrag={moveResourceDragOverlay}
       onDragEnd={() => setDragOverlay(null)}
+      onDragEnterCapture={updateResourceDragEffect}
       onDragOverCapture={updateResourceDragEffect}
       onDragStart={beginResourceDragOverlay}
       onDropCapture={() => setDragOverlay(null)}

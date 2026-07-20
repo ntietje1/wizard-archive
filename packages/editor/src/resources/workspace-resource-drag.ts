@@ -97,8 +97,10 @@ export function allowWorkspaceResourceDrop(event: WorkspaceDropEvent) {
     event.dataTransfer.dropEffect = 'none'
     return
   }
-  event.dataTransfer.dropEffect = fileDrop || copyDragRequested(event) ? 'copy' : 'move'
+  const dropEffect = fileDrop || copyDragRequested(event) ? 'copy' : 'move'
+  event.dataTransfer.dropEffect = dropEffect
   event.currentTarget.dataset.dropTarget = 'true'
+  event.currentTarget.dataset.dropOperation = dropEffect
 }
 
 export function allowWorkspaceInternalResourceDrop(event: WorkspaceDropEvent) {
@@ -110,6 +112,7 @@ export function leaveWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
   const nextTarget = event.relatedTarget
   if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
   delete event.currentTarget.dataset.dropTarget
+  delete event.currentTarget.dataset.dropOperation
 }
 
 export async function finishWorkspaceResourceDrop(
@@ -121,6 +124,7 @@ export async function finishWorkspaceResourceDrop(
   destinationParentId: ResourceId | null,
 ) {
   delete event.currentTarget.dataset.dropTarget
+  delete event.currentTarget.dataset.dropOperation
   const drag = readWorkspaceResourceDrag(event.dataTransfer)
   if (!drag) {
     if (!hasBrowserPlainTransfer(event.dataTransfer)) return
@@ -155,6 +159,7 @@ export async function finishWorkspaceTrashDrop(
   actions: WorkspaceActions,
 ) {
   delete event.currentTarget.dataset.dropTarget
+  delete event.currentTarget.dataset.dropOperation
   const drag = readWorkspaceResourceDrag(event.dataTransfer)
   if (!drag || drag.lifecycle === 'trashed') return
   event.preventDefault()
