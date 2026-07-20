@@ -35,6 +35,7 @@ import {
   readLiveItemHistoryPreview,
 } from './live-item-history'
 import { createLivePlainTransferGateway } from './live-plain-transfer-gateway'
+import { ERROR_CODE, isClientError } from 'shared/errors/client'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -44,8 +45,12 @@ function subscribeToWatch<T>(
   apply: (value: T) => void,
 ) {
   const update = () => {
-    const value = watch.localQueryResult()
-    if (value !== undefined) apply(value)
+    try {
+      const value = watch.localQueryResult()
+      if (value !== undefined) apply(value)
+    } catch (error) {
+      if (!isClientError(error, ERROR_CODE.NOT_AUTHENTICATED)) throw error
+    }
   }
   const unsubscribe = watch.onUpdate(update)
   update()

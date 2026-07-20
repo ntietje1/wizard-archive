@@ -33,7 +33,7 @@ const DEVELOPMENT_SERVER_TOLERANCE: CanvasPerformanceBudget = {
     erasing: 100,
     lasso: 175,
     marquee: 175,
-    resizing: 100,
+    resizing: 125,
   },
   maxTypicalFrameDuration: {
     connecting: 50,

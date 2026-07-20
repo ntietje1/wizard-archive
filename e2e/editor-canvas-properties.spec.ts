@@ -103,12 +103,7 @@ test.describe('canvas properties and arrangement', () => {
     await width.fill('7')
     await width.press('Enter')
     await stroke.getByRole('button', { name: 'Open color picker' }).click()
-    const opacityTrack = page.getByTestId('opacity-track')
-    const opacityBounds = await visibleBox(opacityTrack)
-    await page.mouse.click(
-      opacityBounds.x + opacityBounds.width * 0.4,
-      opacityBounds.y + opacityBounds.height / 2,
-    )
+    await page.getByRole('group', { name: 'Opacity' }).getByRole('slider').fill('40')
 
     await expect(primaryPath).not.toHaveAttribute('d', beforePath ?? '')
     await expect(primaryPath).toHaveAttribute('stroke-width', '7')
