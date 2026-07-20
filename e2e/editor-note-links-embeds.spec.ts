@@ -69,6 +69,7 @@ async function openScratchNote(page: Page, noteTitle: string) {
 async function insertEmptyEmbed(page: Page, editor: Locator) {
   const inline = editor.locator('.bn-inline-content').last()
   await inline.click()
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
   if (await inline.textContent()) {
     await page.keyboard.press('Control+End')
     await page.keyboard.press('Enter')

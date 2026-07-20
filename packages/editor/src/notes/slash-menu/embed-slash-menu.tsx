@@ -29,7 +29,6 @@ export function createEmbedItem(editor: NoteBlockNoteEditor): DefaultReactSugges
       } else {
         editor.replaceBlocks([currentBlock], [embed])
       }
-      editor.focus()
     },
   }
 }

@@ -127,7 +127,6 @@ describe('NoteEmbedBlock', () => {
 
     fireEvent.pointerDown(screen.getByTestId('note-embed-block'), { button: 0 })
 
-    expect(editor.setTextCursorPosition).toHaveBeenCalledOnce()
     expect(screen.getAllByTestId(/note-embed-resize-zone-/)).toHaveLength(8)
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'Resize embedded resource right' }), {
@@ -584,7 +583,6 @@ describe('createEmbedItem', () => {
   it('replaces an empty slash paragraph with one canonical empty embed', () => {
     const paragraph = { id: generateDomainId(DOMAIN_ID_KIND.noteBlock), type: 'paragraph' }
     const editor = {
-      focus: vi.fn(),
       getTextCursorPosition: () => ({ block: paragraph }),
       insertBlocks: vi.fn(),
       replaceBlocks: vi.fn(),
@@ -605,7 +603,6 @@ describe('createEmbedItem', () => {
       ],
     )
     expect(editor.insertBlocks).not.toHaveBeenCalled()
-    expect(editor.focus).toHaveBeenCalledOnce()
   })
 })
 

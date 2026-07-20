@@ -137,7 +137,6 @@ export function NoteEmbedBlock({ block, editor }: NoteEmbedRenderProps) {
       onPointerDownCapture={(event) => {
         if (!surface.editable || event.button !== 0) return
         setSelected(true)
-        editor.setTextCursorPosition(block, 'start')
       }}
       style={{
         maxWidth: '100%',
