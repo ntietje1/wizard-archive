@@ -1,8 +1,12 @@
 import { internal } from '../../_generated/api'
 import type { Doc } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import {
+  ITEM_HISTORY_ACTION,
+  ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type {
+  ItemHistoryRestoreReceipt,
   ItemHistoryRestoreResult,
   ItemHistoryMapEvent,
   ItemHistoryTimelineEvent,
@@ -12,9 +16,14 @@ import type {
   MapContentCommand,
   MapResourceContent,
 } from '@wizard-archive/editor/resources/content-session-contract'
-import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  generateDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type {
   HistoryEntryId,
+  OperationId,
   ResourceId,
   SnapshotId,
 } from '@wizard-archive/editor/resources/domain-id'
@@ -32,6 +41,7 @@ import { replaceNoteContent } from './replaceNoteContent'
 import { replaceCanvasContent } from './replaceCanvasContent'
 import { replaceMapContent } from './replaceMapContent'
 import { findItemHistoryCheckpoint } from './findItemHistoryCheckpoint'
+import { jsonContentDigest } from './contentVersion'
 
 const YJS_CHECKPOINT_IDLE_MS = 10_000
 const YJS_CHECKPOINT_MIN_INTERVAL_MS = 5 * 60_000
@@ -214,51 +224,81 @@ export async function recordMapCommandHistoryCheckpoint(
 
 export async function restoreItemHistoryCheckpoint(
   ctx: CampaignMutationCtx,
-  resourceId: ResourceId,
-  entryId: HistoryEntryId,
-  expectedVersion: VersionStamp,
+  args: Readonly<{
+    resourceId: ResourceId
+    entryId: HistoryEntryId
+    operationId: OperationId
+    expectedVersion: VersionStamp
+  }>,
 ): Promise<ItemHistoryRestoreResult> {
+  const [fingerprint, stored] = await Promise.all([
+    jsonContentDigest({
+      protocolVersion: ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+      resourceId: args.resourceId,
+      entryId: args.entryId,
+      expectedVersion: args.expectedVersion,
+    }),
+    ctx.db
+      .query('itemHistoryRestoreOperations')
+      .withIndex('by_campaign_and_operation', (query) =>
+        query
+          .eq('campaignUuid', ctx.resourceScope.campaignId)
+          .eq('operationUuid', args.operationId),
+      )
+      .unique(),
+  ])
+  if (stored) {
+    if (
+      stored.actorMemberUuid !== ctx.resourceScope.actorId ||
+      stored.fingerprint !== fingerprint
+    ) {
+      return rejectedRestore(args.operationId, 'operation_id_reused')
+    }
+    return readRestoreReceipt(stored.receipt)
+  }
+
   const authorization = await authorizeResourceContentKinds(
     ctx,
-    resourceId,
+    args.resourceId,
     ['note', 'canvas', 'map'],
     'edit',
   )
   if (authorization.status !== 'authorized') {
-    return {
-      status: 'rejected',
-      reason:
-        authorization.reason === 'unauthorized' && ctx.resourceScope.projection !== 'dm'
-          ? 'unauthorized'
-          : 'resource_unavailable',
-    }
+    return rejectedRestore(
+      args.operationId,
+      authorization.reason === 'unauthorized' && ctx.resourceScope.projection !== 'dm'
+        ? 'unauthorized'
+        : 'resource_unavailable',
+    )
   }
 
   const lookup = await findItemHistoryCheckpoint(
     ctx.db,
     ctx.resourceScope.campaignId,
-    resourceId,
-    entryId,
+    args.resourceId,
+    args.entryId,
     authorization.resource.kind,
   )
-  if (lookup.status !== 'ready') return { status: 'rejected', reason: lookup.status }
+  if (lookup.status !== 'ready') {
+    return rejectedRestore(args.operationId, lookup.status)
+  }
 
   const preservedSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
   const restoredSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
   const historyEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
   const restoration = await restoreHistoryContent(ctx, {
-    resourceId,
-    expectedVersion,
+    resourceId: args.resourceId,
+    expectedVersion: args.expectedVersion,
     checkpoint: lookup.checkpoint,
     preservedSnapshotId,
     restoredSnapshotId,
   })
   if (restoration.status !== 'completed') {
-    return { status: 'rejected', reason: restoration.status }
+    return rejectedRestore(args.operationId, restoration.status)
   }
   await recordRestoredHistoryEntry(ctx, {
-    resourceId,
-    entryId,
+    resourceId: args.resourceId,
+    entryId: args.entryId,
     historyEntryId,
     preservedSnapshotId,
     restoredSnapshotId,
@@ -267,14 +307,55 @@ export async function restoreItemHistoryCheckpoint(
   })
   const intent = await ctx.db
     .query('itemHistoryCaptureIntents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', args.resourceId))
     .unique()
   if (intent) await ctx.db.delete('itemHistoryCaptureIntents', intent._id)
-  return {
+  return await storeRestoreReceipt(ctx, args, fingerprint, {
     status: 'restored',
+    operationId: args.operationId,
     historyEntryId,
     preservedSnapshotId,
-    restoredFromEntryId: entryId,
+    restoredFromEntryId: args.entryId,
+  })
+}
+
+async function storeRestoreReceipt(
+  ctx: CampaignMutationCtx,
+  args: Readonly<{
+    resourceId: ResourceId
+    operationId: OperationId
+  }>,
+  fingerprint: string,
+  receipt: Extract<ItemHistoryRestoreReceipt, { status: 'restored' }>,
+): Promise<Extract<ItemHistoryRestoreReceipt, { status: 'restored' }>> {
+  await ctx.db.insert('itemHistoryRestoreOperations', {
+    campaignUuid: ctx.resourceScope.campaignId,
+    actorMemberUuid: ctx.resourceScope.actorId,
+    resourceUuid: args.resourceId,
+    operationUuid: args.operationId,
+    protocolVersion: ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+    fingerprint,
+    receipt,
+  })
+  return receipt
+}
+
+function rejectedRestore(
+  operationId: OperationId,
+  reason: Extract<ItemHistoryRestoreReceipt, { status: 'rejected' }>['reason'],
+): ItemHistoryRestoreReceipt {
+  return { status: 'rejected', operationId, reason }
+}
+
+function readRestoreReceipt(
+  receipt: Doc<'itemHistoryRestoreOperations'>['receipt'],
+): ItemHistoryRestoreReceipt {
+  return {
+    ...receipt,
+    operationId: assertDomainId(DOMAIN_ID_KIND.operation, receipt.operationId),
+    historyEntryId: assertDomainId(DOMAIN_ID_KIND.historyEntry, receipt.historyEntryId),
+    preservedSnapshotId: assertDomainId(DOMAIN_ID_KIND.snapshot, receipt.preservedSnapshotId),
+    restoredFromEntryId: assertDomainId(DOMAIN_ID_KIND.historyEntry, receipt.restoredFromEntryId),
   }
 }
 

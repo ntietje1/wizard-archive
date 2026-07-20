@@ -579,11 +579,12 @@ describe('item history checkpoints', () => {
       await expect(
         asPlayer(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
           campaignId: campaign.campaignDomainId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
           resourceId,
           entryId: historicalEntryId,
           expectedVersion: current.version,
         }),
-      ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+      ).resolves.toMatchObject({ status: 'rejected', reason: 'unauthorized' })
 
       const preview = await asDm(campaign).query(api.resources.queries.loadItemHistoryCheckpoint, {
         campaignId: campaign.campaignDomainId,
@@ -606,16 +607,18 @@ describe('item history checkpoints', () => {
       await expect(
         asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
           campaignId: campaign.campaignDomainId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
           resourceId,
           entryId: historicalEntryId,
           expectedVersion: historicalVersion,
         }),
-      ).resolves.toEqual({ status: 'rejected', reason: 'content_changed' })
+      ).resolves.toMatchObject({ status: 'rejected', reason: 'content_changed' })
 
       const restored = await asDm(campaign).mutation(
         api.resources.mutations.restoreItemHistoryCheckpoint,
         {
           campaignId: campaign.campaignDomainId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
           resourceId,
           entryId: historicalEntryId,
           expectedVersion: current.version,
@@ -743,6 +746,7 @@ describe('item history checkpoints', () => {
         api.resources.mutations.restoreItemHistoryCheckpoint,
         {
           campaignId: campaign.campaignDomainId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
           resourceId,
           entryId: restored.historyEntryId,
           expectedVersion: content.version,
@@ -784,6 +788,7 @@ describe('item history checkpoints', () => {
         Array.from({ length: 2 }, () =>
           asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
             campaignId: campaign.campaignDomainId,
+            operationId: generateDomainId(DOMAIN_ID_KIND.operation),
             resourceId,
             entryId: historicalEntryId,
             expectedVersion: sequentialContent.version,
@@ -793,7 +798,7 @@ describe('item history checkpoints', () => {
       expect(concurrentRestores).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ status: 'restored' }),
-          { status: 'rejected', reason: 'content_changed' },
+          expect.objectContaining({ status: 'rejected', reason: 'content_changed' }),
         ]),
       )
       await t.run(async (ctx) => {
@@ -810,6 +815,127 @@ describe('item history checkpoints', () => {
       })
     } finally {
       historicalDocument.destroy()
+    }
+  })
+
+  it('replays one durable restore receipt without overwriting an intervening edit', async () => {
+    const campaign = await setupCampaignContext(t)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const historicalDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Historical' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const currentDocument = noteBlocksToYDoc(
+      [{ type: 'paragraph', content: [{ type: 'text', text: 'Current' }] }],
+      NOTE_YJS_FRAGMENT,
+    )
+    const historicalUpdate = encodeUpdate(historicalDocument)
+    const historicalVersion = await initialNoteContentVersion(new Uint8Array(historicalUpdate))
+    const entryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const snapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+    try {
+      await createNote(campaign, resourceId, encodeUpdate(currentDocument))
+      const current = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+      })
+      if (current.status !== 'ready') throw new TypeError('Expected current note')
+      await t.run(async (ctx) => {
+        await ctx.db.insert('itemHistoryCheckpoints', {
+          snapshotUuid: snapshotId,
+          campaignUuid: campaign.campaignDomainId,
+          resourceUuid: resourceId,
+          kind: 'note',
+          update: historicalUpdate,
+          version: historicalVersion,
+        })
+        await ctx.db.insert('itemHistoryEntries', {
+          historyEntryUuid: entryId,
+          campaignUuid: campaign.campaignDomainId,
+          resourceUuid: resourceId,
+          actorMemberUuid: campaign.dm.memberDomainId,
+          action: ITEM_HISTORY_ACTION.contentEdited,
+          metadata: null,
+          checkpoint: { kind: 'note', snapshotId, version: historicalVersion },
+          createdAt: Date.now(),
+        })
+      })
+
+      const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+      const request = {
+        campaignId: campaign.campaignDomainId,
+        operationId,
+        resourceId,
+        entryId,
+        expectedVersion: current.version,
+      }
+      const receipt = await asDm(campaign).mutation(
+        api.resources.mutations.restoreItemHistoryCheckpoint,
+        request,
+      )
+      expect(receipt).toMatchObject({ status: 'restored', operationId })
+
+      const stateVector = Y.encodeStateVector(historicalDocument)
+      noteText(historicalDocument).insert(noteText(historicalDocument).length, ' intervening')
+      const interveningSave = await asDm(campaign).mutation(
+        api.resources.mutations.saveNoteContent,
+        {
+          campaignId: campaign.campaignDomainId,
+          generation: 2,
+          resourceId,
+          update: encodeUpdate(historicalDocument, stateVector),
+        },
+      )
+      expect(interveningSave).toMatchObject({ status: 'completed' })
+      const beforeReplay = await asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaign.campaignDomainId,
+        resourceId,
+      })
+
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, request),
+      ).resolves.toEqual(receipt)
+      await expect(
+        asDm(campaign).query(api.resources.queries.loadNoteContent, {
+          campaignId: campaign.campaignDomainId,
+          resourceId,
+        }),
+      ).resolves.toEqual(beforeReplay)
+      await expect(
+        asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
+          ...request,
+          entryId: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+        }),
+      ).resolves.toEqual({
+        status: 'rejected',
+        operationId,
+        reason: 'operation_id_reused',
+      })
+
+      await t.run(async (ctx) => {
+        const [operations, restoredEntries] = await Promise.all([
+          ctx.db
+            .query('itemHistoryRestoreOperations')
+            .withIndex('by_campaign_and_operation', (query) =>
+              query.eq('campaignUuid', campaign.campaignDomainId).eq('operationUuid', operationId),
+            )
+            .collect(),
+          ctx.db
+            .query('itemHistoryEntries')
+            .withIndex('by_resource_action_history', (query) =>
+              query
+                .eq('campaignUuid', campaign.campaignDomainId)
+                .eq('resourceUuid', resourceId)
+                .eq('action', ITEM_HISTORY_ACTION.contentRestored),
+            )
+            .collect(),
+        ])
+        expect(operations).toHaveLength(1)
+        expect(restoredEntries).toHaveLength(1)
+      })
+    } finally {
+      historicalDocument.destroy()
+      currentDocument.destroy()
     }
   })
 
@@ -885,11 +1011,12 @@ describe('item history checkpoints', () => {
       await expect(
         asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
           campaignId: campaign.campaignDomainId,
+          operationId: generateDomainId(DOMAIN_ID_KIND.operation),
           resourceId,
           entryId,
           expectedVersion: content.version,
         }),
-      ).resolves.toEqual({ status: 'rejected', reason })
+      ).resolves.toMatchObject({ status: 'rejected', reason })
     }
 
     await expect(
@@ -901,19 +1028,21 @@ describe('item history checkpoints', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
         campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         resourceId,
         entryId: incompatibleEntryId,
         expectedVersion: content.version,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'resource_unavailable' })
+    ).resolves.toMatchObject({ status: 'rejected', reason: 'resource_unavailable' })
     await expect(
       asPlayer(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
         campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         resourceId,
         entryId: incompatibleEntryId,
         expectedVersion: content.version,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'unauthorized' })
+    ).resolves.toMatchObject({ status: 'rejected', reason: 'unauthorized' })
 
     await expect(
       executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
@@ -925,11 +1054,12 @@ describe('item history checkpoints', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
         campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         resourceId,
         entryId: incompatibleEntryId,
         expectedVersion: content.version,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'resource_unavailable' })
+    ).resolves.toMatchObject({ status: 'rejected', reason: 'resource_unavailable' })
   })
 
   it('restores canvas and map checkpoints through their canonical content owners', async () => {
@@ -1082,6 +1212,7 @@ describe('item history checkpoints', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.restoreItemHistoryCheckpoint, {
         campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         resourceId: canvasId,
         entryId: canvasEntryId,
         expectedVersion: canvasBefore.version,
@@ -1091,6 +1222,7 @@ describe('item history checkpoints', () => {
       api.resources.mutations.restoreItemHistoryCheckpoint,
       {
         campaignId: campaign.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
         resourceId: mapId,
         entryId: mapEntryId,
         expectedVersion: mapBefore.version,

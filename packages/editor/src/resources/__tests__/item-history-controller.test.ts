@@ -161,16 +161,18 @@ describe('item history controller', () => {
   it('deduplicates restore, preserves explicit failures, and closes successful restores', async () => {
     const fixture = historyFixture()
     const first = deferred<ItemHistoryRestoreResult>()
-    const restored: ItemHistoryRestoreResult = {
-      status: 'restored',
-      historyEntryId: generateDomainId(DOMAIN_ID_KIND.historyEntry),
-      preservedSnapshotId: generateDomainId(DOMAIN_ID_KIND.snapshot),
-      restoredFromEntryId: fixture.checkpoint.id,
-    }
     const restore = vi
       .fn<ItemHistoryBackend['restore']>()
       .mockReturnValueOnce(first.promise)
-      .mockResolvedValueOnce(restored)
+      .mockImplementationOnce((_resourceId, _entryId, operationId) =>
+        Promise.resolve({
+          status: 'restored',
+          operationId,
+          historyEntryId: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+          preservedSnapshotId: generateDomainId(DOMAIN_ID_KIND.snapshot),
+          restoredFromEntryId: fixture.checkpoint.id,
+        }),
+      )
     const source = historyBackend(undefined, restore)
     const history = createItemHistoryController(source.backend)
     history.controller.subscribe(fixture.resourceId, vi.fn())
@@ -186,12 +188,17 @@ describe('item history controller', () => {
     const firstConfirmation = history.controller.confirmRestore(fixture.resourceId)
     const duplicateConfirmation = history.controller.confirmRestore(fixture.resourceId)
     expect(restore).toHaveBeenCalledOnce()
-    first.resolve({ status: 'rejected', reason: 'content_changed' })
-    await expect(firstConfirmation).resolves.toEqual({
+    const firstOperationId = restore.mock.calls[0]![2]
+    first.resolve({
+      status: 'rejected',
+      operationId: firstOperationId,
+      reason: 'content_changed',
+    })
+    await expect(firstConfirmation).resolves.toMatchObject({
       status: 'rejected',
       reason: 'content_changed',
     })
-    await expect(duplicateConfirmation).resolves.toEqual({
+    await expect(duplicateConfirmation).resolves.toMatchObject({
       status: 'rejected',
       reason: 'content_changed',
     })
@@ -200,10 +207,52 @@ describe('item history controller', () => {
       result: { status: 'rejected', reason: 'content_changed' },
     })
 
-    await expect(history.controller.confirmRestore(fixture.resourceId)).resolves.toEqual(restored)
+    const restored = await history.controller.confirmRestore(fixture.resourceId)
+    expect(restored).toMatchObject({
+      status: 'restored',
+      restoredFromEntryId: fixture.checkpoint.id,
+    })
+    expect(restore.mock.calls[1]![2]).not.toBe(firstOperationId)
     expect(history.controller.get(fixture.resourceId)).toMatchObject({
       preview: { status: 'closed' },
       restore: { status: 'closed' },
     })
+  })
+
+  it('coalesces double confirmation and reuses one operation after response loss', async () => {
+    const fixture = historyFixture()
+    const restore = vi
+      .fn<ItemHistoryBackend['restore']>()
+      .mockRejectedValueOnce(new Error('response lost'))
+      .mockImplementationOnce((_resourceId, _entryId, operationId) =>
+        Promise.resolve({
+          status: 'restored',
+          operationId,
+          historyEntryId: generateDomainId(DOMAIN_ID_KIND.historyEntry),
+          preservedSnapshotId: generateDomainId(DOMAIN_ID_KIND.snapshot),
+          restoredFromEntryId: fixture.checkpoint.id,
+        }),
+      )
+    const source = historyBackend(undefined, restore)
+    const history = createItemHistoryController(source.backend)
+    history.controller.subscribe(fixture.resourceId, vi.fn())
+    source.watches[0]!.publish({
+      status: 'ready',
+      entries: [fixture.checkpoint],
+      nextCursor: null,
+    })
+    history.controller.requestRestore(fixture.resourceId, fixture.checkpoint.id)
+
+    const first = history.controller.confirmRestore(fixture.resourceId)
+    const doubleClick = history.controller.confirmRestore(fixture.resourceId)
+    await expect(first).resolves.toEqual({ status: 'failed' })
+    await expect(doubleClick).resolves.toEqual({ status: 'failed' })
+    expect(restore).toHaveBeenCalledOnce()
+
+    await expect(history.controller.confirmRestore(fixture.resourceId)).resolves.toMatchObject({
+      status: 'restored',
+    })
+    expect(restore).toHaveBeenCalledTimes(2)
+    expect(restore.mock.calls[1]![2]).toBe(restore.mock.calls[0]![2])
   })
 })

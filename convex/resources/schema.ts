@@ -26,7 +26,10 @@ import {
   RESOURCE_PERMISSION,
 } from '@wizard-archive/editor/resources/access-policy'
 import { NOTE_BLOCK_VISIBILITY } from '@wizard-archive/editor/resources/note-block-access-policy'
-import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import {
+  ITEM_HISTORY_ACTION,
+  ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 
 export const versionStampValidator = v.object({
   scheme: v.literal(VERSION_SCHEME),
@@ -799,24 +802,31 @@ export const itemHistoryPreviewResultValidator = v.union(
   }),
 )
 
+export const itemHistoryRestoredReceiptValidator = v.object({
+  status: v.literal('restored'),
+  operationId: operationIdValidator,
+  historyEntryId: historyEntryIdValidator,
+  preservedSnapshotId: snapshotIdValidator,
+  restoredFromEntryId: historyEntryIdValidator,
+})
+
+const itemHistoryRestoreRejectionValidator = v.object({
+  status: v.literal('rejected'),
+  operationId: operationIdValidator,
+  reason: literals(
+    'content_changed',
+    'history_entry_unavailable',
+    'operation_id_reused',
+    'resource_unavailable',
+    'snapshot_incompatible',
+    'snapshot_unavailable',
+    'unauthorized',
+  ),
+})
+
 export const itemHistoryRestoreResultValidator = v.union(
-  v.object({
-    status: v.literal('restored'),
-    historyEntryId: historyEntryIdValidator,
-    preservedSnapshotId: snapshotIdValidator,
-    restoredFromEntryId: historyEntryIdValidator,
-  }),
-  v.object({
-    status: v.literal('rejected'),
-    reason: literals(
-      'content_changed',
-      'history_entry_unavailable',
-      'resource_unavailable',
-      'snapshot_incompatible',
-      'snapshot_unavailable',
-      'unauthorized',
-    ),
-  }),
+  itemHistoryRestoredReceiptValidator,
+  itemHistoryRestoreRejectionValidator,
   v.object({ status: literals('unavailable', 'failed') }),
 )
 
@@ -1500,6 +1510,19 @@ export const resourceTables = {
     actorMemberUuid: campaignMemberIdValidator,
     version: versionStampValidator,
   }).index('by_resourceUuid', ['resourceUuid']),
+
+  itemHistoryRestoreOperations: defineTable({
+    campaignUuid: campaignIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    resourceUuid: resourceIdValidator,
+    operationUuid: operationIdValidator,
+    protocolVersion: v.literal(ITEM_HISTORY_RESTORE_PROTOCOL_VERSION),
+    fingerprint: v.string(),
+    receipt: itemHistoryRestoredReceiptValidator,
+  })
+    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
+    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid'])
+    .index('by_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceBookmarks: defineTable({
     campaignUuid: campaignIdValidator,

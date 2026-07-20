@@ -7,7 +7,7 @@ import { findCanonicalResource } from './findCanonicalResource'
 
 type ItemHistoryCleanupCtx = Pick<MutationCtx, 'db' | 'scheduler'>
 
-export const ITEM_HISTORY_CLEANUP_STAGES = ['entries', 'checkpoints'] as const
+export const ITEM_HISTORY_CLEANUP_STAGES = ['restoreOperations', 'entries', 'checkpoints'] as const
 export type ItemHistoryCleanupStage = (typeof ITEM_HISTORY_CLEANUP_STAGES)[number]
 
 export async function deleteItemHistoryCaptureIntents(
@@ -32,10 +32,30 @@ export async function deleteResourceItemHistoryBatch(
   stage: ItemHistoryCleanupStage,
 ): Promise<ItemHistoryCleanupStage | null> {
   if (await findCanonicalResource(ctx.db, resourceId)) return null
+  if (stage === 'restoreOperations') {
+    return (await deleteRestoreOperationsBatch(ctx, campaignId, resourceId))
+      ? 'restoreOperations'
+      : 'entries'
+  }
   if (stage === 'entries') {
     return (await deleteEntriesBatch(ctx, campaignId, resourceId)) ? 'entries' : 'checkpoints'
   }
   return (await deleteNextCheckpoint(ctx, campaignId, resourceId)) ? 'checkpoints' : null
+}
+
+async function deleteRestoreOperationsBatch(
+  ctx: Pick<MutationCtx, 'db'>,
+  campaignId: CampaignId,
+  resourceId: ResourceId,
+): Promise<boolean> {
+  const operations = await ctx.db
+    .query('itemHistoryRestoreOperations')
+    .withIndex('by_resource', (query) =>
+      query.eq('campaignUuid', campaignId).eq('resourceUuid', resourceId),
+    )
+    .take(CAMPAIGN_DELETION_BATCH_SIZE)
+  await Promise.all(operations.map((operation) => ctx.db.delete(operation._id)))
+  return operations.length === CAMPAIGN_DELETION_BATCH_SIZE
 }
 
 export async function deleteCampaignItemHistoryEntriesBatch(

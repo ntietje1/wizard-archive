@@ -21,7 +21,10 @@ import {
   isUuidV7,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import {
+  ITEM_HISTORY_ACTION,
+  ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import type { Id } from '../../_generated/dataModel'
 import { storeUncommittedTestUploadSession } from '../../_test/storage.helper'
@@ -1170,6 +1173,24 @@ describe('deleteCampaign', () => {
         checkpoint: { kind: 'canvas', snapshotId, version: content.version },
         createdAt: Date.now(),
       })
+      const restoreOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+      const restoredHistoryEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+      const preservedSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+      await dbCtx.db.insert('itemHistoryRestoreOperations', {
+        campaignUuid: ctx.campaignDomainId,
+        actorMemberUuid: ctx.dm.memberDomainId,
+        resourceUuid: historyResourceId,
+        operationUuid: restoreOperationId,
+        protocolVersion: ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+        fingerprint: '0'.repeat(64),
+        receipt: {
+          status: 'restored',
+          operationId: restoreOperationId,
+          historyEntryId: restoredHistoryEntryId,
+          preservedSnapshotId,
+          restoredFromEntryId: restoredHistoryEntryId,
+        },
+      })
       for (let index = 0; index < 40; index += 1) {
         await dbCtx.db.insert('itemHistoryEntries', {
           historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
@@ -1254,6 +1275,12 @@ describe('deleteCampaign', () => {
         .withIndex('by_resource_history', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
       expect(historyEntries).toHaveLength(0)
+
+      const historyRestoreOperations = await dbCtx.db
+        .query('itemHistoryRestoreOperations')
+        .withIndex('by_campaign_and_actor', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(historyRestoreOperations).toHaveLength(0)
 
       const historyCheckpoints = await dbCtx.db
         .query('itemHistoryCheckpoints')

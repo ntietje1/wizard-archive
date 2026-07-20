@@ -16,7 +16,11 @@ import {
 } from '@wizard-archive/editor/resources/component-version'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import { parseAuthoredDestination } from '@wizard-archive/editor/resources/authored-destination'
 import { mapImageAttachment } from '@wizard-archive/editor/resources/map-session-policy'
 import type {
@@ -38,6 +42,7 @@ type LiveItemHistoryBackend = Readonly<{
     campaignId: CampaignId
     resourceId: ResourceId
     entryId: Parameters<ItemHistoryBackend['restore']>[1]
+    operationId: OperationId
     expectedVersion: VersionStamp
   }): ReturnType<ItemHistoryBackend['restore']>
   loadNote(resourceId: ResourceId): Promise<NoteSnapshot>
@@ -55,18 +60,35 @@ export function createLiveItemHistory(
   }>,
   backend: LiveItemHistoryBackend,
 ) {
+  const restoreVersions = new Map<OperationId, Promise<VersionStamp | null>>()
   return createItemHistoryController({
     watchPage: backend.watchPage,
     loadCheckpoint: backend.loadCheckpoint,
-    restore: async (resourceId, entryId) => {
-      const expectedVersion = await currentContentVersion(resourceId, index, content, backend)
-      if (!expectedVersion) return { status: 'unavailable' }
-      return await backend.restore({
+    restore: async (resourceId, entryId, operationId) => {
+      const pendingVersion =
+        restoreVersions.get(operationId) ??
+        currentContentVersion(resourceId, index, content, backend)
+      restoreVersions.set(operationId, pendingVersion)
+      let expectedVersion: VersionStamp | null
+      try {
+        expectedVersion = await pendingVersion
+      } catch (error) {
+        restoreVersions.delete(operationId)
+        throw error
+      }
+      if (!expectedVersion) {
+        restoreVersions.delete(operationId)
+        return { status: 'unavailable' }
+      }
+      const result = await backend.restore({
         campaignId,
         resourceId,
         entryId,
+        operationId,
         expectedVersion,
       })
+      restoreVersions.delete(operationId)
+      return result
     },
   })
 }

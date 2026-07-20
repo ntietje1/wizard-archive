@@ -44,7 +44,10 @@ import {
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { collaborationColor } from '../../../shared/resources/collaboration-user'
-import { ITEM_HISTORY_ACTION } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import {
+  ITEM_HISTORY_ACTION,
+  ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 import presenceTest from '@convex-dev/presence/test'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { INITIAL_CONTENT_GENERATION } from '@wizard-archive/editor/resources/content-generation'
@@ -1828,6 +1831,26 @@ describe('resource structure commands', () => {
       )
     })
 
+    const restoreOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const restoredHistoryEntryId = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+    const preservedSnapshotId = generateDomainId(DOMAIN_ID_KIND.snapshot)
+    await t.run(async (ctx) => {
+      await ctx.db.insert('itemHistoryRestoreOperations', {
+        campaignUuid,
+        actorMemberUuid: campaign.dm.memberDomainId,
+        resourceUuid: resourceId,
+        operationUuid: restoreOperationId,
+        protocolVersion: ITEM_HISTORY_RESTORE_PROTOCOL_VERSION,
+        fingerprint: '0'.repeat(64),
+        receipt: {
+          status: 'restored',
+          operationId: restoreOperationId,
+          historyEntryId: restoredHistoryEntryId,
+          preservedSnapshotId,
+          restoredFromEntryId: restoredHistoryEntryId,
+        },
+      })
+    })
     await expect(
       execute(campaign, campaignUuid, { type: 'trash', resourceIds: [resourceId] }),
     ).resolves.toMatchObject({ status: 'completed' })
@@ -1837,7 +1860,7 @@ describe('resource structure commands', () => {
         resourceIds: [resourceId],
       }),
     ).resolves.toMatchObject({ status: 'completed' })
-    let cleanupStage: ItemHistoryCleanupStage | null = 'entries'
+    let cleanupStage: ItemHistoryCleanupStage | null = 'restoreOperations'
     while (cleanupStage) {
       const stage: ItemHistoryCleanupStage = cleanupStage
       cleanupStage = await t.run(
@@ -1862,6 +1885,14 @@ describe('resource structure commands', () => {
       candidateId: originalRetirementCandidateId,
     })
     await t.run(async (ctx) => {
+      await expect(
+        ctx.db
+          .query('itemHistoryRestoreOperations')
+          .withIndex('by_resource', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', resourceId),
+          )
+          .unique(),
+      ).resolves.toBeNull()
       await expect(
         ctx.db
           .query('itemHistoryCheckpointAssets')

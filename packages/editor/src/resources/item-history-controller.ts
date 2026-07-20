@@ -6,7 +6,8 @@ import type {
   ItemHistoryRestoreResult,
   ItemHistoryState,
 } from './editor-runtime-contract'
-import type { HistoryEntryId, ResourceId } from './domain-id'
+import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
+import type { HistoryEntryId, OperationId, ResourceId } from './domain-id'
 
 export type ItemHistoryPageResult =
   | Readonly<{
@@ -27,7 +28,11 @@ export interface ItemHistoryBackend {
     publish: (result: ItemHistoryPageResult) => void,
   ): () => void
   loadCheckpoint(resourceId: ResourceId, entryId: HistoryEntryId): Promise<ItemHistoryPreviewResult>
-  restore(resourceId: ResourceId, entryId: HistoryEntryId): Promise<ItemHistoryRestoreResult>
+  restore(
+    resourceId: ResourceId,
+    entryId: HistoryEntryId,
+    operationId: OperationId,
+  ): Promise<ItemHistoryRestoreResult>
 }
 
 type HistoryPage = {
@@ -42,6 +47,7 @@ type HistorySession = {
   readonly listeners: Set<() => void>
   readonly pages: Array<HistoryPage>
   previewRequest: number
+  restoreOperationId: OperationId | null
   restorePromise: Promise<ItemHistoryRestoreResult> | null
   state: ItemHistoryState
 }
@@ -117,11 +123,13 @@ class ItemHistoryControllerStore implements ItemHistoryController {
       ...session.state,
       restore: { status: 'ready', entryId, entryTime: entry.createdAt },
     })
+    session.restoreOperationId = null
   }
 
   cancelRestore(resourceId: ResourceId): void {
     const session = this.#sessions.get(resourceId)
     if (!session || session.state.restore.status === 'restoring') return
+    session.restoreOperationId = null
     this.#publishState(session, { ...session.state, restore: { status: 'closed' } })
   }
 
@@ -140,6 +148,7 @@ class ItemHistoryControllerStore implements ItemHistoryController {
       listeners: new Set(),
       pages: [],
       previewRequest: 0,
+      restoreOperationId: null,
       restorePromise: null,
       state: INITIAL_HISTORY_STATE,
     }
@@ -288,10 +297,12 @@ class ItemHistoryControllerStore implements ItemHistoryController {
         entryTime: entry.createdAt,
       },
     })
+    const operationId = session.restoreOperationId ?? generateDomainId(DOMAIN_ID_KIND.operation)
+    session.restoreOperationId = operationId
     const promise = this.backend
-      .restore(session.resourceId, entry.id)
+      .restore(session.resourceId, entry.id, operationId)
       .catch(() => ({ status: 'failed' }) as const)
-      .then((result) => this.#completeRestore(session, entry, result))
+      .then((result) => this.#completeRestore(session, entry, operationId, result))
     session.restorePromise = promise
     return promise
   }
@@ -299,11 +310,20 @@ class ItemHistoryControllerStore implements ItemHistoryController {
   #completeRestore(
     session: HistorySession,
     entry: Extract<ItemHistoryEntry, { checkpoint: unknown }>,
+    operationId: OperationId,
     result: ItemHistoryRestoreResult,
   ): ItemHistoryRestoreResult {
     if (!this.#current(session)) return result
     session.restorePromise = null
+    if (
+      (result.status === 'restored' &&
+        (result.operationId !== operationId || result.restoredFromEntryId !== entry.id)) ||
+      (result.status === 'rejected' && result.operationId !== operationId)
+    ) {
+      result = { status: 'failed' }
+    }
     if (result.status === 'restored') {
+      session.restoreOperationId = null
       session.previewRequest += 1
       this.#publishState(session, {
         ...session.state,
@@ -311,6 +331,7 @@ class ItemHistoryControllerStore implements ItemHistoryController {
         restore: { status: 'closed' },
       })
     } else {
+      if (result.status !== 'failed') session.restoreOperationId = null
       this.#publishState(session, {
         ...session.state,
         restore: {

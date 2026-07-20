@@ -10,6 +10,7 @@ import type {
   CampaignMemberId,
   HistoryEntryId,
   NoteBlockId,
+  OperationId,
   ResourceId,
   SnapshotId,
 } from './domain-id'
@@ -317,23 +318,31 @@ export type ItemHistoryRestoreState =
       result: Exclude<ItemHistoryRestoreResult, { status: 'restored' }>
     }>
 
-export type ItemHistoryRestoreResult =
+export const ITEM_HISTORY_RESTORE_PROTOCOL_VERSION = 'item-history-restore-v1' as const
+
+export type ItemHistoryRestoreReceipt =
   | Readonly<{
       status: 'restored'
+      operationId: OperationId
       historyEntryId: HistoryEntryId
       preservedSnapshotId: SnapshotId
       restoredFromEntryId: HistoryEntryId
     }>
   | Readonly<{
       status: 'rejected'
+      operationId: OperationId
       reason:
         | 'content_changed'
         | 'history_entry_unavailable'
+        | 'operation_id_reused'
         | 'resource_unavailable'
         | 'snapshot_incompatible'
         | 'snapshot_unavailable'
         | 'unauthorized'
     }>
+
+export type ItemHistoryRestoreResult =
+  | ItemHistoryRestoreReceipt
   | Readonly<{ status: 'unavailable' | 'failed' }>
 
 export type ItemHistoryState = Readonly<{

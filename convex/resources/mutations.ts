@@ -567,18 +567,19 @@ export const saveCanvasContent = campaignMutation({
 
 export const restoreItemHistoryCheckpoint = campaignMutation({
   args: {
+    operationId: operationIdValidator,
     resourceId: resourceIdValidator,
     entryId: historyEntryIdValidator,
     expectedVersion: versionStampValidator,
   },
   returns: itemHistoryRestoreResultValidator,
   handler: async (ctx, args) =>
-    await restoreItemHistoryCheckpointFn(
-      ctx,
-      assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
-      assertDomainId(DOMAIN_ID_KIND.historyEntry, args.entryId),
-      assertVersionStamp(args.expectedVersion),
-    ),
+    await restoreItemHistoryCheckpointFn(ctx, {
+      operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+      entryId: assertDomainId(DOMAIN_ID_KIND.historyEntry, args.entryId),
+      expectedVersion: assertVersionStamp(args.expectedVersion),
+    }),
 })
 
 export const heartbeatResourcePresence = campaignMutation({

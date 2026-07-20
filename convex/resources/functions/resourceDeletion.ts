@@ -260,7 +260,7 @@ export async function applyResourceDeletion(
         campaignId: plan.historyCampaignId,
         resourceIds: plan.historyResourceIds,
         resourceIndex: 0,
-        stage: 'entries',
+        stage: 'restoreOperations',
       },
     )
   }
@@ -287,6 +287,7 @@ const CAMPAIGN_RESOURCE_DELETION_STAGES = [
   'mapPins',
   'canvasContents',
   'searchDocuments',
+  'historyRestoreOperations',
   'historyEntries',
   'historyCheckpoints',
   'referenceEdges',
@@ -320,6 +321,7 @@ type CampaignResourceRow =
   | Doc<'resourceMapPins'>
   | Doc<'resourceCanvasContents'>
   | Doc<'resourceSearchDocuments'>
+  | Doc<'itemHistoryRestoreOperations'>
   | Doc<'resourceReferenceEdges'>
   | Doc<'resourceAssetCopyIntents'>
 
@@ -457,6 +459,11 @@ async function loadCampaignResourceDeletionBatch(
       return await ctx.db
         .query('resourceAssetCopyIntents')
         .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+        .take(CAMPAIGN_DELETION_BATCH_SIZE)
+    case 'historyRestoreOperations':
+      return await ctx.db
+        .query('itemHistoryRestoreOperations')
+        .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
         .take(CAMPAIGN_DELETION_BATCH_SIZE)
   }
   throw new TypeError(`Unknown campaign resource deletion stage: ${stage}`)
