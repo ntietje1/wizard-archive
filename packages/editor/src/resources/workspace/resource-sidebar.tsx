@@ -237,7 +237,7 @@ export function ResourceSidebar({
       aria-label="Sidebar"
       className="flex h-full min-h-0 flex-col bg-background"
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 px-1">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-1">
         <div className="flex items-center">{slots?.headerStart}</div>
         <strong className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
           {workspaceName ?? 'Resources'}
@@ -341,7 +341,7 @@ function ResourceSidebarControls({
     <div
       role="toolbar"
       aria-label="Sidebar controls"
-      className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1"
+      className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-1"
     >
       {canEdit && (
         <ResourceCreateMenu
