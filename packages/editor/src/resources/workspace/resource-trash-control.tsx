@@ -17,7 +17,7 @@ import {
 } from '../workspace-resource-drag'
 import type { WorkspaceActions } from './resource-operations'
 import { resourceKindLabel } from './resource-operations'
-import { resourceKindIcon } from './resource-presentation'
+import { resourceKindIcon } from './resource-icon'
 import { useEnsureResourceCollection } from './resource-loading'
 
 type TrashConfirmation =

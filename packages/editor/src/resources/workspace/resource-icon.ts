@@ -6,6 +6,7 @@ import {
   BookOpen,
   BowArrow,
   Box,
+  Boxes,
   Calendar,
   Cat,
   Cherry,
@@ -19,6 +20,7 @@ import {
   Grid2x2Plus,
   Heart,
   Locate,
+  Map as MapIcon,
   MapPin,
   MessageCircleWarning,
   Moon,
@@ -36,7 +38,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
-import { resourceKindIcon } from './resource-presentation'
+import type { ResourceKind } from '../resource-record'
 
 const RESOURCE_ICON_ENTRIES = [
   ['Apple', Apple],
@@ -81,6 +83,21 @@ export const RESOURCE_ICONS = Object.fromEntries(RESOURCE_ICON_ENTRIES) as Recor
   ResourceIconName,
   LucideIcon
 >
+
+export function resourceKindIcon(kind: ResourceKind): LucideIcon {
+  switch (kind) {
+    case 'note':
+      return FileText
+    case 'folder':
+      return Folder
+    case 'file':
+      return File
+    case 'map':
+      return MapIcon
+    case 'canvas':
+      return Boxes
+  }
+}
 
 export function resourceDisplayIcon(resource: AuthorizedResourceSummary): LucideIcon {
   if (resource.icon && resource.icon in RESOURCE_ICONS) {

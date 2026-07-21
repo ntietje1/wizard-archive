@@ -32,7 +32,7 @@ import type { ResourceContextMenuRequest } from './resource-context-menu-request
 import { ResourceAppearancePopover } from './resource-appearance-popover'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
-import { resourceKindIcon } from './resource-presentation'
+import { resourceKindIcon } from './resource-icon'
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'

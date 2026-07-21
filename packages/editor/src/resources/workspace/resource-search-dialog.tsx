@@ -13,7 +13,7 @@ import { planProjectedResourceStructureCommand } from '../resource-projected-str
 import type { ResourceKind } from '../resource-record'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
-import { resourceKindIcon } from './resource-presentation'
+import { resourceKindIcon } from './resource-icon'
 import { useEnsureResourceCollection } from './resource-loading'
 import { useModalDialog } from './use-modal-dialog'
 import { useResourceSnapshot } from './use-resource-snapshot'

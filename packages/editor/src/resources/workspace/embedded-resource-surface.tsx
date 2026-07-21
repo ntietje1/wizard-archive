@@ -21,7 +21,7 @@ import type {
   CollectionKnowledge,
   ResourceLoadResult,
 } from '../resource-index-contract'
-import { resourceKindIcon } from './resource-presentation'
+import { resourceKindIcon } from './resource-icon'
 import { useEnsureResourceCollection } from './resource-loading'
 import { useResourceStoreSnapshot, useWorkspaceIndexSnapshot } from './resource-store-snapshot'
 

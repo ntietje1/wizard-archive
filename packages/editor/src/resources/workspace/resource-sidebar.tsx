@@ -4,14 +4,11 @@ import {
   ArrowUpDown,
   Bookmark,
   BookmarkCheck,
-  ChevronDown,
   ChevronRight,
   FolderDot,
   FolderOpenDot,
-  Loader2,
   MoreHorizontal,
   PanelLeftClose,
-  Plus,
   Search,
 } from 'lucide-react'
 import {
@@ -31,7 +28,6 @@ import type {
   ResourceKnowledge,
   WorkspaceResourceIndexSnapshot,
 } from '../resource-index-contract'
-import { RESOURCE_KIND } from '../resource-record'
 import { sortAuthorizedResourceSummaries } from '../workspace-resource-index'
 import type { WorkspaceSort } from '../workspace-preferences'
 import { updateWorkspaceSelection, workspaceSelectionIntent } from '../workspace-selection'
@@ -43,24 +39,15 @@ import {
   workspaceResourceDropTargetProps,
   workspaceResourceInteractionProps,
 } from '../workspace-resource-drag'
-import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import { ResourceAppearancePopover } from './resource-appearance-popover'
+import { ResourceCreateMenu } from './resource-create-menu'
 import { resourceDisplayIcon } from './resource-icon'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
 import { useEnsureResourceCollection } from './resource-loading'
-import {
-  duplicateResourceKeys,
-  resourceKindIcon,
-  resourcePresentationKey,
-} from './resource-presentation'
 import { ResourceRenameInput } from './resource-rename-input'
 import { ResourceTrashControl } from './resource-trash-control'
-import { useWorkspaceCreation } from './use-workspace-creation'
-import { WorkspaceCreationStatus } from './workspace-creation-status'
-
-const EMPTY_BOOKMARKS: ReadonlySet<ResourceId> = new Set()
 
 type ResourceTreeExpansion =
   | Readonly<{ status: 'unavailable' }>
@@ -79,6 +66,27 @@ const DEFAULT_TREE_EXPANSION: ResourceTreeExpansionState = {
 type ResourceTreeExpansionController = Readonly<{
   isExpanded: (resourceId: ResourceId) => boolean
   setExpanded: (resourceId: ResourceId, expanded: boolean) => void
+}>
+
+type ResourceRowContext = Readonly<{
+  actions: WorkspaceActions
+  canEdit: boolean
+  initialFocusId: ResourceId | null
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
+  onSelectionChange: (action: WorkspaceSelectionAction) => void
+  renamingResourceId: ResourceId | null
+  selectedResourceId: ResourceId | null
+  selection: WorkspaceSelection
+  visibleIds: () => ReadonlyArray<ResourceId>
+}>
+
+type ResourceTreeContext = Readonly<{
+  expansion: ResourceTreeExpansionController
+  row: ResourceRowContext
+  runtime: EditorRuntime
+  snapshot: WorkspaceResourceIndexSnapshot
+  sort: WorkspaceSort
 }>
 
 function isTreeResourceExpanded(
@@ -210,6 +218,19 @@ export function ResourceSidebar({
       setTreeExpansion((current) => setTreeResourceExpanded(current, resourceId, expanded))
     },
   }
+  const row: ResourceRowContext = {
+    actions,
+    canEdit,
+    initialFocusId,
+    onOpenContextMenu,
+    onRenamingResourceIdChange,
+    onSelectionChange,
+    renamingResourceId,
+    selectedResourceId,
+    selection,
+    visibleIds,
+  }
+  const tree: ResourceTreeContext = { expansion, row, runtime, snapshot, sort }
   return (
     <nav
       ref={navigationElement}
@@ -269,38 +290,13 @@ export function ResourceSidebar({
       >
         {view === 'bookmarks' ? (
           <BookmarkedResourceCollection
-            actions={actions}
             bookmarks={bookmarks}
-            canEdit={canEdit}
-            renamingResourceId={renamingResourceId}
-            selectedResourceId={selectedResourceId}
-            selection={selection}
+            row={row}
             snapshot={snapshot}
             sort={sort}
-            visibleIds={visibleIds}
-            onSelectionChange={onSelectionChange}
-            onOpenContextMenu={onOpenContextMenu}
-            onRenamingResourceIdChange={onRenamingResourceIdChange}
           />
         ) : (
-          <ResourceCollection
-            actions={actions}
-            canEdit={canEdit}
-            expansion={expansion}
-            query={query}
-            runtime={runtime}
-            renamingResourceId={renamingResourceId}
-            initialFocusId={initialFocusId}
-            selectedResourceId={selectedResourceId}
-            selection={selection}
-            snapshot={snapshot}
-            sort={sort}
-            visibleIds={visibleIds}
-            depth={0}
-            onSelectionChange={onSelectionChange}
-            onOpenContextMenu={onOpenContextMenu}
-            onRenamingResourceIdChange={onRenamingResourceIdChange}
-          />
+          <ResourceCollection depth={0} query={query} tree={tree} />
         )}
       </div>
       <div className="m-1 shrink-0">
@@ -443,43 +439,20 @@ function ResourceSortMenu({
 }
 
 function BookmarkedResourceCollection({
-  actions,
   bookmarks,
-  canEdit,
-  onOpenContextMenu,
-  onRenamingResourceIdChange,
-  onSelectionChange,
-  selectedResourceId,
-  renamingResourceId,
-  selection,
+  row,
   snapshot,
   sort,
-  visibleIds,
 }: {
-  actions: WorkspaceActions
   bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
-  canEdit: boolean
-  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
-  onSelectionChange: (action: WorkspaceSelectionAction) => void
-  renamingResourceId: ResourceId | null
-  selectedResourceId: ResourceId | null
-  selection: WorkspaceSelection
+  row: ResourceRowContext
   snapshot: WorkspaceResourceIndexSnapshot
   sort: WorkspaceSort
-  visibleIds: () => ReadonlyArray<ResourceId>
 }) {
-  const bookmarkedIds = bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARKS
-  if (bookmarks.state === 'unknown')
-    return (
-      <SidebarState
-        load={{ loading: true, result: null, retry: () => {} }}
-        pendingLabel="Loading bookmarks…"
-      />
-    )
-  const ids = [...bookmarkedIds]
+  if (bookmarks.state === 'unknown') return <SidebarLoading label="Loading bookmarks…" />
+  if (bookmarks.state === 'missing') return null
   const resources = sortAuthorizedResourceSummaries(
-    ids.flatMap((resourceId) => {
+    [...bookmarks.value].flatMap((resourceId) => {
       const knowledge = snapshot.lookup(resourceId)
       return knowledge.state === 'known' && knowledge.value.lifecycle === 'active'
         ? [knowledge.value]
@@ -491,41 +464,20 @@ function BookmarkedResourceCollection({
   if (resources.length === 0) {
     return null
   }
-  const initialFocusId = selectedResourceId ?? resources[0]?.id ?? null
-  const ambiguous = duplicateResourceKeys(resources)
-  const selectedIds = new Set(selection.selectedIds)
+  const bookmarkRow = {
+    ...row,
+    initialFocusId: row.selectedResourceId ?? resources[0]?.id ?? null,
+  }
   return (
     <ul className="space-y-0.5">
       {resources.map((resource) => (
         <li key={resource.id}>
-          <div
-            aria-current={selectedResourceId === resource.id ? 'page' : undefined}
-            data-selected={selectedIds.has(resource.id)}
-            className="group flex min-w-0 items-center rounded-md px-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
-          >
-            <ResourceAppearanceButton actions={actions} canEdit={canEdit} resource={resource} />
-            <ResourceTreeButton
-              actions={actions}
-              ambiguous={ambiguous.has(resourcePresentationKey(resource))}
-              canEdit={canEdit}
-              expansion={{ status: 'unavailable' }}
-              initialFocusId={initialFocusId}
-              renaming={renamingResourceId === resource.id}
-              resource={resource}
-              selectedResourceId={selectedResourceId}
-              selection={selection}
-              showIcon={false}
-              visibleIds={visibleIds}
-              onSelectionChange={onSelectionChange}
-              onOpenContextMenu={onOpenContextMenu}
-              onRenamingChange={(renaming) =>
-                onRenamingResourceIdChange(renaming ? resource.id : null)
-              }
-            />
-            {renamingResourceId !== resource.id && (
-              <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
-            )}
-          </div>
+          <ResourceRow
+            depth={0}
+            expansion={{ status: 'unavailable' }}
+            resource={resource}
+            row={bookmarkRow}
+          />
         </li>
       ))}
     </ul>
@@ -533,78 +485,32 @@ function BookmarkedResourceCollection({
 }
 
 function ResourceCollection({
-  actions,
-  canEdit,
-  expansion,
-  initialFocusId,
-  onSelectionChange,
-  onOpenContextMenu,
-  onRenamingResourceIdChange,
-  query,
-  runtime,
-  renamingResourceId,
-  selectedResourceId,
-  selection,
-  snapshot,
-  sort,
-  visibleIds,
   depth,
+  query,
+  tree,
 }: {
-  actions: WorkspaceActions
-  canEdit: boolean
-  expansion: ResourceTreeExpansionController
-  initialFocusId: ResourceId | null
-  onSelectionChange: (action: WorkspaceSelectionAction) => void
-  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
-  query: ResourceCollectionQuery
-  runtime: EditorRuntime
-  renamingResourceId: ResourceId | null
-  selectedResourceId: ResourceId | null
-  selection: WorkspaceSelection
-  snapshot: WorkspaceResourceIndexSnapshot
-  sort: WorkspaceSort
-  visibleIds: () => ReadonlyArray<ResourceId>
   depth: number
+  query: ResourceCollectionQuery
+  tree: ResourceTreeContext
 }) {
-  const collection = snapshot.list(query)
+  const collection = tree.snapshot.list(query)
   const load = useEnsureResourceCollection(
-    runtime.resources.loader,
+    tree.runtime.resources.loader,
     query,
     collection.state === 'unknown',
   )
   if (collection.state === 'unknown') {
-    return <SidebarState load={load} pendingLabel="Loading resources…" />
+    return <ResourceCollectionState load={load} />
   }
   if (collection.items.length === 0 && collection.complete) {
     return null
   }
 
-  const items = sortAuthorizedResourceSummaries(collection.items, sort.by, sort.direction)
-  const ambiguous = duplicateResourceKeys(items)
+  const items = sortAuthorizedResourceSummaries(collection.items, tree.sort.by, tree.sort.direction)
   return (
     <ul className="space-y-0.5">
       {items.map((resource) => (
-        <ResourceTreeRow
-          actions={actions}
-          ambiguous={ambiguous.has(resourcePresentationKey(resource))}
-          canEdit={canEdit}
-          expansion={expansion}
-          key={resource.id}
-          resource={resource}
-          runtime={runtime}
-          renamingResourceId={renamingResourceId}
-          initialFocusId={initialFocusId}
-          selectedResourceId={selectedResourceId}
-          selection={selection}
-          snapshot={snapshot}
-          sort={sort}
-          visibleIds={visibleIds}
-          depth={depth}
-          onSelectionChange={onSelectionChange}
-          onOpenContextMenu={onOpenContextMenu}
-          onRenamingResourceIdChange={onRenamingResourceIdChange}
-        />
+        <ResourceTreeRow depth={depth} key={resource.id} resource={resource} tree={tree} />
       ))}
       {!collection.complete && (
         <li className="px-2 py-1">
@@ -620,112 +526,85 @@ function ResourceCollection({
 }
 
 function ResourceTreeRow({
-  actions,
-  ambiguous,
-  canEdit,
-  expansion,
-  initialFocusId,
-  onSelectionChange,
-  onOpenContextMenu,
-  onRenamingResourceIdChange,
-  resource,
-  renamingResourceId,
-  runtime,
-  selectedResourceId,
-  selection,
-  snapshot,
-  sort,
-  visibleIds,
   depth,
+  resource,
+  tree,
 }: {
-  actions: WorkspaceActions
-  ambiguous: boolean
-  canEdit: boolean
-  expansion: ResourceTreeExpansionController
-  initialFocusId: ResourceId | null
-  onSelectionChange: (action: WorkspaceSelectionAction) => void
-  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
-  renamingResourceId: ResourceId | null
-  resource: AuthorizedResourceSummary
-  runtime: EditorRuntime
-  selectedResourceId: ResourceId | null
-  selection: WorkspaceSelection
-  snapshot: WorkspaceResourceIndexSnapshot
-  sort: WorkspaceSort
-  visibleIds: () => ReadonlyArray<ResourceId>
   depth: number
+  resource: AuthorizedResourceSummary
+  tree: ResourceTreeContext
 }) {
-  const expanded = expansion.isExpanded(resource.id)
-  const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const
+  const expansion: ResourceTreeExpansion =
+    resource.kind === 'folder'
+      ? {
+          status: 'available',
+          expanded: tree.expansion.isExpanded(resource.id),
+          onChange: (expanded) => tree.expansion.setExpanded(resource.id, expanded),
+        }
+      : { status: 'unavailable' }
 
   return (
     <li
-      {...workspaceResourceDropTargetProps({ actions, canEdit, resource })}
+      {...workspaceResourceDropTargetProps({
+        actions: tree.row.actions,
+        canEdit: tree.row.canEdit,
+        resource,
+      })}
       className="relative rounded-md data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
     >
-      <div
-        aria-current={selectedResourceId === resource.id ? 'page' : undefined}
-        data-resource-kind={resource.kind}
-        data-selected={selection.selectedIds.includes(resource.id)}
-        className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
-        style={{ paddingLeft: `${4 + depth * 12}px` }}
-      >
-        {resource.kind === 'folder' ? (
-          <FolderExpansionButton
-            expanded={expanded}
-            resource={resource}
-            title={resource.title}
-            onToggle={() => expansion.setExpanded(resource.id, !expanded)}
-          />
-        ) : (
-          <ResourceAppearanceButton actions={actions} canEdit={canEdit} resource={resource} />
-        )}
-        <ResourceTreeButton
-          actions={actions}
-          ambiguous={ambiguous}
-          canEdit={canEdit}
-          expansion={{
-            status: 'available',
-            expanded,
-            onChange: (value) => expansion.setExpanded(resource.id, value),
-          }}
-          initialFocusId={initialFocusId}
-          renaming={renamingResourceId === resource.id}
-          onSelectionChange={onSelectionChange}
-          onOpenContextMenu={onOpenContextMenu}
-          onRenamingChange={(renaming) => onRenamingResourceIdChange(renaming ? resource.id : null)}
-          resource={resource}
-          selectedResourceId={selectedResourceId}
-          selection={selection}
-          showIcon={false}
-          visibleIds={visibleIds}
-        />
-        {renamingResourceId !== resource.id && (
-          <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
-        )}
-      </div>
-      {resource.kind === 'folder' && expanded && (
+      <ResourceRow depth={depth} expansion={expansion} resource={resource} row={tree.row} />
+      {expansion.status === 'available' && expansion.expanded && (
         <ResourceCollection
-          actions={actions}
-          canEdit={canEdit}
-          expansion={expansion}
-          query={childQuery}
-          runtime={runtime}
-          renamingResourceId={renamingResourceId}
-          initialFocusId={initialFocusId}
-          selectedResourceId={selectedResourceId}
-          selection={selection}
-          snapshot={snapshot}
-          sort={sort}
-          visibleIds={visibleIds}
           depth={depth + 1}
-          onSelectionChange={onSelectionChange}
-          onOpenContextMenu={onOpenContextMenu}
-          onRenamingResourceIdChange={onRenamingResourceIdChange}
+          query={{ parentId: resource.id, lifecycle: resource.lifecycle }}
+          tree={tree}
         />
       )}
     </li>
+  )
+}
+
+function ResourceRow({
+  depth,
+  expansion,
+  resource,
+  row,
+}: {
+  depth: number
+  expansion: ResourceTreeExpansion
+  resource: AuthorizedResourceSummary
+  row: ResourceRowContext
+}) {
+  const renaming = row.renamingResourceId === resource.id
+  const selected = row.selection.selectedIds.includes(resource.id)
+  return (
+    <div
+      aria-current={row.selectedResourceId === resource.id ? 'page' : undefined}
+      data-resource-kind={resource.kind}
+      data-selected={selected}
+      className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+      style={{ paddingLeft: `${4 + depth * 12}px` }}
+    >
+      {resource.kind === 'folder' && expansion.status === 'available' ? (
+        <FolderExpansionButton
+          expanded={expansion.expanded}
+          resource={resource}
+          onToggle={() => expansion.onChange(!expansion.expanded)}
+        />
+      ) : (
+        <ResourceAppearanceButton actions={row.actions} canEdit={row.canEdit} resource={resource} />
+      )}
+      <ResourceRowButton
+        expansion={expansion}
+        renaming={renaming}
+        resource={resource}
+        row={row}
+        selected={selected}
+      />
+      {!renaming && (
+        <ResourceRowMenuButton resource={resource} onOpenContextMenu={row.onOpenContextMenu} />
+      )}
+    </div>
   )
 }
 
@@ -757,18 +636,16 @@ function FolderExpansionButton({
   expanded,
   onToggle,
   resource,
-  title,
 }: {
   expanded: boolean
   onToggle: () => void
   resource: AuthorizedResourceSummary
-  title: string
 }) {
   const Icon = resourceDisplayIcon(resource)
   return (
     <button
       type="button"
-      aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+      aria-label={`${expanded ? 'Collapse' : 'Expand'} ${resource.title}`}
       aria-expanded={expanded}
       className="relative inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
       onClick={onToggle}
@@ -777,11 +654,11 @@ function FolderExpansionButton({
         className="size-4 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
         style={{ color: resource.color ?? undefined }}
       />
-      {expanded ? (
-        <ChevronDown className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
-      ) : (
-        <ChevronRight className="absolute size-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" />
-      )}
+      <ChevronRight
+        className={`absolute size-3.5 opacity-0 transition-transform group-hover:opacity-100 group-focus-within:opacity-100 ${
+          expanded ? 'rotate-90' : ''
+        }`}
+      />
     </button>
   )
 }
@@ -821,115 +698,95 @@ function ResourceAppearanceButton({
   )
 }
 
-function ResourceTreeButton({
-  actions,
-  ambiguous,
-  canEdit,
+function ResourceRowButton({
   expansion,
-  initialFocusId,
-  onSelectionChange,
-  onOpenContextMenu,
-  onRenamingChange,
   renaming,
   resource,
-  selectedResourceId,
-  selection,
-  showIcon = true,
-  visibleIds,
+  row,
+  selected,
 }: {
-  actions: WorkspaceActions
-  ambiguous: boolean
-  canEdit: boolean
   expansion: ResourceTreeExpansion
-  initialFocusId: ResourceId | null
-  onSelectionChange: (action: WorkspaceSelectionAction) => void
-  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
-  onRenamingChange: (renaming: boolean) => void
   renaming: boolean
   resource: AuthorizedResourceSummary
-  selectedResourceId: ResourceId | null
-  selection: WorkspaceSelection
-  showIcon?: boolean
-  visibleIds: () => ReadonlyArray<ResourceId>
+  row: ResourceRowContext
+  selected: boolean
 }) {
   if (renaming) {
     return (
       <ResourceRenameInput
-        actions={actions}
+        actions={row.actions}
         ariaLabel={`Rename ${resource.title}`}
         className="h-7 min-w-0 flex-1 rounded border border-input bg-background px-1 text-sm"
         resource={resource}
-        onComplete={() => onRenamingChange(false)}
+        onComplete={() => row.onRenamingResourceIdChange(null)}
       />
     )
   }
-  const Icon = resourceKindIcon(resource.kind)
   const tabbable =
-    selection.focusedId === resource.id ||
-    (selection.focusedId === null && initialFocusId === resource.id)
+    row.selection.focusedId === resource.id ||
+    (row.selection.focusedId === null && row.initialFocusId === resource.id)
   return (
     <button
       type="button"
-      aria-current={selectedResourceId === resource.id ? 'page' : undefined}
+      aria-current={row.selectedResourceId === resource.id ? 'page' : undefined}
+      aria-pressed={selected}
       data-resource-id={resource.id}
-      data-resource-kind={resource.kind}
-      data-selected={selection.selectedIds.includes(resource.id)}
       {...workspaceResourceInteractionProps({
-        canEdit,
+        canEdit: row.canEdit,
         contextMenuOrigin: 'sidebar',
-        onOpenContextMenu,
-        onSelectionChange,
+        onOpenContextMenu: row.onOpenContextMenu,
+        onSelectionChange: row.onSelectionChange,
         resource,
-        selection,
+        selection: row.selection,
       })}
       tabIndex={tabbable ? 0 : -1}
-      className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex h-7 min-w-0 flex-1 items-center rounded-md px-1 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={(event) =>
-        selectTreeResource({ actions, event, resource, visibleIds, onSelectionChange })
+        selectSidebarResource({
+          actions: row.actions,
+          event,
+          resource,
+          visibleIds: row.visibleIds,
+          onSelectionChange: row.onSelectionChange,
+        })
       }
       onKeyDown={(event) =>
-        handleTreeResourceKey({
+        handleSidebarResourceKey({
           event,
           expansion,
-          actions,
-          onSelectionChange,
+          actions: row.actions,
+          onSelectionChange: row.onSelectionChange,
           resource,
-          selection,
-          visibleIds,
+          selection: row.selection,
+          visibleIds: row.visibleIds,
         })
       }
     >
-      {showIcon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
       <span className="min-w-0 flex-1 truncate">{resource.title}</span>
-      {ambiguous && (
-        <span className="shrink-0 text-[10px] text-muted-foreground">
-          {resource.kind} · {resource.id.slice(-6)}
-        </span>
-      )}
     </button>
   )
 }
 
-type TreeResourceInteraction = Readonly<{
+type SidebarResourceInteraction = Readonly<{
   actions: WorkspaceActions
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
   visibleIds: () => ReadonlyArray<ResourceId>
 }>
 
-function selectTreeResource({
+function selectSidebarResource({
   actions,
   event,
   onSelectionChange,
   resource,
   visibleIds,
-}: TreeResourceInteraction & { event: MouseEvent<HTMLButtonElement> }) {
+}: SidebarResourceInteraction & { event: MouseEvent<HTMLButtonElement> }) {
   const intent = workspaceSelectionIntent(event)
   onSelectionChange({ type: 'select', resourceId: resource.id, visibleIds: visibleIds(), intent })
   if (intent === 'single') actions.open(resource.id)
 }
 
-function handleTreeResourceKey({
+function handleSidebarResourceKey({
   actions,
   event,
   expansion,
@@ -937,7 +794,7 @@ function handleTreeResourceKey({
   resource,
   selection,
   visibleIds,
-}: TreeResourceInteraction & {
+}: SidebarResourceInteraction & {
   event: KeyboardEvent<HTMLButtonElement>
   expansion: ResourceTreeExpansion
   selection: WorkspaceSelection
@@ -971,11 +828,11 @@ function handleTreeResourceKey({
       return
     case 'ArrowUp':
     case 'ArrowDown':
-      moveTreeResourceFocus(event, selection, visibleIds(), onSelectionChange)
+      moveSidebarResourceFocus(event, selection, visibleIds(), onSelectionChange)
   }
 }
 
-function moveTreeResourceFocus(
+function moveSidebarResourceFocus(
   event: KeyboardEvent<HTMLButtonElement>,
   selection: WorkspaceSelection,
   visibleIds: ReadonlyArray<ResourceId>,
@@ -1015,115 +872,14 @@ function focusResourceButton(navigation: HTMLElement | null, resourceId: Resourc
   }
 }
 
-export function ResourceCreateMenu({
-  actions,
-  label,
-  parentId,
-  runtime,
-  variant = 'icon',
-}: {
-  actions: WorkspaceActions
-  label: string
-  parentId: ResourceId | null
-  runtime: EditorRuntime
-  variant?: 'card' | 'icon'
-}) {
-  const [open, setOpen] = useState(false)
-  const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, parentId)
-  const blocked = creation.blocked
-  return (
-    <div className={variant === 'card' ? 'relative h-[140px]' : 'relative'}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={label}
-        disabled={blocked}
-        className={
-          variant === 'card'
-            ? 'flex h-full w-full items-center justify-center rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-            : 'inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
-        }
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Plus className="size-4" />
-      </button>
-      {open && (
-        <div
-          role="menu"
-          className={`absolute left-0 z-30 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md ${
-            variant === 'card' ? 'top-full mt-1' : 'top-8'
-          }`}
-        >
-          {(
-            [
-              RESOURCE_KIND.note,
-              RESOURCE_KIND.folder,
-              RESOURCE_KIND.map,
-              RESOURCE_KIND.canvas,
-              RESOURCE_KIND.file,
-            ] as const
-          ).map((kind) => {
-            const Icon = resourceKindIcon(kind)
-            const isPending = creation.pendingControlId === kind
-            return (
-              <button
-                key={kind}
-                role="menuitem"
-                type="button"
-                aria-busy={isPending}
-                disabled={blocked}
-                className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
-                onClick={async () => {
-                  const settlement = await creation.run(kind, (signal) =>
-                    actions.create(kind, parentId, '', signal),
-                  )
-                  if (settlement.status === 'completed') {
-                    setOpen(false)
-                  }
-                }}
-              >
-                {isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Icon className="size-4" />
-                )}
-                {resourceKindLabel(kind)}
-              </button>
-            )
-          })}
-          <WorkspaceCreationStatus
-            creation={creation}
-            onCompleted={() => {
-              setOpen(false)
-            }}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function SidebarState({
+function ResourceCollectionState({
   load,
-  pendingLabel,
 }: {
   load: ReturnType<typeof useEnsureResourceCollection>
-  pendingLabel: string
 }) {
   const result = load.result
   if (!result || result.status === 'completed') {
-    return (
-      <div aria-label={pendingLabel} className="space-y-2 p-2">
-        {[72, 52, 84, 64, 76].map((width) => (
-          <div
-            key={width}
-            className="h-5 animate-pulse rounded bg-muted"
-            style={{ width: `${width}%` }}
-          />
-        ))}
-      </div>
-    )
+    return <SidebarLoading label="Loading resources…" />
   }
   if (result.status === 'scope_changed') return <p className="p-2 text-xs">Workspace changed</p>
   if (result.status === 'unavailable') {
@@ -1137,6 +893,20 @@ function SidebarState({
           Try again
         </button>
       )}
+    </div>
+  )
+}
+
+function SidebarLoading({ label }: { label: string }) {
+  return (
+    <div aria-label={label} className="space-y-2 p-2">
+      {[72, 52, 84, 64, 76].map((width) => (
+        <div
+          key={width}
+          className="h-5 animate-pulse rounded bg-muted"
+          style={{ width: `${width}%` }}
+        />
+      ))}
     </div>
   )
 }

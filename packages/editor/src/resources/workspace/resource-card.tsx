@@ -11,7 +11,6 @@ import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceDisplayIcon } from './resource-icon'
-import { resourceKindLabel } from './resource-operations'
 
 const FOLDER_CARD_HEIGHT = 140
 const FOLDER_CARD_WIDTH = 400
@@ -43,7 +42,6 @@ const FOLDER_CARD_PATH = [
 
 export function ResourceCard({
   actions,
-  ambiguous,
   canEdit,
   onSelectionChange,
   onOpenContextMenu,
@@ -53,7 +51,6 @@ export function ResourceCard({
   visibleIds,
 }: {
   actions: WorkspaceActions
-  ambiguous: boolean
   canEdit: boolean
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
@@ -112,11 +109,6 @@ export function ResourceCard({
           <span className="min-w-0 flex-1 truncate p-1 text-sm font-medium">{resource.title}</span>
         </span>
         <ResourceCardIcon resource={resource} />
-        {ambiguous && (
-          <span className="mt-1 truncate px-1 text-xs text-muted-foreground">
-            {resourceKindLabel(resource.kind)} · {resource.id.slice(-6)}
-          </span>
-        )}
       </div>
       <button
         type="button"

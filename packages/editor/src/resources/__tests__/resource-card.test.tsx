@@ -17,7 +17,6 @@ describe('ResourceCard', () => {
     const { container } = render(
       <ResourceCard
         actions={{ open } as unknown as WorkspaceActions}
-        ambiguous={false}
         canEdit
         resource={resource}
         selected={false}
@@ -32,6 +31,8 @@ describe('ResourceCard', () => {
     expect(staticSurface).not.toBeNull()
     expect(staticSurface?.querySelector('svg')).not.toBeNull()
     expect(staticSurface?.textContent).toBe('')
+    expect(container).not.toHaveTextContent(resource.id.slice(-6))
+    expect(container).not.toHaveTextContent('Note ·')
 
     fireEvent.click(screen.getByRole('button', { name: 'More options for Note' }), {
       clientX: 18,

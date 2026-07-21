@@ -1,6 +1,6 @@
 import { SuggestionMenuController } from '@blocknote/react'
 import type { ReactNode } from 'react'
-import { resourceKindIcon } from '../../resources/workspace/resource-presentation'
+import { resourceKindIcon } from '../../resources/workspace/resource-icon'
 import type { NoteBlockNoteEditor } from '../note-editor-schema'
 import { NoteSuggestionMenu } from '../note-suggestion-menu'
 import type { NoteSuggestionMenuItem } from '../note-suggestion-menu'

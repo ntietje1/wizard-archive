@@ -40,6 +40,28 @@ function dragEventWithPosition(
 }
 
 describe('ResourceShell', () => {
+  it('keeps duplicate resource identity out of sidebar presentation', async () => {
+    const { core, resource } = await shellRuntime(true, 'active', 'edit', 'note')
+    const created = await createWorkspaceActions(core.runtime, vi.fn()).create(
+      'note',
+      null,
+      resource.title,
+    )
+    expect(created.status).toBe('completed')
+    if (created.status !== 'completed') throw new Error('Expected note creation to complete')
+
+    render(
+      <ResourceShell ariaLabel="Duplicate titles" runtime={core.runtime} workspaceName="DM view" />,
+    )
+
+    const sidebar = within(await screen.findByRole('navigation', { name: 'Sidebar' }))
+    expect(sidebar.getAllByRole('button', { name: resource.title })).toHaveLength(2)
+    expect(sidebar.queryByText(/note ·/)).not.toBeInTheDocument()
+    expect(sidebar.queryByText(resource.id.slice(-6))).not.toBeInTheDocument()
+    expect(sidebar.queryByText(created.resourceId.slice(-6))).not.toBeInTheDocument()
+    core.dispose()
+  })
+
   it('becomes ready only after the initial root collection is known', async () => {
     const { core } = await shellRuntime(true)
     await core.runtime.resources.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
@@ -1617,15 +1639,15 @@ describe('ResourceShell', () => {
     fireEvent.click(first)
     fireEvent.click(second, { ctrlKey: true })
     fireEvent.click(third, { shiftKey: true })
-    expect(first).toHaveAttribute('data-selected', 'true')
-    expect(second).toHaveAttribute('data-selected', 'true')
-    expect(third).toHaveAttribute('data-selected', 'true')
+    expect(first).toHaveAttribute('aria-pressed', 'true')
+    expect(second).toHaveAttribute('aria-pressed', 'true')
+    expect(third).toHaveAttribute('aria-pressed', 'true')
 
     fireEvent.keyDown(third, { key: 'ArrowDown' })
     expect(second).toHaveFocus()
-    expect(first).toHaveAttribute('data-selected', 'false')
-    expect(second).toHaveAttribute('data-selected', 'true')
-    expect(third).toHaveAttribute('data-selected', 'false')
+    expect(first).toHaveAttribute('aria-pressed', 'false')
+    expect(second).toHaveAttribute('aria-pressed', 'true')
+    expect(third).toHaveAttribute('aria-pressed', 'false')
     core.dispose()
   })
 

@@ -17,18 +17,14 @@ import {
   leaveWorkspaceResourceDrop,
 } from '../workspace-resource-drag'
 import { useEnsureResourceCollection } from './resource-loading'
-import { ResourceCreateMenu } from './resource-sidebar'
+import { ResourceCreateMenu } from './resource-create-menu'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
 import { reportWorkspaceTextFeedback, resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
-import {
-  duplicateResourceKeys,
-  resourceKindIcon,
-  resourcePresentationKey,
-} from './resource-presentation'
+import { resourceKindIcon } from './resource-icon'
 import { NoteSessionEditor } from '../../notes/note-session-editor'
 import { CanvasEditor } from '../../canvas/canvas-editor'
 import { CanvasResourceEmbed } from './canvas-resource-embed'
@@ -370,7 +366,6 @@ function FolderViewport({
     )
   }
 
-  const ambiguous = duplicateResourceKeys(resources)
   const selectedIds = new Set(selection.selectedIds)
   const visibleIds = resources.map((resource) => resource.id)
   return (
@@ -385,7 +380,6 @@ function FolderViewport({
         {resources.map((resource) => (
           <ResourceCard
             actions={actions}
-            ambiguous={ambiguous.has(resourcePresentationKey(resource))}
             canEdit={canEdit}
             key={resource.id}
             resource={resource}

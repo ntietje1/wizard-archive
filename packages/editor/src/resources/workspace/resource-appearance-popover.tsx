@@ -7,8 +7,7 @@ import {
 } from '@wizard-archive/ui/shadcn/components/popover'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
-import { RESOURCE_ICONS } from './resource-icon'
-import { resourceKindIcon } from './resource-presentation'
+import { RESOURCE_ICONS, resourceKindIcon } from './resource-icon'
 
 const COLORS = [
   { label: 'Default', value: null },
