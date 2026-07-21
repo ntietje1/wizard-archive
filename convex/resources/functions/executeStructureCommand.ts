@@ -30,6 +30,7 @@ import {
   ResourceGraphRejection,
   planResourceCompensation,
   requireActiveResourceFolder,
+  resourceGraphDependencies,
   selectResourceClosure,
   selectResourceRoots,
   transitionResourceCompensation,
@@ -162,40 +163,6 @@ async function loadDescendants(
   }
 }
 
-function selectedResourceIds(command: ResourceStructureCommand): ReadonlyArray<ResourceId> {
-  switch (command.type) {
-    case 'create':
-    case 'updateMetadata':
-      return [command.resourceId]
-    case 'move':
-    case 'trash':
-    case 'restore':
-    case 'permanentlyDelete':
-      return command.resourceIds
-    case 'deepCopy':
-      return command.sourceRootIds
-  }
-}
-
-function destinationParentId(command: ResourceStructureCommand): ResourceId | null {
-  return command.type === 'create'
-    ? command.parentId
-    : command.type === 'move' || command.type === 'deepCopy'
-      ? command.destinationParentId
-      : command.type === 'restore' && command.destination !== 'previousParent'
-        ? command.destination
-        : null
-}
-
-function needsDescendants(command: ResourceStructureCommand): boolean {
-  return (
-    command.type === 'trash' ||
-    command.type === 'restore' ||
-    command.type === 'permanentlyDelete' ||
-    command.type === 'deepCopy'
-  )
-}
-
 async function loadGraph(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
@@ -203,30 +170,23 @@ async function loadGraph(
 ): Promise<LoadedGraph> {
   const rows = new Map<ResourceId, Doc<'resources'>>()
   const resources = new Map<ResourceId, ResourceRecord>()
-  const selectedIds = selectedResourceIds(command)
-  const needsSpines =
-    command.type === 'move' ||
-    command.type === 'trash' ||
-    command.type === 'restore' ||
-    command.type === 'permanentlyDelete' ||
-    command.type === 'deepCopy'
+  const dependencies = resourceGraphDependencies(command)
   await Promise.all(
-    selectedIds.map((resourceId) =>
-      needsSpines
+    dependencies.selectedResourceIds.map((resourceId) =>
+      dependencies.loadSelectedAncestors
         ? loadResourceSpine(ctx, resourceId, rows, resources)
         : loadResource(ctx, resourceId, rows, resources),
     ),
   )
-  const destinationId = destinationParentId(command)
-  if (destinationId !== null) {
-    if (command.type === 'move' || command.type === 'deepCopy' || command.type === 'restore') {
-      await loadResourceSpine(ctx, destinationId, rows, resources)
+  if (dependencies.destinationParentId !== null) {
+    if (dependencies.loadDestinationAncestors) {
+      await loadResourceSpine(ctx, dependencies.destinationParentId, rows, resources)
     } else {
-      await loadResource(ctx, destinationId, rows, resources)
+      await loadResource(ctx, dependencies.destinationParentId, rows, resources)
     }
   }
-  if (needsDescendants(command)) {
-    await loadDescendants(ctx, campaignId, selectedIds, rows, resources)
+  if (dependencies.loadDescendants) {
+    await loadDescendants(ctx, campaignId, dependencies.selectedResourceIds, rows, resources)
   }
 
   const tombstones = new Map<ResourceId, ResourceTombstone>()

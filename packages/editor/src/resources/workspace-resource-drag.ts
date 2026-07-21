@@ -14,7 +14,7 @@ import type {
 } from './workspace-resource-drop-plan'
 
 const WORKSPACE_RESOURCE_DRAG_TYPE = 'application/x-wizard-archive-resource-ids'
-const WORKSPACE_RESOURCE_DRAG_SCHEMA = 'resource-drag-v1'
+const WORKSPACE_RESOURCE_DRAG_SCHEMA = 'resource-drag-v2'
 
 type WorkspaceDataTransfer = BrowserPlainTransferData &
   Pick<DataTransfer, 'getData' | 'types'> & { dropEffect: DataTransfer['dropEffect'] }
@@ -49,7 +49,6 @@ function beginWorkspaceResourceDrag(
     JSON.stringify({
       schema: WORKSPACE_RESOURCE_DRAG_SCHEMA,
       resourceIds,
-      lifecycle: resource.lifecycle,
     }),
   )
 }
@@ -197,7 +196,6 @@ function parseWorkspaceResourceDrag(value: string): WorkspaceResourceDragPayload
   if (
     !isRecord(decoded) ||
     decoded.schema !== WORKSPACE_RESOURCE_DRAG_SCHEMA ||
-    (decoded.lifecycle !== 'active' && decoded.lifecycle !== 'trashed') ||
     !Array.isArray(decoded.resourceIds) ||
     decoded.resourceIds.length === 0
   ) {
@@ -210,7 +208,7 @@ function parseWorkspaceResourceDrag(value: string): WorkspaceResourceDragPayload
     if (!resourceId) return null
     resourceIds.push(resourceId)
   }
-  return { resourceIds: Array.from(new Set(resourceIds)), lifecycle: decoded.lifecycle }
+  return { resourceIds: Array.from(new Set(resourceIds)) }
 }
 
 function copyDragRequested(event: Pick<WorkspaceDropEvent, 'altKey' | 'ctrlKey' | 'metaKey'>) {

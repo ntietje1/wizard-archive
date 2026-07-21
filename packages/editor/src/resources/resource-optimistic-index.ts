@@ -25,9 +25,12 @@ import {
   sameResourceProjectionScope,
 } from './resource-index-contract'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
+import { planProjectedResourceStructureCommand } from './resource-projected-structure-plan'
+import type { ResourceGraphPlan } from './resource-graph-transition'
 
 type StoredOverlay = ResourceOptimisticOverlay & {
   affectedResourceIds: ReadonlySet<ResourceId>
+  structurePlan: ResourceGraphPlan
   createdResource?: AuthorizedResourceSummary
 }
 
@@ -85,58 +88,6 @@ function postconditionsSatisfied(
   })
 }
 
-function collectKnownTree(
-  snapshot: WorkspaceResourceIndexSnapshot,
-  rootIds: ReadonlyArray<ResourceId>,
-): ReadonlySet<ResourceId> {
-  const collected = new Set<ResourceId>()
-  const pending = [...rootIds]
-  while (pending.length > 0) {
-    const resourceId = pending.pop()!
-    if (collected.has(resourceId)) continue
-    const resource = snapshot.lookup(resourceId)
-    if (resource.state !== 'known') continue
-    collected.add(resourceId)
-    if (resource.value.kind === 'folder') enqueueKnownChildren(snapshot, resourceId, pending)
-  }
-  return collected
-}
-
-function enqueueKnownChildren(
-  snapshot: WorkspaceResourceIndexSnapshot,
-  parentId: ResourceId,
-  pending: Array<ResourceId>,
-): void {
-  for (const lifecycle of ['active', 'trashed'] as const) {
-    const children = snapshot.list({ parentId, lifecycle })
-    if (children.state !== 'known') continue
-    for (const child of children.items) pending.push(child.id)
-  }
-}
-
-function dependencyResourceIds(command: OptimisticResourceCommand): ReadonlyArray<ResourceId> {
-  switch (command.type) {
-    case 'create':
-      return command.parentId === null ? [] : [command.parentId]
-    case 'updateMetadata':
-      return [command.resourceId]
-    case 'move':
-      return [
-        ...command.resourceIds,
-        ...(command.destinationParentId === null ? [] : [command.destinationParentId]),
-      ]
-    case 'trash':
-      return command.resourceIds
-    case 'restore':
-      return [
-        ...command.resourceIds,
-        ...(command.destination === null || command.destination === 'previousParent'
-          ? []
-          : [command.destination]),
-      ]
-  }
-}
-
 function commandResourceIds(command: OptimisticResourceCommand): ReadonlyArray<ResourceId> {
   switch (command.type) {
     case 'create':
@@ -159,24 +110,6 @@ function normalizeOptimisticCommand(command: OptimisticResourceCommand): Optimis
 
 function sameCommand(left: OptimisticResourceCommand, right: OptimisticResourceCommand): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
-}
-
-function dependenciesAvailable(
-  snapshot: WorkspaceResourceIndexSnapshot,
-  command: OptimisticResourceCommand,
-): boolean {
-  if (command.type === 'create' && snapshot.lookup(command.resourceId).state === 'known')
-    return false
-  for (const resourceId of dependencyResourceIds(command)) {
-    const dependency = snapshot.lookup(resourceId)
-    if (dependency.state !== 'known') return false
-    const isParent =
-      (command.type === 'create' && command.parentId === resourceId) ||
-      (command.type === 'move' && command.destinationParentId === resourceId) ||
-      (command.type === 'restore' && command.destination === resourceId)
-    if (isParent && dependency.value.kind !== 'folder') return false
-  }
-  return true
 }
 
 async function createOptimisticResource(
@@ -207,13 +140,12 @@ async function createOptimisticResource(
   }
 }
 
-function affectedResourceIds(
-  snapshot: WorkspaceResourceIndexSnapshot,
-  command: OptimisticResourceCommand,
-): ReadonlySet<ResourceId> {
-  return command.type === 'trash' || command.type === 'restore'
-    ? collectKnownTree(snapshot, command.resourceIds)
-    : new Set(commandResourceIds(command))
+function affectedResourceIds(plan: ResourceGraphPlan): ReadonlySet<ResourceId> {
+  return new Set([
+    ...plan.created.map((resource) => resource.resourceId),
+    ...plan.patches.map(({ resourceId }) => resourceId),
+    ...plan.deletedResourceIds,
+  ])
 }
 
 function confirmedVersion(
@@ -231,38 +163,20 @@ function applyOverlay(
   resource: AuthorizedResourceSummary,
   overlay: StoredOverlay,
 ): AuthorizedResourceSummary {
-  let projected = resource
-  switch (overlay.command.type) {
-    case 'create':
-      break
-    case 'updateMetadata':
-      if (overlay.command.resourceId === resource.id) {
-        projected = { ...projected, ...overlay.command.changes }
-      }
-      break
-    case 'move':
-      if (overlay.command.resourceIds.includes(resource.id)) {
-        projected = { ...projected, displayParentId: overlay.command.destinationParentId }
-      }
-      break
-    case 'trash':
-      if (overlay.affectedResourceIds.has(resource.id)) {
-        projected = { ...projected, lifecycle: 'trashed' }
-      }
-      break
-    case 'restore':
-      if (overlay.affectedResourceIds.has(resource.id)) {
-        projected = {
-          ...projected,
-          lifecycle: 'active',
-          ...(overlay.command.resourceIds.includes(resource.id) &&
-          overlay.command.destination !== 'previousParent'
-            ? { displayParentId: overlay.command.destination }
-            : {}),
+  const changes = overlay.structurePlan.patches.find(
+    ({ resourceId }) => resourceId === resource.id,
+  )?.changes
+  const projected =
+    changes === undefined
+      ? resource
+      : {
+          ...resource,
+          ...(changes.parentId === undefined ? {} : { displayParentId: changes.parentId }),
+          ...(changes.title === undefined ? {} : { title: changes.title }),
+          ...(changes.icon === undefined ? {} : { icon: changes.icon }),
+          ...(changes.color === undefined ? {} : { color: changes.color }),
+          ...(changes.lifecycle === undefined ? {} : { lifecycle: changes.lifecycle }),
         }
-      }
-      break
-  }
   const metadataVersion = confirmedVersion(overlay, resource.id)
   return metadataVersion === null ? projected : { ...projected, metadataVersion }
 }
@@ -374,9 +288,15 @@ export class OptimisticWorkspaceResourceIndex {
     if (!sameResourceProjectionScope(baseSnapshot.scope, this.#baseScope)) {
       return { status: 'rejected', reason: 'scope_changed' }
     }
-    if (!dependenciesAvailable(baseSnapshot, command)) {
-      return { status: 'rejected', reason: 'dependency_unavailable' }
+    const basePlan = planProjectedResourceStructureCommand(baseSnapshot, command)
+    if (basePlan.status === 'unavailable') return { status: 'rejected', reason: basePlan.reason }
+    if (basePlan.status === 'rejected') return { status: 'rejected', reason: 'invalid_command' }
+    const projectedPlan = planProjectedResourceStructureCommand(this.#snapshot, command)
+    if (projectedPlan.status === 'unavailable') {
+      return { status: 'rejected', reason: projectedPlan.reason }
     }
+    if (projectedPlan.status === 'rejected')
+      return { status: 'rejected', reason: 'invalid_command' }
 
     const createdResource =
       command.type === 'create'
@@ -391,7 +311,8 @@ export class OptimisticWorkspaceResourceIndex {
       ordinal: this.#nextOrdinal++,
       operationId,
       command,
-      affectedResourceIds: affectedResourceIds(this.#snapshot, command),
+      structurePlan: projectedPlan.plan,
+      affectedResourceIds: affectedResourceIds(projectedPlan.plan),
       ...(createdResource === undefined ? {} : { createdResource }),
     })
     this.#publish()

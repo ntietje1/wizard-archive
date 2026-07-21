@@ -180,7 +180,10 @@ export function MapPinSurface({
         event.stopPropagation()
         setResourceDragActive(false)
         const position = imagePosition(imageRef.current, event)
-        if (!position || drag.lifecycle !== 'active') {
+        if (
+          !position ||
+          drag.resourceIds.some((resourceId) => resolveResource(resourceId)?.lifecycle !== 'active')
+        ) {
           setFeedback({
             message: 'Resources can only be pinned to the map image.',
             retry: null,

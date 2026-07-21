@@ -204,6 +204,7 @@ function CanvasViewport({
       canEdit={canEdit}
       drop={createWorkspaceAuthoredDestinationDropResolver({
         actions,
+        resolveResource: (resourceId) => resolveRuntimeResource(runtime, resourceId),
       })}
       renderEmbed={({
         activation,
@@ -284,6 +285,7 @@ function NoteViewport({
         resources={{
           drop: createWorkspaceAuthoredDestinationDropResolver({
             actions,
+            resolveResource: (resourceId) => resolveRuntimeResource(runtime, resourceId),
           }),
           report: actions.report,
           renderNote: renderEmbeddedNoteResource,
@@ -301,6 +303,14 @@ function NoteViewport({
       />
     </div>
   )
+}
+
+function resolveRuntimeResource(
+  runtime: EditorRuntime,
+  resourceId: AuthorizedResourceSummary['id'],
+): AuthorizedResourceSummary | null {
+  const resource = runtime.resources.index.getSnapshot().lookup(resourceId)
+  return resource.state === 'known' ? resource.value : null
 }
 
 function FolderViewport({

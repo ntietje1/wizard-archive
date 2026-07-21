@@ -248,13 +248,11 @@ describe('MapViewer', () => {
       dropEffect: 'none',
       getData: () =>
         JSON.stringify({
-          schema: 'resource-drag-v1',
+          schema: 'resource-drag-v2',
           resourceIds: [droppedId],
-          lifecycle: 'active',
         }),
     }
     expect(readWorkspaceResourceDrag(dataTransfer)).toEqual({
-      lifecycle: 'active',
       resourceIds: [droppedId],
     })
     const mapSurface = imageElement.parentElement!

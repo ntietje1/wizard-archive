@@ -4,9 +4,10 @@ import type {
   ResourcePostcondition,
   ResourceStructureCommand,
   ResourceStructureRejection,
+  ResourceStructureResult,
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
-import type { AuditStamp, ResourceRecord } from './resource-record'
+import type { AuditStamp, ResourceMetadataValue, ResourceRecord } from './resource-record'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE, resourceMetadataValue } from './resource-record'
 import {
   advanceResourceMetadataVersion,
@@ -26,6 +27,91 @@ export type ResourceGraphTransition = Readonly<{
   tombstones: ReadonlyArray<ResourceTombstone>
   receipt: ResourceCommandReceipt
 }>
+
+export type ResourceGraphPlan = Readonly<{
+  created: ReadonlyArray<
+    Readonly<{
+      resourceId: ResourceId
+      campaignId: CampaignId
+      metadata: ResourceMetadataValue
+    }>
+  >
+  patches: ReadonlyArray<
+    Readonly<{
+      resourceId: ResourceId
+      before: ResourceMetadataValue
+      changes: Partial<
+        Pick<ResourceMetadataValue, 'parentId' | 'title' | 'icon' | 'color' | 'lifecycle'>
+      >
+    }>
+  >
+  deletedResourceIds: ReadonlyArray<ResourceId>
+  result: Exclude<ResourceStructureResult, { type: 'deepCopied' }>
+}>
+
+export type ResourceGraphDependencies = Readonly<{
+  selectedResourceIds: ReadonlyArray<ResourceId>
+  destinationParentId: ResourceId | null
+  loadSelectedAncestors: boolean
+  loadDestinationAncestors: boolean
+  loadDescendants: boolean
+}>
+
+export function resourceGraphDependencies(
+  command: ResourceStructureCommand,
+): ResourceGraphDependencies {
+  switch (command.type) {
+    case 'create':
+      return {
+        selectedResourceIds: [command.resourceId],
+        destinationParentId: command.parentId,
+        loadSelectedAncestors: false,
+        loadDestinationAncestors: false,
+        loadDescendants: false,
+      }
+    case 'updateMetadata':
+      return {
+        selectedResourceIds: [command.resourceId],
+        destinationParentId: null,
+        loadSelectedAncestors: false,
+        loadDestinationAncestors: false,
+        loadDescendants: false,
+      }
+    case 'move':
+      return {
+        selectedResourceIds: command.resourceIds,
+        destinationParentId: command.destinationParentId,
+        loadSelectedAncestors: true,
+        loadDestinationAncestors: true,
+        loadDescendants: false,
+      }
+    case 'trash':
+    case 'permanentlyDelete':
+      return {
+        selectedResourceIds: command.resourceIds,
+        destinationParentId: null,
+        loadSelectedAncestors: true,
+        loadDestinationAncestors: false,
+        loadDescendants: true,
+      }
+    case 'restore':
+      return {
+        selectedResourceIds: command.resourceIds,
+        destinationParentId: command.destination === 'previousParent' ? null : command.destination,
+        loadSelectedAncestors: true,
+        loadDestinationAncestors: command.destination !== 'previousParent',
+        loadDescendants: true,
+      }
+    case 'deepCopy':
+      return {
+        selectedResourceIds: command.sourceRootIds,
+        destinationParentId: command.destinationParentId,
+        loadSelectedAncestors: true,
+        loadDestinationAncestors: false,
+        loadDescendants: true,
+      }
+  }
+}
 
 export type ResourceCompensationPlan =
   | Readonly<{
@@ -205,10 +291,6 @@ function selectActiveRoots(
     return reject('invalid_lifecycle')
   }
   return roots
-}
-
-function emptyTransition(receiptValue: ResourceCommandReceipt): ResourceGraphTransition {
-  return { upserted: [], deletedResourceIds: [], tombstones: [], receipt: receiptValue }
 }
 
 function requiredPostconditions(
@@ -487,13 +569,11 @@ async function transitionMoveCompensation(
   }
 }
 
-async function createResource(
+function planCreateResource(
   graph: ResourceGraph,
   campaignId: CampaignId,
-  operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'create' }>,
-  audit: AuditStamp,
-): Promise<ResourceGraphTransition> {
+): ResourceGraphPlan {
   const existing = graph.resources.get(command.resourceId)
   if (existing) {
     return reject(existing.campaignId === campaignId ? 'invalid_command' : 'ownership_mismatch')
@@ -511,115 +591,72 @@ async function createResource(
     color: command.color,
     lifecycle: 'active' as const,
   }
-  const resource: ResourceRecord = {
-    id: command.resourceId,
-    campaignId,
-    ...metadata,
-    lifecycle: { state: 'active' },
-    metadataVersion: await initialResourceMetadataVersion(metadata),
-    created: audit,
-    updated: audit,
-  }
   return {
-    ...emptyTransition(
-      receipt(
-        campaignId,
-        operationId,
-        { type: 'created', resourceId: resource.id },
-        present([resource]),
-      ),
-    ),
-    upserted: [resource],
+    created: [{ resourceId: command.resourceId, campaignId, metadata }],
+    patches: [],
+    deletedResourceIds: [],
+    result: { type: 'created', resourceId: command.resourceId },
   }
 }
 
-async function updateResourceMetadata(
+function planUpdateResourceMetadata(
   graph: ResourceGraph,
   campaignId: CampaignId,
-  operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'updateMetadata' }>,
-  audit: AuditStamp,
-): Promise<ResourceGraphTransition> {
+): ResourceGraphPlan {
   const resource = requireOwnedResource(graph, campaignId, command.resourceId)
   if (resource.lifecycle.state !== 'active') return reject('invalid_lifecycle')
-  const updated = await replaceMetadata(resource, command.changes, audit)
   return {
-    ...emptyTransition(
-      receipt(
-        campaignId,
-        operationId,
-        { type: 'metadataUpdated', resourceId: resource.id },
-        present([updated]),
-      ),
-    ),
-    upserted: updated === resource ? [] : [updated],
+    created: [],
+    patches: [plannedPatch(resource, command.changes)],
+    deletedResourceIds: [],
+    result: { type: 'metadataUpdated', resourceId: resource.id },
   }
 }
 
-async function moveResources(
+function planMoveResources(
   graph: ResourceGraph,
   campaignId: CampaignId,
-  operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'move' }>,
-  audit: AuditStamp,
-): Promise<ResourceGraphTransition> {
+): ResourceGraphPlan {
   const roots = selectActiveRoots(graph, campaignId, command.resourceIds)
   const destination = requireActiveResourceFolder(graph, campaignId, command.destinationParentId)
   ensureNoMoveCycle(graph, campaignId, roots, destination)
-  const updated = await Promise.all(
-    roots.map((resource) =>
-      replaceMetadata(resource, { parentId: command.destinationParentId }, audit),
-    ),
-  )
   return {
-    ...emptyTransition(
-      receipt(
-        campaignId,
-        operationId,
-        { type: 'moved', resourceIds: updated.map((resource) => resource.id) },
-        present(updated),
-      ),
+    created: [],
+    patches: roots.map((resource) =>
+      plannedPatch(resource, { parentId: command.destinationParentId }),
     ),
-    upserted: updated.filter((resource, index) => resource !== roots[index]),
+    deletedResourceIds: [],
+    result: { type: 'moved', resourceIds: roots.map((resource) => resource.id) },
   }
 }
 
-async function trashResources(
+function planTrashResources(
   graph: ResourceGraph,
   campaignId: CampaignId,
-  operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'trash' }>,
-  audit: AuditStamp,
-): Promise<ResourceGraphTransition> {
+): ResourceGraphPlan {
   const roots = selectActiveRoots(graph, campaignId, command.resourceIds)
   const closure = selectResourceClosure(graph, campaignId, roots)
-  const updated = await Promise.all(
-    closure.map(async (resource) =>
-      resource.lifecycle.state === 'trashed'
-        ? resource
-        : await replaceMetadata(resource, { lifecycle: { state: 'trashed', ...audit } }, audit),
-    ),
-  )
   return {
-    ...emptyTransition(
-      receipt(
-        campaignId,
-        operationId,
-        { type: 'trashed', resourceIds: updated.map((resource) => resource.id) },
-        present(updated),
+    created: [],
+    patches: closure.map((resource) =>
+      plannedPatch(
+        resource,
+        resource.lifecycle.state === 'trashed' ? {} : { lifecycle: 'trashed' },
       ),
     ),
-    upserted: updated.filter((resource, index) => resource !== closure[index]),
+    deletedResourceIds: [],
+    result: { type: 'trashed', resourceIds: closure.map((resource) => resource.id) },
   }
 }
 
-async function restoreResources(
+function planRestoreResources(
   graph: ResourceGraph,
   campaignId: CampaignId,
-  operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'restore' }>,
-  audit: AuditStamp,
-): Promise<ResourceGraphTransition> {
+): ResourceGraphPlan {
   const roots = selectResourceRoots(graph, campaignId, command.resourceIds)
   if (roots.some((resource) => resource.lifecycle.state !== 'trashed')) {
     return reject('invalid_lifecycle')
@@ -631,9 +668,10 @@ async function restoreResources(
   if (destination) ensureNoMoveCycle(graph, campaignId, roots, destination)
   const rootIds = new Set(roots.map((resource) => resource.id))
   const closure = selectResourceClosure(graph, campaignId, roots)
-  const updated = await Promise.all(
-    closure.map(async (resource) => {
-      if (resource.lifecycle.state === 'active') return resource
+  return {
+    created: [],
+    patches: closure.map((resource) => {
+      if (resource.lifecycle.state === 'active') return plannedPatch(resource, {})
       const parent = resource.parentId === null ? null : graph.resources.get(resource.parentId)
       const parentId = rootIds.has(resource.id)
         ? command.destination === 'previousParent'
@@ -642,29 +680,18 @@ async function restoreResources(
             : resource.parentId
           : command.destination
         : resource.parentId
-      return await replaceMetadata(resource, { parentId, lifecycle: { state: 'active' } }, audit)
+      return plannedPatch(resource, { parentId, lifecycle: 'active' })
     }),
-  )
-  return {
-    ...emptyTransition(
-      receipt(
-        campaignId,
-        operationId,
-        { type: 'restored', resourceIds: updated.map((resource) => resource.id) },
-        present(updated),
-      ),
-    ),
-    upserted: updated.filter((resource, index) => resource !== closure[index]),
+    deletedResourceIds: [],
+    result: { type: 'restored', resourceIds: closure.map((resource) => resource.id) },
   }
 }
 
-async function permanentlyDeleteResources(
+function planPermanentlyDeleteResources(
   graph: ResourceGraph,
   campaignId: CampaignId,
-  operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'permanentlyDelete' }>,
-  audit: AuditStamp,
-): Promise<ResourceGraphTransition> {
+): ResourceGraphPlan {
   const roots = selectResourceRoots(graph, campaignId, command.resourceIds)
   for (const root of roots) {
     const parent = root.parentId === null ? null : graph.resources.get(root.parentId)
@@ -679,21 +706,107 @@ async function permanentlyDeleteResources(
   if (closure.some((resource) => resource.lifecycle.state !== 'trashed')) {
     return reject('invalid_lifecycle')
   }
-  const tombstones = await Promise.all(
-    closure.map((resource) =>
-      createResourceTombstone(resource.id, campaignId, resource.metadataVersion, audit.at),
-    ),
-  )
-  const deletedResourceIds = closure.map((resource) => resource.id)
   return {
-    upserted: [],
+    created: [],
+    patches: [],
+    deletedResourceIds: closure.map((resource) => resource.id),
+    result: { type: 'permanentlyDeleted', resourceIds: closure.map((resource) => resource.id) },
+  }
+}
+
+function plannedPatch(
+  resource: ResourceRecord,
+  changes: ResourceGraphPlan['patches'][number]['changes'],
+): ResourceGraphPlan['patches'][number] {
+  return { resourceId: resource.id, before: resourceMetadataValue(resource), changes }
+}
+
+export function planResourceGraphTransition(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  command: Exclude<ResourceStructureCommand, { type: 'deepCopy' }>,
+): ResourceGraphPlan {
+  switch (command.type) {
+    case 'create':
+      return planCreateResource(graph, campaignId, command)
+    case 'updateMetadata':
+      return planUpdateResourceMetadata(graph, campaignId, command)
+    case 'move':
+      return planMoveResources(graph, campaignId, command)
+    case 'trash':
+      return planTrashResources(graph, campaignId, command)
+    case 'restore':
+      return planRestoreResources(graph, campaignId, command)
+    case 'permanentlyDelete':
+      return planPermanentlyDeleteResources(graph, campaignId, command)
+  }
+}
+
+async function applyResourceGraphPlan(
+  graph: ResourceGraph,
+  plan: ResourceGraphPlan,
+  campaignId: CampaignId,
+  operationId: OperationId,
+  audit: AuditStamp,
+): Promise<ResourceGraphTransition> {
+  const created = await Promise.all(
+    plan.created.map(async ({ resourceId, campaignId: ownerCampaignId, metadata }) => ({
+      id: resourceId,
+      campaignId: ownerCampaignId,
+      ...metadata,
+      lifecycle: { state: 'active' as const },
+      metadataVersion: await initialResourceMetadataVersion(metadata),
+      created: audit,
+      updated: audit,
+    })),
+  )
+  const patchedEntries = await Promise.all(
+    plan.patches.map(async ({ resourceId, changes }) => {
+      const resource = requireOwnedResource(graph, campaignId, resourceId)
+      const { lifecycle, ...metadataChanges } = changes
+      return {
+        resource,
+        updated: await replaceMetadata(
+          resource,
+          {
+            ...metadataChanges,
+            ...(lifecycle === undefined
+              ? {}
+              : {
+                  lifecycle:
+                    lifecycle === 'active'
+                      ? ({ state: 'active' } as const)
+                      : ({ state: 'trashed', ...audit } as const),
+                }),
+          },
+          audit,
+        ),
+      }
+    }),
+  )
+  const tombstones = await Promise.all(
+    plan.deletedResourceIds.map((resourceId) => {
+      const resource = requireOwnedResource(graph, campaignId, resourceId)
+      return createResourceTombstone(resource.id, campaignId, resource.metadataVersion, audit.at)
+    }),
+  )
+  const patched = patchedEntries.map(({ updated }) => updated)
+  const presentResources = [...created, ...patched]
+  const deletedResourceIds = plan.deletedResourceIds
+  return {
+    upserted: [
+      ...created,
+      ...patchedEntries.flatMap(({ resource, updated }) => (updated === resource ? [] : [updated])),
+    ],
     deletedResourceIds,
     tombstones,
     receipt: receipt(
       campaignId,
       operationId,
-      { type: 'permanentlyDeleted', resourceIds: deletedResourceIds },
-      deletedResourceIds.map((resourceId) => ({ state: 'missing', resourceId })),
+      plan.result,
+      deletedResourceIds.length > 0
+        ? deletedResourceIds.map((resourceId) => ({ state: 'missing' as const, resourceId }))
+        : present(presentResources),
     ),
   }
 }
@@ -705,18 +818,11 @@ export async function transitionResourceGraph(
   command: Exclude<ResourceStructureCommand, { type: 'deepCopy' }>,
   audit: AuditStamp,
 ): Promise<ResourceGraphTransition> {
-  switch (command.type) {
-    case 'create':
-      return await createResource(graph, campaignId, operationId, command, audit)
-    case 'updateMetadata':
-      return await updateResourceMetadata(graph, campaignId, operationId, command, audit)
-    case 'move':
-      return await moveResources(graph, campaignId, operationId, command, audit)
-    case 'trash':
-      return await trashResources(graph, campaignId, operationId, command, audit)
-    case 'restore':
-      return await restoreResources(graph, campaignId, operationId, command, audit)
-    case 'permanentlyDelete':
-      return await permanentlyDeleteResources(graph, campaignId, operationId, command, audit)
-  }
+  return await applyResourceGraphPlan(
+    graph,
+    planResourceGraphTransition(graph, campaignId, command),
+    campaignId,
+    operationId,
+    audit,
+  )
 }

@@ -73,7 +73,7 @@ describe('planWorkspaceResourceDrop', () => {
     expect(
       planWorkspaceResourceDrop(
         snapshot([source, folder]),
-        { resourceIds: [source.id], lifecycle: 'active' },
+        { resourceIds: [source.id] },
         { type: 'collection', parentId: folder.id, title: folder.title },
         false,
       ),
@@ -97,7 +97,7 @@ describe('planWorkspaceResourceDrop', () => {
     })
     const plan = planWorkspaceResourceDrop(
       snapshot([trashed, folder]),
-      { resourceIds: [trashed.id], lifecycle: 'trashed' },
+      { resourceIds: [trashed.id] },
       { type: 'collection', parentId: folder.id, title: folder.title },
       false,
     )
@@ -116,7 +116,7 @@ describe('planWorkspaceResourceDrop', () => {
     expect(
       planWorkspaceResourceDrop(
         snapshot([folder, child]),
-        { resourceIds: [folder.id], lifecycle: 'active' },
+        { resourceIds: [folder.id] },
         { type: 'collection', parentId: child.id, title: child.title },
         false,
       ),
@@ -128,17 +128,12 @@ describe('planWorkspaceResourceDrop', () => {
     const current = snapshot([source])
 
     expect(
-      planWorkspaceResourceDrop(
-        current,
-        { resourceIds: [source.id], lifecycle: 'active' },
-        { type: 'trash' },
-        false,
-      ),
+      planWorkspaceResourceDrop(current, { resourceIds: [source.id] }, { type: 'trash' }, false),
     ).toMatchObject({ status: 'accepted', effect: 'trash', label: 'Trash item' })
     expect(
       planWorkspaceResourceDrop(
         current,
-        { resourceIds: [source.id], lifecycle: 'active' },
+        { resourceIds: [source.id] },
         { type: 'collection', parentId: null, title: 'Campaign' },
         false,
       ),

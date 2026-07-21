@@ -6,6 +6,7 @@ import type {
 import type { AuthoredDestination } from '../authored-destination-contract'
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import type { ResourceId } from '../domain-id'
+import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import { hasWorkspaceResourceDrag, readWorkspaceResourceDrag } from '../workspace-resource-drag'
 import type { WorkspaceActions, WorkspaceCreationSettlement } from './resource-operations'
 
@@ -16,8 +17,10 @@ const EMPTY_DROP_RESULT: AuthoredDestinationDropResult = {
 
 export function createWorkspaceAuthoredDestinationDropResolver({
   actions,
+  resolveResource,
 }: {
   actions: Pick<WorkspaceActions, 'createAssetFile'>
+  resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null
 }): AuthoredDestinationDropResolver {
   return {
     canResolve: (dataTransfer) =>
@@ -27,7 +30,12 @@ export function createWorkspaceAuthoredDestinationDropResolver({
     resolve: (dataTransfer, maximumDestinations, signal) => {
       if (signal.aborted) return Promise.resolve(EMPTY_DROP_RESULT)
       const resourceDrag = readWorkspaceResourceDrag(dataTransfer)
-      if (resourceDrag?.lifecycle === 'active') {
+      if (
+        resourceDrag &&
+        resourceDrag.resourceIds.every(
+          (resourceId) => resolveResource(resourceId)?.lifecycle === 'active',
+        )
+      ) {
         return Promise.resolve({
           kind: 'destinations',
           destinations: resourceDrag.resourceIds

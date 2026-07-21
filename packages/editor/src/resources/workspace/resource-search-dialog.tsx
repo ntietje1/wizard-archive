@@ -9,6 +9,7 @@ import type {
   ResourceKnowledge,
   WorkspaceResourceIndexSnapshot,
 } from '../resource-index-contract'
+import { planProjectedResourceStructureCommand } from '../resource-projected-structure-plan'
 import type { ResourceKind } from '../resource-record'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
@@ -503,24 +504,15 @@ function isEligibleMoveDestination(
   resourceIds: ReadonlyArray<ResourceId>,
   destinationParentId: ResourceId | null,
 ): boolean {
-  const resourceIdSet = new Set(resourceIds)
-  if (destinationParentId !== null) {
-    if (resourceIdSet.has(destinationParentId)) return false
-    const ancestors = snapshot.ancestors(destinationParentId)
-    if (
-      ancestors.state !== 'known' ||
-      ancestors.value.some((ancestor) => resourceIdSet.has(ancestor.id))
-    ) {
-      return false
-    }
-  }
-  let changesParent = false
-  for (const resourceId of resourceIds) {
-    const resource = snapshot.lookup(resourceId)
-    if (resource.state !== 'known') return false
-    if (resource.value.displayParentId !== destinationParentId) changesParent = true
-  }
-  return changesParent
+  const result = planProjectedResourceStructureCommand(snapshot, {
+    type: 'move',
+    resourceIds,
+    destinationParentId,
+  })
+  return (
+    result.status === 'planned' &&
+    result.plan.patches.some(({ before }) => before.parentId !== destinationParentId)
+  )
 }
 
 function knownResource(

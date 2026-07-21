@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { assertDomainId, DOMAIN_ID_KIND } from '../../domain-id'
+import type { AuthorizedResourceSummary } from '../../resource-index-contract'
 import { createWorkspaceAuthoredDestinationDropResolver } from '../workspace-authored-destination-drop'
 
 const RESOURCE_A = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-65f2-7cc0-8a3b-111111111111')
@@ -10,12 +11,12 @@ describe('workspace canvas drops', () => {
     const createAssetFile = vi.fn()
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createAssetFile },
+      resolveResource: activeResource,
     })
     const transfer = createDataTransfer({
       'application/x-wizard-archive-resource-ids': JSON.stringify({
-        schema: 'resource-drag-v1',
+        schema: 'resource-drag-v2',
         resourceIds: [RESOURCE_A, RESOURCE_B],
-        lifecycle: 'active',
       }),
     })
 
@@ -41,6 +42,7 @@ describe('workspace canvas drops', () => {
       .mockResolvedValueOnce({ status: 'rejected', reason: 'unsupported' })
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createAssetFile },
+      resolveResource: () => null,
     })
     const transfer = createDataTransfer({}, [image, rejected])
 
@@ -63,6 +65,7 @@ describe('workspace canvas drops', () => {
     )
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createAssetFile },
+      resolveResource: () => null,
     })
 
     await expect(resolver.resolveFiles([image], 1, new AbortController().signal)).resolves.toEqual({
@@ -87,6 +90,7 @@ describe('workspace canvas drops', () => {
           }),
         ),
       },
+      resolveResource: () => null,
     })
 
     const result = await resolver.resolveFiles([image], 1, new AbortController().signal)
@@ -109,6 +113,7 @@ describe('workspace canvas drops', () => {
     const createAssetFile = vi.fn()
     const resolver = createWorkspaceAuthoredDestinationDropResolver({
       actions: { createAssetFile },
+      resolveResource: () => null,
     })
     const transfer = createDataTransfer({
       'text/uri-list': '# browser metadata\r\nhttps://example.com/reference\r\n',
@@ -136,4 +141,8 @@ function createDataTransfer(data: Record<string, string>, files: ReadonlyArray<F
     getData: (type: string) => data[type] ?? '',
     types,
   } as unknown as DataTransfer
+}
+
+function activeResource(resourceId: typeof RESOURCE_A): AuthorizedResourceSummary {
+  return { id: resourceId, lifecycle: 'active' } as AuthorizedResourceSummary
 }
