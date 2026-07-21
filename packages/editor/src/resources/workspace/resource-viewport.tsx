@@ -35,6 +35,7 @@ import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigati
 import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
 import { ResourceCard } from './resource-card'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import type { ContentRecovery, ContentRecoveryActionResult } from '../content-session-contract'
 
 export function ResourceViewport({
@@ -372,7 +373,6 @@ function FolderViewport({
     <FolderViewportSurface
       actions={actions}
       canEdit={canEdit}
-      className="overflow-y-auto"
       folderId={folder.id}
       folderTitle={folder.title}
     >
@@ -417,14 +417,12 @@ function FolderViewportSurface({
   actions,
   canEdit,
   children,
-  className = '',
   folderId,
   folderTitle,
 }: {
   actions: WorkspaceActions
   canEdit: boolean
   children: ReactNode
-  className?: string
   folderId: AuthorizedResourceSummary['id']
   folderTitle: string
 }) {
@@ -433,7 +431,7 @@ function FolderViewportSurface({
       aria-label={`${folderTitle} resource drop zone`}
       data-resource-id={folderId}
       data-workspace-drop-target="collection"
-      className={`flex min-h-0 flex-1 flex-col data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring ${className}`}
+      className="flex min-h-0 flex-1 flex-col overflow-hidden data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
       onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
       onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
       onDrop={
@@ -447,7 +445,9 @@ function FolderViewportSurface({
           : undefined
       }
     >
-      {children}
+      <ScrollArea className="min-h-0 flex-1" contentClassName="flex min-h-full flex-col">
+        {children}
+      </ScrollArea>
     </div>
   )
 }
@@ -463,7 +463,7 @@ function CreateNewDashboard({
 }) {
   const blocked = creation.blocked
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
+    <div className="flex min-h-0 flex-1 items-center justify-center p-6">
       <div className="w-full max-w-2xl">
         <p className="mb-1 text-center text-sm text-muted-foreground">{folder.title}</p>
         <h2 className="mb-6 text-center text-xl font-semibold">Create New</h2>

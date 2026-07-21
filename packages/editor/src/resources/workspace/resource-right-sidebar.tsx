@@ -59,7 +59,7 @@ export function ResourceRightSidebar({
           ))}
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <ScrollArea className="min-h-0 flex-1">
         <ResourcePanel
           actions={actions}
           noteHeadingNavigation={noteHeadingNavigation}
@@ -67,7 +67,7 @@ export function ResourceRightSidebar({
           resource={resource}
           runtime={runtime}
         />
-      </div>
+      </ScrollArea>
     </aside>
   )
 }
@@ -432,7 +432,7 @@ function AvailableResourceHistoryPanel({
   }
   const groups = groupHistoryEntriesByDay(list.entries)
   return (
-    <ScrollArea className="h-full">
+    <div>
       <ol aria-label="Item history">
         {groups.map((group) => (
           <li key={group.label}>
@@ -475,7 +475,7 @@ function AvailableResourceHistoryPanel({
           </button>
         </div>
       ) : null}
-    </ScrollArea>
+    </div>
   )
 }
 

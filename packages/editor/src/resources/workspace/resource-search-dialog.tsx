@@ -20,6 +20,7 @@ import { useResourceSnapshot } from './use-resource-snapshot'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
 import { EmbeddedResourceSurface } from './embedded-resource-surface'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 
 type SearchState =
   | Readonly<{ status: 'idle'; results: ReadonlyArray<WorkspaceSearchResult> }>
@@ -261,7 +262,7 @@ function OpenResourceSearchDialog({
           >
             {searchStatus(query, state, displayItems.length, recentResults.length)}
           </output>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1">
             <div
               id="resource-search-results"
               role="listbox"
@@ -307,7 +308,7 @@ function OpenResourceSearchDialog({
                 </p>
               )}
             </div>
-          </div>
+          </ScrollArea>
         </div>
         {purpose.type === 'open' && showPreview && (
           <SearchPreview resource={selectedResource} runtime={runtime} />

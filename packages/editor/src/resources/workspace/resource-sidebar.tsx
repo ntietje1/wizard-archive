@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@wizard-archive/ui/shadcn/components/dropdown-menu'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -266,39 +267,41 @@ export function ResourceSidebar({
         onSortChange={onSortChange}
         onViewChange={onViewChange}
       />
-      <div
-        aria-label={`${view} resource drop zone`}
-        data-workspace-drop-target="collection"
-        className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
-        onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
-        onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
-        onDrop={
-          canEdit
-            ? (event) =>
-                void finishWorkspaceResourceDrop(event, actions, {
-                  type: 'collection',
-                  parentId: null,
-                  title: workspaceName ?? 'Resources',
-                })
-            : undefined
-        }
-        onContextMenu={(event) => {
-          if (!canEdit || event.target !== event.currentTarget) return
-          event.preventDefault()
-          onOpenBackgroundContextMenu({ x: event.clientX, y: event.clientY })
-        }}
-      >
-        {view === 'bookmarks' ? (
-          <BookmarkedResourceCollection
-            bookmarks={bookmarks}
-            row={row}
-            snapshot={snapshot}
-            sort={sort}
-          />
-        ) : (
-          <ResourceCollection depth={0} query={query} tree={tree} />
-        )}
-      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div
+          aria-label={`${view} resource drop zone`}
+          data-workspace-drop-target="collection"
+          className="min-h-full p-1 data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
+          onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
+          onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
+          onDrop={
+            canEdit
+              ? (event) =>
+                  void finishWorkspaceResourceDrop(event, actions, {
+                    type: 'collection',
+                    parentId: null,
+                    title: workspaceName ?? 'Resources',
+                  })
+              : undefined
+          }
+          onContextMenu={(event) => {
+            if (!canEdit || event.target !== event.currentTarget) return
+            event.preventDefault()
+            onOpenBackgroundContextMenu({ x: event.clientX, y: event.clientY })
+          }}
+        >
+          {view === 'bookmarks' ? (
+            <BookmarkedResourceCollection
+              bookmarks={bookmarks}
+              row={row}
+              snapshot={snapshot}
+              sort={sort}
+            />
+          ) : (
+            <ResourceCollection depth={0} query={query} tree={tree} />
+          )}
+        </div>
+      </ScrollArea>
       <div className="m-1 shrink-0">
         <ResourceTrashControl
           actions={actions}
