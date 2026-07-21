@@ -14,6 +14,8 @@ import type { CampaignMemberStatus } from '../../shared/campaigns/types'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
+import { assertUsername, usernameValidator } from '../users/validation'
+import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
 export const createCampaign = authMutation({
   args: {
@@ -31,12 +33,14 @@ export const createCampaign = authMutation({
 
 export const joinCampaign = authMutation({
   args: {
-    campaignId: campaignIdValidator,
+    dmUsername: usernameValidator,
+    slug: campaignSlugValidator,
   },
   returns: campaignMemberStatusValidator,
   handler: async (ctx, args): Promise<CampaignMemberStatus> => {
     return joinCampaignFn(ctx, {
-      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId),
+      dmUsername: assertUsername(args.dmUsername),
+      slug: assertCampaignSlug(args.slug),
     })
   },
 })
@@ -45,6 +49,7 @@ export const updateCampaign = dmMutation({
   args: {
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    slug: v.optional(campaignSlugValidator),
     resourceAccessDefaults: v.optional(
       v.object({
         folderInheritance: v.union(
@@ -59,6 +64,7 @@ export const updateCampaign = dmMutation({
     return updateCampaignFn(ctx, {
       name: args.name,
       description: args.description,
+      slug: args.slug === undefined ? undefined : assertCampaignSlug(args.slug),
       resourceAccessDefaults: args.resourceAccessDefaults,
     })
   },

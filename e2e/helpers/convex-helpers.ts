@@ -4,22 +4,39 @@ import { api } from 'convex/_generated/api'
 import { AUTH_STORAGE_PATH } from './constants'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import type { APIRequestContext, APIResponse } from '@playwright/test'
+import type { PaginationResult } from 'convex/server'
+import type { Campaign } from 'shared/campaigns/types'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
 const CONVEX_OPERATION_ATTEMPTS = 3
 
-export function getCampaignIdFromUrl(url: string): CampaignId {
-  const [, campaignsSegment, campaignId, editorSegment] = new URL(url).pathname.split('/')
-  if (campaignsSegment !== 'campaigns' || !campaignId || editorSegment !== 'editor') {
-    throw new Error(`Expected campaign route, got ${url}`)
-  }
-  return assertDomainId(DOMAIN_ID_KIND.campaign, campaignId)
+export async function getCampaignInvitationPath(campaignId: CampaignId) {
+  const campaign = await getCampaignById(campaignId)
+  return `/join/${campaign.dmUserProfile.username}/${campaign.slug}`
 }
 
-export function getCampaignInvitationPath(campaignId: CampaignId) {
-  return `/join/${campaignId}`
+export async function getCampaignEditorPath(campaignId: CampaignId) {
+  const campaign = await getCampaignById(campaignId)
+  return `/campaigns/${campaign.dmUserProfile.username}/${campaign.slug}/editor`
+}
+
+async function getCampaignById(campaignId: CampaignId) {
+  const client = await createE2EConvexClient()
+  let cursor: string | null = null
+  for (;;) {
+    const result: PaginationResult<Campaign> = await client.query(
+      api.campaigns.queries.getUserCampaigns,
+      {
+        paginationOpts: { cursor, numItems: 100 },
+      },
+    )
+    const campaign = result.page.find((item) => item.id === campaignId)
+    if (campaign) return campaign
+    if (result.isDone)
+      throw new Error(`Campaign is absent from the authenticated list: ${campaignId}`)
+    cursor = result.continueCursor
+  }
 }
 
 export async function ensureAcceptedPlayerMember({

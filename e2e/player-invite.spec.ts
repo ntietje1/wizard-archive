@@ -5,7 +5,7 @@ import {
   navigateToCampaignId,
   provisionCampaign,
 } from './helpers/campaign-helpers'
-import { getCampaignIdFromUrl, getCampaignInvitationPath } from './helpers/convex-helpers'
+import { getCampaignInvitationPath } from './helpers/convex-helpers'
 import { gotoSignIn, signIn } from './helpers/auth-helpers'
 import { testName } from './helpers/constants'
 
@@ -49,7 +49,6 @@ test.describe.serial('player invite flow', () => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaignId(page, provisionedCampaignId)
 
-    const campaignId = getCampaignIdFromUrl(page.url())
     const playerContext = await browser.newContext()
     const playerPage = await playerContext.newPage()
 
@@ -57,7 +56,7 @@ test.describe.serial('player invite flow', () => {
     await signIn(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
     await playerPage.waitForURL('**/campaigns', { timeout: 30000 })
 
-    await playerPage.goto(getCampaignInvitationPath(campaignId))
+    await playerPage.goto(await getCampaignInvitationPath(provisionedCampaignId))
     const joinButton = playerPage.getByRole('button', { name: /join/i })
     await expect(joinButton).toBeVisible({ timeout: 10000 })
     await joinButton.click()

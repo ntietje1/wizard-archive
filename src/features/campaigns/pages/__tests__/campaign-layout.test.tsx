@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CampaignLayout } from '../campaign-layout'
 
 const routeState = vi.hoisted(() => ({
-  campaignId: '018f2e40-7c00-7000-8000-000000000003',
+  campaignSlug: 'storm-king',
+  dmUsername: 'mira',
   shouldThrow: true,
 }))
 
@@ -21,7 +22,8 @@ vi.mock('~/features/campaigns/contexts/campaign-context', () => ({
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
-    campaignId: routeState.campaignId,
+    campaignSlug: routeState.campaignSlug,
+    dmUsername: routeState.dmUsername,
   }),
 }))
 
@@ -31,7 +33,8 @@ vi.mock('@wizard-archive/ui/components/error-fallback', () => ({
 
 describe('CampaignLayout', () => {
   beforeEach(() => {
-    routeState.campaignId = '018f2e40-7c00-7000-8000-000000000003'
+    routeState.campaignSlug = 'storm-king'
+    routeState.dmUsername = 'mira'
     routeState.shouldThrow = true
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
   })
@@ -44,7 +47,7 @@ describe('CampaignLayout', () => {
     rerender(<CampaignLayout />)
     expect(screen.getByText('Campaign route failed')).toBeInTheDocument()
 
-    routeState.campaignId = '018f2e40-7c00-7000-8000-000000000004'
+    routeState.campaignSlug = 'curse-of-strahd'
     rerender(<CampaignLayout />)
     expect(screen.getByText('Healthy campaign')).toBeInTheDocument()
     expect(screen.queryByText('Campaign route failed')).not.toBeInTheDocument()

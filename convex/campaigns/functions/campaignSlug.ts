@@ -24,3 +24,18 @@ export async function generateAvailableCampaignSlug(
   }
   throwClientError(ERROR_CODE.CONFLICT, 'Unable to generate a unique campaign link')
 }
+
+export async function assertAvailableCampaignSlug(
+  db: MutationCtx['db'],
+  dmUserId: Id<'userProfiles'>,
+  slug: CampaignSlug,
+  excludeCampaignId: Id<'campaigns'>,
+): Promise<void> {
+  const conflict = await db
+    .query('campaigns')
+    .withIndex('by_slug_dm', (query) => query.eq('slug', slug).eq('dmUserId', dmUserId))
+    .unique()
+  if (conflict && conflict._id !== excludeCampaignId) {
+    throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this link already exists')
+  }
+}

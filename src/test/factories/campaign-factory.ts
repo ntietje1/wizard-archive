@@ -7,6 +7,7 @@ import { createUser } from './user-factory'
 import type { Campaign, CampaignMember } from 'shared/campaigns/types'
 import { testDomainId } from 'shared/test/domain-id'
 import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
+import { campaignSlugFromName } from 'shared/campaigns/validation'
 
 let campaignCounter = 0
 
@@ -23,6 +24,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
     id: campaignId,
     createdAt: Date.now(),
     name: `Test Campaign ${campaignCounter}`,
+    slug: campaignSlugFromName(`Test Campaign ${campaignCounter}`),
     description: '',
     status: CAMPAIGN_STATUS.Active,
     resourceAccessDefaults: DEFAULT_RESOURCE_ACCESS_DEFAULTS,

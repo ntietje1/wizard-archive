@@ -9,6 +9,7 @@ import {
 } from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
+  expectConflict,
   expectNotFound,
   expectPermissionDenied,
   expectValidationFailed,
@@ -363,15 +364,16 @@ describe('getUserCampaigns', () => {
   })
 })
 
-describe('getCampaignById', () => {
+describe('getCampaignBySlug', () => {
   const t = createTestContext()
 
-  it('loads an authorized campaign through its domain UUID', async () => {
+  it('loads an authorized campaign through its route identity', async () => {
     const dm = await setupUser(t)
-    const { campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignDomainId, slug } = await createCampaignWithDm(t, dm.profile)
 
-    const campaign = await dm.authed.query(api.campaigns.queries.getCampaignById, {
-      campaignId: campaignDomainId,
+    const campaign = await dm.authed.query(api.campaigns.queries.getCampaignBySlug, {
+      dmUsername: dm.profile.username,
+      slug,
     })
 
     expect(campaign.id).toBe(campaignDomainId)
@@ -380,21 +382,25 @@ describe('getCampaignById', () => {
   it('does not expose a campaign to an actor without membership', async () => {
     const dm = await setupUser(t)
     const outsider = await setupUser(t)
-    const { campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { slug } = await createCampaignWithDm(t, dm.profile)
 
     await expectPermissionDenied(
-      outsider.authed.query(api.campaigns.queries.getCampaignById, {
-        campaignId: campaignDomainId,
+      outsider.authed.query(api.campaigns.queries.getCampaignBySlug, {
+        dmUsername: dm.profile.username,
+        slug,
       }),
     )
   })
 
   it('requires authentication', async () => {
     const dm = await setupUser(t)
-    const { campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { slug } = await createCampaignWithDm(t, dm.profile)
 
     await expectNotAuthenticated(
-      t.query(api.campaigns.queries.getCampaignById, { campaignId: campaignDomainId }),
+      t.query(api.campaigns.queries.getCampaignBySlug, {
+        dmUsername: dm.profile.username,
+        slug,
+      }),
     )
   })
 })
@@ -402,10 +408,11 @@ describe('getCampaignById', () => {
 describe('getCampaignInvitation', () => {
   const t = createTestContext()
 
-  it('returns a campaign by its canonical ID without authentication', async () => {
+  it('returns a campaign by its owner and slug without authentication', async () => {
     const ctx = await setupCampaignContext(t)
     const campaign = await t.query(api.campaigns.queries.getCampaignInvitation, {
-      campaignId: ctx.campaignDomainId,
+      dmUsername: ctx.dm.profile.username,
+      slug: ctx.slug,
     })
 
     expect(campaign.id).toBe(ctx.campaignDomainId)
@@ -418,7 +425,8 @@ describe('getCampaignInvitation', () => {
     const playerAuth = asPlayer(ctx)
 
     const campaign = await playerAuth.query(api.campaigns.queries.getCampaignInvitation, {
-      campaignId: ctx.campaignDomainId,
+      dmUsername: ctx.dm.profile.username,
+      slug: ctx.slug,
     })
 
     expect(campaign.dmUserProfile).toEqual({
@@ -441,10 +449,12 @@ describe('getCampaignInvitation', () => {
     expect(campaign.myMembership?.userProfile).not.toHaveProperty('twoFactorEnabled')
   })
 
-  it('returns NOT_FOUND for a nonexistent campaign ID', async () => {
+  it('returns NOT_FOUND for a nonexistent campaign slug', async () => {
+    const dm = await setupUser(t)
     await expectNotFound(
       t.query(api.campaigns.queries.getCampaignInvitation, {
-        campaignId: generateDomainId(DOMAIN_ID_KIND.campaign),
+        dmUsername: dm.profile.username,
+        slug: 'missing-campaign',
       }),
     )
   })
@@ -458,7 +468,8 @@ describe('getCampaignInvitation', () => {
 
     await expectNotFound(
       t.query(api.campaigns.queries.getCampaignInvitation, {
-        campaignId: ctx.campaignDomainId,
+        dmUsername: ctx.dm.profile.username,
+        slug: ctx.slug,
       }),
     )
   })
@@ -635,11 +646,12 @@ describe('joinCampaign', () => {
 
   it('creates Pending membership', async () => {
     const dm = await setupUser(t)
-    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, slug } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
 
     const status = await player.authed.mutation(api.campaigns.mutations.joinCampaign, {
-      campaignId: campaignDomainId,
+      dmUsername: dm.profile.username,
+      slug,
     })
 
     expect(status).toBe('Pending')
@@ -663,7 +675,8 @@ describe('joinCampaign', () => {
     const playerAuth = asPlayer(ctx)
 
     const status = await playerAuth.mutation(api.campaigns.mutations.joinCampaign, {
-      campaignId: ctx.campaignDomainId,
+      dmUsername: ctx.dm.profile.username,
+      slug: ctx.slug,
     })
 
     expect(status).toBe('Accepted')
@@ -671,7 +684,7 @@ describe('joinCampaign', () => {
 
   it('returns NOT_FOUND for deleted campaign', async () => {
     const dm = await setupUser(t)
-    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, slug } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
 
     await t.run(async (ctx) => {
@@ -680,21 +693,23 @@ describe('joinCampaign', () => {
 
     await expectNotFound(
       player.authed.mutation(api.campaigns.mutations.joinCampaign, {
-        campaignId: campaignDomainId,
+        dmUsername: dm.profile.username,
+        slug,
       }),
     )
   })
 
   it('returns existing Removed status without resetting', async () => {
     const dm = await setupUser(t)
-    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, slug } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
     await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Removed',
     })
 
     const status = await player.authed.mutation(api.campaigns.mutations.joinCampaign, {
-      campaignId: campaignDomainId,
+      dmUsername: dm.profile.username,
+      slug,
     })
 
     expect(status).toBe('Removed')
@@ -712,14 +727,15 @@ describe('joinCampaign', () => {
 
   it('returns existing Rejected status without resetting', async () => {
     const dm = await setupUser(t)
-    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, slug } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
     await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Rejected',
     })
 
     const status = await player.authed.mutation(api.campaigns.mutations.joinCampaign, {
-      campaignId: campaignDomainId,
+      dmUsername: dm.profile.username,
+      slug,
     })
 
     expect(status).toBe('Rejected')
@@ -736,9 +752,11 @@ describe('joinCampaign', () => {
   })
 
   it('requires authentication', async () => {
+    const dm = await setupUser(t)
     await expectNotAuthenticated(
       t.mutation(api.campaigns.mutations.joinCampaign, {
-        campaignId: generateDomainId(DOMAIN_ID_KIND.campaign),
+        dmUsername: dm.profile.username,
+        slug: 'campaign',
       }),
     )
   })
@@ -996,6 +1014,51 @@ describe('updateCampaign', () => {
       const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign!.description).toBe('New description')
     })
+  })
+
+  it('updates the campaign link', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
+      campaignId: ctx.campaignDomainId,
+      slug: 'updated-campaign',
+    })
+
+    const campaign = await dmAuth.query(api.campaigns.queries.getCampaignBySlug, {
+      dmUsername: ctx.dm.profile.username,
+      slug: 'updated-campaign',
+    })
+    expect(campaign.id).toBe(ctx.campaignDomainId)
+    await expectNotFound(
+      dmAuth.query(api.campaigns.queries.getCampaignBySlug, {
+        dmUsername: ctx.dm.profile.username,
+        slug: ctx.slug,
+      }),
+    )
+  })
+
+  it('rejects a campaign link already owned by the DM', async () => {
+    const ctx = await setupCampaignContext(t)
+    const other = await createCampaignWithDm(t, ctx.dm.profile)
+
+    await expectConflict(
+      asDm(ctx).mutation(api.campaigns.mutations.updateCampaign, {
+        campaignId: ctx.campaignDomainId,
+        slug: other.slug,
+      }),
+    )
+  })
+
+  it('validates campaign links', async () => {
+    const ctx = await setupCampaignContext(t)
+
+    await expectValidationFailed(
+      asDm(ctx).mutation(api.campaigns.mutations.updateCampaign, {
+        campaignId: ctx.campaignDomainId,
+        slug: 'Invalid Link',
+      }),
+    )
   })
 
   it('validates name constraints', async () => {

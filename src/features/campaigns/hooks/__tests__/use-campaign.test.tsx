@@ -36,6 +36,13 @@ function createWrapper(value: CampaignContextType) {
   }
 }
 
+function routeIdentity(campaign: ReturnType<typeof createCampaign>) {
+  return {
+    dmUsername: campaign.dmUserProfile.username,
+    campaignSlug: campaign.slug,
+  }
+}
+
 describe('useCampaign', () => {
   it('throws when used outside provider', () => {
     expect(() => {
@@ -46,6 +53,7 @@ describe('useCampaign', () => {
   it('returns context value when inside provider', () => {
     const campaign = createCampaign()
     const value: CampaignContextType = {
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -64,6 +72,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const value: CampaignContextType = {
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -81,6 +90,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     const value: CampaignContextType = {
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
@@ -114,7 +124,7 @@ describe('useOptionalCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     mockUseMatch.mockReturnValue({
-      params: { campaignId: campaign.id },
+      params: routeIdentity(campaign),
     })
     vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(campaign))
 

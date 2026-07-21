@@ -27,10 +27,8 @@ export async function setupCampaignContext(t: T) {
   const dm = await setupUser(t)
   const player = await setupUser(t)
 
-  const { campaignId, campaignDomainId, dmMemberId, dmMemberDomainId } = await createCampaignWithDm(
-    t,
-    dm.profile,
-  )
+  const { campaignId, campaignDomainId, dmMemberId, dmMemberDomainId, slug } =
+    await createCampaignWithDm(t, dm.profile)
   const { memberId: playerMemberId, memberDomainId: playerMemberDomainId } =
     await addPlayerToCampaign(t, campaignId, player.profile)
 
@@ -39,15 +37,14 @@ export async function setupCampaignContext(t: T) {
     player: { ...player, memberId: playerMemberId, memberDomainId: playerMemberDomainId },
     campaignId,
     campaignDomainId,
+    slug,
   }
 }
 
 export async function setupMultiPlayerContext(t: T, playerCount: number) {
   const dm = await setupUser(t)
-  const { campaignId, campaignDomainId, dmMemberId, dmMemberDomainId } = await createCampaignWithDm(
-    t,
-    dm.profile,
-  )
+  const { campaignId, campaignDomainId, dmMemberId, dmMemberDomainId, slug } =
+    await createCampaignWithDm(t, dm.profile)
 
   const players = []
   for (let i = 0; i < playerCount; i++) {
@@ -61,6 +58,7 @@ export async function setupMultiPlayerContext(t: T, playerCount: number) {
     players,
     campaignId,
     campaignDomainId,
+    slug,
   }
 }
 

@@ -55,7 +55,7 @@ export async function getUserProfileByUsername(
 }
 
 export async function getUserProfileDocByUsername(
-  ctx: QueryCtx,
+  ctx: QueryCtx | MutationCtx,
   { username }: { username: Username },
 ): Promise<Doc<'userProfiles'> | null> {
   return await ctx.db

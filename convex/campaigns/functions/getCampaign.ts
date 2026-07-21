@@ -4,15 +4,19 @@ import { throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
 import {
   getUserProfileDocByAuthProfileKey,
+  getUserProfileDocByUsername,
   getUserProfileById,
 } from '../../users/functions/getUserProfile'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
 import type { Campaign, CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { CampaignMemberRow, CampaignRow } from '../rows'
 import type { Id } from '../../_generated/dataModel'
-import type { QueryCtx } from '../../_generated/server'
+import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { toCampaignMemberProjection } from './campaignMemberProjection'
+import { assertCampaignSlug } from '../validation'
+import type { CampaignSlug } from '../../../shared/campaigns/validation'
+import type { Username } from '../../../shared/users/validation'
 
 function toCampaign(campaign: CampaignRow): Omit<Campaign, 'dmUserProfile' | 'myMembership'> {
   return {
@@ -20,6 +24,7 @@ function toCampaign(campaign: CampaignRow): Omit<Campaign, 'dmUserProfile' | 'my
     createdAt: campaign._creationTime,
     name: campaign.name,
     description: campaign.description,
+    slug: assertCampaignSlug(campaign.slug),
     status: campaign.status,
     resourceAccessDefaults: campaign.resourceAccessDefaults,
     acceptedMemberCount: campaign.acceptedMemberCount,
@@ -74,15 +79,24 @@ export async function getCampaign(
   return enhanceCampaign(ctx, { campaign })
 }
 
-export async function getCampaignInvitation(
+export async function getCampaignBySlug(
   ctx: QueryCtx,
-  campaignId: Campaign['id'],
+  identity: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<Campaign> {
+  return enhanceCampaign(ctx, { campaign: await getCampaignRowBySlug(ctx, identity) })
+}
+
+export async function getCampaignRowBySlug(
+  ctx: QueryCtx | MutationCtx,
+  { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
+): Promise<CampaignRow> {
+  const dmUserProfile = await getUserProfileDocByUsername(ctx, { username: dmUsername })
+  if (!dmUserProfile) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const campaign = await ctx.db
     .query('campaigns')
-    .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+    .withIndex('by_slug_dm', (query) => query.eq('slug', slug).eq('dmUserId', dmUserProfile._id))
     .unique()
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
-  return enhanceCampaign(ctx, { campaign })
+  return campaign
 }

@@ -1,5 +1,4 @@
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
@@ -7,16 +6,18 @@ import {
 } from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { requireCampaignRow } from './campaignIdentity'
+import { getCampaignRowBySlug } from './getCampaign'
 import type { CampaignMemberStatus } from '../../../shared/campaigns/types'
 import type { AuthMutationCtx } from '../../functions'
+import type { CampaignSlug } from '../../../shared/campaigns/validation'
+import type { Username } from '../../../shared/users/validation'
 
 export async function joinCampaign(
   ctx: AuthMutationCtx,
-  { campaignId }: { campaignId: CampaignId },
+  identity: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<CampaignMemberStatus> {
   const profile = ctx.user.profile
-  const campaign = await requireCampaignRow(ctx, campaignId)
+  const campaign = await getCampaignRowBySlug(ctx, identity)
 
   if (campaign.status !== CAMPAIGN_STATUS.Active) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'This campaign is not accepting new members')

@@ -9,6 +9,13 @@ import { TestWrapper } from '~/test/test-wrapper'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getOrigin } from '~/shared/utils/origin'
 
+function routeIdentity(campaign: ReturnType<typeof createCampaign>) {
+  return {
+    dmUsername: campaign.dmUserProfile.username,
+    campaignSlug: campaign.slug,
+  }
+}
+
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useOptionalCampaign: vi.fn(),
 }))
@@ -58,6 +65,7 @@ describe('PeopleTab', () => {
   it('renders on campaign routes without requiring CampaignProvider', () => {
     const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
@@ -99,6 +107,7 @@ describe('PeopleTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -126,7 +135,7 @@ describe('PeopleTab', () => {
     )
 
     expect(screen.getByTestId('invite-link-section')).toHaveTextContent(
-      `https://example.test/join/${campaign.id}`,
+      `https://example.test/join/${campaign.dmUserProfile.username}/${campaign.slug}`,
     )
     expect(screen.getByTestId('members-section')).toBeInTheDocument()
     expect(screen.getByTestId('pending-requests-section')).toBeInTheDocument()
@@ -139,6 +148,7 @@ describe('PeopleTab', () => {
     })
     const retryMembers = vi.fn()
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -179,6 +189,7 @@ describe('PeopleTab', () => {
       }),
     ]
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,

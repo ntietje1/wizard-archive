@@ -117,7 +117,13 @@ function CampaignsContentProjection() {
                         : undefined
                     }
                     linkWrapper={(children) => (
-                      <Link to="/campaigns/$campaignId/editor" params={{ campaignId: campaign.id }}>
+                      <Link
+                        to="/campaigns/$dmUsername/$campaignSlug/editor"
+                        params={{
+                          dmUsername: campaign.dmUserProfile.username,
+                          campaignSlug: campaign.slug,
+                        }}
+                      >
                         {children}
                       </Link>
                     )}

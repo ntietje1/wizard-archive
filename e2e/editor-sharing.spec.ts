@@ -81,7 +81,7 @@ test.describe('canonical sharing and view-as', () => {
     playerPage = await playerContext.newPage()
     await playerPage.goto('/sign-in', { waitUntil: 'commit' })
     await signInByApi(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
-    await playerPage.goto(getCampaignInvitationPath(campaignId))
+    await playerPage.goto(await getCampaignInvitationPath(campaignId))
     const joinButton = playerPage.getByRole('button', { name: /join/i })
     await expect(joinButton).toBeVisible({ timeout: 10_000 })
     await joinButton.click()

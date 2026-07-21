@@ -20,7 +20,8 @@ import { StatusIcon } from '~/features/campaigns/components/status-icon'
 import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 import type { Campaign, CampaignMemberSummary } from 'shared/campaigns/types'
 import type { CampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
-import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { parseCampaignSlug } from 'shared/campaigns/validation'
+import { parseUsername } from 'shared/users/validation'
 
 type JoinCampaignCardContent = {
   title: string
@@ -399,10 +400,12 @@ function joinRequestCardContent(
 
 export function JoinCampaignPage() {
   const navigate = useNavigate()
-  const { campaignId: rawCampaignId } = useParams({
-    from: '/_app/join/$campaignId/',
+  const { dmUsername: rawDmUsername, campaignSlug: rawCampaignSlug } = useParams({
+    from: '/_app/join/$dmUsername/$campaignSlug/',
   })
-  const campaignId = parseDomainId(DOMAIN_ID_KIND.campaign, rawCampaignId)
+  const dmUsername = parseUsername(rawDmUsername)
+  const campaignSlug = parseCampaignSlug(rawCampaignSlug)
+  const identity = dmUsername && campaignSlug ? { dmUsername, campaignSlug } : null
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const [showSignIn, setShowSignIn] = useState(false)
 
@@ -417,7 +420,7 @@ export function JoinCampaignPage() {
     error: campaignError,
     refetch: refetchCampaign,
     status: campaignQueryStatus,
-  } = useJoinCampaignQuery(campaignId)
+  } = useJoinCampaignQuery(identity)
 
   const campaignMember = campaign?.myMembership
   const campaignLookupState = resolveCampaignLookupState({
@@ -430,10 +433,13 @@ export function JoinCampaignPage() {
   const joinCampaign = useJoinCampaignMutation()
 
   const handleJoinCampaign = async () => {
-    if (!campaign || !campaignId) return
+    if (!campaign || !identity) return
 
     try {
-      await joinCampaign.mutateAsync({ campaignId })
+      await joinCampaign.mutateAsync({
+        dmUsername: identity.dmUsername,
+        slug: identity.campaignSlug,
+      })
     } catch {
       // Error UI rendered via joinCampaign.status === 'error'
     }
@@ -446,12 +452,15 @@ export function JoinCampaignPage() {
   const goToCampaignHome = () => {
     if (!campaign) return
     void navigate({
-      to: '/campaigns/$campaignId',
-      params: { campaignId: campaign.id },
+      to: '/campaigns/$dmUsername/$campaignSlug',
+      params: {
+        dmUsername: campaign.dmUserProfile.username,
+        campaignSlug: campaign.slug,
+      },
     })
   }
 
-  if (!campaignId) {
+  if (!identity) {
     return (
       <div className="min-h-screen bg-muted flex items-center justify-center p-4">
         <Card className="w-full max-w-lg bg-card">

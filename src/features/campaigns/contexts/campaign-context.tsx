@@ -7,7 +7,7 @@ import {
 import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 import { CampaignNotFound } from '~/features/campaigns/components/campaign-not-found'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
-import { useCampaignByIdQuery } from '~/features/campaigns/hooks/use-campaign-operations'
+import { useCampaignBySlugQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 function CampaignLookupFailed({ onRetry }: { onRetry: () => unknown }) {
   return (
@@ -25,7 +25,7 @@ function CampaignLookupFailed({ onRetry }: { onRetry: () => unknown }) {
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const identity = useOptionalCampaignRoute()
-  const campaign = useCampaignByIdQuery(identity?.campaignId ?? null)
+  const campaign = useCampaignBySlugQuery(identity)
 
   if (!identity) {
     return <CampaignNotFound />

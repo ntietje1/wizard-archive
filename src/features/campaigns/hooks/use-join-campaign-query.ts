@@ -1,19 +1,19 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignSlug } from 'shared/campaigns/validation'
+import type { Username } from 'shared/users/validation'
 
-const PLACEHOLDER_CAMPAIGN_ID = assertDomainId(
-  DOMAIN_ID_KIND.campaign,
-  '00000000-0000-7000-8000-000000000000',
-)
+const PLACEHOLDER_IDENTITY = { dmUsername: 'user', slug: 'campaign' } as const
 
-export function useJoinCampaignQuery(campaignId: CampaignId | null) {
+export function useJoinCampaignQuery(
+  identity: { dmUsername: Username; campaignSlug: CampaignSlug } | null,
+) {
   return useQuery({
     ...convexQuery(api.campaigns.queries.getCampaignInvitation, {
-      campaignId: campaignId ?? PLACEHOLDER_CAMPAIGN_ID,
+      dmUsername: identity?.dmUsername ?? PLACEHOLDER_IDENTITY.dmUsername,
+      slug: identity?.campaignSlug ?? PLACEHOLDER_IDENTITY.slug,
     }),
-    enabled: campaignId !== null,
+    enabled: identity !== null,
   })
 }

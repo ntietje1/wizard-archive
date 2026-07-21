@@ -14,6 +14,13 @@ const mutate = vi.fn()
 const mutateAsync = vi.fn()
 type AppMutationMockResult = ReturnType<typeof useAppMutation>
 
+function routeIdentity(campaign: ReturnType<typeof createCampaign>) {
+  return {
+    dmUsername: campaign.dmUserProfile.username,
+    campaignSlug: campaign.slug,
+  }
+}
+
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useOptionalCampaign: vi.fn(),
 }))
@@ -52,6 +59,7 @@ describe('CampaignGeneralTab', () => {
   it('announces loading while campaign settings are pending', () => {
     const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery<ReturnType<typeof createCampaign>>(undefined),
       isDm: undefined,
       isCampaignLoaded: false,
@@ -70,6 +78,7 @@ describe('CampaignGeneralTab', () => {
   it('shows the campaign settings load failure', () => {
     const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQueryError<ReturnType<typeof createCampaign>>(new Error('campaign failed')),
       isDm: undefined,
       isCampaignLoaded: false,
@@ -88,6 +97,7 @@ describe('CampaignGeneralTab', () => {
   it('shows the campaign settings load failure after campaign lookup settles without data', () => {
     const campaign = createCampaign()
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery<ReturnType<typeof createCampaign>>(undefined, {
         fetchStatus: 'idle',
         isFetching: false,
@@ -116,6 +126,7 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -139,6 +150,7 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -165,6 +177,7 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -197,6 +210,7 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
@@ -220,6 +234,7 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,

@@ -14,7 +14,7 @@ import { TestWrapper } from '~/test/test-wrapper'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 const mockUseMatch = vi.fn()
-let routeCampaignId = createCampaign().id
+let routeCampaign = createCampaign()
 
 vi.mock('~/shared/hooks/useAuthQuery', () => ({
   useAuthQuery: vi.fn(),
@@ -44,9 +44,12 @@ function CampaignConsumer() {
 
 describe('CampaignProvider', () => {
   beforeEach(() => {
-    routeCampaignId = createCampaign().id
+    routeCampaign = createCampaign()
     mockUseMatch.mockReturnValue({
-      params: { campaignId: routeCampaignId },
+      params: {
+        dmUsername: routeCampaign.dmUserProfile.username,
+        campaignSlug: routeCampaign.slug,
+      },
     })
   })
 
@@ -64,7 +67,7 @@ describe('CampaignProvider', () => {
       </TestWrapper>,
     )
 
-    expect(screen.getByTestId('campaign-id')).toHaveTextContent(routeCampaignId)
+    expect(screen.getByTestId('campaign-id')).toHaveTextContent(campaign.id)
     expect(screen.getByTestId('is-loaded')).toHaveTextContent('true')
   })
 

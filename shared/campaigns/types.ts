@@ -5,6 +5,7 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceAccessDefaults } from '@wizard-archive/editor/resources/access-policy'
 import type { UserProfile, UserProfileSummary } from '../users/types'
+import type { CampaignSlug } from './validation'
 
 export const CAMPAIGN_STATUS = {
   Active: 'Active',
@@ -36,6 +37,7 @@ export type Campaign = {
   createdAt: number
   name: string
   description: string
+  slug: CampaignSlug
   status: CampaignStatus
   resourceAccessDefaults: ResourceAccessDefaults
   dmUserProfile: UserProfileSummary

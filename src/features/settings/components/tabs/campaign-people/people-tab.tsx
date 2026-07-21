@@ -19,7 +19,10 @@ export function PeopleTab() {
 
   if (!campaignContext) return <NoCampaignPeopleTab />
 
-  const joinUrl = isDm && campaignData ? `${getOrigin()}/join/${campaignData.id}` : null
+  const joinUrl =
+    isDm && campaignData
+      ? `${getOrigin()}/join/${campaignData.dmUserProfile.username}/${campaignData.slug}`
+      : null
 
   const memberState = getPeopleSectionState(members)
   const requestState = getPeopleSectionState(requests)

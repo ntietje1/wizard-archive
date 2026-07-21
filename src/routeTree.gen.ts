@@ -27,12 +27,12 @@ import { Route as AppAuthRedirectRouteRouteImport } from './routes/_app/auth-red
 import { Route as AppAuthedRouteRouteImport } from './routes/_app/_authed/route'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AppAuthedCampaignsRouteRouteImport } from './routes/_app/_authed/campaigns/route'
-import { Route as AppJoinCampaignIdIndexRouteImport } from './routes/_app/join.$campaignId/index'
 import { Route as AppAuthedCampaignsIndexRouteImport } from './routes/_app/_authed/campaigns/index'
-import { Route as AppAuthedCampaignsCampaignIdRouteRouteImport } from './routes/_app/_authed/campaigns/$campaignId/route'
-import { Route as AppAuthedCampaignsCampaignIdIndexRouteImport } from './routes/_app/_authed/campaigns/$campaignId/index'
-import { Route as AppAuthedCampaignsCampaignIdEditorRouteRouteImport } from './routes/_app/_authed/campaigns/$campaignId/editor/route'
-import { Route as AppAuthedCampaignsCampaignIdEditorIndexRouteImport } from './routes/_app/_authed/campaigns/$campaignId/editor/index'
+import { Route as AppJoinDmUsernameCampaignSlugIndexRouteImport } from './routes/_app/join.$dmUsername.$campaignSlug/index'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/route'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/index'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/editor/route'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -122,39 +122,41 @@ const AppAuthedCampaignsRouteRoute = AppAuthedCampaignsRouteRouteImport.update({
   path: '/campaigns',
   getParentRoute: () => AppAuthedRouteRoute,
 } as any)
-const AppJoinCampaignIdIndexRoute = AppJoinCampaignIdIndexRouteImport.update({
-  id: '/join/$campaignId/',
-  path: '/join/$campaignId/',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppAuthedCampaignsIndexRoute = AppAuthedCampaignsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppAuthedCampaignsRouteRoute,
 } as any)
-const AppAuthedCampaignsCampaignIdRouteRoute =
-  AppAuthedCampaignsCampaignIdRouteRouteImport.update({
-    id: '/$campaignId',
-    path: '/$campaignId',
+const AppJoinDmUsernameCampaignSlugIndexRoute =
+  AppJoinDmUsernameCampaignSlugIndexRouteImport.update({
+    id: '/join/$dmUsername/$campaignSlug/',
+    path: '/join/$dmUsername/$campaignSlug/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteImport.update({
+    id: '/$dmUsername/$campaignSlug',
+    path: '/$dmUsername/$campaignSlug',
     getParentRoute: () => AppAuthedCampaignsRouteRoute,
   } as any)
-const AppAuthedCampaignsCampaignIdIndexRoute =
-  AppAuthedCampaignsCampaignIdIndexRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AppAuthedCampaignsCampaignIdRouteRoute,
+    getParentRoute: () => AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AppAuthedCampaignsCampaignIdEditorRouteRoute =
-  AppAuthedCampaignsCampaignIdEditorRouteRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport.update({
     id: '/editor',
     path: '/editor',
-    getParentRoute: () => AppAuthedCampaignsCampaignIdRouteRoute,
+    getParentRoute: () => AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AppAuthedCampaignsCampaignIdEditorIndexRoute =
-  AppAuthedCampaignsCampaignIdEditorIndexRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AppAuthedCampaignsCampaignIdEditorRouteRoute,
+    getParentRoute: () =>
+      AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -174,12 +176,12 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof AppSignUpRouteRoute
   '/campaigns': typeof AppAuthedCampaignsRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/campaigns/$campaignId': typeof AppAuthedCampaignsCampaignIdRouteRouteWithChildren
   '/campaigns/': typeof AppAuthedCampaignsIndexRoute
-  '/join/$campaignId/': typeof AppJoinCampaignIdIndexRoute
-  '/campaigns/$campaignId/editor': typeof AppAuthedCampaignsCampaignIdEditorRouteRouteWithChildren
-  '/campaigns/$campaignId/': typeof AppAuthedCampaignsCampaignIdIndexRoute
-  '/campaigns/$campaignId/editor/': typeof AppAuthedCampaignsCampaignIdEditorIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug': typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
+  '/join/$dmUsername/$campaignSlug/': typeof AppJoinDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/editor': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
+  '/campaigns/$dmUsername/$campaignSlug/': typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/editor/': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,9 +200,9 @@ export interface FileRoutesByTo {
   '/sign-up': typeof AppSignUpRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/campaigns': typeof AppAuthedCampaignsIndexRoute
-  '/join/$campaignId': typeof AppJoinCampaignIdIndexRoute
-  '/campaigns/$campaignId': typeof AppAuthedCampaignsCampaignIdIndexRoute
-  '/campaigns/$campaignId/editor': typeof AppAuthedCampaignsCampaignIdEditorIndexRoute
+  '/join/$dmUsername/$campaignSlug': typeof AppJoinDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug': typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/editor': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -222,12 +224,12 @@ export interface FileRoutesById {
   '/_app/sign-up': typeof AppSignUpRouteRoute
   '/_app/_authed/campaigns': typeof AppAuthedCampaignsRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/_app/_authed/campaigns/$campaignId': typeof AppAuthedCampaignsCampaignIdRouteRouteWithChildren
   '/_app/_authed/campaigns/': typeof AppAuthedCampaignsIndexRoute
-  '/_app/join/$campaignId/': typeof AppJoinCampaignIdIndexRoute
-  '/_app/_authed/campaigns/$campaignId/editor': typeof AppAuthedCampaignsCampaignIdEditorRouteRouteWithChildren
-  '/_app/_authed/campaigns/$campaignId/': typeof AppAuthedCampaignsCampaignIdIndexRoute
-  '/_app/_authed/campaigns/$campaignId/editor/': typeof AppAuthedCampaignsCampaignIdEditorIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug': typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
+  '/_app/join/$dmUsername/$campaignSlug/': typeof AppJoinDmUsernameCampaignSlugIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/': typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -248,12 +250,12 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/campaigns'
     | '/api/auth/$'
-    | '/campaigns/$campaignId'
     | '/campaigns/'
-    | '/join/$campaignId/'
-    | '/campaigns/$campaignId/editor'
-    | '/campaigns/$campaignId/'
-    | '/campaigns/$campaignId/editor/'
+    | '/campaigns/$dmUsername/$campaignSlug'
+    | '/join/$dmUsername/$campaignSlug/'
+    | '/campaigns/$dmUsername/$campaignSlug/editor'
+    | '/campaigns/$dmUsername/$campaignSlug/'
+    | '/campaigns/$dmUsername/$campaignSlug/editor/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -272,9 +274,9 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/api/auth/$'
     | '/campaigns'
-    | '/join/$campaignId'
-    | '/campaigns/$campaignId'
-    | '/campaigns/$campaignId/editor'
+    | '/join/$dmUsername/$campaignSlug'
+    | '/campaigns/$dmUsername/$campaignSlug'
+    | '/campaigns/$dmUsername/$campaignSlug/editor'
   id:
     | '__root__'
     | '/'
@@ -295,12 +297,12 @@ export interface FileRouteTypes {
     | '/_app/sign-up'
     | '/_app/_authed/campaigns'
     | '/api/auth/$'
-    | '/_app/_authed/campaigns/$campaignId'
     | '/_app/_authed/campaigns/'
-    | '/_app/join/$campaignId/'
-    | '/_app/_authed/campaigns/$campaignId/editor'
-    | '/_app/_authed/campaigns/$campaignId/'
-    | '/_app/_authed/campaigns/$campaignId/editor/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug'
+    | '/_app/join/$dmUsername/$campaignSlug/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -445,13 +447,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuthedCampaignsRouteRouteImport
       parentRoute: typeof AppAuthedRouteRoute
     }
-    '/_app/join/$campaignId/': {
-      id: '/_app/join/$campaignId/'
-      path: '/join/$campaignId'
-      fullPath: '/join/$campaignId/'
-      preLoaderRoute: typeof AppJoinCampaignIdIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/_authed/campaigns/': {
       id: '/_app/_authed/campaigns/'
       path: '/'
@@ -459,80 +454,87 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuthedCampaignsIndexRouteImport
       parentRoute: typeof AppAuthedCampaignsRouteRoute
     }
-    '/_app/_authed/campaigns/$campaignId': {
-      id: '/_app/_authed/campaigns/$campaignId'
-      path: '/$campaignId'
-      fullPath: '/campaigns/$campaignId'
-      preLoaderRoute: typeof AppAuthedCampaignsCampaignIdRouteRouteImport
+    '/_app/join/$dmUsername/$campaignSlug/': {
+      id: '/_app/join/$dmUsername/$campaignSlug/'
+      path: '/join/$dmUsername/$campaignSlug'
+      fullPath: '/join/$dmUsername/$campaignSlug/'
+      preLoaderRoute: typeof AppJoinDmUsernameCampaignSlugIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug'
+      path: '/$dmUsername/$campaignSlug'
+      fullPath: '/campaigns/$dmUsername/$campaignSlug'
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteImport
       parentRoute: typeof AppAuthedCampaignsRouteRoute
     }
-    '/_app/_authed/campaigns/$campaignId/': {
-      id: '/_app/_authed/campaigns/$campaignId/'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/'
       path: '/'
-      fullPath: '/campaigns/$campaignId/'
-      preLoaderRoute: typeof AppAuthedCampaignsCampaignIdIndexRouteImport
-      parentRoute: typeof AppAuthedCampaignsCampaignIdRouteRoute
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/'
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_app/_authed/campaigns/$campaignId/editor': {
-      id: '/_app/_authed/campaigns/$campaignId/editor'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor'
       path: '/editor'
-      fullPath: '/campaigns/$campaignId/editor'
-      preLoaderRoute: typeof AppAuthedCampaignsCampaignIdEditorRouteRouteImport
-      parentRoute: typeof AppAuthedCampaignsCampaignIdRouteRoute
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/editor'
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_app/_authed/campaigns/$campaignId/editor/': {
-      id: '/_app/_authed/campaigns/$campaignId/editor/'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
       path: '/'
-      fullPath: '/campaigns/$campaignId/editor/'
-      preLoaderRoute: typeof AppAuthedCampaignsCampaignIdEditorIndexRouteImport
-      parentRoute: typeof AppAuthedCampaignsCampaignIdEditorRouteRoute
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/editor/'
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute
     }
   }
 }
 
-interface AppAuthedCampaignsCampaignIdEditorRouteRouteChildren {
-  AppAuthedCampaignsCampaignIdEditorIndexRoute: typeof AppAuthedCampaignsCampaignIdEditorIndexRoute
+interface AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren {
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
 }
 
-const AppAuthedCampaignsCampaignIdEditorRouteRouteChildren: AppAuthedCampaignsCampaignIdEditorRouteRouteChildren =
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren: AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren =
   {
-    AppAuthedCampaignsCampaignIdEditorIndexRoute:
-      AppAuthedCampaignsCampaignIdEditorIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute,
   }
 
-const AppAuthedCampaignsCampaignIdEditorRouteRouteWithChildren =
-  AppAuthedCampaignsCampaignIdEditorRouteRoute._addFileChildren(
-    AppAuthedCampaignsCampaignIdEditorRouteRouteChildren,
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren =
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute._addFileChildren(
+    AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren,
   )
 
-interface AppAuthedCampaignsCampaignIdRouteRouteChildren {
-  AppAuthedCampaignsCampaignIdEditorRouteRoute: typeof AppAuthedCampaignsCampaignIdEditorRouteRouteWithChildren
-  AppAuthedCampaignsCampaignIdIndexRoute: typeof AppAuthedCampaignsCampaignIdIndexRoute
+interface AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
+  AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
 }
 
-const AppAuthedCampaignsCampaignIdRouteRouteChildren: AppAuthedCampaignsCampaignIdRouteRouteChildren =
+const AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren =
   {
-    AppAuthedCampaignsCampaignIdEditorRouteRoute:
-      AppAuthedCampaignsCampaignIdEditorRouteRouteWithChildren,
-    AppAuthedCampaignsCampaignIdIndexRoute:
-      AppAuthedCampaignsCampaignIdIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren,
+    AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute,
   }
 
-const AppAuthedCampaignsCampaignIdRouteRouteWithChildren =
-  AppAuthedCampaignsCampaignIdRouteRoute._addFileChildren(
-    AppAuthedCampaignsCampaignIdRouteRouteChildren,
+const AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren =
+  AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute._addFileChildren(
+    AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren,
   )
 
 interface AppAuthedCampaignsRouteRouteChildren {
-  AppAuthedCampaignsCampaignIdRouteRoute: typeof AppAuthedCampaignsCampaignIdRouteRouteWithChildren
   AppAuthedCampaignsIndexRoute: typeof AppAuthedCampaignsIndexRoute
+  AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
 }
 
 const AppAuthedCampaignsRouteRouteChildren: AppAuthedCampaignsRouteRouteChildren =
   {
-    AppAuthedCampaignsCampaignIdRouteRoute:
-      AppAuthedCampaignsCampaignIdRouteRouteWithChildren,
     AppAuthedCampaignsIndexRoute: AppAuthedCampaignsIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren,
   }
 
 const AppAuthedCampaignsRouteRouteWithChildren =
@@ -559,7 +561,7 @@ interface AppRouteChildren {
   AppResetPasswordRouteRoute: typeof AppResetPasswordRouteRoute
   AppSignInRouteRoute: typeof AppSignInRouteRoute
   AppSignUpRouteRoute: typeof AppSignUpRouteRoute
-  AppJoinCampaignIdIndexRoute: typeof AppJoinCampaignIdIndexRoute
+  AppJoinDmUsernameCampaignSlugIndexRoute: typeof AppJoinDmUsernameCampaignSlugIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -569,7 +571,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppResetPasswordRouteRoute: AppResetPasswordRouteRoute,
   AppSignInRouteRoute: AppSignInRouteRoute,
   AppSignUpRouteRoute: AppSignUpRouteRoute,
-  AppJoinCampaignIdIndexRoute: AppJoinCampaignIdIndexRoute,
+  AppJoinDmUsernameCampaignSlugIndexRoute:
+    AppJoinDmUsernameCampaignSlugIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

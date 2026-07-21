@@ -23,7 +23,7 @@ const campaignFields = {
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
-  slug: v.optional(v.string()),
+  slug: v.string(),
   status: campaignStatusValidator,
   acceptedMemberCount: v.number(),
   resourceAccessDefaults: v.object({
@@ -88,6 +88,7 @@ const publicCampaignFields = {
   createdAt: v.number(),
   name: v.string(),
   description: v.string(),
+  slug: v.string(),
   status: campaignStatusValidator,
   resourceAccessDefaults: v.object({
     folderInheritance: v.union(

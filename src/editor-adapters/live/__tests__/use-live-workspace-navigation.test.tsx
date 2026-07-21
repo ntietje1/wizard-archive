@@ -10,6 +10,8 @@ import {
 const navigateMock = vi.hoisted(() => vi.fn())
 const useMatchMock = vi.hoisted(() => vi.fn())
 const campaignId = vi.hoisted(() => '018f2e40-7c00-7000-8000-000000000001')
+const campaignSlug = 'storm-king'
+const dmUsername = 'mira'
 const lastResourceState = vi.hoisted(() => ({
   lastSelectedResourceSearch: null as Record<string, unknown> | null,
   setLastSelectedResource: vi.fn(),
@@ -23,6 +25,8 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
     campaignId,
+    campaignSlug,
+    dmUsername,
   }),
 }))
 
@@ -79,7 +83,7 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(lastResourceState.setLastSelectedResource).toHaveBeenCalledExactlyOnceWith(resourceId)
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { campaignId },
+      params: { campaignSlug, dmUsername },
       search: {
         resource: resourceId,
         target: 'noteBlock',
@@ -99,7 +103,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { campaignId },
+      params: { campaignSlug, dmUsername },
       search: { trash: true },
       replace: undefined,
     })
@@ -116,7 +120,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { campaignId },
+      params: { campaignSlug, dmUsername },
       search: { resource: resourceId },
       replace: undefined,
     })
@@ -131,7 +135,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { campaignId },
+      params: { campaignSlug, dmUsername },
       search: {},
       replace: undefined,
     })
@@ -147,7 +151,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { campaignId },
+      params: { campaignSlug, dmUsername },
       search: {},
       replace: undefined,
     })

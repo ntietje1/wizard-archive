@@ -22,7 +22,7 @@ export function LiveWorkspaceRuntimeProvider({
   const { campaign, campaignId } = useCampaign()
   const membership = campaign.data?.myMembership
 
-  if (!membership) {
+  if (!membership || !campaignId) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner size="lg" />

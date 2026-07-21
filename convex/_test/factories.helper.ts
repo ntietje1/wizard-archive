@@ -7,6 +7,7 @@ import { assertUsername } from '../users/validation'
 import type { TestConvex } from 'convex-test'
 import type { Id } from '../_generated/dataModel'
 import type schema from '../schema'
+import { campaignSlugFromName } from '../../shared/campaigns/validation'
 
 type T = TestConvex<typeof schema>
 
@@ -65,6 +66,7 @@ export async function createCampaignWithDm(
   overrides?: Partial<{
     name: string
     description: string
+    slug: string
     status: 'Active' | 'Inactive'
     currentSessionId: Id<'sessions'> | null
     resourceAccessDefaults: ResourceAccessDefaults
@@ -74,6 +76,7 @@ export async function createCampaignWithDm(
   const campaignData = {
     campaignUuid: generateDomainId(DOMAIN_ID_KIND.campaign),
     name: `Campaign ${n}`,
+    slug: campaignSlugFromName(overrides?.name ?? `Campaign ${n}`),
     description: '',
     dmUserId: dmProfile._id,
     status: 'Active' as const,
@@ -96,6 +99,7 @@ export async function createCampaignWithDm(
   return {
     campaignId,
     campaignDomainId: campaignData.campaignUuid,
+    slug: campaignData.slug,
     dmMemberId: memberId,
     dmMemberDomainId,
   }

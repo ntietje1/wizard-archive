@@ -1,9 +1,8 @@
 import { expect } from '@playwright/test'
 import { api } from 'convex/_generated/api'
 import { signInByApi } from './auth-helpers'
-import { createE2EConvexClient } from './convex-helpers'
+import { createE2EConvexClient, getCampaignEditorPath } from './convex-helpers'
 import type { Locator, Page } from '@playwright/test'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function createCampaign(page: Page, name: string): Promise<CampaignId> {
@@ -29,9 +28,14 @@ export async function createCampaign(page: Page, name: string): Promise<Campaign
       const card = page.getByRole('article', { name })
       await expect(card).toBeVisible({ timeout: 15000 })
       const href = await card.getByRole('link').getAttribute('href')
-      const campaignId = href?.match(/^\/campaigns\/([^/]+)\/editor$/)?.[1]
-      if (!campaignId) throw new Error(`Created campaign card has no canonical route: ${href}`)
-      return assertDomainId(DOMAIN_ID_KIND.campaign, decodeURIComponent(campaignId))
+      const route = href?.match(/^\/campaigns\/([^/]+)\/([^/]+)\/editor$/)
+      if (!route) throw new Error(`Created campaign card has no canonical route: ${href}`)
+      const client = await createE2EConvexClient()
+      const campaign = await client.query(api.campaigns.queries.getCampaignBySlug, {
+        dmUsername: decodeURIComponent(route[1]!),
+        slug: decodeURIComponent(route[2]!),
+      })
+      return campaign.id
     } catch (error) {
       lastError = error
       if (!(await dialog.isVisible().catch(() => false))) {
@@ -87,7 +91,7 @@ async function navigateToCampaignRoute(
 ) {
   await authenticatePage(page)
   const search = resourceId ? `?resource=${resourceId}` : ''
-  await page.goto(`/campaigns/${campaignId}/editor${search}`, { waitUntil: 'commit' })
+  await page.goto(`${await getCampaignEditorPath(campaignId)}${search}`, { waitUntil: 'commit' })
   await waitForWorkspaceReady(page, `Provisioned campaign is unavailable: ${campaignId}`)
 }
 

@@ -1,24 +1,25 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator, paginationResultValidator } from 'convex/server'
-import { authQuery, campaignQuery, dmQuery } from '../functions'
+import { authQuery, campaignQuery, checkCampaignMembership, dmQuery } from '../functions'
 import { query } from '../_generated/server'
+import { assertUsername, usernameValidator } from '../users/validation'
 import { getCampaignMembers } from './functions/getCampaignMembers'
 import { getCampaignRequests as getCampaignRequestsFn } from './functions/getCampaignRequests'
 import {
   campaignMemberSummaryValidator,
   campaignMemberValidator,
-  campaignIdValidator,
   campaignValidator,
 } from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
 import {
   getCampaign as getCampaignFn,
-  getCampaignInvitation as getCampaignInvitationFn,
+  getCampaignBySlug as getCampaignBySlugFn,
+  getCampaignRowBySlug,
 } from './functions/getCampaign'
+import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
 import type { PaginationResult } from 'convex/server'
 import type { Campaign, CampaignMember, CampaignMemberSummary } from '../../shared/campaigns/types'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 export const getUserCampaigns = authQuery({
   args: { paginationOpts: paginationOptsValidator },
@@ -30,22 +31,32 @@ export const getUserCampaigns = authQuery({
 
 export const getCampaignInvitation = query({
   args: {
-    campaignId: campaignIdValidator,
+    dmUsername: usernameValidator,
+    slug: campaignSlugValidator,
   },
   returns: campaignValidator,
   handler: async (ctx, args): Promise<Campaign> => {
-    return await getCampaignInvitationFn(
-      ctx,
-      assertDomainId(DOMAIN_ID_KIND.campaign, args.campaignId),
-    )
+    return await getCampaignBySlugFn(ctx, {
+      dmUsername: assertUsername(args.dmUsername),
+      slug: assertCampaignSlug(args.slug),
+    })
   },
 })
 
-export const getCampaignById = campaignQuery({
-  args: {},
+export const getCampaignBySlug = authQuery({
+  args: {
+    dmUsername: usernameValidator,
+    slug: campaignSlugValidator,
+  },
   returns: campaignValidator,
-  handler: async (ctx): Promise<Campaign> => {
-    const campaign = await getCampaignFn(ctx, { campaignId: ctx.campaign._id })
+  handler: async (ctx, args): Promise<Campaign> => {
+    const identity = {
+      dmUsername: assertUsername(args.dmUsername),
+      slug: assertCampaignSlug(args.slug),
+    }
+    const row = await getCampaignRowBySlug(ctx, identity)
+    await checkCampaignMembership(ctx, row._id)
+    const campaign = await getCampaignFn(ctx, { campaignId: row._id })
     if (!campaign) throw new Error('Campaign scope resolved a missing campaign')
     return campaign
   },

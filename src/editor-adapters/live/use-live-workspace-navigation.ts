@@ -19,10 +19,10 @@ export function useLiveWorkspaceSelectedTarget(): CanonicalTarget | null {
 
 export const useLiveWorkspaceNavigation = () => {
   const navigate = useNavigate()
-  const { campaignId } = useCampaign()
+  const { campaignSlug, dmUsername } = useCampaign()
   const { lastSelectedResourceSearch, setLastSelectedResource } = useLastResource()
 
-  const routeParams = { campaignId }
+  const routeParams = { campaignSlug, dmUsername }
 
   const navigateToWorkspaceRoute = async (search: WorkspaceRouteSearch, replace?: boolean) => {
     await navigate({
