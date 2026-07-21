@@ -45,11 +45,9 @@ import type { EditorRuntime, ResourceNavigation } from './editor-runtime-contrac
 import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
 import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
+import type { InMemoryResourceScope } from './in-memory-resource-runtime'
 import { createResourceUndoHistory } from './resource-undo-history'
-import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
-import type { ResourceCatalogSnapshot, SourcePathAlias } from './resource-catalog-contract'
-import type { ResourceProjectionScope } from './resource-index-contract'
-import type { GrantedResourcePermission } from './resource-access-policy'
+import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource } from './resource-source-classifier'
 import { EMPTY_FILE_CONTENT_METADATA } from './file-content-contract'
@@ -75,17 +73,7 @@ import {
   transitionMapContent,
 } from './map-session-policy'
 import type { MapImageBytes } from './map-session-policy'
-import { digestPlainTransferPlan, planPlainTransfer } from './plain-transfer-inventory'
-import type { PlainTransferInventoryResource } from './plain-transfer-inventory'
-import type {
-  PlainTransferEntryOutcome,
-  PlainTransferGateway,
-  PlainTransferProgress,
-  PlainTransferReceipt,
-} from './transfer-job-contract'
-import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
 import { createInMemoryNoteOutlineSource } from './in-memory-note-outline'
-import { markdownToNoteYDoc } from '../notes/document/headless-yjs'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -136,10 +124,7 @@ export type InMemoryEditorContent = Readonly<{
 }>
 
 export type InMemoryEditorRuntimeInput = Readonly<{
-  authorize?: InMemoryResourceRuntimeOptions['authorize']
-  canEdit?: boolean
-  permission?: GrantedResourcePermission
-  scope: ResourceProjectionScope
+  scope: InMemoryResourceScope
   snapshot: ResourceCatalogSnapshot
   content?: InMemoryEditorContent
   navigation: ResourceNavigation
@@ -774,242 +759,14 @@ async function createOwnedContentResource(
   return delivery
 }
 
-function createInMemoryPlainTransferGateway({
-  appendAlias,
-  campaignId,
-  executeStructure,
-  files,
-  notes,
-}: Readonly<{
-  appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
-  campaignId: CampaignId
-  executeStructure: ResourceStructureCommandGateway['execute']
-  files: InMemoryFileContentSource
-  notes: InMemoryNoteSessionSource
-}>): PlainTransferGateway {
-  const jobs = new Map<string, Readonly<{ fingerprint: string; receipt: PlainTransferReceipt }>>()
-  return {
-    execute: async (intent, sources, entries, options) => {
-      const planned = await planPlainTransfer({
-        campaignId,
-        intent,
-        sources,
-        entries,
-      })
-      if (planned.status === 'rejected') {
-        return { status: 'rejected', reason: planned.reason }
-      }
-      const resources = planned.inventory.resources
-      const fingerprint = await digestPlainTransferPlan(planned.inventory)
-      const existing = jobs.get(intent.jobId)
-      if (existing) {
-        return existing.fingerprint === fingerprint
-          ? existing.receipt
-          : { status: 'rejected', reason: 'job_conflict' }
-      }
-      const pendingEntries: PlainTransferReceipt['entries'] = resources.map((resource) => ({
-        status: 'pending',
-        sourceId: resource.alias.sourceRootId,
-        sourcePath: resource.sourcePath,
-      }))
-      if (options?.signal?.aborted) {
-        const receipt: PlainTransferReceipt = {
-          jobId: intent.jobId,
-          status: 'settled',
-          entries: pendingEntries.map((entry) => ({
-            status: 'cancelled',
-            sourceId: entry.sourceId,
-            sourcePath: entry.sourcePath,
-          })),
-        }
-        jobs.set(intent.jobId, { fingerprint, receipt })
-        return receipt
-      }
-      jobs.set(intent.jobId, {
-        fingerprint,
-        receipt: { jobId: intent.jobId, status: 'running', entries: pendingEntries },
-      })
-      const totalBytes = entries.reduce(
-        (total, entry) => total + (entry.type === 'file' ? entry.bytes.byteLength : 0),
-        0,
-      )
-      const outcomes = await executeInMemoryPlainTransferInventory({
-        appendAlias,
-        campaignId,
-        executeStructure,
-        files,
-        notes,
-        onProgress: options?.onProgress,
-        resources,
-        signal: options?.signal,
-        totalBytes,
-      })
-      const completed = outcomes.map(
-        (outcome, index): PlainTransferEntryOutcome =>
-          outcome ?? {
-            status: 'cancelled',
-            sourceId: resources[index]!.alias.sourceRootId,
-            sourcePath: resources[index]!.sourcePath,
-          },
-      )
-      options?.onProgress?.({
-        completedEntries: resources.length,
-        totalEntries: resources.length,
-        uploadedBytes: totalBytes,
-        totalBytes,
-        currentPath: null,
-      })
-      const receipt: PlainTransferReceipt = {
-        jobId: intent.jobId,
-        status: 'settled',
-        entries: completed,
-      }
-      jobs.set(intent.jobId, { fingerprint, receipt })
-      return receipt
-    },
-  }
-}
-
-async function executeInMemoryPlainTransferInventory({
-  appendAlias,
-  campaignId,
-  executeStructure,
-  files,
-  notes,
-  onProgress,
-  resources,
-  signal,
-  totalBytes,
-}: Readonly<{
-  appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
-  campaignId: CampaignId
-  executeStructure: ResourceStructureCommandGateway['execute']
-  files: InMemoryFileContentSource
-  notes: InMemoryNoteSessionSource
-  onProgress: ((progress: PlainTransferProgress) => void) | undefined
-  resources: ReadonlyArray<PlainTransferInventoryResource>
-  signal: AbortSignal | undefined
-  totalBytes: number
-}>): Promise<ReadonlyArray<PlainTransferEntryOutcome | null>> {
-  const commits = new Map<ResourceId, Promise<PlainTransferEntryOutcome | null>>()
-  for (const [index, resource] of resources.entries()) {
-    const parentCommit = resource.parentId === null ? undefined : commits.get(resource.parentId)
-    const commit = (parentCommit ?? Promise.resolve(undefined)).then(async (parentOutcome) => {
-      if (signal?.aborted || (parentCommit && parentOutcome === null)) return null
-      onProgress?.({
-        completedEntries: index,
-        totalEntries: resources.length,
-        uploadedBytes: totalBytes,
-        totalBytes,
-        currentPath: resource.sourcePath,
-      })
-      return await executeInMemoryPlainTransferResource({
-        appendAlias,
-        campaignId,
-        executeStructure,
-        files,
-        notes,
-        resource,
-      })
-    })
-    commits.set(resource.id, commit)
-  }
-  return await Promise.all(commits.values())
-}
-
-async function executeInMemoryPlainTransferResource({
-  appendAlias,
-  campaignId,
-  executeStructure,
-  files,
-  notes,
-  resource,
-}: Readonly<{
-  appendAlias: (alias: SourcePathAlias) => Promise<SourcePathAlias>
-  campaignId: CampaignId
-  executeStructure: ResourceStructureCommandGateway['execute']
-  files: InMemoryFileContentSource
-  notes: InMemoryNoteSessionSource
-  resource: PlainTransferInventoryResource
-}>): Promise<PlainTransferEntryOutcome> {
-  const delivery =
-    resource.kind === 'note'
-      ? await notes.create(
-          {
-            campaignId,
-            operationId: resource.operationId,
-            command: {
-              type: 'create',
-              resourceId: resource.id,
-              kind: 'note',
-              parentId: resource.parentId,
-              title: resource.title,
-              icon: null,
-              color: null,
-            },
-          },
-          markdownToNoteYDoc(resource.content.source.text),
-        )
-      : await executeStructure({
-          campaignId,
-          operationId: resource.operationId,
-          command: {
-            type: 'create',
-            resourceId: resource.id,
-            kind: resource.kind,
-            parentId: resource.parentId,
-            title: resource.title,
-            icon: null,
-            color: null,
-          },
-        })
-  if (!isCompletedCreate(delivery, resource.id)) {
-    return {
-      status: 'rejected',
-      sourceId: resource.alias.sourceRootId,
-      sourcePath: resource.sourcePath,
-      reason: inMemoryTransferRejection(delivery),
-    }
-  }
-  await appendAlias(resource.alias)
-  if (resource.kind === 'file') {
-    files.setReady(
-      resource.id,
-      { ...resource.content.source.metadata, attachment: 'attached' },
-      await initialFileContentVersion(
-        resource.content.source.bytes,
-        resource.content.source.metadata,
-      ),
-      resource.content.source.bytes,
-    )
-  }
-  return {
-    status: 'completed',
-    sourceId: resource.alias.sourceRootId,
-    sourcePath: resource.sourcePath,
-    resourceId: resource.id,
-    kind: resource.kind,
-  }
-}
-
-function inMemoryTransferRejection(
-  delivery: CommandDelivery<ResourceStructureCommandResult>,
-): string {
-  if (delivery.status !== 'received') return delivery.reason
-  return delivery.result.status === 'completed' ? 'invalid_response' : delivery.result.reason
-}
-
 export function createInMemoryEditorRuntime({
-  authorize,
-  canEdit: requestedCanEdit,
   content = {},
   navigation,
   now,
-  permission,
   scope,
   snapshot,
 }: InMemoryEditorRuntimeInput): Readonly<{ runtime: EditorRuntime; dispose(): void }> {
-  const canEdit = requestedCanEdit ?? scope.projection === 'dm'
+  const canManageStructure = scope.projection === 'dm' || scope.projection === 'local'
   const kinds = new Map(snapshot.resources.map((resource) => [resource.id, resource.kind]))
   let executeStructure: ResourceStructureCommandGateway['execute'] = () =>
     Promise.resolve({
@@ -1051,8 +808,6 @@ export function createInMemoryEditorRuntime({
   const resources = createInMemoryResourceRuntime({
     scope,
     initialSnapshot: snapshot,
-    authorize: authorize ?? (() => canEdit),
-    ...(permission ? { permission } : {}),
     contentCopy: createInMemoryContentCopyPlanner(kinds, { notes, files, maps, canvases }),
     ...(now ? { now } : {}),
   })
@@ -1101,7 +856,7 @@ export function createInMemoryEditorRuntime({
       return undo.structure.execute(envelope)
     },
   }
-  const structure = canEdit
+  const structure = canManageStructure
     ? ({ status: 'available', value: workspaceStructure } as const)
     : ({ status: 'unavailable', reason: 'unauthorized' } as const)
   const contentSources = { notes, files, maps, canvases }
@@ -1123,11 +878,6 @@ export function createInMemoryEditorRuntime({
     },
   }
   const catalogResources = () => resources.catalogSnapshot().resources
-  const references = createInMemoryResourceReferenceSource(
-    resources.index,
-    catalogResources,
-    contentSources,
-  )
   const bookmarks = createInMemoryBookmarks((resourceId) =>
     catalogResources().some((resource) => resource.id === resourceId),
   )
@@ -1218,14 +968,6 @@ export function createInMemoryEditorRuntime({
     return { status: 'completed', resourceId }
   }
   const noteOutlines = createInMemoryNoteOutlineSource(content.notes ?? [])
-  const transfers = createInMemoryPlainTransferGateway({
-    appendAlias: resources.appendAlias,
-    campaignId: scope.campaignId,
-    executeStructure: (envelope) => executeStructure(envelope),
-    files,
-    notes,
-  })
-
   return {
     runtime: {
       scope,
@@ -1237,8 +979,8 @@ export function createInMemoryEditorRuntime({
         noteBlockAccess: unsupported,
         bookmarks: { status: 'available', value: bookmarks },
         noteOutlines: { status: 'available', value: noteOutlines.source },
-        references: { status: 'available', value: references.source },
-        undo: canEdit
+        references: unsupported,
+        undo: canManageStructure
           ? { status: 'available', value: undo.history }
           : { status: 'unavailable', reason: 'unauthorized' },
       },
@@ -1247,13 +989,10 @@ export function createInMemoryEditorRuntime({
       preferences,
       search: { status: 'available', value: search.gateway },
       history: unsupported,
-      transfers: canEdit
-        ? { status: 'available', value: transfers }
-        : { status: 'unavailable', reason: 'unauthorized' },
+      transfers: unsupported,
       viewAs: unsupported,
     },
     dispose: () => {
-      references.dispose()
       noteOutlines.dispose()
       search.dispose()
       for (const source of Object.values(contentSources)) source.dispose()

@@ -11,7 +11,6 @@ describe('resource application workflows', () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -21,23 +20,13 @@ describe('resource application workflows', () => {
       },
       navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
     })
-    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
-    const transfers = core.runtime.transfers.value
-    const execute = vi.fn((...args: Parameters<typeof transfers.execute>) =>
-      transfers.execute(...args),
-    )
-    const runtime = {
-      ...core.runtime,
-      transfers: { status: 'available' as const, value: { execute } },
-    } satisfies EditorRuntime
     const report = vi.fn()
 
-    const result = await createWorkspaceActions(runtime, report).create('file', null, '')
+    const result = await createWorkspaceActions(core.runtime, report).create('file', null, '')
 
     expect(result).toMatchObject({ status: 'completed' })
-    expect(execute).not.toHaveBeenCalled()
     if (result.status !== 'completed') throw new TypeError('Expected completed transfer')
-    expect(runtime.resources.index.getSnapshot().lookup(result.resourceId)).toMatchObject({
+    expect(core.runtime.resources.index.getSnapshot().lookup(result.resourceId)).toMatchObject({
       state: 'known',
       value: { kind: 'file', title: 'Untitled file' },
     })
@@ -50,7 +39,6 @@ describe('resource application workflows', () => {
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const open = vi.fn()
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -61,6 +49,43 @@ describe('resource application workflows', () => {
       navigation: { ...navigation(generateDomainId(DOMAIN_ID_KIND.resource)), open },
     })
     const report = vi.fn()
+    const rootId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const execute = vi.fn((...args: Parameters<NonNullableTransfer['execute']>) => {
+      const [intent, , , options] = args
+      options?.onProgress?.({
+        completedEntries: 0,
+        totalEntries: 4,
+        uploadedBytes: 0,
+        totalBytes: 0,
+        currentPath: 'Campaign',
+      })
+      return Promise.resolve({
+        jobId: intent.jobId,
+        status: 'settled' as const,
+        entries: [
+          completedTransfer('Campaign', 'campaign', rootId, 'folder'),
+          completedTransfer(
+            'Campaign/Readme.md',
+            'readme',
+            generateDomainId(DOMAIN_ID_KIND.resource),
+            'note',
+          ),
+          completedTransfer(
+            'Campaign/Maps',
+            'maps',
+            generateDomainId(DOMAIN_ID_KIND.resource),
+            'folder',
+          ),
+          completedTransfer(
+            'Campaign/Maps/Map.bin',
+            'map',
+            generateDomainId(DOMAIN_ID_KIND.resource),
+            'file',
+          ),
+        ],
+      })
+    })
+    const runtime = withTransfers(core.runtime, execute)
     const directory = browserDirectory('Campaign', [
       [
         browserFileEntry('Readme.md', '# Campaign'),
@@ -69,36 +94,15 @@ describe('resource application workflows', () => {
       [],
     ])
 
-    await createWorkspaceActions(core.runtime, report).importExternal(
+    await createWorkspaceActions(runtime, report).importExternal(
       null,
       browserDataTransfer(directory),
     )
 
-    const rootQuery = { parentId: null, lifecycle: 'active' as const }
-    await core.runtime.resources.loader.ensureCollection(rootQuery)
-    let snapshot = core.runtime.resources.index.getSnapshot()
-    const roots = snapshot.list(rootQuery)
-    expect(roots).toMatchObject({
-      state: 'known',
-      complete: true,
-      items: [{ kind: 'folder', title: 'Campaign' }],
-    })
-    if (roots.state !== 'known' || !roots.items[0]) throw new Error('Expected imported root')
-    const childQuery = { parentId: roots.items[0].id, lifecycle: 'active' as const }
-    await core.runtime.resources.loader.ensureCollection(childQuery)
-    snapshot = core.runtime.resources.index.getSnapshot()
-    const children = snapshot.list(childQuery)
-    expect(children).toMatchObject({
-      state: 'known',
-      complete: true,
-      items: expect.arrayContaining([
-        expect.objectContaining({ kind: 'note', title: 'Readme.md' }),
-        expect.objectContaining({ kind: 'folder', title: 'Maps' }),
-      ]),
-    })
+    expect(execute).toHaveBeenCalledOnce()
     expect(open).toHaveBeenLastCalledWith({
       kind: 'resource',
-      resourceId: roots.items[0].id,
+      resourceId: rootId,
     })
     expect(report.mock.calls.at(-1)?.[0]).toEqual({
       kind: 'message',
@@ -123,7 +127,6 @@ describe('resource application workflows', () => {
       open: vi.fn(),
     }
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -133,27 +136,26 @@ describe('resource application workflows', () => {
       },
       navigation: navigationGateway,
     })
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const execute = vi.fn((...args: Parameters<NonNullableTransfer['execute']>) => {
+      const [intent] = args
+      return Promise.resolve({
+        jobId: intent.jobId,
+        status: 'settled' as const,
+        entries: [completedTransfer('Session.md', 'selected-file', noteId, 'note')],
+      })
+    })
+    const runtime = withTransfers(core.runtime, execute)
 
-    await createWorkspaceActions(core.runtime, vi.fn()).importExternal(
+    await createWorkspaceActions(runtime, vi.fn()).importExternal(
       null,
       browserDataTransfer(browserFileEntry('Session.md', '# Session')),
     )
 
-    await core.runtime.resources.loader.ensureCollection({
-      parentId: null,
-      lifecycle: 'active',
-    })
-    const roots = core.runtime.resources.index
-      .getSnapshot()
-      .list({ parentId: null, lifecycle: 'active' })
-    expect(roots).toMatchObject({
-      state: 'known',
-      items: [expect.objectContaining({ kind: 'note', title: 'Session.md' })],
-    })
-    if (roots.state !== 'known' || !roots.items[0]) throw new Error('Expected imported note')
+    expect(execute).toHaveBeenCalledOnce()
     expect(navigationGateway.open).toHaveBeenLastCalledWith({
       kind: 'resource',
-      resourceId: roots.items[0].id,
+      resourceId: noteId,
     })
     core.dispose()
   })
@@ -162,7 +164,6 @@ describe('resource application workflows', () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -224,7 +225,6 @@ describe('resource application workflows', () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -273,6 +273,24 @@ describe('resource application workflows', () => {
     core.dispose()
   })
 })
+
+type NonNullableTransfer = Extract<EditorRuntime['transfers'], { status: 'available' }>['value']
+
+function withTransfers(
+  runtime: EditorRuntime,
+  execute: NonNullableTransfer['execute'],
+): EditorRuntime {
+  return { ...runtime, transfers: { status: 'available', value: { execute } } }
+}
+
+function completedTransfer(
+  sourcePath: string,
+  sourceId: string,
+  resourceId: ResourceRecord['id'],
+  kind: Extract<ResourceRecord['kind'], 'file' | 'folder' | 'note'>,
+) {
+  return { status: 'completed' as const, sourceId, sourcePath, resourceId, kind }
+}
 
 function navigation(initialResourceId: ResourceRecord['id']): ResourceNavigation {
   let target: ReturnType<ResourceNavigation['current']> = {

@@ -63,12 +63,21 @@ export function createSampleLocalWorkspaceFixture({
   projection?: 'dm' | 'player'
 } = {}): LocalWorkspaceFixture {
   return {
-    scope: {
-      campaignId: SAMPLE_CAMPAIGN_ID,
-      actorId: SAMPLE_ACTOR_ID,
-      projection,
-      schema: RESOURCE_INDEX_SCHEMA,
-    },
+    scope:
+      projection === 'dm'
+        ? {
+            campaignId: SAMPLE_CAMPAIGN_ID,
+            actorId: SAMPLE_ACTOR_ID,
+            projection,
+            schema: RESOURCE_INDEX_SCHEMA,
+          }
+        : {
+            campaignId: SAMPLE_CAMPAIGN_ID,
+            actorId: SAMPLE_ACTOR_ID,
+            projection,
+            permission: 'view',
+            schema: RESOURCE_INDEX_SCHEMA,
+          },
     snapshot: {
       campaignId: SAMPLE_CAMPAIGN_ID,
       resources: sampleResources(),

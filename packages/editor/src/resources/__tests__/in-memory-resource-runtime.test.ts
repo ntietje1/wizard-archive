@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vite-plus/test'
+import { describe, expect, it } from 'vite-plus/test'
 import { createInMemoryResourceRuntime } from '../in-memory-resource-runtime'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
@@ -58,7 +58,6 @@ describe('in-memory resource runtime', () => {
     const runtime = createInMemoryResourceRuntime({
       scope,
       initialSnapshot,
-      authorize: () => true,
     })
 
     expect(runtime.index.getSnapshot().lookup(noteId)).toEqual({ state: 'unknown' })
@@ -83,52 +82,45 @@ describe('in-memory resource runtime', () => {
     runtime.dispose()
   })
 
-  it('renders final UUID creates optimistically and reconciles from authoritative receipts', async () => {
-    let authorize: (() => void) | undefined
-    const authorization = new Promise<boolean>((resolve) => {
-      authorize = () => resolve(true)
-    })
+  it('derives projection permissions and command authority from one scope', async () => {
     const runtime = createInMemoryResourceRuntime({
-      scope,
+      scope: { ...scope, projection: 'player', permission: 'view' },
       initialSnapshot: {
         campaignId,
-        resources: [],
+        resources: [
+          await resource(generateDomainId(DOMAIN_ID_KIND.resource), null, 'note', 'Note'),
+        ],
         tombstones: [],
         aliases: [],
       },
-      authorize: () => authorization,
-      now: () => 10,
     })
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
-    const pending = runtime.structure.execute({
-      campaignId,
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-      command: {
-        type: 'create',
-        resourceId,
-        kind: 'note',
-        parentId: null,
-        title: canonicalizeResourceTitle('Draft'),
-        icon: null,
-        color: null,
-      },
-    })
-
-    await vi.waitFor(() => {
-      expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({
+    await runtime.loader.ensureCollection({ parentId: null, lifecycle: 'active' })
+    expect(runtime.index.getSnapshot().list({ parentId: null, lifecycle: 'active' })).toMatchObject(
+      {
         state: 'known',
-        value: expect.objectContaining({ id: resourceId, title: 'Draft' }),
-      })
-    })
-    authorize!()
-    await expect(pending).resolves.toMatchObject({
+        items: [{ permission: 'view' }],
+      },
+    )
+    await expect(
+      runtime.structure.execute({
+        campaignId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId,
+          kind: 'note',
+          parentId: null,
+          title: canonicalizeResourceTitle('Draft'),
+          icon: null,
+          color: null,
+        },
+      }),
+    ).resolves.toEqual({
       status: 'received',
-      result: { status: 'completed', receipt: { result: { type: 'created', resourceId } } },
+      result: { status: 'rejected', reason: 'unauthorized' },
     })
-    expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({
-      state: 'known',
-      value: expect.objectContaining({ id: resourceId, title: 'Draft' }),
-    })
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({ state: 'unknown' })
     runtime.dispose()
   })
 })

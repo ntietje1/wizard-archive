@@ -44,7 +44,6 @@ async function historyPreviewFixture(state: ItemHistoryState) {
     subscribe: () => () => {},
   }
   const core = createInMemoryEditorRuntime({
-    canEdit: true,
     scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
     snapshot: {
       campaignId,

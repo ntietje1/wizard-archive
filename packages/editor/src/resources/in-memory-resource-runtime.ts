@@ -1,5 +1,5 @@
 import type { ContentCopyPlanner } from './content-copy-contract'
-import type { ResourceCatalogSnapshot, SourcePathAlias } from './resource-catalog-contract'
+import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type {
   CommandDelivery,
   ResourceStructureCommandResult,
@@ -9,7 +9,6 @@ import type {
 import type { ResourceId } from './domain-id'
 import type { GrantedResourcePermission } from './resource-access-policy'
 import { InMemoryResourceCatalog } from './in-memory-resource-catalog'
-import type { InMemoryResourceOperationsOptions } from './in-memory-resource-catalog'
 import type {
   AuthorizedResourceSnapshot,
   AuthorizedResourceSummary,
@@ -30,11 +29,17 @@ import {
   indexRevision,
 } from './workspace-resource-index'
 
-export type InMemoryResourceRuntimeOptions<TContentCopyPlan = never> = Readonly<{
-  scope: ResourceProjectionScope
+export type InMemoryResourceScope =
+  | (Omit<ResourceProjectionScope, 'projection'> & Readonly<{ projection: 'dm' | 'local' }>)
+  | (Omit<ResourceProjectionScope, 'projection'> &
+      Readonly<{
+        projection: 'player' | 'view_as_player'
+        permission: GrantedResourcePermission
+      }>)
+
+type InMemoryResourceRuntimeOptions<TContentCopyPlan = never> = Readonly<{
+  scope: InMemoryResourceScope
   initialSnapshot: ResourceCatalogSnapshot
-  authorize: InMemoryResourceOperationsOptions<TContentCopyPlan>['authorize']
-  permission?: GrantedResourcePermission
   contentCopy?: ContentCopyPlanner<TContentCopyPlan, () => void>
   now?: () => number
 }>
@@ -63,8 +68,6 @@ function projectionSignature(snapshot: Omit<AuthorizedResourceSnapshot, 'revisio
 export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   scope,
   initialSnapshot,
-  authorize,
-  permission = 'edit',
   contentCopy,
   now,
 }: InMemoryResourceRuntimeOptions<TContentCopyPlan>) {
@@ -73,8 +76,13 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   }
 
   const catalog = new InMemoryResourceCatalog({ initialSnapshot })
+  const canManageStructure = scope.projection === 'dm' || scope.projection === 'local'
+  const permission =
+    scope.projection === 'player' || scope.projection === 'view_as_player'
+      ? scope.permission
+      : 'edit'
   const operations = catalog.operations({
-    authorize,
+    authorize: () => canManageStructure,
     ...(contentCopy ? { contentCopy } : {}),
     ...(now ? { now } : {}),
   })
@@ -180,7 +188,6 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   const optimistic = createOptimisticResourceStructureRuntime(baseIndex, authoritative, now)
 
   return {
-    appendAlias: (alias: SourcePathAlias) => operations.appendAlias(alias),
     catalogSnapshot: () => catalog.getSnapshot(scope.campaignId),
     subscribeCatalog: (listener: () => void) => catalog.subscribe(scope.campaignId, listener),
     dispose: () => {

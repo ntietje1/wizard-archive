@@ -50,7 +50,7 @@ type InMemoryResourceCatalogOptions = Readonly<{
   initialSnapshot?: ResourceCatalogSnapshot
 }>
 
-export type InMemoryResourceOperationsOptions<TContentCopyPlan = never> = Readonly<{
+type InMemoryResourceOperationsOptions<TContentCopyPlan = never> = Readonly<{
   authorize: ResourceOperationAuthorizer
   contentCopy?: ContentCopyPlanner<TContentCopyPlan, () => void>
   now?: () => number

@@ -350,12 +350,9 @@ describe('ResourceShell', () => {
 
   it('filters the shared topbar menu and opens panels and the canonical move picker', async () => {
     const { core, resource } = await shellRuntime(true)
+    const runtime = withAvailableReferences(core.runtime)
     render(
-      <ResourceShell
-        ariaLabel="Editable resources"
-        runtime={core.runtime}
-        workspaceName="DM view"
-      />,
+      <ResourceShell ariaLabel="Editable resources" runtime={runtime} workspaceName="DM view" />,
     )
     await createFolderForTest(core.runtime, 'Destination')
     const roots = core.runtime.resources.index
@@ -790,9 +787,30 @@ describe('ResourceShell', () => {
 
   it('imports an external file dropped on an empty folder dashboard', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
-    render(
-      <ResourceShell ariaLabel="Folder import" runtime={core.runtime} workspaceName="DM view" />,
-    )
+    const importedId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const runtime = {
+      ...core.runtime,
+      transfers: {
+        status: 'available' as const,
+        value: {
+          execute: (intent: Parameters<NonNullableTransfer['execute']>[0]) =>
+            Promise.resolve({
+              jobId: intent.jobId,
+              status: 'settled' as const,
+              entries: [
+                {
+                  status: 'completed' as const,
+                  sourceId: 'selected-file',
+                  sourcePath: 'External.bin',
+                  resourceId: importedId,
+                  kind: 'file' as const,
+                },
+              ],
+            }),
+        },
+      },
+    } satisfies EditorRuntime
+    render(<ResourceShell ariaLabel="Folder import" runtime={runtime} workspaceName="DM view" />)
 
     expect(await screen.findByRole('heading', { name: 'Create New' })).toBeInTheDocument()
     const dropZone = screen.getByLabelText(`${resource.title} resource drop zone`)
@@ -808,19 +826,7 @@ describe('ResourceShell', () => {
     fireEvent.drop(dropZone, { dataTransfer })
 
     expect(await screen.findByText('Imported 1 file')).toBeInTheDocument()
-    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
-    const importedId = navigation.current()?.resourceId
-    expect(importedId).toBeDefined()
-    const imported = importedId
-      ? core.runtime.resources.index.getSnapshot().lookup(importedId)
-      : null
-    expect(imported?.state).toBe('known')
-    if (imported?.state !== 'known') throw new Error('Expected imported file')
-    expect(imported.value).toMatchObject({
-      displayParentId: resource.id,
-      kind: 'file',
-      title: 'External.bin',
-    })
+    await waitFor(() => expect(navigation.current()?.resourceId).toBe(importedId))
     core.dispose()
   })
 
@@ -1988,6 +1994,29 @@ async function createFolderForTest(runtime: EditorRuntime, title: string) {
   })
 }
 
+type NonNullableTransfer = Extract<EditorRuntime['transfers'], { status: 'available' }>['value']
+
+function withAvailableReferences(runtime: EditorRuntime): EditorRuntime {
+  const state = {
+    status: 'ready' as const,
+    outgoing: { status: 'ready' as const, edges: [] },
+    backlinks: { status: 'ready' as const, edges: [] },
+  }
+  return {
+    ...runtime,
+    resources: {
+      ...runtime.resources,
+      references: {
+        status: 'available',
+        value: {
+          get: () => state,
+          subscribe: () => () => undefined,
+        },
+      },
+    },
+  }
+}
+
 async function shellRuntime(
   canEdit: boolean,
   lifecycle: 'active' | 'trashed' = 'active',
@@ -2055,14 +2084,10 @@ async function shellRuntime(
             }
           : undefined
   const core = createInMemoryEditorRuntime({
-    canEdit,
-    permission,
-    scope: {
-      campaignId,
-      actorId,
-      projection,
-      schema: RESOURCE_INDEX_SCHEMA,
-    },
+    scope:
+      projection === 'player' || projection === 'view_as_player'
+        ? { campaignId, actorId, projection, permission, schema: RESOURCE_INDEX_SCHEMA }
+        : { campaignId, actorId, projection, schema: RESOURCE_INDEX_SCHEMA },
     snapshot: {
       campaignId,
       resources: [resource],

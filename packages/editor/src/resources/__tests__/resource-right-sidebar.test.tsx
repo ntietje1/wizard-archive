@@ -13,6 +13,7 @@ import { canonicalizeResourceTitle } from '../resource-record'
 import { ResourceRightSidebar } from '../workspace/resource-right-sidebar'
 import { createWorkspaceActions } from '../workspace/resource-operations'
 import type {
+  EditorRuntime,
   ItemHistoryController,
   ItemHistoryState,
   ResourceNavigation,
@@ -64,7 +65,6 @@ describe('ResourceRightSidebar note outline', () => {
       subscribe: () => () => {},
     }
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -149,7 +149,6 @@ describe('ResourceRightSidebar references', () => {
       presentation: 'heading' as const,
     }
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -205,14 +204,35 @@ describe('ResourceRightSidebar references', () => {
     })
     await core.runtime.resources.loader.ensureResource(resourceId)
     await core.runtime.resources.loader.ensureResource(targetId)
+    const referenceState = {
+      status: 'ready' as const,
+      outgoing: {
+        status: 'ready' as const,
+        edges: [{ sourceResourceId: resourceId, sourceVersion: version, target }],
+      },
+      backlinks: { status: 'ready' as const, edges: [] },
+    }
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        references: {
+          status: 'available' as const,
+          value: {
+            get: () => referenceState,
+            subscribe: () => () => undefined,
+          },
+        },
+      },
+    } satisfies EditorRuntime
 
     render(
       <ResourceRightSidebar
-        actions={createWorkspaceActions(core.runtime, vi.fn())}
+        actions={createWorkspaceActions(runtime, vi.fn())}
         activePanel="outgoing"
         noteHeadingNavigation={{ current: null }}
         resource={authorizedResourceSummaryFromRecord(records[0]!, 'edit')}
-        runtime={core.runtime}
+        runtime={runtime}
         onActivePanelChange={vi.fn()}
       />,
     )
@@ -243,7 +263,6 @@ describe('ResourceRightSidebar references', () => {
       updated: { at: 1, by: actorId },
     }
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,
@@ -321,7 +340,6 @@ describe('ResourceRightSidebar item history', () => {
       subscribe: () => () => {},
     }
     const core = createInMemoryEditorRuntime({
-      canEdit: true,
       scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
       snapshot: {
         campaignId,

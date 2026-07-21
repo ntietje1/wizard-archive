@@ -85,12 +85,21 @@ function PublicDemoIsland({
   scenario: PublicDemoScenario
   showResourcePanel?: boolean
 }) {
+  const workspace = canEdit
+    ? scenario.workspace
+    : {
+        ...scenario.workspace,
+        scope: {
+          ...scenario.workspace.scope,
+          projection: 'player' as const,
+          permission: 'view' as const,
+        },
+      }
   return (
     <LocalWorkspaceRuntimeHost
       ariaLabel={ariaLabel}
-      canEdit={canEdit}
       initialResourceId={scenario.initialResourceId}
-      initialWorkspace={scenario.workspace}
+      initialWorkspace={workspace}
       showResourcePanel={showResourcePanel}
       workspaceName="Demo workspace"
     />

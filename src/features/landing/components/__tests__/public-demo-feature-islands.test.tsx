@@ -60,10 +60,9 @@ describe('public demo feature islands', () => {
     expect(screen.getByRole('region', { name: 'Demo workspace' })).toBeInTheDocument()
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        canEdit: false,
         initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
-          scope: scenario.workspace.scope,
+          scope: expect.objectContaining({ projection: 'player', permission: 'view' }),
           snapshot: scenario.workspace.snapshot,
         }),
       }),
@@ -88,7 +87,6 @@ describe('public demo feature islands', () => {
     expect(screen.getByRole('region')).toHaveAttribute('data-resource-panel', 'hidden')
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        canEdit: true,
         initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
@@ -158,7 +156,6 @@ describe('public demo feature islands', () => {
     expect(screen.getByRole('region', { name: 'Collaborative note preview' })).toBeInTheDocument()
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        canEdit: true,
         initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
@@ -182,7 +179,6 @@ describe('public demo feature islands', () => {
     expect(screen.getByRole('region', { name: 'Template note editor' })).toBeInTheDocument()
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        canEdit: true,
         initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
