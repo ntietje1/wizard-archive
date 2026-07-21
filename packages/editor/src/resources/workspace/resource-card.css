@@ -1,0 +1,10 @@
+.resource-folder-card-shape svg {
+  filter: drop-shadow(0 0 0.75px var(--border));
+  transition: filter 100ms ease;
+}
+
+.resource-folder-card:is(:focus-within, [data-selected='true'], [data-drop-target='true'])
+  .resource-folder-card-shape
+  svg {
+  filter: drop-shadow(0 0 0.75px var(--ring));
+}
