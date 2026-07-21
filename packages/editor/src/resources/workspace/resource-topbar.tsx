@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import {
   ChevronRight,
   Eye,
-  FolderInput,
   MoreVertical,
   PanelLeftOpen,
   PanelRightClose,
@@ -14,9 +13,13 @@ import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
 import { ResourceSharingControl } from './resource-sharing-control'
 import { ResourceViewAsMenu } from '../resource-view-as-menu'
+import { ResourceContextMenu } from './resource-context-menu'
+import { resourceRightSidebarPanels } from './resource-right-sidebar-panels'
+import type { ResourceRightSidebarPanel } from './resource-right-sidebar-panels'
 
 export function ResourceTopbar({
   actions,
+  activeRightPanel,
   canEdit,
   leftSidebarAvailable,
   leftSidebarVisible,
@@ -24,6 +27,7 @@ export function ResourceTopbar({
   onModeChange,
   onOpenHistory,
   onOpenLeftSidebar,
+  onOpenRightPanel,
   onToggleRightSidebar,
   onRequestMove,
   resource,
@@ -31,6 +35,7 @@ export function ResourceTopbar({
   runtime,
 }: {
   actions: WorkspaceActions
+  activeRightPanel: ResourceRightSidebarPanel
   canEdit: boolean
   leftSidebarAvailable: boolean
   leftSidebarVisible: boolean
@@ -38,6 +43,7 @@ export function ResourceTopbar({
   onModeChange: (mode: 'editor' | 'viewer') => void
   onOpenHistory: () => void
   onOpenLeftSidebar: () => void
+  onOpenRightPanel: (panel: ResourceRightSidebarPanel) => void
   onToggleRightSidebar: () => void
   onRequestMove: (resourceIds: ReadonlyArray<AuthorizedResourceSummary['id']>) => void
   resource: AuthorizedResourceSummary
@@ -45,11 +51,13 @@ export function ResourceTopbar({
   runtime: EditorRuntime
 }) {
   const [editing, setEditing] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<Readonly<{ x: number; y: number }> | null>(null)
+  const menuAnchor = useRef<HTMLDivElement>(null)
   const ancestors = runtime.resources.index.getSnapshot().ancestors(resource.id)
   const breadcrumb = ancestors.state === 'known' ? ancestors.value : []
   const historyAvailable = runtime.history.status === 'available' && resource.permission === 'edit'
   const viewAs = runtime.viewAs.status === 'available' ? runtime.viewAs.value : null
+  const rightSidebarPanels = resourceRightSidebarPanels(resource, runtime)
 
   return (
     <header className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border px-1">
@@ -127,103 +135,37 @@ export function ResourceTopbar({
           <PanelRightOpen className="size-4" />
         )}
       </TopbarIcon>
-      <div className="relative">
-        <TopbarIcon label="More options" onClick={() => setMenuOpen((value) => !value)}>
+      <div ref={menuAnchor} className="relative">
+        <TopbarIcon
+          label="More options"
+          onClick={() => {
+            if (menuPosition) {
+              setMenuPosition(null)
+              return
+            }
+            const bounds = menuAnchor.current?.getBoundingClientRect()
+            if (!bounds) return
+            setMenuPosition({ x: bounds.right - 224, y: bounds.bottom + 4 })
+          }}
+        >
           <MoreVertical className="size-4" />
         </TopbarIcon>
-        {menuOpen && (
-          <ResourceMenu
+        {menuPosition && (
+          <ResourceContextMenu
             actions={actions}
+            activePanel={activeRightPanel}
             canEdit={canEdit}
-            resource={resource}
-            onClose={() => setMenuOpen(false)}
+            panels={rightSidebarPanels}
+            request={{ resource, ...menuPosition }}
+            rightSidebarVisible={rightSidebarVisible}
+            surface="topbar"
+            onClose={() => setMenuPosition(null)}
+            onOpenPanel={onOpenRightPanel}
             onRequestMove={onRequestMove}
           />
         )}
       </div>
     </header>
-  )
-}
-
-function ResourceMenu({
-  actions,
-  canEdit,
-  onClose,
-  onRequestMove,
-  resource,
-}: {
-  actions: WorkspaceActions
-  canEdit: boolean
-  onClose: () => void
-  onRequestMove: (resourceIds: ReadonlyArray<AuthorizedResourceSummary['id']>) => void
-  resource: AuthorizedResourceSummary
-}) {
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const run = (operation: () => Promise<unknown>) => {
-    onClose()
-    void operation()
-  }
-  return (
-    <div
-      role="menu"
-      className="absolute right-0 top-8 z-40 w-52 rounded-md border border-border bg-popover p-1 text-sm text-popover-foreground shadow-md"
-    >
-      {canEdit && resource.lifecycle === 'active' && (
-        <>
-          <MenuButton
-            onClick={() => run(() => actions.duplicate([resource.id], resource.displayParentId))}
-          >
-            Duplicate
-          </MenuButton>
-          <MenuButton
-            onClick={() => {
-              onClose()
-              onRequestMove([resource.id])
-            }}
-          >
-            <FolderInput className="mr-2 size-4" />
-            Move…
-          </MenuButton>
-        </>
-      )}
-      <MenuButton onClick={() => run(() => actions.copyLink(resource))}>Copy link</MenuButton>
-      {canEdit && resource.lifecycle === 'active' && (
-        <MenuButton
-          ariaLabel={`Move ${resource.title} to trash`}
-          destructive
-          onClick={() => run(() => actions.changeLifecycle([resource.id], 'trash'))}
-        >
-          Move to trash
-        </MenuButton>
-      )}
-      {canEdit && resource.lifecycle === 'trashed' && (
-        <>
-          <MenuButton
-            ariaLabel={`Restore ${resource.title}`}
-            onClick={() => run(() => actions.changeLifecycle([resource.id], 'restore'))}
-          >
-            Restore
-          </MenuButton>
-          {confirmDelete ? (
-            <MenuButton
-              ariaLabel={`Confirm delete ${resource.title} forever`}
-              destructive
-              onClick={() => run(() => actions.changeLifecycle([resource.id], 'permanentlyDelete'))}
-            >
-              Confirm delete forever
-            </MenuButton>
-          ) : (
-            <MenuButton
-              ariaLabel={`Delete ${resource.title} forever`}
-              destructive
-              onClick={() => setConfirmDelete(true)}
-            >
-              Delete forever
-            </MenuButton>
-          )}
-        </>
-      )}
-    </div>
   )
 }
 
@@ -288,30 +230,6 @@ function TopbarIcon({
       disabled={disabled}
       onClick={onClick}
       title={title ?? label}
-    >
-      {children}
-    </button>
-  )
-}
-
-function MenuButton({
-  ariaLabel,
-  children,
-  destructive,
-  onClick,
-}: {
-  ariaLabel?: string
-  children: ReactNode
-  destructive?: boolean
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      className={`flex h-8 w-full items-center rounded px-2 text-left hover:bg-muted ${destructive ? 'text-destructive' : ''}`}
-      role="menuitem"
-      onClick={onClick}
     >
       {children}
     </button>

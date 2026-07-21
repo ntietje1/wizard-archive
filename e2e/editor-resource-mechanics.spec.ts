@@ -52,8 +52,23 @@ test.describe('resource mechanics', () => {
     await expect(
       page.getByRole('textbox', { name: 'The Lantern Market note editor' }),
     ).toBeVisible()
-    await page.getByRole('button', { name: 'Open resource panel' }).click()
+    await page.getByRole('button', { name: 'More options', exact: true }).click()
+    const topbarMenu = page.getByRole('menu', { name: 'The Lantern Market actions' })
+    await expect(topbarMenu.getByRole('menuitem', { name: 'Backlinks' })).toBeVisible()
+    await expect(topbarMenu.getByRole('menuitem', { name: 'Outgoing links' })).toBeVisible()
+    await expect(topbarMenu.getByRole('menuitem', { name: 'Duplicate' })).toHaveCount(0)
+    await expect(topbarMenu.getByRole('menuitem', { name: 'Paste' })).toHaveCount(0)
+    await topbarMenu.getByRole('menuitem', { name: 'Backlinks' }).click()
     const details = page.getByRole('complementary', { name: 'Resource panel' })
+    await expect(details.getByRole('button', { name: 'Backlinks' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await page.getByRole('button', { name: 'More options', exact: true }).click()
+    await page
+      .getByRole('menu', { name: 'The Lantern Market actions' })
+      .getByRole('menuitem', { name: 'Details' })
+      .click()
     await expect(details).toContainText('Kind')
     await expect(details).toContainText('note')
     await expect(details).toContainText('Campaign root')
@@ -75,7 +90,7 @@ test.describe('resource mechanics', () => {
   test('creates through the folder dashboard and preserves natural titles through undo and redo', async ({
     page,
   }) => {
-    await openWorkspace(page)
+    const workspace = await openWorkspace(page)
 
     await createNamedResource(page, 'Folder', 'Operations')
     await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible()
@@ -89,13 +104,18 @@ test.describe('resource mechanics', () => {
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
 
     let history = await openSidebarHistoryMenu(page)
+    await expect(history.getByRole('menuitem', { name: 'New…' })).toBeVisible()
+    await expect(history.getByRole('menuitem', { name: 'Paste' })).toBeDisabled()
     await history.getByRole('menuitem', { name: 'Undo rename' }).click()
     await expect(page.getByRole('heading', { name: 'Untitled note' })).toBeVisible()
     history = await openSidebarHistoryMenu(page)
     await history.getByRole('menuitem', { name: 'Redo rename' }).click()
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'More options', exact: true }).click()
+    const sidebar = workspace.getByRole('navigation', { name: 'Sidebar' })
+    await sidebar.getByRole('button', { name: 'Clue: North / South', exact: true }).click({
+      button: 'right',
+    })
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
   })

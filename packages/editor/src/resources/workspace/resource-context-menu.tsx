@@ -4,6 +4,7 @@ import {
   Clipboard,
   ClipboardPaste,
   ChevronRight,
+  Check,
   Copy,
   Download,
   ExternalLink,
@@ -30,40 +31,49 @@ import type { WorkspaceActions } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
+import type {
+  ResourceRightSidebarPanel,
+  ResourceRightSidebarPanelOption,
+} from './resource-right-sidebar-panels'
 
-export function ResourceContextMenu({
-  canEdit,
-  actions: workspace,
-  bookmarksAvailable,
-  campaignId,
-  clipboard,
-  onClipboardChange,
-  onClose,
-  onRequestMove,
-  navigation,
-  request,
-  resourceIds,
-  bookmarkedIds,
-}: {
+type ResourceContextMenuCommonProps = Readonly<{
   actions: WorkspaceActions
-  bookmarksAvailable: boolean
-  campaignId: CampaignId
   canEdit: boolean
-  clipboard: WorkspaceClipboard
-  onClipboardChange: (clipboard: WorkspaceClipboard) => void
   onClose: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
-  navigation: ResourceNavigation
   request: ResourceContextMenuRequest
-  resourceIds: ReadonlyArray<ResourceId>
-  bookmarkedIds: ReadonlySet<ResourceId>
-}) {
+}>
+
+type ResourceSurfaceContextMenuProps = ResourceContextMenuCommonProps &
+  Readonly<{
+    surface: 'resource'
+    bookmarksAvailable: boolean
+    bookmarkedIds: ReadonlySet<ResourceId>
+    campaignId: CampaignId
+    clipboard: WorkspaceClipboard
+    navigation: ResourceNavigation
+    resourceIds: ReadonlyArray<ResourceId>
+    onClipboardChange: (clipboard: WorkspaceClipboard) => void
+  }>
+
+type TopbarContextMenuProps = ResourceContextMenuCommonProps &
+  Readonly<{
+    surface: 'topbar'
+    activePanel: ResourceRightSidebarPanel
+    panels: ReadonlyArray<ResourceRightSidebarPanelOption>
+    rightSidebarVisible: boolean
+    onOpenPanel: (panel: ResourceRightSidebarPanel) => void
+  }>
+
+export function ResourceContextMenu(
+  props: ResourceSurfaceContextMenuProps | TopbarContextMenuProps,
+) {
   const menu = useRef<HTMLDivElement>(null)
-  const resource = request.resource
-  const active = resource.lifecycle === 'active'
+  const { onClose, onRequestMove, request } = props
+  const workspace = props.actions
+  const resource = props.request.resource
+  const resourceIds = props.surface === 'resource' ? props.resourceIds : [resource.id]
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const destinationId = resource.kind === 'folder' ? resource.id : null
-  const creation = useWorkspaceCreation(campaignId, navigation, destinationId)
 
   useEffect(() => {
     menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus()
@@ -87,48 +97,156 @@ export function ResourceContextMenu({
       style={boundedMenuPosition(request.x, request.y)}
       onKeyDown={(event) => navigateMenu(event, onClose)}
     >
+      <ResourceContextMenuItems
+        actions={actions}
+        confirmDelete={confirmDelete}
+        props={props}
+        onConfirmDelete={() => setConfirmDelete(true)}
+      />
+    </div>
+  )
+}
+
+function ResourceContextMenuItems({
+  actions,
+  confirmDelete,
+  onConfirmDelete,
+  props,
+}: {
+  actions: ResourceMenuActions
+  confirmDelete: boolean
+  onConfirmDelete: () => void
+  props: ResourceSurfaceContextMenuProps | TopbarContextMenuProps
+}) {
+  if (props.surface === 'resource') {
+    return (
+      <ResourceSurfaceMenuItems
+        actions={actions}
+        confirmDelete={confirmDelete}
+        props={props}
+        onConfirmDelete={onConfirmDelete}
+      />
+    )
+  }
+  return (
+    <TopbarSurfaceMenuItems
+      actions={actions}
+      confirmDelete={confirmDelete}
+      props={props}
+      onConfirmDelete={onConfirmDelete}
+    />
+  )
+}
+
+function ResourceSurfaceMenuItems({
+  actions,
+  confirmDelete,
+  onConfirmDelete,
+  props,
+}: {
+  actions: ResourceMenuActions
+  confirmDelete: boolean
+  onConfirmDelete: () => void
+  props: ResourceSurfaceContextMenuProps
+}) {
+  const active = actions.resource.lifecycle === 'active'
+  const singleResource = actions.resourceIds.length === 1
+  return (
+    <>
       <MenuItem
         icon={<ExternalLink />}
         label="Open"
-        onActivate={() => runMenuOperation(actions, () => workspace.open(resource.id))}
+        onActivate={() =>
+          runMenuOperation(actions, () => actions.workspace.open(actions.resource.id))
+        }
       />
-      {canEdit && active && (
+      {props.canEdit && active && (
         <ActiveResourceMenuItems
           actions={actions}
-          clipboard={clipboard}
-          creation={creation}
-          onClipboardChange={onClipboardChange}
-          submenuSide={request.x > globalThis.innerWidth - 460 ? 'left' : 'right'}
+          campaignId={props.campaignId}
+          clipboard={props.clipboard}
+          navigation={props.navigation}
+          onClipboardChange={props.onClipboardChange}
+          submenuSide={props.request.x > globalThis.innerWidth - 460 ? 'left' : 'right'}
         />
       )}
-      {canEdit && active && resourceIds.length === 1 && (
-        <ResourceAppearancePopover
-          actions={workspace}
-          resource={resource}
-          trigger={
-            <button
-              role="menuitem"
-              type="button"
-              className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted"
-            >
-              <Palette className="size-4" />
-              Edit icon and color
-            </button>
-          }
-        />
+      {props.canEdit && active && singleResource && (
+        <ResourceAppearanceMenuItem actions={actions} />
       )}
-      {resourceIds.length === 1 && <ResourceLinkMenuItems actions={actions} />}
-      {bookmarksAvailable && active && (
-        <ResourceBookmarkMenuItem actions={actions} bookmarkedIds={bookmarkedIds} />
+      {singleResource && <ResourceLinkMenuItems actions={actions} separated />}
+      {props.bookmarksAvailable && active && (
+        <ResourceBookmarkMenuItem actions={actions} bookmarkedIds={props.bookmarkedIds} />
       )}
-      {canEdit && (
+      {props.canEdit && (
         <ResourceLifecycleMenuItems
           actions={actions}
           confirmDelete={confirmDelete}
-          onConfirmDelete={() => setConfirmDelete(true)}
+          onConfirmDelete={onConfirmDelete}
         />
       )}
-    </div>
+    </>
+  )
+}
+
+function TopbarSurfaceMenuItems({
+  actions,
+  confirmDelete,
+  onConfirmDelete,
+  props,
+}: {
+  actions: ResourceMenuActions
+  confirmDelete: boolean
+  onConfirmDelete: () => void
+  props: TopbarContextMenuProps
+}) {
+  const active = actions.resource.lifecycle === 'active'
+  return (
+    <>
+      {props.canEdit && active && (
+        <MenuItem
+          icon={<FolderInput />}
+          label="Move…"
+          onActivate={() =>
+            runMenuOperation(actions, () => props.onRequestMove(actions.resourceIds))
+          }
+        />
+      )}
+      {props.canEdit && active && <ResourceAppearanceMenuItem actions={actions} />}
+      <ResourceLinkMenuItems actions={actions} separated={props.canEdit && active} />
+      <ResourcePanelMenuItems
+        actions={actions}
+        activePanel={props.activePanel}
+        panels={props.panels}
+        rightSidebarVisible={props.rightSidebarVisible}
+        onOpenPanel={props.onOpenPanel}
+      />
+      {props.canEdit && (
+        <ResourceLifecycleMenuItems
+          actions={actions}
+          confirmDelete={confirmDelete}
+          onConfirmDelete={onConfirmDelete}
+        />
+      )}
+    </>
+  )
+}
+
+function ResourceAppearanceMenuItem({ actions }: { actions: ResourceMenuActions }) {
+  return (
+    <ResourceAppearancePopover
+      actions={actions.workspace}
+      resource={actions.resource}
+      trigger={
+        <button
+          role="menuitem"
+          type="button"
+          className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted"
+        >
+          <Palette className="size-4" />
+          Edit icon and color
+        </button>
+      }
+    />
   )
 }
 
@@ -166,19 +284,22 @@ type ResourceMenuActions = Readonly<{
 
 function ActiveResourceMenuItems({
   actions,
+  campaignId,
   clipboard,
-  creation,
+  navigation,
   onClipboardChange,
   submenuSide,
 }: {
   actions: ResourceMenuActions
+  campaignId: CampaignId
   clipboard: WorkspaceClipboard
-  creation: ReturnType<typeof useWorkspaceCreation>
+  navigation: ResourceNavigation
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   submenuSide: 'left' | 'right'
 }) {
   const { resource, resourceIds, workspace } = actions
   const destinationId = resource.kind === 'folder' ? resource.id : null
+  const creation = useWorkspaceCreation(campaignId, navigation, destinationId)
   const canPaste =
     destinationId !== null &&
     clipboard.status === 'ready' &&
@@ -193,9 +314,10 @@ function ActiveResourceMenuItems({
       {destinationId !== null && (
         <>
           <NewResourceSubmenu
-            actions={actions}
+            actions={workspace}
             creation={creation}
-            destinationId={destinationId}
+            destinationParentId={destinationId}
+            onClose={actions.onClose}
             side={submenuSide}
           />
           <WorkspaceCreationStatus creation={creation} onCompleted={actions.onClose} />
@@ -222,13 +344,15 @@ function ActiveResourceMenuItems({
           )
         }
       />
-      <MenuItem
-        disabled={!canPaste}
-        icon={<ClipboardPaste />}
-        label="Paste into folder"
-        shortcut="Ctrl+V"
-        onActivate={() => runMenuOperation(actions, paste)}
-      />
+      {destinationId !== null && (
+        <MenuItem
+          disabled={!canPaste}
+          icon={<ClipboardPaste />}
+          label="Paste"
+          shortcut="Ctrl+V"
+          onActivate={() => runMenuOperation(actions, paste)}
+        />
+      )}
       <MenuItem
         icon={<Copy />}
         label={resourceIds.length > 1 ? `Duplicate ${resourceIds.length} items` : 'Duplicate'}
@@ -248,15 +372,17 @@ function ActiveResourceMenuItems({
   )
 }
 
-function NewResourceSubmenu({
+export function NewResourceSubmenu({
   actions,
   creation,
-  destinationId,
+  destinationParentId,
+  onClose,
   side,
 }: {
-  actions: ResourceMenuActions
+  actions: WorkspaceActions
   creation: ReturnType<typeof useWorkspaceCreation>
-  destinationId: ResourceId
+  destinationParentId: ResourceId | null
+  onClose: () => void
   side: 'left' | 'right'
 }) {
   const [open, setOpen] = useState(false)
@@ -294,11 +420,9 @@ function NewResourceSubmenu({
                 label={resourceKindLabel(kind)}
                 onActivate={() =>
                   void creation
-                    .run(kind, (signal) =>
-                      actions.workspace.create(kind, destinationId, '', signal),
-                    )
+                    .run(kind, (signal) => actions.create(kind, destinationParentId, '', signal))
                     .then((settlement) => {
-                      if (settlement.status === 'completed') actions.onClose()
+                      if (settlement.status === 'completed') onClose()
                     })
                 }
               />
@@ -310,11 +434,17 @@ function NewResourceSubmenu({
   )
 }
 
-function ResourceLinkMenuItems({ actions }: { actions: ResourceMenuActions }) {
+function ResourceLinkMenuItems({
+  actions,
+  separated,
+}: {
+  actions: ResourceMenuActions
+  separated: boolean
+}) {
   const { resource, workspace } = actions
   return (
     <>
-      <MenuSeparator />
+      {separated && <MenuSeparator />}
       <MenuItem
         icon={<FileInput />}
         label="Copy link"
@@ -332,6 +462,37 @@ function ResourceLinkMenuItems({ actions }: { actions: ResourceMenuActions }) {
           onActivate={() => runMenuOperation(actions, () => workspace.download(resource))}
         />
       )}
+    </>
+  )
+}
+
+function ResourcePanelMenuItems({
+  actions,
+  activePanel,
+  onOpenPanel,
+  panels,
+  rightSidebarVisible,
+}: {
+  actions: ResourceMenuActions
+  activePanel: ResourceRightSidebarPanel
+  onOpenPanel: (panel: ResourceRightSidebarPanel) => void
+  panels: ReadonlyArray<ResourceRightSidebarPanelOption>
+  rightSidebarVisible: boolean
+}) {
+  const availablePanels = panels.filter((panel) => panel.available)
+  if (availablePanels.length === 0) return null
+  return (
+    <>
+      <MenuSeparator />
+      {availablePanels.map((panel) => (
+        <MenuItem
+          checked={rightSidebarVisible && panel.id === activePanel}
+          icon={<panel.icon />}
+          key={panel.id}
+          label={panel.label}
+          onActivate={() => runMenuOperation(actions, () => onOpenPanel(panel.id))}
+        />
+      ))}
     </>
   )
 }
@@ -407,6 +568,7 @@ function runMenuOperation(actions: ResourceMenuActions, operation: () => unknown
 
 function MenuItem({
   busy = false,
+  checked = false,
   danger = false,
   disabled = false,
   icon,
@@ -415,6 +577,7 @@ function MenuItem({
   shortcut,
 }: {
   busy?: boolean
+  checked?: boolean
   danger?: boolean
   disabled?: boolean
   icon: ReactNode
@@ -428,6 +591,7 @@ function MenuItem({
       type="button"
       aria-label={label}
       aria-busy={busy}
+      aria-current={checked ? 'true' : undefined}
       disabled={disabled}
       className={`flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:pointer-events-none disabled:opacity-50 ${danger ? 'text-destructive' : ''}`}
       onClick={onActivate}
@@ -435,6 +599,7 @@ function MenuItem({
       <span className="[&>svg]:size-4">{icon}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {shortcut && <span className="text-xs text-muted-foreground">{shortcut}</span>}
+      {checked && <Check className="size-4" aria-hidden="true" />}
     </button>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Clock3, FileText, Link2, List, Loader2, RotateCcw } from 'lucide-react'
+import { ChevronRight, Link2, Loader2, RotateCcw } from 'lucide-react'
 import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
 import { formatRelativeTime } from '@wizard-archive/ui/utils/format-relative-time'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
@@ -19,8 +19,8 @@ import type * as Y from 'yjs'
 import type { NoteHeadingNavigationRef } from '../../notes/note-heading-navigation'
 import { canonicalTargetKey } from '../authored-destination'
 import { useResourceStoreSnapshot, useWorkspaceIndexSnapshot } from './resource-store-snapshot'
-
-type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
+import { resourceRightSidebarPanels } from './resource-right-sidebar-panels'
+import type { ResourceRightSidebarPanel } from './resource-right-sidebar-panels'
 
 export function ResourceRightSidebar({
   actions,
@@ -31,34 +31,13 @@ export function ResourceRightSidebar({
   runtime,
 }: {
   actions: WorkspaceActions
-  activePanel: PanelId
+  activePanel: ResourceRightSidebarPanel
   noteHeadingNavigation: NoteHeadingNavigationRef
-  onActivePanelChange: (panel: PanelId) => void
+  onActivePanelChange: (panel: ResourceRightSidebarPanel) => void
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
-  const panels = [
-    { id: 'details' as const, label: 'Details', icon: FileText, available: true },
-    { id: 'outline' as const, label: 'Outline', icon: List, available: resource.kind === 'note' },
-    {
-      id: 'backlinks' as const,
-      label: 'Backlinks',
-      icon: Link2,
-      available: runtime.resources.references.status === 'available',
-    },
-    {
-      id: 'outgoing' as const,
-      label: 'Outgoing links',
-      icon: Link2,
-      available: runtime.resources.references.status === 'available',
-    },
-    {
-      id: 'history' as const,
-      label: 'History',
-      icon: Clock3,
-      available: runtime.history.status === 'available' && resource.permission === 'edit',
-    },
-  ]
+  const panels = resourceRightSidebarPanels(resource, runtime)
   const selected = panels.find((panel) => panel.id === activePanel && panel.available) ?? panels[0]
   return (
     <aside aria-label="Resource panel" className="flex h-full min-h-0 flex-col bg-background">
@@ -102,7 +81,7 @@ function ResourcePanel({
 }: {
   actions: WorkspaceActions
   noteHeadingNavigation: NoteHeadingNavigationRef
-  panel: PanelId
+  panel: ResourceRightSidebarPanel
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
@@ -641,8 +620,6 @@ function historyLocation(value: string | null) {
 function historySubject(value: 'all_players' | CampaignMemberId) {
   return value === 'all_players' ? 'all players’' : 'a player’s'
 }
-
-export type ResourceRightSidebarPanel = PanelId
 
 const resourceTimestampFormat = new Intl.DateTimeFormat('en-US', {
   dateStyle: 'medium',

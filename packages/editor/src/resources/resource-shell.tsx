@@ -39,7 +39,7 @@ import { ResourceHistoryPreview } from './workspace/resource-history-preview'
 import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import { useWorkspacePanelGeometry } from './workspace/use-workspace-panel-geometry'
 import { ResourceViewAsBanner } from './workspace/resource-view-as-banner'
-import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar'
+import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar-panels'
 import { createWorkspaceActions } from './workspace/resource-operations'
 import type { WorkspaceActions, WorkspaceReport } from './workspace/resource-operations'
 import type {
@@ -239,6 +239,7 @@ export function ResourceShell({
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <SelectedResource
+          activeRightPanel={rightPanel}
           actions={actions}
           canEditStructure={canEditStructure}
           knowledge={selected}
@@ -259,6 +260,10 @@ export function ResourceShell({
             patchPreference({ field: 'rightPanelVisible', value: true })
           }}
           onOpenLeftSidebar={() => patchPreference({ field: 'leftPanelVisible', value: true })}
+          onOpenRightPanel={(panel) => {
+            setRightPanel(panel)
+            patchPreference({ field: 'rightPanelVisible', value: true })
+          }}
           rightSidebarVisible={rightVisible}
           onToggleRightSidebar={() =>
             patchPreference({ field: 'rightPanelVisible', value: !rightVisible })
@@ -372,18 +377,21 @@ function ResourceShellMenus({
           navigation={runtime.navigation}
           request={currentResourceContextRequest(snapshot, contextMenu.request)}
           resourceIds={contextMenu.resourceIds}
+          surface="resource"
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
           onClipboardChange={onClipboardChange}
           onClose={onCloseContextMenu}
           onRequestMove={onMoveResourceIdsChange}
         />
       )}
-      {sidebarContextMenu && runtime.resources.undo.status === 'available' && (
+      {sidebarContextMenu && (
         <ResourceSidebarContextMenu
           actions={actions}
+          clipboard={clipboard}
           runtime={runtime}
           x={sidebarContextMenu.x}
           y={sidebarContextMenu.y}
+          onClipboardChange={onClipboardChange}
           onClose={onSidebarContextMenuClose}
         />
       )}
@@ -733,6 +741,7 @@ function runResourceShortcut({
 
 function SelectedResource({
   actions,
+  activeRightPanel,
   canEditStructure,
   knowledge,
   noteHeadingNavigation,
@@ -744,6 +753,7 @@ function SelectedResource({
   onOpenHistory,
   onOpenContextMenu,
   onOpenLeftSidebar,
+  onOpenRightPanel,
   onToggleRightSidebar,
   onRequestMove,
   onSelectionChange,
@@ -756,6 +766,7 @@ function SelectedResource({
   target,
 }: {
   actions: WorkspaceActions
+  activeRightPanel: ResourceRightSidebarPanel
   canEditStructure: boolean
   knowledge: ResourceKnowledge<AuthorizedResourceSummary>
   noteHeadingNavigation: NoteHeadingNavigationRef
@@ -767,6 +778,7 @@ function SelectedResource({
   onOpenHistory: () => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onOpenLeftSidebar: () => void
+  onOpenRightPanel: (panel: ResourceRightSidebarPanel) => void
   onToggleRightSidebar: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
@@ -832,6 +844,7 @@ function SelectedResource({
     <>
       <ResourceTopbar
         actions={actions}
+        activeRightPanel={activeRightPanel}
         canEdit={canEditStructure}
         leftSidebarAvailable={leftSidebarAvailable}
         leftSidebarVisible={leftSidebarVisible}
@@ -841,6 +854,7 @@ function SelectedResource({
         onModeChange={onModeChange}
         onOpenHistory={onOpenHistory}
         onOpenLeftSidebar={onOpenLeftSidebar}
+        onOpenRightPanel={onOpenRightPanel}
         onToggleRightSidebar={onToggleRightSidebar}
         onRequestMove={onRequestMove}
         rightSidebarVisible={rightSidebarVisible}

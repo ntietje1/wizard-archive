@@ -321,7 +321,11 @@ describe('ResourceShell', () => {
     )
 
     expect(await screen.findByRole('heading', { name: resource.title })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(sidebar.getByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
 
     expect(await screen.findByText('Resource duplicated')).toBeInTheDocument()
@@ -332,6 +336,54 @@ describe('ResourceShell', () => {
       state: 'known',
       value: { title: resource.title, kind: 'folder' },
     })
+    core.dispose()
+  })
+
+  it('filters the shared topbar menu and opens panels and the canonical move picker', async () => {
+    const { core, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    await createFolderForTest(core.runtime, 'Destination')
+    const roots = core.runtime.resources.index
+      .getSnapshot()
+      .list({ parentId: null, lifecycle: 'active' })
+    if (roots.state !== 'known') throw new Error('expected loaded roots')
+    const destinationId = roots.items.find((item) => item.title === 'Destination')?.id
+    if (!destinationId) throw new Error('expected destination folder')
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(screen.getByRole('menuitem', { name: 'Move…' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Copy link' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Details' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Backlinks' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Outgoing links' })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: 'Open' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'New…' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Copy' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Cut' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Paste' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Bookmark' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Backlinks' }))
+    expect(await screen.findByText('No backlinks')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Close resource panel' })).toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move…' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'Move resources' }))
+    fireEvent.click(dialog.getByRole('option', { name: /Destination/ }))
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { displayParentId: destinationId },
+      }),
+    )
     core.dispose()
   })
 
@@ -424,6 +476,75 @@ describe('ResourceShell', () => {
     })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Redo rename' }))
     expect(await screen.findByRole('heading', { name: 'Undoable name' })).toBeInTheDocument()
+    core.dispose()
+  })
+
+  it('offers history, creation, and paste from the empty sidebar surface', async () => {
+    const { core, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(await sidebar.findByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy' }))
+
+    const root = screen.getByLabelText('resources resource drop zone')
+    fireEvent.contextMenu(root, { clientX: 10, clientY: 100 })
+    const rootMenu = within(screen.getByRole('menu', { name: 'Sidebar actions' }))
+    expect(rootMenu.getByRole('menuitem', { name: 'Undo' })).toBeDisabled()
+    expect(rootMenu.getByRole('menuitem', { name: 'Redo' })).toBeDisabled()
+    expect(rootMenu.getByRole('menuitem', { name: 'New…' })).toBeVisible()
+    expect(rootMenu.getByRole('menuitem', { name: 'Paste' })).toBeEnabled()
+    fireEvent.click(rootMenu.getByRole('menuitem', { name: 'Paste' }))
+    expect(await screen.findByText('Resource duplicated')).toBeVisible()
+    await waitFor(() => {
+      const roots = core.runtime.resources.index
+        .getSnapshot()
+        .list({ parentId: null, lifecycle: 'active' })
+      expect(
+        roots.state === 'known' ? roots.items.filter((item) => item.title === resource.title) : [],
+      ).toHaveLength(2)
+    })
+
+    fireEvent.contextMenu(root, { clientX: 10, clientY: 100 })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New…' }))
+    fireEvent.click(
+      within(screen.getByRole('menu', { name: 'New resource' })).getByRole('menuitem', {
+        name: 'Folder',
+      }),
+    )
+    expect(await screen.findByRole('heading', { name: 'Untitled folder' })).toBeVisible()
+    core.dispose()
+  })
+
+  it('shows Paste only on folders and the sidebar root', async () => {
+    const { core, resource } = await shellRuntime(true, 'active', 'edit', 'note')
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(await sidebar.findByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    expect(screen.queryByRole('menuitem', { name: 'Paste' })).not.toBeInTheDocument()
+
+    fireEvent.contextMenu(screen.getByLabelText('resources resource drop zone'), {
+      clientX: 10,
+      clientY: 100,
+    })
+    expect(screen.getByRole('menuitem', { name: 'Paste' })).toBeDisabled()
     core.dispose()
   })
 
@@ -1196,7 +1317,7 @@ describe('ResourceShell', () => {
     )
 
     fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: `Delete ${resource.title} forever` }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Forever' }))
     expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('known')
     fireEvent.click(
       screen.getByRole('menuitem', { name: `Confirm delete ${resource.title} forever` }),
@@ -1240,7 +1361,7 @@ describe('ResourceShell', () => {
       <ResourceShell ariaLabel="Editable resources" runtime={runtime} workspaceName="DM view" />,
     )
     fireEvent.click(await screen.findByRole('button', { name: 'More options' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: `Move ${resource.title} to trash` }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move to Trash' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
 
     await waitFor(() =>
@@ -1363,7 +1484,7 @@ describe('ResourceShell', () => {
       clientX: 80,
       clientY: 90,
     })
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Paste into folder' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Paste' }))
 
     expect(await screen.findByText('Resource duplicated')).toBeInTheDocument()
     const destination = core.runtime.resources.index

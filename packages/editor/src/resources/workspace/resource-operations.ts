@@ -89,7 +89,7 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
     move: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
       moveWorkspaceResources(runtime, resourceIds, destinationParentId, report),
     open: (resourceId: ResourceId) => runtime.navigation.open({ kind: 'resource', resourceId }),
-    paste: (clipboard: WorkspaceClipboard, destinationParentId: ResourceId) =>
+    paste: (clipboard: WorkspaceClipboard, destinationParentId: ResourceId | null) =>
       pasteWorkspaceClipboard(runtime, clipboard, destinationParentId, report),
     report,
     update: (
@@ -618,10 +618,13 @@ function finishWorkspaceDeepCopy(
 async function pasteWorkspaceClipboard(
   runtime: EditorRuntime,
   clipboard: WorkspaceClipboard,
-  destinationParentId: ResourceId,
+  destinationParentId: ResourceId | null,
   report: WorkspaceReport,
 ): Promise<WorkspaceClipboard> {
-  if (clipboard.status === 'empty' || clipboard.resourceIds.includes(destinationParentId)) {
+  if (
+    clipboard.status === 'empty' ||
+    (destinationParentId !== null && clipboard.resourceIds.includes(destinationParentId))
+  ) {
     return clipboard
   }
   const completed =
