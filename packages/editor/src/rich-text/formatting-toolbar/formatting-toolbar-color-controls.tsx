@@ -86,7 +86,7 @@ export function ColorControls({
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5 px-2"
+            className="gap-1.5 px-2"
             aria-label={triggerLabel}
             disabled={disabled}
             title={triggerLabel}
