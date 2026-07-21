@@ -63,8 +63,8 @@ export function ShareSideMenuButton({ tooltipDisabled }: { tooltipDisabled: bool
     runtime.open({
       blockIds,
       kind,
+      source: { kind: 'side-menu', controls: sideMenu },
       title: getBlockShareTitle(blockIds.length),
-      sideMenu,
       position:
         'clientX' in event && event.detail > 0
           ? { x: event.clientX, y: event.clientY }

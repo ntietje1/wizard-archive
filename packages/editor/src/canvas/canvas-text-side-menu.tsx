@@ -1,12 +1,8 @@
 import { SideMenu, SideMenuController } from '@blocknote/react'
 import type { SideMenuProps } from '@blocknote/react'
 import { createContext, use } from 'react'
-import { generateUuidV7 } from '../resources/domain-id'
 import { BlockDragHandleButton } from '../rich-text/side-menu/block-drag-handle-button'
-import type {
-  RichTextSideMenuBlock,
-  RichTextSideMenuEditor,
-} from '../rich-text/side-menu/block-drag-handle-button'
+import { duplicateCanvasTextBlock } from './text/duplicate-block'
 
 const CanvasTextSideMenuState = createContext<{
   menuOpen: boolean
@@ -41,17 +37,4 @@ function CanvasTextSideMenu(props: SideMenuProps) {
       />
     </SideMenu>
   )
-}
-
-function duplicateCanvasTextBlock(editor: RichTextSideMenuEditor, block: RichTextSideMenuBlock) {
-  const [duplicate] = editor.insertBlocks([copyCanvasTextBlock(block)], block, 'after')
-  if (duplicate) editor.setTextCursorPosition(duplicate, 'end')
-}
-
-function copyCanvasTextBlock(block: RichTextSideMenuBlock): RichTextSideMenuBlock {
-  return {
-    ...structuredClone(block),
-    id: generateUuidV7(),
-    children: block.children.map(copyCanvasTextBlock),
-  }
 }

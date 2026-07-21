@@ -71,8 +71,7 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
       type: 'permanentlyDelete' | 'restore' | 'trash',
     ) => changeWorkspaceResourcesLifecycle(runtime, resourceIds, type, report),
     copyId: (resource: AuthorizedResourceSummary) => copyWorkspaceResourceId(resource, report),
-    copyLink: (resource: AuthorizedResourceSummary) =>
-      copyWorkspaceResourceLink(runtime, resource, report),
+    copyLink: (resource: AuthorizedResourceSummary) => copyWorkspaceResourceLink(resource, report),
     create: (
       kind: ResourceKind,
       parentId: ResourceId | null,
@@ -662,7 +661,6 @@ async function pasteWorkspaceClipboard(
 }
 
 async function copyWorkspaceResourceLink(
-  runtime: EditorRuntime,
   resource: AuthorizedResourceSummary,
   report: WorkspaceReport,
 ) {
@@ -670,10 +668,10 @@ async function copyWorkspaceResourceLink(
     reportFailure(report, 'Copy link is unavailable')
     return
   }
-  const url = new URL(
-    `/campaigns/${runtime.scope.campaignId}/editor?resource=${resource.id}`,
-    globalThis.location?.origin ?? 'https://wizard-archive.invalid',
-  )
+  const url = new URL(globalThis.location?.href ?? 'https://wizard-archive.invalid/')
+  url.hash = ''
+  url.search = ''
+  url.searchParams.set('resource', resource.id)
   await navigator.clipboard.writeText(url.href)
   reportMessage(report, 'Link copied')
 }

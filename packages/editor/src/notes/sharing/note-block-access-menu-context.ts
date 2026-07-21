@@ -12,10 +12,15 @@ export type NoteBlockAccessMenuState = Readonly<{
   blockIds: ReadonlyArray<NoteBlockId>
   kind: 'context' | 'sharing'
   position: Readonly<{ x: number; y: number }>
-  sideMenu: Readonly<{
-    freezeMenu: () => void
-    unfreezeMenu: () => void
-  }>
+  source:
+    | Readonly<{ kind: 'editor' }>
+    | Readonly<{
+        kind: 'side-menu'
+        controls: Readonly<{
+          freezeMenu: () => void
+          unfreezeMenu: () => void
+        }>
+      }>
   title: string
 }>
 

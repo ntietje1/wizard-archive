@@ -59,9 +59,10 @@ export function NoteBlockAccessMenuProvider({
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (!menu) return
-    menu.sideMenu.freezeMenu()
-    return () => menu.sideMenu.unfreezeMenu()
+    const source = menu?.source
+    if (source?.kind !== 'side-menu') return
+    source.controls.freezeMenu()
+    return () => source.controls.unfreezeMenu()
   }, [menu])
 
   const execute = async (command: NoteBlockAccessCommand) => {

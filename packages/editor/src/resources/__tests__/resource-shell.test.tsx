@@ -41,6 +41,40 @@ function dragEventWithPosition(
 }
 
 describe('ResourceShell', () => {
+  it('copies resource links on the current campaign slug route', async () => {
+    const { core, resource } = await shellRuntime(true)
+    const originalClipboard = navigator.clipboard
+    const writeText = vi.fn<(text: string) => Promise<void>>()
+    writeText.mockResolvedValue()
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    window.history.replaceState(
+      null,
+      '',
+      '/campaigns/dm-name/campaign-slug/editor?resource=old#section',
+    )
+
+    try {
+      await createWorkspaceActions(core.runtime, vi.fn()).copyLink(
+        authorizedResourceSummaryFromRecord(resource, 'edit'),
+      )
+
+      const copied = new URL(writeText.mock.calls[0]![0])
+      expect(copied.pathname).toBe('/campaigns/dm-name/campaign-slug/editor')
+      expect(Object.fromEntries(copied.searchParams)).toEqual({ resource: resource.id })
+      expect(copied.hash).toBe('')
+    } finally {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: originalClipboard,
+      })
+      window.history.replaceState(null, '', '/')
+      core.dispose()
+    }
+  })
+
   it('keeps duplicate resource identity out of sidebar presentation', async () => {
     const { core, resource } = await shellRuntime(true, 'active', 'edit', 'note')
     const created = await createWorkspaceActions(core.runtime, vi.fn()).create(

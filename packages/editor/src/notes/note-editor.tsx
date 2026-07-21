@@ -27,6 +27,7 @@ import type { NoteResourceBinding } from './note-resource-runtime-context'
 import { NoteResourceLinkMenu } from './links/resource-link-menu'
 import type { NoteBlockNoteEditor } from './note-editor-schema'
 import { noteEditorResourceDropTarget } from './note-editor-drop-target'
+import { NoteBlockContextMenu } from './note-block-context-menu'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -163,23 +164,25 @@ function NoteDocumentEditor(props: NoteEditorProps) {
                 editable={editable}
               >
                 <NoteValueRuntimeProvider editor={editor} editable={editable}>
-                  <BlockNoteView
-                    editable={editable}
-                    editor={editor}
-                    formattingToolbar={false}
-                    linkToolbar={false}
-                    sideMenu={false}
-                    slashMenu={false}
-                    theme={resolvedTheme}
-                  >
-                    {editable && (
-                      <>
-                        <SideMenuController sideMenu={NoteSideMenu} />
-                        <NoteSlashMenu editor={editor} />
-                        <NoteResourceLinkMenu editor={editor} />
-                      </>
-                    )}
-                  </BlockNoteView>
+                  <NoteBlockContextMenu editable={editable} editor={editor}>
+                    <BlockNoteView
+                      editable={editable}
+                      editor={editor}
+                      formattingToolbar={false}
+                      linkToolbar={false}
+                      sideMenu={false}
+                      slashMenu={false}
+                      theme={resolvedTheme}
+                    >
+                      {editable && (
+                        <>
+                          <SideMenuController sideMenu={NoteSideMenu} />
+                          <NoteSlashMenu editor={editor} />
+                          <NoteResourceLinkMenu editor={editor} />
+                        </>
+                      )}
+                    </BlockNoteView>
+                  </NoteBlockContextMenu>
                 </NoteValueRuntimeProvider>
               </NoteResourceRuntimeProvider>
             </div>

@@ -262,6 +262,56 @@ describe('NoteEditor', () => {
     })
   })
 
+  it('opens block actions for the right-clicked block and duplicates it', async () => {
+    const blockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const document = noteBlocksToYDoc(
+      [
+        {
+          id: blockId,
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Context target' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    render(
+      <NoteEditor
+        document={document}
+        label="Context note"
+        mode="edit"
+        persistence="ready"
+        scroll={EPHEMERAL_NOTE_SCROLL}
+        onFlush={() => Promise.resolve()}
+      />,
+    )
+
+    const target = await screen.findByText('Context target')
+    fireEvent.contextMenu(target, {
+      clientX: 24,
+      clientY: 36,
+    })
+
+    expect(await screen.findByRole('menuitem', { name: 'Turn into' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Color' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
+
+    await waitFor(() => {
+      const blocks = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
+      const matchingBlocks = blocks.filter(
+        (block) =>
+          Array.isArray(block.content) &&
+          block.content.some(
+            (inline) => inline.type === 'text' && inline.text === 'Context target',
+          ),
+      )
+      expect(matchingBlocks).toHaveLength(2)
+      expect(matchingBlocks[0]?.id).toBe(blockId)
+      expect(matchingBlocks[1]?.id).not.toBe(blockId)
+    })
+  })
+
   it('tracks canonical document edits in native editor history', async () => {
     const document = noteBlocksToYDoc(
       [

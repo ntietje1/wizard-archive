@@ -14,6 +14,8 @@ import { useBlockNoteActivation } from '../rich-text/blocknote/use-blocknote-act
 import type { BlockNoteActivation } from '../rich-text/blocknote/use-blocknote-activation'
 import './canvas-text-editor.css'
 import { CanvasTextSideMenuController } from './canvas-text-side-menu'
+import { RichTextBlockContextMenu } from '../rich-text/block-menu/block-context-menu'
+import { duplicateCanvasTextBlock } from './text/duplicate-block'
 
 type CanvasTextEditorProps = {
   activation: BlockNoteActivation | null
@@ -97,23 +99,29 @@ export function CanvasTextEditor(props: CanvasTextEditorProps) {
         onPointerDown={editing ? (event) => event.stopPropagation() : undefined}
       >
         <ScrollArea className="size-full">
-          <BlockNoteView
-            className="min-h-full bg-transparent"
-            editable={editing}
+          <RichTextBlockContextMenu
             editor={editor}
-            formattingToolbar={false}
-            linkToolbar={false}
-            sideMenu={false}
-            slashMenu={false}
-            onChange={editing ? persist : undefined}
+            enabled={editing}
+            onDuplicate={duplicateCanvasTextBlock}
           >
-            {editing && (
-              <CanvasTextSideMenuController
-                menuOpen={sideMenuOpen}
-                onMenuOpenChange={setSideMenuOpen}
-              />
-            )}
-          </BlockNoteView>
+            <BlockNoteView
+              className="min-h-full bg-transparent"
+              editable={editing}
+              editor={editor}
+              formattingToolbar={false}
+              linkToolbar={false}
+              sideMenu={false}
+              slashMenu={false}
+              onChange={editing ? persist : undefined}
+            >
+              {editing && (
+                <CanvasTextSideMenuController
+                  menuOpen={sideMenuOpen}
+                  onMenuOpenChange={setSideMenuOpen}
+                />
+              )}
+            </BlockNoteView>
+          </RichTextBlockContextMenu>
         </ScrollArea>
       </div>
     </Fragment>

@@ -1,23 +1,12 @@
 import { SideMenuExtension } from '@blocknote/core/extensions'
-import type { BlockNoteEditor } from '@blocknote/core'
 import {
   useBlockNoteEditor,
   useComponentsContext,
   useExtension,
   useExtensionState,
 } from '@blocknote/react'
-import {
-  Check,
-  Copy,
-  Files,
-  GripVertical,
-  MessageSquare,
-  Palette,
-  Trash2,
-  Type,
-} from 'lucide-react'
+import { GripVertical } from 'lucide-react'
 import { useLayoutEffect } from 'react'
-import { toast } from 'sonner'
 import {
   clearInternalNativeDrag,
   markInternalNativeDrag,
@@ -25,13 +14,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@wizard-archive/ui/shadcn/components/dropdown-menu'
 import {
@@ -40,33 +22,24 @@ import {
   TooltipTrigger,
 } from '@wizard-archive/ui/shadcn/components/tooltip'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
-import {
-  RICH_TEXT_COLOR_PRESETS,
-  RICH_TEXT_HIGHLIGHT_PRESETS,
-} from '../blocknote/rich-text-selection-colors'
-import {
-  blockTypeSupportsProp,
-  getSupportedBlockTypeOptions,
-} from '../formatting-toolbar/formatting-toolbar-model'
-import type { BlockTypeOption } from '../formatting-toolbar/formatting-toolbar-model'
-
-export type RichTextSideMenuEditor = BlockNoteEditor<any, any, any>
-export type RichTextSideMenuBlock = RichTextSideMenuEditor['document'][number]
+import { RichTextBlockMenuItems } from '../block-menu/block-menu'
+import type { RichTextBlockMenuBlock, RichTextBlockMenuEditor } from '../block-menu/block-menu'
 
 export function BlockDragHandleButton({
   menuOpen,
+  onCopyLink,
   onDuplicate,
   onMenuOpenChange,
   variant,
 }: {
   menuOpen: boolean
-  onDuplicate: (editor: RichTextSideMenuEditor, block: RichTextSideMenuBlock) => void
+  onCopyLink?: (block: RichTextBlockMenuBlock) => void
+  onDuplicate: (editor: RichTextBlockMenuEditor, block: RichTextBlockMenuBlock) => void
   onMenuOpenChange: (open: boolean) => void
   variant: 'canvas-text' | 'note'
 }) {
-  const noteActions = variant === 'note'
   const Components = useComponentsContext()!
-  const editor = useBlockNoteEditor() as RichTextSideMenuEditor
+  const editor = useBlockNoteEditor() as RichTextBlockMenuEditor
   const sideMenu = useExtension(SideMenuExtension)
   const block = useExtensionState(SideMenuExtension, {
     selector: (state) => state?.block,
@@ -80,7 +53,7 @@ export function BlockDragHandleButton({
 
   if (!block) return null
   const sideMenuBlock = block
-  const activeBlock = sideMenuBlock as RichTextSideMenuBlock
+  const activeBlock = sideMenuBlock as RichTextBlockMenuBlock
 
   function handleDragStart(event: React.DragEvent) {
     sideMenu.freezeMenu()
@@ -141,7 +114,7 @@ export function BlockDragHandleButton({
       <BlockDragHandleMenu
         block={activeBlock}
         editor={editor}
-        noteActions={noteActions}
+        onCopyLink={onCopyLink}
         onDuplicate={onDuplicate}
       />
     </DropdownMenu>
@@ -162,13 +135,13 @@ function showNativeBlockDragPreview(event: React.DragEvent) {
 function BlockDragHandleMenu({
   block,
   editor,
-  noteActions,
+  onCopyLink,
   onDuplicate,
 }: {
-  block: RichTextSideMenuBlock
-  editor: RichTextSideMenuEditor
-  noteActions: boolean
-  onDuplicate: (editor: RichTextSideMenuEditor, block: RichTextSideMenuBlock) => void
+  block: RichTextBlockMenuBlock
+  editor: RichTextBlockMenuEditor
+  onCopyLink?: (block: RichTextBlockMenuBlock) => void
+  onDuplicate: (editor: RichTextBlockMenuEditor, block: RichTextBlockMenuBlock) => void
 }) {
   return (
     <DropdownMenuContent
@@ -178,190 +151,13 @@ function BlockDragHandleMenu({
       sideOffset={4}
       className="z-[9999] w-48"
     >
-      <BlockTypeSubmenu block={block} editor={editor} />
-      <BlockColorSubmenu block={block} editor={editor} />
-      <DropdownMenuSeparator />
-      {noteActions && (
-        <MenuItem
-          icon={<Copy className="size-4" />}
-          label="Copy link to block"
-          onClick={comingSoon}
-        />
-      )}
-      <MenuItem
-        icon={<Files className="size-4" />}
-        label="Duplicate"
-        onClick={() => onDuplicate(editor, block)}
+      <RichTextBlockMenuItems
+        block={block}
+        editor={editor}
+        onCopyLink={onCopyLink}
+        onDuplicate={onDuplicate}
+        surface="dropdown"
       />
-      <MenuItem
-        destructive
-        icon={<Trash2 className="size-4" />}
-        label="Delete"
-        onClick={() => editor.removeBlocks([block])}
-      />
-      {noteActions && (
-        <MenuItem
-          icon={<MessageSquare className="size-4" />}
-          label="Comment"
-          onClick={comingSoon}
-        />
-      )}
     </DropdownMenuContent>
   )
-}
-
-function BlockTypeSubmenu({
-  block,
-  editor,
-}: {
-  block: RichTextSideMenuBlock
-  editor: RichTextSideMenuEditor
-}) {
-  const options = getSupportedBlockTypeOptions(editor, 'full')
-  const canChangeType = Array.isArray(block.content)
-
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger disabled={!canChangeType}>
-        <Type className="size-4" />
-        <span className="min-w-0 flex-1 truncate text-left">Turn into</span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="z-[10000] w-52">
-        {options.map((option) => (
-          <BlockTypeMenuItem key={option.id} block={block} editor={editor} option={option} />
-        ))}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  )
-}
-
-function BlockTypeMenuItem({
-  block,
-  editor,
-  option,
-}: {
-  block: RichTextSideMenuBlock
-  editor: RichTextSideMenuEditor
-  option: BlockTypeOption
-}) {
-  const active =
-    block.type === option.type &&
-    Object.entries(option.props ?? {}).every(([name, value]) => getBlockProp(block, name) === value)
-  const Icon = option.icon
-
-  return (
-    <DropdownMenuItem
-      onClick={() => editor.updateBlock(block, { type: option.type, props: option.props })}
-    >
-      <Icon className="size-4" />
-      <span className="min-w-0 flex-1 truncate text-left">{option.label}</span>
-      {active && <Check className="ml-auto size-4" />}
-    </DropdownMenuItem>
-  )
-}
-
-function BlockColorSubmenu({
-  block,
-  editor,
-}: {
-  block: RichTextSideMenuBlock
-  editor: RichTextSideMenuEditor
-}) {
-  const supportsTextColor = blockTypeSupportsProp(editor, block.type, 'textColor')
-  const supportsBackgroundColor = blockTypeSupportsProp(editor, block.type, 'backgroundColor')
-
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger disabled={!supportsTextColor && !supportsBackgroundColor}>
-        <Palette className="size-4" />
-        <span className="min-w-0 flex-1 truncate text-left">Color</span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="z-[10000] w-52">
-        {supportsTextColor && (
-          <DropdownMenuGroup aria-label="Text color">
-            <DropdownMenuLabel>Text color</DropdownMenuLabel>
-            {RICH_TEXT_COLOR_PRESETS.map((preset) => (
-              <BlockColorMenuItem
-                key={`text-${preset.label}`}
-                active={getBlockProp(block, 'textColor') === preset.value.color}
-                color={preset.value.color}
-                label={preset.label}
-                onClick={() =>
-                  editor.updateBlock(block, { props: { textColor: preset.value.color } })
-                }
-              />
-            ))}
-          </DropdownMenuGroup>
-        )}
-        {supportsTextColor && supportsBackgroundColor && <DropdownMenuSeparator />}
-        {supportsBackgroundColor && (
-          <DropdownMenuGroup aria-label="Background color">
-            <DropdownMenuLabel>Background color</DropdownMenuLabel>
-            {RICH_TEXT_HIGHLIGHT_PRESETS.map((preset) => (
-              <BlockColorMenuItem
-                key={`background-${preset.label}`}
-                active={getBlockProp(block, 'backgroundColor') === preset.value}
-                color={preset.value}
-                label={preset.label}
-                onClick={() =>
-                  editor.updateBlock(block, { props: { backgroundColor: preset.value } })
-                }
-              />
-            ))}
-          </DropdownMenuGroup>
-        )}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  )
-}
-
-function BlockColorMenuItem({
-  active,
-  color,
-  label,
-  onClick,
-}: {
-  active: boolean
-  color: string
-  label: string
-  onClick: () => void
-}) {
-  return (
-    <DropdownMenuItem onClick={onClick}>
-      <span
-        aria-hidden
-        className="size-4 rounded-sm border border-border"
-        style={{ backgroundColor: color === 'default' ? 'transparent' : color }}
-      />
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-      {active && <Check className="ml-auto size-4" />}
-    </DropdownMenuItem>
-  )
-}
-
-function MenuItem({
-  destructive = false,
-  icon,
-  label,
-  onClick,
-}: {
-  destructive?: boolean
-  icon: React.ReactNode
-  label: string
-  onClick: () => void
-}) {
-  return (
-    <DropdownMenuItem variant={destructive ? 'destructive' : 'default'} onClick={onClick}>
-      {icon}
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-    </DropdownMenuItem>
-  )
-}
-
-function comingSoon() {
-  toast.info('Coming soon')
-}
-
-function getBlockProp(block: RichTextSideMenuBlock, name: string) {
-  return (block.props as Record<string, unknown>)[name]
 }

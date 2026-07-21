@@ -205,7 +205,7 @@ test.describe('note authoring mechanics', () => {
     await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Comment' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Comment' })).toHaveCount(0)
     await expect(page.getByText(/drag\s+to move/i)).toHaveCount(0)
     await expect(page.getByText(/click\s+to open menu/i)).toHaveCount(0)
     const dragHandleBox = await dragHandle.boundingBox()
@@ -213,8 +213,17 @@ test.describe('note authoring mechanics', () => {
     if (!dragHandleBox || !menuBox) throw new Error('Expected custom block menu geometry')
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(dragHandleBox.x + 1)
     await page.keyboard.press('Escape')
-
     await assertEditorOwnsViewportWhitespace(page)
+
+    await block.click({ button: 'right' })
+    const contextMenu = page.getByTestId('block-context-menu')
+    await expect(contextMenu).toBeVisible()
+    await expect(contextMenu.getByRole('menuitem', { name: 'Turn into' })).toBeVisible()
+    await expect(contextMenu.getByRole('menuitem', { name: 'Color' })).toBeVisible()
+    await expect(contextMenu.getByRole('menuitem', { name: 'Copy link to block' })).toBeVisible()
+    await expect(contextMenu.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
+    await expect(contextMenu.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
+    await page.keyboard.press('Escape')
   })
 
   test('executes custom block conversion, color, duplicate, and delete commands', async ({
@@ -263,31 +272,20 @@ test.describe('note authoring mechanics', () => {
     ).toHaveCount(1)
   })
 
-  test('keeps future custom block actions explicit without inventing parallel models', async ({
-    page,
-  }) => {
+  test('copies a canonical target from the block context menu', async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     const editor = await openNoteEditor(page)
     const block = editor.locator('[data-node-type="blockContainer"]').last()
-    const initialBlockCount = await editor
-      .locator(':scope > .bn-block-group > .bn-block-outer')
-      .count()
-    const initialText = await editor.textContent()
-    const initialUrl = page.url()
 
-    await block.hover()
-    await page.getByRole('button', { name: 'Drag block' }).click()
+    await block.click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Copy link to block' }).click()
-    await expect(page.getByRole('menuitem', { name: 'Copy link to block' })).toHaveCount(0)
-
-    await block.hover()
-    await page.getByRole('button', { name: 'Drag block' }).click()
-    await page.getByRole('menuitem', { name: 'Comment' }).click()
-    await expect(page.getByRole('menuitem', { name: 'Comment' })).toHaveCount(0)
-    await expect(editor.locator(':scope > .bn-block-group > .bn-block-outer')).toHaveCount(
-      initialBlockCount,
-    )
-    await expect(editor).toHaveText(initialText ?? '')
-    expect(page.url()).toBe(initialUrl)
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    const target = new URL(copied)
+    expect(target.pathname).toBe('/demo')
+    expect(target.searchParams.get('resource')).toBeTruthy()
+    expect(target.searchParams.get('target')).toBe('noteBlock')
+    expect(target.searchParams.get('targetId')).toBeTruthy()
+    expect(target.searchParams.get('presentation')).toBe('block')
   })
 
   test('moves blocks through the custom drag handle', async ({ page }) => {
@@ -368,9 +366,9 @@ async function assertEditorOwnsViewportWhitespace(page: Page) {
     .poll(() =>
       page.evaluate(() => {
         const editor = document.querySelector('.resource-note-editor .bn-editor')
-        const viewport = document.querySelector(
-          '.resource-note-editor [data-slot="scroll-area-viewport"]',
-        )
+        const viewport = document
+          .querySelector('.resource-note-editor .note-editor-scroll-content')
+          ?.closest('[data-slot="scroll-area-viewport"]')
         if (!editor || !viewport) return { bottom: false, top: false }
 
         const editorRect = editor.getBoundingClientRect()

@@ -82,6 +82,15 @@ describe('CanvasTextEditor', () => {
     expect(viewport).toHaveProperty('scrollTop', 24)
     expect(createEditor).toHaveBeenCalledTimes(creationCount)
 
+    fireEvent.contextMenu(screen.getByText('Harbor plan'), { clientX: 24, clientY: 36 })
+    expect(await screen.findByTestId('block-context-menu')).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Turn into' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Color' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeVisible()
+    expect(screen.queryByRole('menuitem', { name: 'Copy link to block' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Visibility...' })).not.toBeInTheDocument()
+
     fireEvent.keyDown(editor, { key: 'Escape' })
     expect(onFinish).toHaveBeenCalledOnce()
     createEditor.mockRestore()
