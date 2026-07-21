@@ -3993,7 +3993,11 @@ describe('resource structure commands', () => {
         resourceIds: [childId],
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'invalid_root_selection' })
-    await execute(campaign, campaignUuid, { type: 'restore', resourceIds: [childId] })
+    await execute(campaign, campaignUuid, {
+      type: 'restore',
+      resourceIds: [childId],
+      destination: 'previousParent',
+    })
     await t.run(async (ctx) => {
       const child = await ctx.db
         .query('resources')
@@ -4001,6 +4005,32 @@ describe('resource structure commands', () => {
         .unique()
       expect(child).toEqual(
         expect.objectContaining({ lifecycle: 'active', parentResourceUuid: null }),
+      )
+    })
+
+    const restoreDestinationId = await createResource(
+      campaign,
+      campaignUuid,
+      'folder',
+      null,
+      'Restored here',
+    )
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [childId] })
+    await execute(campaign, campaignUuid, {
+      type: 'restore',
+      resourceIds: [childId],
+      destination: restoreDestinationId,
+    })
+    await t.run(async (ctx) => {
+      const child = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', childId))
+        .unique()
+      expect(child).toEqual(
+        expect.objectContaining({
+          lifecycle: 'active',
+          parentResourceUuid: restoreDestinationId,
+        }),
       )
     })
 

@@ -396,7 +396,9 @@ export async function transitionResourceCompensation(
     > =
       plan.type === 'updateMetadata'
         ? { type: plan.type, resourceId: plan.resourceId, changes: plan.changes }
-        : { type: plan.type, resourceIds: plan.resourceIds }
+        : plan.type === 'restore'
+          ? { type: plan.type, resourceIds: plan.resourceIds, destination: 'previousParent' }
+          : { type: plan.type, resourceIds: plan.resourceIds }
     const transition = await transitionResourceGraph(graph, campaignId, operationId, command, audit)
     const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
     if (!compensation) return reject('content_integrity_failure')
@@ -596,17 +598,24 @@ async function restoreResources(
   if (roots.some((resource) => resource.lifecycle.state !== 'trashed')) {
     return reject('invalid_lifecycle')
   }
+  const destination =
+    command.destination === 'previousParent'
+      ? null
+      : requireActiveResourceFolder(graph, campaignId, command.destination)
+  if (destination) ensureNoMoveCycle(graph, campaignId, roots, destination)
   const rootIds = new Set(roots.map((resource) => resource.id))
   const closure = selectResourceClosure(graph, campaignId, roots)
   const updated = await Promise.all(
     closure.map(async (resource) => {
       if (resource.lifecycle.state === 'active') return resource
       const parent = resource.parentId === null ? null : graph.resources.get(resource.parentId)
-      const parentId =
-        rootIds.has(resource.id) &&
-        (!parent || parent.campaignId !== campaignId || parent.lifecycle.state !== 'active')
-          ? null
-          : resource.parentId
+      const parentId = rootIds.has(resource.id)
+        ? command.destination === 'previousParent'
+          ? !parent || parent.campaignId !== campaignId || parent.lifecycle.state !== 'active'
+            ? null
+            : resource.parentId
+          : command.destination
+        : resource.parentId
       return await replaceMetadata(resource, { parentId, lifecycle: { state: 'active' } }, audit)
     }),
   )

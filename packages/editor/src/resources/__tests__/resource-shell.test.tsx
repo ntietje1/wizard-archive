@@ -620,11 +620,11 @@ describe('ResourceShell', () => {
       dataTransfer,
     })
     await waitFor(() =>
-      expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent('Move'),
+      expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent('Already in “DM view”'),
     )
 
     fireEvent.dragEnd(row, { dataTransfer })
-    expect(screen.queryByTestId('resource-drag-overlay')).not.toBeInTheDocument()
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveClass('hidden')
     core.dispose()
   })
 

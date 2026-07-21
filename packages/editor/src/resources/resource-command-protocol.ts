@@ -124,7 +124,14 @@ function normalizeTrash(command: TrashResourcesCommand): TrashResourcesCommand {
 }
 
 function normalizeRestore(command: RestoreResourcesCommand): RestoreResourcesCommand {
-  return { type: 'restore', resourceIds: normalizeResourceIdSet(command.resourceIds) }
+  return {
+    type: 'restore',
+    resourceIds: normalizeResourceIdSet(command.resourceIds),
+    destination:
+      command.destination === 'previousParent'
+        ? 'previousParent'
+        : normalizeParentId(command.destination),
+  }
 }
 
 function normalizeDeepCopy(command: DeepCopyResourcesCommand): DeepCopyResourcesCommand {

@@ -424,11 +424,20 @@ function FolderViewportSurface({
   return (
     <div
       aria-label={`${folderTitle} resource drop zone`}
+      data-resource-id={folderId}
+      data-workspace-drop-target="collection"
       className={`flex min-h-0 flex-1 flex-col data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring ${className}`}
       onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
       onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
       onDrop={
-        canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, folderId) : undefined
+        canEdit
+          ? (event) =>
+              void finishWorkspaceResourceDrop(event, actions, {
+                type: 'collection',
+                parentId: folderId,
+                title: folderTitle,
+              })
+          : undefined
       }
     >
       {children}

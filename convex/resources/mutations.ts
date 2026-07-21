@@ -312,9 +312,17 @@ function resourceStructureCommand(
           command.destinationParentId === null ? null : resourceId(command.destinationParentId),
       }
     case 'trash':
-    case 'restore':
     case 'permanentlyDelete':
       return { type: command.type, resourceIds: command.resourceIds.map(resourceId) }
+    case 'restore':
+      return {
+        type: 'restore',
+        resourceIds: command.resourceIds.map(resourceId),
+        destination:
+          command.destination === null || command.destination === 'previousParent'
+            ? command.destination
+            : resourceId(command.destination),
+      }
     case 'deepCopy':
       return {
         type: 'deepCopy',

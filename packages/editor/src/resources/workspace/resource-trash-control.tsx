@@ -64,6 +64,7 @@ export function ResourceTrashControl({
       <button
         type="button"
         aria-expanded={open}
+        data-workspace-drop-target="trash"
         className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-destructive"
         onClick={() => setOpen((value) => !value)}
         onDragOver={canEdit ? allowWorkspaceInternalResourceDrop : undefined}

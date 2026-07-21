@@ -182,7 +182,9 @@ function destinationParentId(command: ResourceStructureCommand): ResourceId | nu
     ? command.parentId
     : command.type === 'move' || command.type === 'deepCopy'
       ? command.destinationParentId
-      : null
+      : command.type === 'restore' && command.destination !== 'previousParent'
+        ? command.destination
+        : null
 }
 
 function needsDescendants(command: ResourceStructureCommand): boolean {
@@ -217,7 +219,7 @@ async function loadGraph(
   )
   const destinationId = destinationParentId(command)
   if (destinationId !== null) {
-    if (command.type === 'move' || command.type === 'deepCopy') {
+    if (command.type === 'move' || command.type === 'deepCopy' || command.type === 'restore') {
       await loadResourceSpine(ctx, destinationId, rows, resources)
     } else {
       await loadResource(ctx, destinationId, rows, resources)

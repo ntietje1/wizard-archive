@@ -1405,7 +1405,7 @@ describe('authorized resource projection', () => {
     await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
       campaignId: campaignUuid,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-      command: { type: 'restore', resourceIds: [noteId] },
+      command: { type: 'restore', resourceIds: [noteId], destination: 'previousParent' },
     })
     await expect(
       asDm(campaign).query(api.resources.queries.searchResources, {

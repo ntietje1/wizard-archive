@@ -24,6 +24,11 @@ import type {
 } from '../transfer-job-contract'
 import { readBrowserPlainTransfer } from './browser-plain-transfer'
 import type { BrowserPlainTransferData } from './browser-plain-transfer'
+import { planWorkspaceResourceDrop } from '../workspace-resource-drop-plan'
+import type {
+  WorkspaceResourceDragPayload,
+  WorkspaceResourceDropTarget,
+} from '../workspace-resource-drop-plan'
 
 export type WorkspaceReport = (
   message: string,
@@ -73,6 +78,11 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
       downloadWorkspaceResource(runtime, resource, report),
     duplicate: (resourceIds: ReadonlyArray<ResourceId>, destinationParentId: ResourceId | null) =>
       duplicateWorkspaceResources(runtime, resourceIds, destinationParentId, report),
+    drop: (
+      drag: WorkspaceResourceDragPayload,
+      target: WorkspaceResourceDropTarget,
+      copy: boolean,
+    ) => executeWorkspaceResourceDrop(runtime, drag, target, copy, report),
     importExternal: (
       destinationParentId: ResourceId | null,
       dataTransfer: BrowserPlainTransferData,
@@ -594,15 +604,46 @@ async function changeWorkspaceResourcesLifecycle(
   type: 'permanentlyDelete' | 'restore' | 'trash',
   report: WorkspaceReport,
 ) {
-  return await executeWorkspaceStructureCommand(
-    runtime,
-    { type, resourceIds },
-    report,
-    (delivery) => {
-      clearDeletedTarget(runtime, delivery)
+  const command: ResourceStructureCommand =
+    type === 'restore'
+      ? { type, resourceIds, destination: 'previousParent' }
+      : { type, resourceIds }
+  return await executeWorkspaceStructureCommand(runtime, command, report, (delivery) => {
+    clearDeletedTarget(runtime, delivery)
+    report(deliveryMessage(delivery))
+  })
+}
+
+async function executeWorkspaceResourceDrop(
+  runtime: EditorRuntime,
+  drag: WorkspaceResourceDragPayload,
+  target: WorkspaceResourceDropTarget,
+  copy: boolean,
+  report: WorkspaceReport,
+) {
+  const plan = planWorkspaceResourceDrop(runtime.resources.index.getSnapshot(), drag, target, copy)
+  if (plan.status === 'rejected') {
+    report(plan.label)
+    return false
+  }
+  return await executeWorkspaceStructureCommand(runtime, plan.command, report, (delivery) => {
+    if (
+      plan.command.type === 'deepCopy' &&
+      delivery.status === 'received' &&
+      delivery.result.status === 'completed' &&
+      delivery.result.receipt.result.type === 'deepCopied'
+    ) {
+      const roots = delivery.result.receipt.result.roots
+      if (roots.length === 1 && roots[0]) {
+        runtime.navigation.open({ kind: 'resource', resourceId: roots[0].destinationRootId })
+      }
+      report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
+      return
+    }
+    if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
       report(deliveryMessage(delivery))
-    },
-  )
+    }
+  })
 }
 
 function clearDeletedTarget(

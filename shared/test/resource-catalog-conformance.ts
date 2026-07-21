@@ -387,6 +387,7 @@ export function defineResourceCatalogConformance(
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'restore',
             resourceIds: [childId],
+            destination: 'previousParent',
           }),
         ),
       )
@@ -453,6 +454,7 @@ export function defineResourceCatalogConformance(
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'restore',
             resourceIds: [childId],
+            destination: 'previousParent',
           }),
         ),
       )

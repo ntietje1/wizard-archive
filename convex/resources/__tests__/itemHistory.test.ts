@@ -319,6 +319,7 @@ describe('item history checkpoints', () => {
     await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
       type: 'restore',
       resourceIds: [resourceId],
+      destination: 'previousParent',
     })
     const copied = await executeStructure(campaign, generateDomainId(DOMAIN_ID_KIND.operation), {
       type: 'deepCopy',

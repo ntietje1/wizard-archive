@@ -1070,7 +1070,11 @@ export const resourceStructureCommandValidator = v.union(
     destinationParentId: v.nullable(resourceIdValidator),
   }),
   v.object({ type: v.literal('trash'), resourceIds: v.array(resourceIdValidator) }),
-  v.object({ type: v.literal('restore'), resourceIds: v.array(resourceIdValidator) }),
+  v.object({
+    type: v.literal('restore'),
+    resourceIds: v.array(resourceIdValidator),
+    destination: v.union(v.literal('previousParent'), v.null(), resourceIdValidator),
+  }),
   v.object({ type: v.literal('permanentlyDelete'), resourceIds: v.array(resourceIdValidator) }),
   v.object({
     type: v.literal('deepCopy'),

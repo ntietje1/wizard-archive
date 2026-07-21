@@ -80,9 +80,13 @@ describe('resource-command-v1 normalization', () => {
         resourceIds: ['sidebar-item-1' as typeof resourceA],
       }),
     ).toThrow(/UUIDv7/)
-    expect(() => normalizeResourceStructureCommand({ type: 'restore', resourceIds: [] })).toThrow(
-      /cannot be empty/,
-    )
+    expect(() =>
+      normalizeResourceStructureCommand({
+        type: 'restore',
+        resourceIds: [],
+        destination: 'previousParent',
+      }),
+    ).toThrow(/cannot be empty/)
     expect(() =>
       normalizeResourceStructureCommand({
         type: 'updateMetadata',

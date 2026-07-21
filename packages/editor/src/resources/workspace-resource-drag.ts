@@ -8,6 +8,10 @@ import type { ResourceContextMenuRequest } from './workspace/resource-context-me
 import type { WorkspaceActions } from './workspace/resource-operations'
 import { hasBrowserPlainTransfer } from './workspace/browser-plain-transfer'
 import type { BrowserPlainTransferData } from './workspace/browser-plain-transfer'
+import type {
+  WorkspaceResourceDragPayload,
+  WorkspaceResourceDropTarget,
+} from './workspace-resource-drop-plan'
 
 const WORKSPACE_RESOURCE_DRAG_TYPE = 'application/x-wizard-archive-resource-ids'
 const WORKSPACE_RESOURCE_DRAG_SCHEMA = 'resource-drag-v1'
@@ -85,10 +89,16 @@ export function workspaceResourceDropTargetProps({
 }) {
   if (!canEdit || resource.kind !== 'folder' || resource.lifecycle === 'trashed') return {}
   return {
+    'data-workspace-drop-resource-id': resource.id,
+    'data-workspace-drop-target': 'collection' as const,
     onDragOver: allowWorkspaceResourceDrop,
     onDragLeave: leaveWorkspaceResourceDrop,
     onDrop: (event: DragEvent<HTMLElement>) =>
-      void finishWorkspaceResourceDrop(event, actions, resource.id),
+      void finishWorkspaceResourceDrop(event, actions, {
+        type: 'collection',
+        parentId: resource.id,
+        title: resource.title,
+      }),
   }
 }
 
@@ -98,13 +108,13 @@ export function allowWorkspaceResourceDrop(event: WorkspaceDropEvent) {
   if (!resourceDrag && !fileDrop) return
   event.preventDefault()
   event.stopPropagation()
+  clearWorkspaceResourceDropTargets(event.currentTarget.ownerDocument)
   if (fileDrop && browserPlainTransferBlocked(event)) {
     event.dataTransfer.dropEffect = 'none'
     return
   }
   const dropEffect = fileDrop || copyDragRequested(event) ? 'copy' : 'move'
   event.dataTransfer.dropEffect = dropEffect
-  clearWorkspaceResourceDropTargets(event.currentTarget.ownerDocument)
   event.currentTarget.dataset.dropTarget = 'true'
   event.currentTarget.dataset.dropOperation = dropEffect
 }
@@ -130,11 +140,8 @@ export function clearWorkspaceResourceDropTargets(root: ParentNode) {
 
 export async function finishWorkspaceResourceDrop(
   event: WorkspaceDropEvent,
-  actions: Pick<
-    WorkspaceActions,
-    'changeLifecycle' | 'duplicate' | 'importExternal' | 'move' | 'report'
-  >,
-  destinationParentId: ResourceId | null,
+  actions: Pick<WorkspaceActions, 'drop' | 'importExternal' | 'report'>,
+  target: Extract<WorkspaceResourceDropTarget, { type: 'collection' }>,
 ) {
   delete event.currentTarget.dataset.dropTarget
   delete event.currentTarget.dataset.dropOperation
@@ -147,24 +154,12 @@ export async function finishWorkspaceResourceDrop(
       actions.report('Drop files on a folder or empty resource area')
       return
     }
-    await actions.importExternal(destinationParentId, event.dataTransfer)
+    await actions.importExternal(target.parentId, event.dataTransfer)
     return
   }
-  if (destinationParentId && drag.resourceIds.includes(destinationParentId)) return
   event.preventDefault()
   event.stopPropagation()
-  if (drag.lifecycle === 'trashed') {
-    const restored = await actions.changeLifecycle(drag.resourceIds, 'restore')
-    if (restored) {
-      await actions.move(drag.resourceIds, destinationParentId)
-    }
-    return
-  }
-  if (copyDragRequested(event)) {
-    await actions.duplicate(drag.resourceIds, destinationParentId)
-    return
-  }
-  await actions.move(drag.resourceIds, destinationParentId)
+  await actions.drop(drag, target, copyDragRequested(event))
 }
 
 export async function finishWorkspaceTrashDrop(
@@ -174,27 +169,23 @@ export async function finishWorkspaceTrashDrop(
   delete event.currentTarget.dataset.dropTarget
   delete event.currentTarget.dataset.dropOperation
   const drag = readWorkspaceResourceDrag(event.dataTransfer)
-  if (!drag || drag.lifecycle === 'trashed') return
+  if (!drag) return
   event.preventDefault()
   event.stopPropagation()
-  await actions.changeLifecycle(drag.resourceIds, 'trash')
+  await actions.drop(drag, { type: 'trash' }, false)
 }
 
 export function hasWorkspaceResourceDrag(dataTransfer: Pick<DataTransfer, 'types'>): boolean {
   return Array.from(dataTransfer.types).includes(WORKSPACE_RESOURCE_DRAG_TYPE)
 }
 
-export function readWorkspaceResourceDrag(dataTransfer: Pick<DataTransfer, 'getData'>): Readonly<{
-  resourceIds: ReadonlyArray<ResourceId>
-  lifecycle: AuthorizedResourceSummary['lifecycle']
-}> | null {
+export function readWorkspaceResourceDrag(
+  dataTransfer: Pick<DataTransfer, 'getData'>,
+): WorkspaceResourceDragPayload | null {
   return parseWorkspaceResourceDrag(dataTransfer.getData(WORKSPACE_RESOURCE_DRAG_TYPE))
 }
 
-function parseWorkspaceResourceDrag(value: string): Readonly<{
-  resourceIds: ReadonlyArray<ResourceId>
-  lifecycle: AuthorizedResourceSummary['lifecycle']
-}> | null {
+function parseWorkspaceResourceDrag(value: string): WorkspaceResourceDragPayload | null {
   let decoded: unknown
   try {
     decoded = JSON.parse(value)

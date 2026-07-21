@@ -43,6 +43,7 @@ export type TrashResourcesCommand = Readonly<{
 export type RestoreResourcesCommand = Readonly<{
   type: 'restore'
   resourceIds: ReadonlyArray<ResourceId>
+  destination: 'previousParent' | ResourceId | null
 }>
 
 export type PermanentlyDeleteResourcesCommand = Readonly<{

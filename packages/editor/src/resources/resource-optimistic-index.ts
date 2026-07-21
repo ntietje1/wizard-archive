@@ -126,8 +126,14 @@ function dependencyResourceIds(command: OptimisticResourceCommand): ReadonlyArra
         ...(command.destinationParentId === null ? [] : [command.destinationParentId]),
       ]
     case 'trash':
-    case 'restore':
       return command.resourceIds
+    case 'restore':
+      return [
+        ...command.resourceIds,
+        ...(command.destination === null || command.destination === 'previousParent'
+          ? []
+          : [command.destination]),
+      ]
   }
 }
 
@@ -166,7 +172,8 @@ function dependenciesAvailable(
     if (dependency.state !== 'known') return false
     const isParent =
       (command.type === 'create' && command.parentId === resourceId) ||
-      (command.type === 'move' && command.destinationParentId === resourceId)
+      (command.type === 'move' && command.destinationParentId === resourceId) ||
+      (command.type === 'restore' && command.destination === resourceId)
     if (isParent && dependency.value.kind !== 'folder') return false
   }
   return true
@@ -245,7 +252,14 @@ function applyOverlay(
       break
     case 'restore':
       if (overlay.affectedResourceIds.has(resource.id)) {
-        projected = { ...projected, lifecycle: 'active' }
+        projected = {
+          ...projected,
+          lifecycle: 'active',
+          ...(overlay.command.resourceIds.includes(resource.id) &&
+          overlay.command.destination !== 'previousParent'
+            ? { displayParentId: overlay.command.destination }
+            : {}),
+        }
       }
       break
   }

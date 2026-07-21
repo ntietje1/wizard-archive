@@ -362,7 +362,7 @@ describe('in-memory resource compensation', () => {
     const restored = await operations.execute(actorId, {
       campaignId,
       operationId: operationDomainId(82),
-      command: { type: 'restore', resourceIds: [id] },
+      command: { type: 'restore', resourceIds: [id], destination: 'previousParent' },
     })
     if (restored.status !== 'completed') throw new Error('Expected restore completion')
     const undone = await operations.compensate(actorId, {
@@ -398,6 +398,29 @@ describe('in-memory resource compensation', () => {
         originalOperationId: deleted.receipt.operationId,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'history_irreversible' })
+  })
+
+  it('restores a trashed resource directly into the requested active folder', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({ authorize: () => true })
+    const destination = resourceDomainId(120)
+    const restored = resourceDomainId(121)
+    await createResource(operations, destination, operationDomainId(120), null, 'folder')
+    await createResource(operations, restored, operationDomainId(121), null, 'note')
+    await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(122),
+      command: { type: 'trash', resourceIds: [restored] },
+    })
+
+    await expect(
+      operations.execute(actorId, {
+        campaignId,
+        operationId: operationDomainId(123),
+        command: { type: 'restore', resourceIds: [restored], destination },
+      }),
+    ).resolves.toMatchObject({ status: 'completed' })
+    expect(parentIds(catalog, restored)).toEqual([destination])
   })
 
   it('rejects create, restore, and deep-copy undo after a later descendant appears', async () => {
@@ -448,7 +471,11 @@ describe('in-memory resource compensation', () => {
     const restored = await operations.execute(actorId, {
       campaignId,
       operationId: operationDomainId(96),
-      command: { type: 'restore', resourceIds: [restoredRoot] },
+      command: {
+        type: 'restore',
+        resourceIds: [restoredRoot],
+        destination: 'previousParent',
+      },
     })
     if (restored.status !== 'completed') throw new Error('Expected restore completion')
     const laterRestoredChild = resourceDomainId(97)

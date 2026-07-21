@@ -27,7 +27,11 @@ describe('workspace external resource drops', () => {
     const actions = workspaceDropActions()
     const drop = dropEvent(target, target, dataTransfer)
 
-    await finishWorkspaceResourceDrop(drop.event, actions, null)
+    await finishWorkspaceResourceDrop(drop.event, actions, {
+      type: 'collection',
+      parentId: null,
+      title: 'Resources',
+    })
 
     expect(drop.preventDefault).toHaveBeenCalledOnce()
     expect(drop.stopPropagation).toHaveBeenCalledOnce()
@@ -42,7 +46,11 @@ describe('workspace external resource drops', () => {
     const actions = workspaceDropActions()
     const drop = dropEvent(target, note, browserDataTransfer())
 
-    await finishWorkspaceResourceDrop(drop.event, actions, null)
+    await finishWorkspaceResourceDrop(drop.event, actions, {
+      type: 'collection',
+      parentId: null,
+      title: 'Resources',
+    })
 
     expect(actions.importExternal).not.toHaveBeenCalled()
     expect(actions.report).toHaveBeenCalledWith('Drop files on a folder or empty resource area')
@@ -51,15 +59,10 @@ describe('workspace external resource drops', () => {
 
 function workspaceDropActions() {
   return {
-    changeLifecycle: vi.fn(),
-    duplicate: vi.fn(),
+    drop: vi.fn(),
     importExternal: vi.fn(),
-    move: vi.fn(),
     report: vi.fn(),
-  } satisfies Pick<
-    WorkspaceActions,
-    'changeLifecycle' | 'duplicate' | 'importExternal' | 'move' | 'report'
-  >
+  } satisfies Pick<WorkspaceActions, 'drop' | 'importExternal' | 'report'>
 }
 
 function browserDataTransfer(): Parameters<typeof finishWorkspaceResourceDrop>[0]['dataTransfer'] {

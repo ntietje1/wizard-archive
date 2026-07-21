@@ -22,6 +22,8 @@ import {
   clearWorkspaceResourceDropTargets,
   readWorkspaceResourceDrag,
 } from './workspace-resource-drag'
+import { planWorkspaceResourceDrop } from './workspace-resource-drop-plan'
+import type { WorkspaceResourceDropTarget } from './workspace-resource-drop-plan'
 import { useEnsureResource, useEnsureResourceCollection } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
@@ -92,7 +94,7 @@ export function ResourceShell({
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
   const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
-  const resourceDrag = useWorkspaceResourceDragOverlay(snapshot)
+  const resourceDrag = useWorkspaceResourceDragOverlay(snapshot, workspaceName ?? 'Resources')
   const [sidebarContextMenu, setSidebarContextMenu] = useState<Readonly<{
     x: number
     y: number
@@ -335,6 +337,7 @@ export function ResourceShell({
       )}
       <WorkspaceResourceDragOverlay
         nativePreviewRef={resourceDrag.nativePreviewRef}
+        overlayRef={resourceDrag.overlayRef}
         state={resourceDrag.state}
       />
       <ResourceViewAsBanner viewAs={runtime.viewAs} />
@@ -381,9 +384,14 @@ function WorkspaceNotice({
   )
 }
 
-function useWorkspaceResourceDragOverlay(snapshot: WorkspaceResourceIndexSnapshot) {
+function useWorkspaceResourceDragOverlay(
+  snapshot: WorkspaceResourceIndexSnapshot,
+  workspaceName: string,
+) {
   const [state, setState] = useState<WorkspaceResourceDragOverlayState>(null)
   const nativePreviewRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const lastFeedbackKey = useRef<string | null>(null)
   const begin = (event: DragEvent<HTMLElement>) => {
     const drag = readWorkspaceResourceDrag(event.dataTransfer)
     if (!drag) return
@@ -398,35 +406,47 @@ function useWorkspaceResourceDragOverlay(snapshot: WorkspaceResourceIndexSnapsho
     if (nativePreviewRef.current) {
       event.dataTransfer.setDragImage(nativePreviewRef.current, 0, 0)
     }
+    showWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
+    lastFeedbackKey.current = null
     setState({
       count: drag.resourceIds.length,
-      effect: null,
+      feedback: null,
       resource: source.value,
-      x: event.clientX,
-      y: event.clientY,
     })
   }
   const move = (event: DragEvent<HTMLElement>) => {
     if (event.clientX === 0 && event.clientY === 0) return
-    setState((current) => (current ? { ...current, x: event.clientX, y: event.clientY } : null))
+    positionWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
   }
   const updateEffect = (event: DragEvent<HTMLElement>) => {
     const target = event.target instanceof Element ? event.target : null
-    const x = event.clientX
-    const y = event.clientY
+    const copy = event.altKey || event.ctrlKey || event.metaKey
+    positionWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
     queueMicrotask(() => {
+      const activeTarget = target?.closest<HTMLElement>('[data-drop-target=true]') ?? null
+      const destination = workspaceDropTarget(activeTarget, snapshot, workspaceName)
+      const drag = readWorkspaceResourceDrag(event.dataTransfer)
+      const plan =
+        drag && destination ? planWorkspaceResourceDrop(snapshot, drag, destination, copy) : null
+      const feedback = plan
+        ? {
+            blocked: plan.status === 'rejected',
+            label: plan.label,
+          }
+        : { blocked: true, label: 'Cannot drop here' }
+      const feedbackKey = `${feedback.blocked}:${feedback.label}`
+      if (lastFeedbackKey.current === feedbackKey) return
+      lastFeedbackKey.current = feedbackKey
       setState((current) => {
         if (!current) return null
-        const dropOperation =
-          target?.closest<HTMLElement>('[data-drop-target=true]')?.dataset.dropOperation
-        const effect =
-          dropOperation === 'copy' ? 'copy' : dropOperation === 'move' ? 'move' : 'blocked'
-        return { ...current, effect, x, y }
+        return { ...current, feedback }
       })
     })
   }
   const end = (event: DragEvent<HTMLElement>) => {
     clearWorkspaceResourceDropTargets(event.currentTarget)
+    overlayRef.current?.classList.add('hidden')
+    lastFeedbackKey.current = null
     setState(null)
   }
   return {
@@ -435,9 +455,42 @@ function useWorkspaceResourceDragOverlay(snapshot: WorkspaceResourceIndexSnapsho
     leave: clearWorkspaceResourceDropTargetsAfterLeave,
     move,
     nativePreviewRef,
+    overlayRef,
     state,
     updateEffect,
   }
+}
+
+function workspaceDropTarget(
+  element: HTMLElement | null,
+  snapshot: WorkspaceResourceIndexSnapshot,
+  workspaceName: string,
+): WorkspaceResourceDropTarget | null {
+  if (!element) return null
+  if (element.dataset.workspaceDropTarget === 'trash') return { type: 'trash' }
+  if (element.dataset.workspaceDropTarget !== 'collection') return null
+  const resourceId = (element.dataset.workspaceDropResourceId ?? element.dataset.resourceId) as
+    | ResourceId
+    | undefined
+  if (!resourceId) return { type: 'collection', parentId: null, title: workspaceName }
+  const resource = snapshot.lookup(resourceId)
+  return resource.state === 'known' && resource.value.kind === 'folder'
+    ? {
+        type: 'collection',
+        parentId: resource.value.id,
+        title: resource.value.title,
+      }
+    : null
+}
+
+function showWorkspaceDragOverlay(element: HTMLDivElement | null, x: number, y: number) {
+  if (!element) return
+  element.classList.remove('hidden')
+  positionWorkspaceDragOverlay(element, x, y)
+}
+
+function positionWorkspaceDragOverlay(element: HTMLDivElement | null, x: number, y: number) {
+  if (element) element.style.transform = `translate(${x + 8}px, ${y + 8}px)`
 }
 
 function clearWorkspaceResourceDropTargetsAfterLeave(event: DragEvent<HTMLElement>) {
@@ -811,9 +864,20 @@ function ResizableWorkspacePanel({
   size: number
 }) {
   const panelElement = useRef<HTMLDivElement>(null)
+  const contentElement = useRef<HTMLDivElement>(null)
+  const activeResize = useRef<AbortController | null>(null)
+  const draggedSize = useRef(size)
+  useEffect(
+    () => () => {
+      activeResize.current?.abort()
+    },
+    [],
+  )
   const resize = (requestedSize: number) => {
     const bounded = normalizeWorkspacePanelGeometry({ [panel]: requestedSize })[panel]
     if (panelElement.current) panelElement.current.style.width = `${bounded}px`
+    if (contentElement.current) contentElement.current.style.width = `${bounded}px`
+    draggedSize.current = bounded
     return bounded
   }
 
@@ -821,19 +885,22 @@ function ResizableWorkspacePanel({
     event.preventDefault()
     const startX = event.clientX
     const startSize = panelElement.current?.getBoundingClientRect().width ?? size
+    activeResize.current?.abort()
+    const controller = new AbortController()
+    activeResize.current = controller
+    resize(startSize)
     const move = (moveEvent: globalThis.PointerEvent) => {
       const delta = moveEvent.clientX - startX
       resize(startSize + (panel === 'left' ? delta : -delta))
     }
-    const finish = (upEvent: globalThis.PointerEvent) => {
-      const delta = upEvent.clientX - startX
-      const nextSize = resize(startSize + (panel === 'left' ? delta : -delta))
-      onCommit(nextSize)
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', finish)
+    const finish = () => {
+      controller.abort()
+      if (activeResize.current === controller) activeResize.current = null
+      onCommit(draggedSize.current)
     }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', finish)
+    window.addEventListener('pointermove', move, { signal: controller.signal })
+    window.addEventListener('pointerup', finish, { signal: controller.signal })
+    window.addEventListener('pointercancel', finish, { signal: controller.signal })
   }
 
   return (
@@ -842,7 +909,9 @@ function ResizableWorkspacePanel({
       className={`relative z-20 h-full min-h-0 shrink-0 ${panel === 'left' ? 'border-r' : 'border-l'} border-border max-md:absolute max-md:inset-y-0 ${panel === 'left' ? 'max-md:left-0' : 'max-md:right-0'}`}
       style={{ width: size }}
     >
-      {children}
+      <div ref={contentElement} className="h-full overflow-hidden" style={{ width: size }}>
+        {children}
+      </div>
       <div
         role="separator"
         aria-label={`Resize ${panel} sidebar`}

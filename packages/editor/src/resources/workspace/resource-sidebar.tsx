@@ -10,6 +10,7 @@ import {
   FolderDot,
   FolderOpenDot,
   Loader2,
+  MoreHorizontal,
   PanelLeftClose,
   Plus,
   Search,
@@ -48,6 +49,7 @@ import type { WorkspaceActions } from './resource-operations'
 import { ResourceAppearancePopover } from './resource-appearance-popover'
 import { resourceDisplayIcon } from './resource-icon'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
+import { resourceContextMenuRequest } from './resource-context-menu-request'
 import { useEnsureResourceCollection } from './resource-loading'
 import {
   duplicateResourceKeys,
@@ -241,11 +243,19 @@ export function ResourceSidebar({
       />
       <div
         aria-label={`${view} resource drop zone`}
+        data-workspace-drop-target="collection"
         className="min-h-0 flex-1 overflow-y-auto p-1 data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
         onDragOver={canEdit ? allowWorkspaceResourceDrop : undefined}
         onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
         onDrop={
-          canEdit ? (event) => void finishWorkspaceResourceDrop(event, actions, null) : undefined
+          canEdit
+            ? (event) =>
+                void finishWorkspaceResourceDrop(event, actions, {
+                  type: 'collection',
+                  parentId: null,
+                  title: workspaceName ?? 'Resources',
+                })
+            : undefined
         }
         onContextMenu={(event) => {
           if (!canEdit || event.target !== event.currentTarget) return
@@ -496,6 +506,7 @@ function BookmarkedResourceCollection({
               onSelectionChange={onSelectionChange}
               onOpenContextMenu={onOpenContextMenu}
             />
+            <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
           </div>
         </li>
       ))}
@@ -621,16 +632,17 @@ function ResourceTreeRow({
   const childQuery = { parentId: resource.id, lifecycle: resource.lifecycle } as const
 
   return (
-    <li>
+    <li
+      {...workspaceResourceDropTargetProps({ actions, canEdit, resource })}
+      className="relative rounded-md data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
+    >
       <div
         aria-current={selectedResourceId === resource.id ? 'page' : undefined}
         data-resource-kind={resource.kind}
         data-selected={selection.selectedIds.includes(resource.id)}
-        {...workspaceResourceDropTargetProps({ actions, canEdit, resource })}
-        className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+        className="group relative flex min-w-0 items-center rounded-md pr-1 hover:bg-muted/70 aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
         style={{ paddingLeft: `${4 + depth * 12}px` }}
       >
-        <SidebarIndentGuides depth={depth} />
         {resource.kind === 'folder' ? (
           <FolderExpansionButton
             expanded={expanded}
@@ -659,6 +671,7 @@ function ResourceTreeRow({
           showIcon={false}
           visibleIds={visibleIds}
         />
+        <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
       </div>
       {resource.kind === 'folder' && expanded && (
         <ResourceCollection
@@ -682,15 +695,26 @@ function ResourceTreeRow({
   )
 }
 
-function SidebarIndentGuides({ depth }: { depth: number }) {
-  return Array.from({ length: depth }, (_, index) => (
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 border-l border-border"
-      key={index}
-      style={{ left: `${16 + index * 12}px` }}
-    />
-  ))
+function ResourceRowMenuButton({
+  onOpenContextMenu,
+  resource,
+}: {
+  onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  resource: AuthorizedResourceSummary
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`More options for ${resource.title}`}
+      className="pointer-events-none absolute right-1 z-10 inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-background hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpenContextMenu(resourceContextMenuRequest(event, resource))
+      }}
+    >
+      <MoreHorizontal className="size-4" />
+    </button>
+  )
 }
 
 function FolderExpansionButton({
