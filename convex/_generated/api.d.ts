@@ -93,10 +93,10 @@ import type * as resources_functions_replacementTarget from "../resources/functi
 import type * as resources_functions_resourceAccess from "../resources/functions/resourceAccess.js";
 import type * as resources_functions_resourceBookmarks from "../resources/functions/resourceBookmarks.js";
 import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
+import type * as resources_functions_resourceCatalogRow from "../resources/functions/resourceCatalogRow.js";
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
 import type * as resources_functions_resourcePresence from "../resources/functions/resourcePresence.js";
-import type * as resources_functions_resourceRecordRow from "../resources/functions/resourceRecordRow.js";
 import type * as resources_functions_resourceReferences from "../resources/functions/resourceReferences.js";
 import type * as resources_functions_resourceSearchProjection from "../resources/functions/resourceSearchProjection.js";
 import type * as resources_functions_saveCanvasContent from "../resources/functions/saveCanvasContent.js";
@@ -237,10 +237,10 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/resourceAccess": typeof resources_functions_resourceAccess;
   "resources/functions/resourceBookmarks": typeof resources_functions_resourceBookmarks;
   "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;
+  "resources/functions/resourceCatalogRow": typeof resources_functions_resourceCatalogRow;
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
   "resources/functions/resourcePresence": typeof resources_functions_resourcePresence;
-  "resources/functions/resourceRecordRow": typeof resources_functions_resourceRecordRow;
   "resources/functions/resourceReferences": typeof resources_functions_resourceReferences;
   "resources/functions/resourceSearchProjection": typeof resources_functions_resourceSearchProjection;
   "resources/functions/saveCanvasContent": typeof resources_functions_saveCanvasContent;
