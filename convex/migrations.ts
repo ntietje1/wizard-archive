@@ -16,8 +16,24 @@ import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { loadValidMapContentRows } from './resources/functions/mapContent'
 import { replaceResourceReferenceProjection } from './resources/functions/resourceReferences'
+import { generateAvailableCampaignSlug } from './campaigns/functions/campaignSlug'
 
 const migrations = new Migrations<DataModel>(components.migrations)
+
+export const addCampaignSlugs = migrations.define({
+  table: 'campaigns',
+  migrateOne: async (ctx, campaign) =>
+    campaign.slug === undefined
+      ? {
+          slug: await generateAvailableCampaignSlug(
+            ctx.db,
+            campaign.dmUserId,
+            campaign.name,
+            campaign._id,
+          ),
+        }
+      : undefined,
+})
 
 export const addNoteContentGeneration = migrations.define({
   table: 'resourceNoteContents',

@@ -9,6 +9,7 @@ import { prepareCampaignName } from '../validation'
 import type { AuthMutationCtx } from '../../functions'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { DEFAULT_RESOURCE_ACCESS_DEFAULTS } from '@wizard-archive/editor/resources/access-policy'
+import { generateAvailableCampaignSlug } from './campaignSlug'
 
 export async function createCampaign(
   ctx: AuthMutationCtx,
@@ -26,11 +27,13 @@ export async function createCampaign(
   const profile = ctx.user.profile
   const campaignUuid = generateDomainId(DOMAIN_ID_KIND.campaign)
   const campaignMemberUuid = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+  const slug = await generateAvailableCampaignSlug(ctx.db, profile._id, preparedName)
   const campaignId = await ctx.db.insert('campaigns', {
     campaignUuid,
     name: preparedName,
     description: preparedDescription ?? '',
     dmUserId: profile._id,
+    slug,
     status: CAMPAIGN_STATUS.Active,
     acceptedMemberCount: 1,
     currentSessionId: null,

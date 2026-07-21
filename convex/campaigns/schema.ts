@@ -23,6 +23,7 @@ const campaignFields = {
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
+  slug: v.optional(v.string()),
   status: campaignStatusValidator,
   acceptedMemberCount: v.number(),
   resourceAccessDefaults: v.object({
@@ -49,7 +50,9 @@ const campaignMemberTableFields = {
 export const campaignTables = {
   campaigns: defineTable({
     ...campaignTableFields,
-  }).index('by_campaignUuid', ['campaignUuid']),
+  })
+    .index('by_campaignUuid', ['campaignUuid'])
+    .index('by_slug_dm', ['slug', 'dmUserId']),
 
   campaignMembers: defineTable({
     ...campaignMemberTableFields,

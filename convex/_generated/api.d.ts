@@ -25,6 +25,7 @@ import type * as campaigns_functions_acceptedPlayerMember from "../campaigns/fun
 import type * as campaigns_functions_campaignIdentity from "../campaigns/functions/campaignIdentity.js";
 import type * as campaigns_functions_campaignMemberProfiles from "../campaigns/functions/campaignMemberProfiles.js";
 import type * as campaigns_functions_campaignMemberProjection from "../campaigns/functions/campaignMemberProjection.js";
+import type * as campaigns_functions_campaignSlug from "../campaigns/functions/campaignSlug.js";
 import type * as campaigns_functions_createCampaign from "../campaigns/functions/createCampaign.js";
 import type * as campaigns_functions_getCampaign from "../campaigns/functions/getCampaign.js";
 import type * as campaigns_functions_getCampaignMembers from "../campaigns/functions/getCampaignMembers.js";
@@ -169,6 +170,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/functions/campaignIdentity": typeof campaigns_functions_campaignIdentity;
   "campaigns/functions/campaignMemberProfiles": typeof campaigns_functions_campaignMemberProfiles;
   "campaigns/functions/campaignMemberProjection": typeof campaigns_functions_campaignMemberProjection;
+  "campaigns/functions/campaignSlug": typeof campaigns_functions_campaignSlug;
   "campaigns/functions/createCampaign": typeof campaigns_functions_createCampaign;
   "campaigns/functions/getCampaign": typeof campaigns_functions_getCampaign;
   "campaigns/functions/getCampaignMembers": typeof campaigns_functions_getCampaignMembers;

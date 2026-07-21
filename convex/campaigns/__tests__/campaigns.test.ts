@@ -58,6 +58,7 @@ describe('createCampaign', () => {
       const campaign = await ctx.db.get('campaigns', campaignRowId)
       expect(campaign).not.toBeNull()
       expect(campaign!.name).toBe('My Campaign')
+      expect(campaign!.slug).toBe('my-campaign')
       expect(campaign!.dmUserId).toBe(profile._id)
       expect(campaign!.status).toBe('Active')
       expect(campaign!.acceptedMemberCount).toBe(1)
@@ -120,6 +121,25 @@ describe('createCampaign', () => {
       name: 'a'.repeat(30),
     })
     expect(id).toBeDefined()
+  })
+
+  it('generates a unique link from the campaign name', async () => {
+    const { authed } = await setupUser(t)
+
+    const firstId = await authed.mutation(api.campaigns.mutations.createCampaign, {
+      name: 'My Campaign',
+    })
+    const secondId = await authed.mutation(api.campaigns.mutations.createCampaign, {
+      name: 'My Campaign',
+    })
+    const firstRowId = await getCampaignRowId(t, firstId)
+    const secondRowId = await getCampaignRowId(t, secondId)
+
+    const slugs = await t.run(async (ctx) => {
+      const campaigns = await Promise.all([ctx.db.get(firstRowId), ctx.db.get(secondRowId)])
+      return campaigns.map((campaign) => campaign?.slug)
+    })
+    expect(slugs).toEqual(['my-campaign', 'my-campaign-1'])
   })
 
   it('requires authentication', async () => {
