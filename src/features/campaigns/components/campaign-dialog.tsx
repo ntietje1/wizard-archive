@@ -2,83 +2,44 @@ import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import { validateCampaignName } from 'shared/campaigns/validation'
 import { Sword } from 'lucide-react'
-import type { Campaign } from 'shared/campaigns/types'
 import { Input } from '@wizard-archive/ui/shadcn/components/input'
 import { Label } from '@wizard-archive/ui/shadcn/components/label'
-import { Textarea } from '@wizard-archive/ui/shadcn/components/textarea'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { FormDialog } from '@wizard-archive/ui/components/form-dialog'
-import {
-  useCreateCampaignMutation,
-  useUpdateCampaignMutation,
-} from '~/features/campaigns/hooks/use-campaign-operations'
+import { useCreateCampaignMutation } from '~/features/campaigns/hooks/use-campaign-operations'
 import { handleError } from '~/shared/utils/logger'
 
 interface CampaignDialogProps {
-  mode: 'create' | 'edit'
   isOpen: boolean
   onClose: () => void
-  campaign?: Campaign
 }
 
-export function CampaignDialog({ mode, isOpen, onClose, campaign }: CampaignDialogProps) {
+export function CampaignDialog({ isOpen, onClose }: CampaignDialogProps) {
   return (
     <FormDialog
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'create' ? 'New Campaign' : 'Edit Campaign'}
-      description={
-        mode === 'create'
-          ? 'Start a new TTRPG adventure and invite your party to join.'
-          : 'Update campaign details'
-      }
+      title="New Campaign"
+      description="Start a new TTRPG adventure and invite your party to join."
       icon={Sword}
     >
-      {isOpen && <CampaignForm mode={mode} onClose={onClose} campaign={campaign} />}
+      {isOpen && <CampaignForm onClose={onClose} />}
     </FormDialog>
   )
 }
 
-function CampaignForm({ mode, onClose, campaign }: Omit<CampaignDialogProps, 'isOpen'>) {
+function CampaignForm({ onClose }: Pick<CampaignDialogProps, 'onClose'>) {
   const createCampaign = useCreateCampaignMutation()
-  const updateCampaign = useUpdateCampaignMutation()
 
   const form = useForm({
-    defaultValues:
-      mode === 'edit' && campaign
-        ? {
-            name: campaign.name,
-            description: campaign.description || '',
-          }
-        : {
-            name: '',
-            description: '',
-          },
+    defaultValues: { name: '' },
     onSubmit: async ({ value }) => {
       try {
-        if (mode === 'create') {
-          await createCampaign.mutateAsync({
-            name: value.name.trim(),
-            description: value.description.trim(),
-          })
-
-          toast.success('Campaign created successfully')
-          onClose()
-        } else if (campaign) {
-          await updateCampaign.mutateAsync({
-            campaignId: campaign.id,
-            name: value.name.trim(),
-            description: value.description.trim() || undefined,
-          })
-
-          toast.success('Campaign updated successfully')
-          onClose()
-        } else {
-          toast.error('Invalid form state: missing campaign')
-          return
-        }
+        await createCampaign.mutateAsync({ name: value.name.trim() })
+        toast.success('Campaign created successfully')
+        onClose()
       } catch (error) {
-        handleError(error, 'Failed to save campaign')
+        handleError(error, 'Failed to create campaign')
       }
     },
   })
@@ -121,42 +82,17 @@ function CampaignForm({ mode, onClose, campaign }: Omit<CampaignDialogProps, 'is
         )}
       </form.Field>
 
-      <form.Field name="description">
-        {(field) => (
-          <div className="space-y-2 px-px">
-            <Label htmlFor="campaign-description">Description</Label>
-            <Textarea
-              id="campaign-description"
-              rows={3}
-              className="h-20"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              placeholder="A thrilling adventure in the Sword Coast..."
-              disabled={form.state.isSubmitting}
-            />
+      <form.Subscribe selector={(state) => state}>
+        {(state) => (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!state.canSubmit || state.isSubmitting}>
+              Create Campaign
+            </Button>
           </div>
         )}
-      </form.Field>
-
-      <form.Subscribe
-        selector={(s: any) => ({
-          canSubmit: s.canSubmit,
-          isSubmitting: s.isSubmitting,
-        })}
-      >
-        {({ canSubmit, isSubmitting }: { canSubmit: boolean; isSubmitting: boolean }) => {
-          return (
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                {mode === 'create' ? 'Create Campaign' : 'Update Campaign'}
-              </Button>
-            </div>
-          )
-        }}
       </form.Subscribe>
     </form>
   )

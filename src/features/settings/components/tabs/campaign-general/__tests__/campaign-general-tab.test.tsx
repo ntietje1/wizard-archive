@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
+import { assertCampaignSlug } from 'shared/campaigns/validation'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { FOLDER_ACCESS_INHERITANCE } from '@wizard-archive/editor/resources/access-policy'
@@ -12,6 +14,7 @@ import { TestWrapper } from '~/test/test-wrapper'
 
 const mutate = vi.fn()
 const mutateAsync = vi.fn()
+const navigate = vi.fn()
 type AppMutationMockResult = ReturnType<typeof useAppMutation>
 
 function routeIdentity(campaign: ReturnType<typeof createCampaign>) {
@@ -30,7 +33,11 @@ vi.mock('~/shared/hooks/useAppMutation', () => ({
 }))
 
 vi.mock('sonner', () => ({
-  toast: { error: vi.fn() },
+  toast: { error: vi.fn(), success: vi.fn() },
+}))
+
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigate,
 }))
 
 describe('CampaignGeneralTab', () => {
@@ -40,6 +47,8 @@ describe('CampaignGeneralTab', () => {
     vi.mocked(toast.error).mockReset()
     mutate.mockReset()
     mutateAsync.mockReset()
+    navigate.mockReset()
+    navigate.mockResolvedValue(undefined)
     vi.mocked(useAppMutation).mockReturnValue(createMutationResult())
   })
 
@@ -142,6 +151,78 @@ describe('CampaignGeneralTab', () => {
     expect(
       screen.getByRole('switch', { name: /share folder contents automatically/i }),
     ).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('updates campaign details and replaces a changed slug route', async () => {
+    const user = userEvent.setup()
+    const campaign = createCampaign({
+      name: 'Old Campaign',
+      description: 'Old description',
+      slug: assertCampaignSlug('old-campaign'),
+      myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
+    })
+    vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
+      campaign: mockAuthQuery(campaign),
+      isDm: true,
+      isCampaignLoaded: true,
+      campaignId: campaign.id,
+    })
+
+    render(
+      <TestWrapper>
+        <CampaignGeneralTab />
+      </TestWrapper>,
+    )
+
+    await user.clear(screen.getByLabelText('Name'))
+    await user.type(screen.getByLabelText('Name'), 'New Campaign')
+    await user.clear(screen.getByLabelText('Description'))
+    await user.type(screen.getByLabelText('Description'), 'New description')
+    await user.clear(screen.getByLabelText('Campaign link'))
+    await user.type(screen.getByLabelText('Campaign link'), 'new-campaign')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({
+        campaignId: campaign.id,
+        name: 'New Campaign',
+        description: 'New description',
+        slug: 'new-campaign',
+      })
+    })
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/campaigns/$dmUsername/$campaignSlug/editor',
+      params: {
+        dmUsername: campaign.dmUserProfile.username,
+        campaignSlug: 'new-campaign',
+      },
+      search: true,
+      replace: true,
+    })
+    expect(toast.success).toHaveBeenCalledWith('Campaign settings updated')
+  })
+
+  it('makes campaign details read-only for non-DMs', () => {
+    const campaign = createCampaign({ myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player } })
+    vi.mocked(useOptionalCampaign).mockReturnValue({
+      ...routeIdentity(campaign),
+      campaign: mockAuthQuery(campaign),
+      isDm: false,
+      isCampaignLoaded: true,
+      campaignId: campaign.id,
+    })
+
+    render(
+      <TestWrapper>
+        <CampaignGeneralTab />
+      </TestWrapper>,
+    )
+
+    expect(screen.getByLabelText('Name')).toBeDisabled()
+    expect(screen.getByLabelText('Description')).toBeDisabled()
+    expect(screen.getByLabelText('Campaign link')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
   })
 
   it('updates the campaign default when the switch changes', () => {

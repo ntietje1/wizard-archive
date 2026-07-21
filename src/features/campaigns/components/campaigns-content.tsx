@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Edit, Loader2, Plus, Sword, Trash2, User, Users } from 'lucide-react'
+import { Loader2, Plus, Sword, Trash2, User, Users } from 'lucide-react'
 import { CampaignsContentError } from './campaigns-content-error'
 import type { Campaign } from 'shared/campaigns/types'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
@@ -24,14 +24,10 @@ export function CampaignsContent() {
 
 function CampaignsContentProjection() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)
-  const [editingCampaignId, setEditingCampaignId] = useState<CampaignId | null>(null)
   const [deletingCampaignId, setDeletingCampaignId] = useState<CampaignId | null>(null)
 
   const campaigns = useUserCampaignsQuery()
 
-  const currentlyEditingCampaign = campaigns.results.find(
-    (campaign: Campaign) => campaign.id === editingCampaignId,
-  )
   const currentlyDeletingCampaign = campaigns.results.find(
     (campaign: Campaign) => campaign.id === deletingCampaignId,
   )
@@ -97,14 +93,6 @@ function CampaignsContentProjection() {
                       campaign.myMembership?.role === 'DM'
                         ? [
                             {
-                              icon: Edit,
-                              onClick: (e: React.MouseEvent) => {
-                                e.stopPropagation()
-                                setEditingCampaignId(campaign.id)
-                              },
-                              'aria-label': 'Edit campaign',
-                            },
-                            {
                               icon: Trash2,
                               onClick: (e: React.MouseEvent) => {
                                 e.stopPropagation()
@@ -150,18 +138,7 @@ function CampaignsContentProjection() {
         )}
       </ContentGrid>
 
-      <CampaignDialog
-        mode="create"
-        isOpen={creatingCampaign}
-        onClose={() => setCreatingCampaign(false)}
-      />
-
-      <CampaignDialog
-        mode="edit"
-        isOpen={editingCampaignId !== null}
-        onClose={() => setEditingCampaignId(null)}
-        campaign={currentlyEditingCampaign ?? undefined}
-      />
+      <CampaignDialog isOpen={creatingCampaign} onClose={() => setCreatingCampaign(false)} />
 
       {currentlyDeletingCampaign && (
         <CampaignDeleteConfirmDialog

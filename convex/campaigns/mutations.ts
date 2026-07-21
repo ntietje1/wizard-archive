@@ -20,14 +20,10 @@ import { assertCampaignSlug, campaignSlugValidator } from './validation'
 export const createCampaign = authMutation({
   args: {
     name: v.string(),
-    description: v.optional(v.string()),
   },
   returns: campaignIdValidator,
   handler: async (ctx, args): Promise<CampaignId> => {
-    return createCampaignFn(ctx, {
-      name: args.name,
-      description: args.description,
-    })
+    return createCampaignFn(ctx, { name: args.name })
   },
 })
 

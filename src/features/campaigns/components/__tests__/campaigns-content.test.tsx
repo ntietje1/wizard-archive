@@ -102,7 +102,7 @@ describe('CampaignsContent', () => {
     expect(screen.getByText('Dragon Quest')).toBeInTheDocument()
   })
 
-  it('shows edit and delete buttons for DM campaigns', () => {
+  it('shows the delete button for DM campaigns', () => {
     const campaign = createCampaign({
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
@@ -115,11 +115,10 @@ describe('CampaignsContent', () => {
       </TestWrapper>,
     )
 
-    expect(screen.getByRole('button', { name: /edit campaign/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /delete campaign/i })).toBeInTheDocument()
   })
 
-  it('hides edit and delete buttons for player campaigns', () => {
+  it('hides the delete button for player campaigns', () => {
     const campaign = createCampaign({
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
@@ -132,7 +131,6 @@ describe('CampaignsContent', () => {
       </TestWrapper>,
     )
 
-    expect(screen.queryByRole('button', { name: /edit campaign/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /delete campaign/i })).not.toBeInTheDocument()
   })
 

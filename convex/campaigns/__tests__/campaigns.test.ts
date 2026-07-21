@@ -59,6 +59,7 @@ describe('createCampaign', () => {
       const campaign = await ctx.db.get('campaigns', campaignRowId)
       expect(campaign).not.toBeNull()
       expect(campaign!.name).toBe('My Campaign')
+      expect(campaign!.description).toBe('')
       expect(campaign!.slug).toBe('my-campaign')
       expect(campaign!.dmUserId).toBe(profile._id)
       expect(campaign!.status).toBe('Active')

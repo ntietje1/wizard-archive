@@ -29,24 +29,21 @@ beforeEach(() => {
 })
 
 describe('CampaignDialog', () => {
-  it('creates a campaign from its name and optional description', async () => {
+  it('creates a campaign from only its name', async () => {
     const user = userEvent.setup()
     render(
       <TestWrapper>
-        <CampaignDialog mode="create" isOpen onClose={vi.fn()} />
+        <CampaignDialog isOpen onClose={vi.fn()} />
       </TestWrapper>,
     )
 
     await user.type(screen.getByLabelText(/campaign name/i), 'Dragon Quest')
-    await user.type(screen.getByLabelText(/description/i), '  Into the mountains  ')
     await user.click(screen.getByRole('button', { name: /create campaign/i }))
 
     await waitFor(() => {
-      expect(mutateAsync).toHaveBeenCalledWith({
-        name: 'Dragon Quest',
-        description: 'Into the mountains',
-      })
+      expect(mutateAsync).toHaveBeenCalledWith({ name: 'Dragon Quest' })
     })
+    expect(screen.queryByLabelText(/description/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/custom link/i)).not.toBeInTheDocument()
   })
 })

@@ -27,10 +27,12 @@ export async function updateCampaign(
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
   if (name !== undefined) {
-    updates.name = prepareCampaignName(name)
+    const preparedName = prepareCampaignName(name)
+    if (preparedName !== campaign.name) updates.name = preparedName
   }
   if (description !== undefined) {
-    updates.description = prepareCampaignDescription(description) ?? ''
+    const preparedDescription = prepareCampaignDescription(description) ?? ''
+    if (preparedDescription !== campaign.description) updates.description = preparedDescription
   }
   if (slug !== undefined && slug !== campaign.slug) {
     await assertAvailableCampaignSlug(ctx.db, campaign.dmUserId, slug, campaign._id)
