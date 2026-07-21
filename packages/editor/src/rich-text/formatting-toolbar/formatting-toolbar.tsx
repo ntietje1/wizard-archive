@@ -195,9 +195,9 @@ function FormattingToolbarContent({
       role="toolbar"
       aria-label={ariaLabel}
       className={cn(
-        'flex items-center gap-1 rounded-lg border bg-background/95 p-1 shadow-md backdrop-blur-sm',
-        mode === 'full' &&
-          'w-full overflow-x-auto rounded-none border-x-0 border-t-0 px-3 shadow-none',
+        'flex items-center gap-1 border bg-background/95 backdrop-blur-sm',
+        mode === 'full' && 'h-9 w-full shrink-0 overflow-x-auto border-x-0 border-t-0 px-3',
+        mode === 'compact' && 'rounded-lg p-1 shadow-md',
         className,
       )}
       onPointerDown={(event) => {

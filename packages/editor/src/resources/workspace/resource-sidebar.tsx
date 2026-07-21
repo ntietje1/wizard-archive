@@ -338,7 +338,11 @@ function ResourceSidebarControls({
 }) {
   const searchAvailable = runtime.search.status === 'available'
   return (
-    <div className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1">
+    <div
+      role="toolbar"
+      aria-label="Sidebar controls"
+      className="flex h-9 shrink-0 items-center gap-1 border-y border-border px-1"
+    >
       {canEdit && (
         <ResourceCreateMenu
           actions={actions}

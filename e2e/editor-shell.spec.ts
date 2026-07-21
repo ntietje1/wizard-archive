@@ -6,6 +6,21 @@ import {
 } from './helpers/editor-resource-helpers'
 
 test.describe('editor shell', () => {
+  test('aligns the note toolbar with the sidebar controls', async ({ page }) => {
+    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
+    await sidebarResource(page, 'The Lantern Market').click()
+    const sidebarToolbar = page.getByRole('toolbar', { name: 'Sidebar controls' })
+    const noteToolbar = page.getByRole('toolbar', { name: 'Note formatting toolbar' })
+    await expect(sidebarToolbar).toBeVisible()
+    await expect(noteToolbar).toBeVisible()
+
+    const [sidebarBounds, noteBounds] = await Promise.all([
+      sidebarToolbar.boundingBox(),
+      noteToolbar.boundingBox(),
+    ])
+    expect(noteBounds?.height).toBe(sidebarBounds?.height)
+  })
+
   test('shows valid drop feedback on the first drag movement', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
     const source = sidebarResource(page, 'Blue-glass Invoice')
