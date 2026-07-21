@@ -32,7 +32,7 @@ type WorkspaceResourceDropPlan =
       status: 'accepted'
       execution: 'noop'
       effect: 'move'
-      label: string
+      label: string | null
     }>
   | Readonly<{ status: 'rejected'; label: string }>
 
@@ -167,7 +167,7 @@ function planMoveDrop({
     destinationParentId !== null &&
     resourceIds[0] === destinationParentId
   ) {
-    return { status: 'accepted', execution: 'noop', effect: 'move', label }
+    return { status: 'accepted', execution: 'noop', effect: 'move', label: null }
   }
   const command = {
     type: 'move' as const,

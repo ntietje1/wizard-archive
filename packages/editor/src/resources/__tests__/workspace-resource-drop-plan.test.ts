@@ -160,7 +160,7 @@ describe('planWorkspaceResourceDrop', () => {
       status: 'accepted',
       execution: 'noop',
       effect: 'move',
-      label: 'Move item to “Lore”',
+      label: null,
     })
   })
 })

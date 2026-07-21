@@ -585,7 +585,7 @@ function useWorkspaceResourceDragOverlay(
       drag,
       event.altKey || event.ctrlKey || event.metaKey,
     )
-    lastFeedbackKey.current = `${feedback.blocked}:${feedback.label}`
+    lastFeedbackKey.current = workspaceDragFeedbackKey(feedback)
     setState({
       count: drag.resourceIds.length,
       feedback,
@@ -598,7 +598,7 @@ function useWorkspaceResourceDragOverlay(
     const drag = readWorkspaceResourceDrag(event.dataTransfer)
     if (!drag) return
     const feedback = workspaceDragFeedback(target, snapshot, workspaceName, drag, copy)
-    const feedbackKey = `${feedback.blocked}:${feedback.label}`
+    const feedbackKey = workspaceDragFeedbackKey(feedback)
     if (lastFeedbackKey.current === feedbackKey) return
     lastFeedbackKey.current = feedbackKey
     setState((current) => {
@@ -633,7 +633,7 @@ function workspaceDragFeedback(
   workspaceName: string,
   drag: WorkspaceResourceDragPayload,
   copy: boolean,
-) {
+): NonNullable<WorkspaceResourceDragOverlayState>['feedback'] {
   const activeTarget = element?.closest<HTMLElement>('[data-drop-target=true]') ?? null
   const target =
     activeTarget ?? element?.closest<HTMLElement>('[data-workspace-drop-target]') ?? null
@@ -645,9 +645,15 @@ function workspaceDragFeedback(
   }
   const destination = workspaceDropTarget(target, snapshot, workspaceName)
   const plan = destination ? planWorkspaceResourceDrop(snapshot, drag, destination, copy) : null
-  return plan
-    ? { blocked: plan.status === 'rejected', label: plan.label }
-    : { blocked: true, label: 'Cannot drop here' }
+  if (!plan) return { blocked: true, label: 'Cannot drop here' }
+  if (plan.label === null) return null
+  return { blocked: plan.status === 'rejected', label: plan.label }
+}
+
+function workspaceDragFeedbackKey(
+  feedback: NonNullable<WorkspaceResourceDragOverlayState>['feedback'],
+) {
+  return feedback ? `${feedback.blocked}:${feedback.label}` : null
 }
 
 function workspaceDropTarget(

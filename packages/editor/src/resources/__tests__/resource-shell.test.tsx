@@ -894,9 +894,8 @@ describe('ResourceShell', () => {
     fireEvent.dragStart(row, { clientX: 20, clientY: 30, dataTransfer })
 
     expect(dataTransfer.setDragImage).toHaveBeenCalledOnce()
-    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(
-      `${resource.title}Move item to “${resource.title}”`,
-    )
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(resource.title)
+    expect(screen.getByTestId('resource-drag-overlay')).not.toHaveTextContent('Move item')
 
     const rootDropZone = screen.getByLabelText('resources resource drop zone')
     fireEvent(
