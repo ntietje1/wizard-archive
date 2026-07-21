@@ -100,11 +100,16 @@ describe('resource application workflows', () => {
       kind: 'resource',
       resourceId: roots.items[0].id,
     })
-    expect(report.mock.calls.at(-1)?.[0]).toBe('Imported 2 folders, 1 note, 1 file')
+    expect(report.mock.calls.at(-1)?.[0]).toEqual({
+      kind: 'message',
+      message: 'Imported 2 folders, 1 note, 1 file',
+    })
     expect(
       report.mock.calls.some(
-        ([message, , progress]) =>
-          typeof message === 'string' && message.startsWith('Importing resources') && progress,
+        ([feedback]) =>
+          feedback.kind === 'pending' &&
+          feedback.message.startsWith('Importing resources') &&
+          feedback.progress,
       ),
     ).toBe(true)
     core.dispose()

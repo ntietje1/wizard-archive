@@ -30,12 +30,20 @@ import type {
   WorkspaceResourceDropTarget,
 } from '../workspace-resource-drop-plan'
 
-export type WorkspaceReport = (
+export type WorkspaceFeedback =
+  | Readonly<{ kind: 'message'; message: string }>
+  | Readonly<{ kind: 'pending'; message: string; progress?: PlainTransferProgress }>
+  | Readonly<{ kind: 'failed'; message: string; retry?: () => void }>
+
+export type WorkspaceReport = (feedback: WorkspaceFeedback) => void
+
+export function reportWorkspaceTextFeedback(
+  report: WorkspaceReport,
   message: string,
   retry?: () => void,
-  progress?: PlainTransferProgress,
-  pending?: boolean,
-) => void
+): void {
+  report(retry ? { kind: 'failed', message, retry } : { kind: 'message', message })
+}
 
 export type WorkspaceCreationSettlement =
   | Readonly<{ status: 'completed'; resourceId: ResourceId }>
@@ -99,7 +107,7 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
     undo: (direction: 'redo' | 'undo') => {
       const history = runtime.resources.undo
       if (history.status !== 'available') {
-        report(`${direction === 'undo' ? 'Undo' : 'Redo'} is unavailable`)
+        reportFailure(report, `${direction === 'undo' ? 'Undo' : 'Redo'} is unavailable`)
         return Promise.resolve()
       }
       return runResourceUndo(history.value, direction, report)
@@ -182,7 +190,7 @@ async function importWorkspaceDataTransfer(
     runtime.resources.structure.status !== 'available' ||
     runtime.transfers.status !== 'available'
   ) {
-    report('Files cannot be imported in this workspace')
+    reportFailure(report, 'Files cannot be imported in this workspace')
     return
   }
   reportPending(report, 'Reading dropped files…')
@@ -190,11 +198,11 @@ async function importWorkspaceDataTransfer(
   try {
     transfer = await readBrowserPlainTransfer(dataTransfer)
   } catch {
-    report('Could not read the dropped files')
+    reportFailure(report, 'Could not read the dropped files')
     return
   }
   if (transfer.sources.length === 0) {
-    report('No files were found in the drop')
+    reportMessage(report, 'No files were found in the drop')
     return
   }
   const deliver = createWorkspaceTransferDelivery(
@@ -247,37 +255,43 @@ async function settleWorkspaceDropTransfer(
   try {
     result = await deliver(undefined, (progress) => {
       const current = progress.currentPath ? `: ${progress.currentPath}` : ''
-      report(`Importing resources${current}`, undefined, progress)
+      report({ kind: 'pending', message: `Importing resources${current}`, progress })
     })
   } catch {
-    report('Import failed', () => void settleWorkspaceDropTransfer(runtime, deliver, report))
+    reportFailure(
+      report,
+      'Import failed',
+      () => void settleWorkspaceDropTransfer(runtime, deliver, report),
+    )
     return
   }
   if (result.status === 'indeterminate') {
-    report(
+    reportFailure(
+      report,
       `Import status is unresolved: ${result.reason}`,
       () => void settleWorkspaceDropTransfer(runtime, deliver, report),
     )
     return
   }
   if (result.status === 'rejected') {
-    report(`Import rejected: ${result.reason}`)
+    reportFailure(report, `Import rejected: ${result.reason}`)
     return
   }
   if (result.status !== 'settled') {
-    report(
+    reportFailure(
+      report,
       'Import status is unresolved',
       () => void settleWorkspaceDropTransfer(runtime, deliver, report),
     )
     return
   }
   if (result.entries.every((entry) => entry.status === 'cancelled')) {
-    report('Import cancelled')
+    reportMessage(report, 'Import cancelled')
     return
   }
   const completed = result.entries.filter((entry) => entry.status === 'completed')
   const rejected = result.entries.filter((entry) => entry.status === 'rejected')
-  report(workspaceTransferSummary(completed, rejected))
+  reportMessage(report, workspaceTransferSummary(completed, rejected))
   const opened = completed.find((entry) => entry.kind === 'folder') ?? completed[0]
   if (opened) runtime.navigation.open({ kind: 'resource', resourceId: opened.resourceId })
 }
@@ -323,14 +337,14 @@ async function createWorkspaceAssetFile(
     bytes = new Uint8Array(await file.arrayBuffer())
   } catch {
     if (signal?.aborted) {
-      report('Upload cancelled')
+      reportMessage(report, 'Upload cancelled')
       return { status: 'cancelled' }
     }
-    report('Upload failed: file could not be read')
+    reportFailure(report, 'Upload failed: file could not be read')
     return { status: 'rejected', reason: 'file_read_failed' }
   }
   if (signal?.aborted) {
-    report('Upload cancelled')
+    reportMessage(report, 'Upload cancelled')
     return { status: 'cancelled' }
   }
   return await settleAssetFileCreation(
@@ -346,22 +360,22 @@ function settleAssetFileCreation(
   signal?: AbortSignal,
 ): Promise<WorkspaceCreationSettlement> {
   if (signal?.aborted) {
-    report('Upload cancelled')
+    reportMessage(report, 'Upload cancelled')
     return Promise.resolve({ status: 'cancelled' })
   }
   if (result.status === 'completed') {
-    report('File uploaded')
+    reportMessage(report, 'File uploaded')
     return Promise.resolve(result)
   }
   if (result.status === 'retryable') {
-    report('Upload status is unknown')
+    reportFailure(report, 'Upload status is unknown')
     return Promise.resolve({
       status: 'indeterminate',
       reason: result.reason,
       retry: async () => await settleAssetFileCreation(await result.retry(), report),
     })
   }
-  report(`Upload failed: ${humanizeReason(result.reason)}`)
+  reportFailure(report, `Upload failed: ${humanizeReason(result.reason)}`)
   return Promise.resolve({ status: 'rejected', reason: result.reason })
 }
 
@@ -371,7 +385,7 @@ async function downloadWorkspaceResource(
   report: WorkspaceReport,
 ): Promise<void> {
   if (resource.kind === 'folder') {
-    report('Folders cannot be downloaded directly')
+    reportFailure(report, 'Folders cannot be downloaded directly')
     return
   }
   reportPending(report, `Preparing ${resource.title}…`)
@@ -380,7 +394,8 @@ async function downloadWorkspaceResource(
     const source = runtime.content[contentSourceName(resource.kind)]
     const result = await source.export(resource.id)
     if (result.status !== 'ready') {
-      report(
+      reportFailure(
+        report,
         result.status === 'loading' ? 'Content is still loading' : 'Content is unavailable',
         retry,
       )
@@ -394,9 +409,9 @@ async function downloadWorkspaceResource(
     link.download = resourceDownloadFileName(resource.title, result.extension)
     link.click()
     URL.revokeObjectURL(url)
-    report('Download started')
+    reportMessage(report, 'Download started')
   } catch {
-    report('Download failed', retry)
+    reportFailure(report, 'Download failed', retry)
   }
 }
 
@@ -464,7 +479,7 @@ async function completeWorkspaceCreation(
     }
     return { status: 'completed', resourceId: result.resourceId }
   }
-  report(deliveryMessage(delivery))
+  reportFailure(report, deliveryMessage(delivery))
   return { status: 'rejected', reason: delivery.result.reason }
 }
 
@@ -479,7 +494,7 @@ async function updateWorkspaceResource(
     try {
       title = canonicalizeResourceTitle(values.title)
     } catch {
-      report('Invalid resource title')
+      reportFailure(report, 'Invalid resource title')
       return false
     }
   }
@@ -524,7 +539,7 @@ async function changeWorkspaceResourcesLifecycle(
   return await executeWorkspaceStructureCommand(runtime, command, report, (delivery) => {
     clearDeletedTarget(runtime, delivery)
     if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
-      report(deliveryMessage(delivery))
+      reportFailure(report, deliveryMessage(delivery))
     }
   })
 }
@@ -538,7 +553,7 @@ async function executeWorkspaceResourceDrop(
 ) {
   const plan = planWorkspaceResourceDrop(runtime.resources.index.getSnapshot(), drag, target, copy)
   if (plan.status === 'rejected') {
-    report(plan.label)
+    reportFailure(report, plan.label)
     return false
   }
   if (plan.command.type === 'deepCopy') {
@@ -601,7 +616,8 @@ function finishWorkspaceDeepCopy(
     delivery.result.status !== 'completed' ||
     delivery.result.receipt.result.type !== 'deepCopied'
   ) {
-    report(
+    reportFailure(
+      report,
       delivery.status === 'received' && delivery.result.status === 'completed'
         ? 'The copy response was invalid'
         : deliveryMessage(delivery),
@@ -612,7 +628,10 @@ function finishWorkspaceDeepCopy(
   if (roots.length === 1 && roots[0]) {
     runtime.navigation.open({ kind: 'resource', resourceId: roots[0].destinationRootId })
   }
-  report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
+  reportMessage(
+    report,
+    roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`,
+  )
 }
 
 async function pasteWorkspaceClipboard(
@@ -645,7 +664,7 @@ async function copyWorkspaceResourceLink(
   report: WorkspaceReport,
 ) {
   if (!globalThis.navigator?.clipboard) {
-    report('Copy link is unavailable')
+    reportFailure(report, 'Copy link is unavailable')
     return
   }
   const url = new URL(
@@ -653,7 +672,7 @@ async function copyWorkspaceResourceLink(
     globalThis.location?.origin ?? 'https://wizard-archive.invalid',
   )
   await navigator.clipboard.writeText(url.href)
-  report('Link copied')
+  reportMessage(report, 'Link copied')
 }
 
 async function copyWorkspaceResourceId(
@@ -661,11 +680,11 @@ async function copyWorkspaceResourceId(
   report: WorkspaceReport,
 ) {
   if (!globalThis.navigator?.clipboard) {
-    report('Copy resource ID is unavailable')
+    reportFailure(report, 'Copy resource ID is unavailable')
     return
   }
   await navigator.clipboard.writeText(resource.id)
-  report('Resource ID copied')
+  reportMessage(report, 'Resource ID copied')
 }
 
 async function setWorkspaceBookmarkState(
@@ -676,18 +695,19 @@ async function setWorkspaceBookmarkState(
 ) {
   const bookmarks = runtime.resources.bookmarks
   if (bookmarks.status !== 'available') {
-    report('Bookmarks are unavailable')
+    reportFailure(report, 'Bookmarks are unavailable')
     return false
   }
   try {
     const result = await bookmarks.value.setBookmarkState(resourceIds, bookmarked)
     if (result.status !== 'completed') {
-      report(`rejected: ${result.reason}`)
+      reportFailure(report, `Bookmark update rejected: ${humanizeReason(result.reason)}`)
       return false
     }
     return true
   } catch {
-    report(
+    reportFailure(
+      report,
       'Bookmark update failed. Retry safely.',
       () => void setWorkspaceBookmarkState(runtime, resourceIds, bookmarked, report),
     )
@@ -705,7 +725,8 @@ async function runResourceUndo(
   if (delivery.status === 'received') {
     if (delivery.result.status === 'completed') return
     const label = direction === 'undo' ? 'Undo' : 'Redo'
-    report(
+    reportFailure(
+      report,
       delivery.result.status === 'rejected' && delivery.result.reason === 'history_conflict'
         ? `${label} is no longer safe because the resource changed`
         : `${label} is unavailable`,
@@ -715,7 +736,8 @@ async function runResourceUndo(
   const retry = delivery.retryable
     ? () => void runResourceUndo(history, direction, report)
     : undefined
-  report(
+  reportFailure(
+    report,
     delivery.status === 'indeterminate'
       ? `${direction === 'undo' ? 'Undo' : 'Redo'} status is unknown`
       : `${direction === 'undo' ? 'Undo' : 'Redo'} was not applied`,
@@ -729,13 +751,13 @@ async function executeWorkspaceStructureCommand(
   report: WorkspaceReport,
   handle: (delivery: CommandDelivery<ResourceStructureCommandResult>) => void = (delivery) => {
     if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
-      report(deliveryMessage(delivery))
+      reportFailure(report, deliveryMessage(delivery))
     }
   },
 ) {
   const structure = runtime.resources.structure
   if (structure.status !== 'available') {
-    report('This workspace is read only')
+    reportFailure(report, 'This workspace is read only')
     return false
   }
   const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
@@ -746,7 +768,7 @@ async function executeWorkspaceStructureCommand(
       command,
     })
     if (delivery.status === 'indeterminate') {
-      report(deliveryMessage(delivery), () => void attempt())
+      reportFailure(report, deliveryMessage(delivery), () => void attempt())
       return false
     }
     handle(delivery)
@@ -769,7 +791,15 @@ function humanizeReason(reason: string): string {
 }
 
 function reportPending(report: WorkspaceReport, message: string): void {
-  report(message, undefined, undefined, true)
+  report({ kind: 'pending', message })
+}
+
+function reportMessage(report: WorkspaceReport, message: string): void {
+  report({ kind: 'message', message })
+}
+
+function reportFailure(report: WorkspaceReport, message: string, retry?: () => void): void {
+  report({ kind: 'failed', message, ...(retry ? { retry } : {}) })
 }
 
 export function resourceKindLabel(kind: ResourceKind) {

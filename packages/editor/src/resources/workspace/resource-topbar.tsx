@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import type { ReactNode } from 'react'
 import {
   ChevronRight,
@@ -11,54 +11,51 @@ import {
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
+import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { ResourceSharingControl } from './resource-sharing-control'
 import { ResourceViewAsMenu } from '../resource-view-as-menu'
-import { ResourceContextMenu } from './resource-context-menu'
 import { ResourceRenameInput } from './resource-rename-input'
-import { resourceRightSidebarPanels } from './resource-right-sidebar-panels'
-import type { ResourceRightSidebarPanel } from './resource-right-sidebar-panels'
 
 export function ResourceTopbar({
   actions,
-  activeRightPanel,
   canEdit,
+  editing,
   leftSidebarAvailable,
   leftSidebarVisible,
   mode,
+  menuOpen,
   onModeChange,
   onOpenHistory,
   onOpenLeftSidebar,
-  onOpenRightPanel,
   onToggleRightSidebar,
-  onRequestMove,
+  onEditingChange,
+  onMenuChange,
   resource,
   rightSidebarVisible,
   runtime,
 }: {
   actions: WorkspaceActions
-  activeRightPanel: ResourceRightSidebarPanel
   canEdit: boolean
+  editing: boolean
   leftSidebarAvailable: boolean
   leftSidebarVisible: boolean
   mode: 'editor' | 'viewer'
+  menuOpen: boolean
   onModeChange: (mode: 'editor' | 'viewer') => void
   onOpenHistory: () => void
   onOpenLeftSidebar: () => void
-  onOpenRightPanel: (panel: ResourceRightSidebarPanel) => void
   onToggleRightSidebar: () => void
-  onRequestMove: (resourceIds: ReadonlyArray<AuthorizedResourceSummary['id']>) => void
+  onEditingChange: (editing: boolean) => void
+  onMenuChange: (request: ResourceContextMenuRequest | null) => void
   resource: AuthorizedResourceSummary
   rightSidebarVisible: boolean
   runtime: EditorRuntime
 }) {
-  const [editing, setEditing] = useState(false)
-  const [menuPosition, setMenuPosition] = useState<Readonly<{ x: number; y: number }> | null>(null)
   const menuAnchor = useRef<HTMLDivElement>(null)
   const ancestors = runtime.resources.index.getSnapshot().ancestors(resource.id)
   const breadcrumb = ancestors.state === 'known' ? ancestors.value : []
   const historyAvailable = runtime.history.status === 'available' && resource.permission === 'edit'
   const viewAs = runtime.viewAs.status === 'available' ? runtime.viewAs.value : null
-  const rightSidebarPanels = resourceRightSidebarPanels(resource, runtime)
 
   return (
     <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-1">
@@ -86,7 +83,7 @@ export function ResourceTopbar({
             ariaLabel="Resource title"
             className="h-7 min-w-32 flex-1 rounded border border-input bg-background px-2 text-sm"
             resource={resource}
-            onComplete={() => setEditing(false)}
+            onComplete={() => onEditingChange(false)}
           />
         ) : (
           <h1 className="min-w-0 truncate px-1 text-sm font-medium" title={resource.title}>
@@ -94,7 +91,7 @@ export function ResourceTopbar({
               type="button"
               className="max-w-full truncate rounded px-0.5 text-left hover:bg-muted disabled:pointer-events-none"
               disabled={!canEdit || resource.lifecycle !== 'active'}
-              onClick={() => setEditing(true)}
+              onClick={() => onEditingChange(true)}
             >
               {resource.title}
             </button>
@@ -142,33 +139,22 @@ export function ResourceTopbar({
         <TopbarIcon
           label="More options"
           onClick={() => {
-            if (menuPosition) {
-              setMenuPosition(null)
+            if (menuOpen) {
+              onMenuChange(null)
               return
             }
             const bounds = menuAnchor.current?.getBoundingClientRect()
             if (!bounds) return
-            setMenuPosition({ x: bounds.right - 224, y: bounds.bottom + 4 })
+            onMenuChange({
+              origin: 'topbar',
+              resource,
+              x: bounds.right - 224,
+              y: bounds.bottom + 4,
+            })
           }}
         >
           <MoreVertical className="size-4" />
         </TopbarIcon>
-        {menuPosition && (
-          <ResourceContextMenu
-            actions={actions}
-            activePanel={activeRightPanel}
-            canEdit={canEdit}
-            panels={rightSidebarPanels}
-            request={{ origin: 'topbar', resource, ...menuPosition }}
-            rightSidebarVisible={rightSidebarVisible}
-            runtime={runtime}
-            surface="topbar"
-            onClose={() => setMenuPosition(null)}
-            onOpenPanel={onOpenRightPanel}
-            onRequestMove={onRequestMove}
-            onRequestRename={() => setEditing(true)}
-          />
-        )}
       </div>
     </header>
   )

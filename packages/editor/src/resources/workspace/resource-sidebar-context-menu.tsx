@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { ClipboardPaste, Redo2, Undo2 } from 'lucide-react'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
@@ -7,6 +6,7 @@ import type { WorkspaceActions } from './resource-operations'
 import { useResourceUndoSnapshot } from './resource-undo'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
+import { WorkspaceMenu, WorkspaceMenuItem, WorkspaceMenuSeparator } from './workspace-menu'
 
 export function ResourceSidebarContextMenu({
   actions,
@@ -25,17 +25,8 @@ export function ResourceSidebarContextMenu({
   x: number
   y: number
 }) {
-  const menu = useRef<HTMLDivElement>(null)
   const snapshot = useResourceUndoSnapshot(runtime.resources.undo)
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, null)
-  useEffect(() => {
-    menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus()
-    const close = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node)) onClose()
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [onClose])
   const running = snapshot.status === 'running'
   const undo = snapshot.status === 'ready' ? snapshot.undo : null
   const redo = snapshot.status === 'ready' ? snapshot.redo : null
@@ -45,37 +36,20 @@ export function ResourceSidebarContextMenu({
     void actions.undo(direction)
   }
   return (
-    <div
-      ref={menu}
-      role="menu"
-      aria-label="Sidebar actions"
-      className="fixed z-[70] w-52 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
-      style={boundedMenuPosition(x, y)}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' || event.key === 'Tab') onClose()
-      }}
-    >
-      <button
-        type="button"
-        role="menuitem"
+    <WorkspaceMenu label="Sidebar actions" x={x} y={y} onClose={onClose}>
+      <WorkspaceMenuItem
         disabled={running || undo === null}
-        className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:opacity-50"
-        onClick={() => run('undo')}
-      >
-        <Undo2 className="size-4" />
-        {undo ? `Undo ${undo.label}` : 'Undo'}
-      </button>
-      <button
-        type="button"
-        role="menuitem"
+        icon={<Undo2 />}
+        label={undo ? `Undo ${undo.label}` : 'Undo'}
+        onActivate={() => run('undo')}
+      />
+      <WorkspaceMenuItem
         disabled={running || redo === null}
-        className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:opacity-50"
-        onClick={() => run('redo')}
-      >
-        <Redo2 className="size-4" />
-        {redo ? `Redo ${redo.label}` : 'Redo'}
-      </button>
-      <hr className="my-1 border-0 border-t border-border" />
+        icon={<Redo2 />}
+        label={redo ? `Redo ${redo.label}` : 'Redo'}
+        onActivate={() => run('redo')}
+      />
+      <WorkspaceMenuSeparator />
       <NewResourceSubmenu
         actions={actions}
         creation={creation}
@@ -84,28 +58,15 @@ export function ResourceSidebarContextMenu({
         side={x > globalThis.innerWidth - 404 ? 'left' : 'right'}
       />
       <WorkspaceCreationStatus creation={creation} onCompleted={onClose} />
-      <button
-        type="button"
-        role="menuitem"
-        aria-label="Paste"
+      <WorkspaceMenuItem
         disabled={!canPaste}
-        className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:pointer-events-none disabled:opacity-50"
-        onClick={() => {
+        icon={<ClipboardPaste />}
+        label="Paste"
+        onActivate={() => {
           onClose()
           void actions.paste(clipboard, null).then(onClipboardChange)
         }}
-      >
-        <ClipboardPaste className="size-4" />
-        <span className="min-w-0 flex-1">Paste</span>
-      </button>
-    </div>
+      />
+    </WorkspaceMenu>
   )
-}
-
-function boundedMenuPosition(x: number, y: number) {
-  if (typeof window === 'undefined') return { left: x, top: y }
-  return {
-    left: Math.max(8, Math.min(x, window.innerWidth - 216)),
-    top: Math.max(8, Math.min(y, window.innerHeight - 176)),
-  }
 }

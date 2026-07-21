@@ -53,7 +53,10 @@ describe('workspace external resource drops', () => {
     })
 
     expect(actions.importExternal).not.toHaveBeenCalled()
-    expect(actions.report).toHaveBeenCalledWith('Drop files on a folder or empty resource area')
+    expect(actions.report).toHaveBeenCalledWith({
+      kind: 'failed',
+      message: 'Drop files on a folder or empty resource area',
+    })
   })
 })
 

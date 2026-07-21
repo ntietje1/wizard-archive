@@ -20,7 +20,7 @@ import { useEnsureResourceCollection } from './resource-loading'
 import { ResourceCreateMenu } from './resource-sidebar'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
-import { resourceKindLabel } from './resource-operations'
+import { reportWorkspaceTextFeedback, resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
@@ -287,7 +287,7 @@ function NoteViewport({
             actions,
             resolveResource: (resourceId) => resolveRuntimeResource(runtime, resourceId),
           }),
-          report: actions.report,
+          report: (message, retry) => reportWorkspaceTextFeedback(actions.report, message, retry),
           renderNote: renderEmbeddedNoteResource,
           runtime,
           sourceResourceId: resource.id,

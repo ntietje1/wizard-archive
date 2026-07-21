@@ -40,8 +40,13 @@ import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import { useWorkspacePanelGeometry } from './workspace/use-workspace-panel-geometry'
 import { ResourceViewAsBanner } from './workspace/resource-view-as-banner'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar-panels'
+import { resourceRightSidebarPanels } from './workspace/resource-right-sidebar-panels'
 import { createWorkspaceActions } from './workspace/resource-operations'
-import type { WorkspaceActions, WorkspaceReport } from './workspace/resource-operations'
+import type {
+  WorkspaceActions,
+  WorkspaceFeedback,
+  WorkspaceReport,
+} from './workspace/resource-operations'
 import type {
   NoteHeadingNavigation,
   NoteHeadingNavigationRef,
@@ -52,22 +57,29 @@ const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
 const ACTIVE_ROOT_QUERY = { parentId: null, lifecycle: 'active' as const }
 
-type WorkspaceNoticeState = Readonly<{
-  message: string
-  retry?: () => void
-  progress?: PlainTransferProgress
-  pending?: boolean
-}>
-
-type ResourceShellContextMenuState =
-  | Readonly<{ status: 'closed' }>
+type WorkspaceOverlay =
+  | Readonly<{ kind: 'closed' }>
+  | Readonly<{ kind: 'search' }>
+  | Readonly<{ kind: 'move'; resourceIds: ReadonlyArray<ResourceId> }>
+  | Readonly<{ kind: 'rootMenu'; x: number; y: number }>
   | Readonly<{
-      status: 'open'
+      kind: 'resourceMenu'
       request: ResourceContextMenuRequest
       resourceIds: ReadonlyArray<ResourceId>
     }>
 
-type SidebarContextMenuPosition = Readonly<{ x: number; y: number }>
+type WorkspaceRename =
+  | Readonly<{ kind: 'closed' }>
+  | Readonly<{ kind: 'sidebar' | 'topbar'; resourceId: ResourceId }>
+
+type SelectedResourceState =
+  | Readonly<{ kind: 'empty' }>
+  | Readonly<{
+      kind: 'loading'
+      load: { result: ResourceLoadResult | null; retry: () => void }
+    }>
+  | Readonly<{ kind: 'missing' }>
+  | Readonly<{ kind: 'ready'; resource: AuthorizedResourceSummary }>
 
 export function ResourceShell({
   ariaLabel,
@@ -103,37 +115,23 @@ export function ResourceShell({
     runtime.scope,
   )
   const selectedLoad = useEnsureResource(runtime, selectedResourceId)
-  const selected: ResourceKnowledge<AuthorizedResourceSummary> = selectedResourceId
+  const selectedKnowledge: ResourceKnowledge<AuthorizedResourceSummary> = selectedResourceId
     ? snapshot.lookup(selectedResourceId)
     : { state: 'unknown' }
+  const selected = selectedResourceState(selectedResourceId, selectedKnowledge, selectedLoad)
   const [sidebarView, setSidebarView] = useState<'bookmarks' | 'resources'>('resources')
-  const [searchOpen, setSearchOpen] = useState(false)
   const [selection, setSelection] = useState(EMPTY_WORKSPACE_SELECTION)
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
-  const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
   const resourceDrag = useWorkspaceResourceDragOverlay(snapshot, workspaceName ?? 'Resources')
-  const [sidebarContextMenu, setSidebarContextMenu] = useState<SidebarContextMenuPosition | null>(
-    null,
-  )
-  const [sidebarRenamingResourceId, setSidebarRenamingResourceId] = useState<ResourceId | null>(
-    null,
-  )
-  const [contextMenu, setContextMenu] = useState<ResourceShellContextMenuState>({
-    status: 'closed',
-  })
-  const [notice, setNotice] = useState<WorkspaceNoticeState | null>(null)
+  const [overlay, setOverlay] = useState<WorkspaceOverlay>({ kind: 'closed' })
+  const [rename, setRename] = useState<WorkspaceRename>({ kind: 'closed' })
+  const [notice, setNotice] = useState<WorkspaceFeedback | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const noteHeadingNavigation = useRef<NoteHeadingNavigation | null>(null)
-  const report: WorkspaceReport = (message, retry, progress, pending) =>
-    setNotice({
-      message,
-      ...(retry ? { retry } : {}),
-      ...(progress ? { progress } : {}),
-      ...(pending ? { pending } : {}),
-    })
+  const report: WorkspaceReport = setNotice
   const actions = createWorkspaceActions(runtime, report)
   const leftVisible = showResourcePanel && preferences.panels.leftVisible
-  const rightVisible = selected.state === 'known' && preferences.panels.rightVisible
+  const rightVisible = selected.kind === 'ready' && preferences.panels.rightVisible
   const canEditStructure =
     runtime.resources.structure.status === 'available' && preferences.mode === 'editor'
   const changeSelection = (action: WorkspaceSelectionAction) =>
@@ -146,11 +144,12 @@ export function ResourceShell({
     const resourceIds = selection.selectedIds.includes(request.resource.id)
       ? selection.selectedIds
       : [request.resource.id]
-    changeSelection({ type: 'normalizeContext', resourceId: request.resource.id })
-    setSidebarContextMenu(null)
-    setContextMenu({ status: 'open', request, resourceIds })
+    if (request.origin !== 'topbar') {
+      changeSelection({ type: 'normalizeContext', resourceId: request.resource.id })
+    }
+    setOverlay({ kind: 'resourceMenu', request, resourceIds })
   }
-  const closeContextMenu = () => setContextMenu({ status: 'closed' })
+  const closeOverlay = () => setOverlay({ kind: 'closed' })
   const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) =>
     handleResourceShellKeyDown(event, {
       actions,
@@ -162,12 +161,14 @@ export function ResourceShell({
       snapshot,
       undoAvailable: runtime.resources.undo.status === 'available',
       onClipboardChange: setClipboard,
-      onCloseContextMenu: closeContextMenu,
-      onSearch: () => setSearchOpen(true),
+      onCloseContextMenu: closeOverlay,
+      onSearch: () => setOverlay({ kind: 'search' }),
     })
 
   const patchPreference = (patch: WorkspacePreferencePatch) => {
-    void runtime.preferences.patch(patch).catch(() => report('Could not save workspace preference'))
+    void runtime.preferences
+      .patch(patch)
+      .catch(() => report({ kind: 'failed', message: 'Could not save workspace preference' }))
   }
   const previousResourceId = useRef(selectedResourceId)
   useEffect(() => {
@@ -221,7 +222,7 @@ export function ResourceShell({
             bookmarks={bookmarks}
             view={sidebarView}
             runtime={runtime}
-            renamingResourceId={sidebarRenamingResourceId}
+            renamingResourceId={rename.kind === 'sidebar' ? rename.resourceId : null}
             selectedResourceId={selectedResourceId}
             selection={selection}
             slots={resourcePanelSlots}
@@ -229,14 +230,15 @@ export function ResourceShell({
             sort={preferences.sort}
             workspaceName={workspaceName}
             onViewChange={changeSidebarView}
-            onSearch={() => setSearchOpen(true)}
+            onSearch={() => setOverlay({ kind: 'search' })}
             onClose={() => patchPreference({ field: 'leftPanelVisible', value: false })}
             onOpenBackgroundContextMenu={(position) => {
-              closeContextMenu()
-              setSidebarContextMenu(position)
+              setOverlay({ kind: 'rootMenu', ...position })
             }}
             onOpenContextMenu={openContextMenu}
-            onRenamingResourceIdChange={setSidebarRenamingResourceId}
+            onRenamingResourceIdChange={(resourceId) =>
+              setRename(resourceId ? { kind: 'sidebar', resourceId } : { kind: 'closed' })
+            }
             onSelectionChange={changeSelection}
             onSortChange={(sort) => patchPreference({ field: 'sort', value: sort })}
           />
@@ -244,16 +246,19 @@ export function ResourceShell({
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <SelectedResource
-          activeRightPanel={rightPanel}
           actions={actions}
           canEditStructure={canEditStructure}
-          knowledge={selected}
+          state={selected}
           noteHeadingNavigation={noteHeadingNavigation}
           leftSidebarAvailable={showResourcePanel}
           leftSidebarVisible={leftVisible}
-          load={selectedLoad}
           mode={preferences.mode}
-          resourceId={selectedResourceId}
+          topbarEditing={rename.kind === 'topbar' && rename.resourceId === selectedResourceId}
+          topbarMenuOpen={
+            overlay.kind === 'resourceMenu' &&
+            overlay.request.origin === 'topbar' &&
+            overlay.request.resource.id === selectedResourceId
+          }
           runtime={runtime}
           selection={selection}
           snapshot={snapshot}
@@ -265,20 +270,23 @@ export function ResourceShell({
             patchPreference({ field: 'rightPanelVisible', value: true })
           }}
           onOpenLeftSidebar={() => patchPreference({ field: 'leftPanelVisible', value: true })}
-          onOpenRightPanel={(panel) => {
-            setRightPanel(panel)
-            patchPreference({ field: 'rightPanelVisible', value: true })
-          }}
           rightSidebarVisible={rightVisible}
           onToggleRightSidebar={() =>
             patchPreference({ field: 'rightPanelVisible', value: !rightVisible })
           }
           onOpenContextMenu={openContextMenu}
-          onRequestMove={setMoveResourceIds}
+          onTopbarEditingChange={(editing) =>
+            setRename(
+              editing && selectedResourceId
+                ? { kind: 'topbar', resourceId: selectedResourceId }
+                : { kind: 'closed' },
+            )
+          }
+          onTopbarMenuChange={(request) => (request ? openContextMenu(request) : closeOverlay())}
           onSelectionChange={changeSelection}
         />
       </div>
-      {rightVisible && (
+      {rightVisible && selected.kind === 'ready' && (
         <ResizableWorkspacePanel
           panel="right"
           size={panelGeometry.right}
@@ -288,29 +296,30 @@ export function ResourceShell({
             actions={actions}
             activePanel={rightPanel}
             noteHeadingNavigation={noteHeadingNavigation}
-            resource={selected.value}
+            resource={selected.resource}
             runtime={runtime}
             onActivePanelChange={setRightPanel}
           />
         </ResizableWorkspacePanel>
       )}
-      <ResourceShellMenus
+      <WorkspaceOverlayHost
         actions={actions}
         bookmarks={bookmarks}
         canEditStructure={canEditStructure}
         clipboard={clipboard}
-        contextMenu={contextMenu}
-        moveResourceIds={moveResourceIds}
+        activeRightPanel={rightPanel}
+        overlay={overlay}
+        rightSidebarVisible={rightVisible}
         runtime={runtime}
-        searchOpen={searchOpen}
-        sidebarContextMenu={sidebarContextMenu}
         snapshot={snapshot}
         onClipboardChange={setClipboard}
-        onCloseContextMenu={closeContextMenu}
-        onMoveResourceIdsChange={setMoveResourceIds}
-        onRequestSidebarRename={setSidebarRenamingResourceId}
-        onSearchOpenChange={setSearchOpen}
-        onSidebarContextMenuClose={() => setSidebarContextMenu(null)}
+        onClose={closeOverlay}
+        onOpenRightPanel={(panel) => {
+          setRightPanel(panel)
+          patchPreference({ field: 'rightPanelVisible', value: true })
+        }}
+        onOverlayChange={setOverlay}
+        onRenameChange={setRename}
       />
       <WorkspaceResourceDragOverlay
         nativePreviewRef={resourceDrag.nativePreviewRef}
@@ -323,59 +332,59 @@ export function ResourceShell({
   )
 }
 
-function ResourceShellMenus({
+function WorkspaceOverlayHost({
+  activeRightPanel,
   actions,
   bookmarks,
   canEditStructure,
   clipboard,
-  contextMenu,
-  moveResourceIds,
+  overlay,
+  rightSidebarVisible,
   runtime,
-  searchOpen,
-  sidebarContextMenu,
   snapshot,
   onClipboardChange,
-  onCloseContextMenu,
-  onMoveResourceIdsChange,
-  onRequestSidebarRename,
-  onSearchOpenChange,
-  onSidebarContextMenuClose,
+  onClose,
+  onOpenRightPanel,
+  onOverlayChange,
+  onRenameChange,
 }: {
+  activeRightPanel: ResourceRightSidebarPanel
   actions: WorkspaceActions
   bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
   canEditStructure: boolean
   clipboard: WorkspaceClipboard
-  contextMenu: ResourceShellContextMenuState
-  moveResourceIds: ReadonlyArray<ResourceId> | null
+  overlay: WorkspaceOverlay
+  rightSidebarVisible: boolean
   runtime: EditorRuntime
-  searchOpen: boolean
-  sidebarContextMenu: SidebarContextMenuPosition | null
   snapshot: WorkspaceResourceIndexSnapshot
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
-  onCloseContextMenu: () => void
-  onMoveResourceIdsChange: (resourceIds: ReadonlyArray<ResourceId> | null) => void
-  onRequestSidebarRename: (resourceId: ResourceId) => void
-  onSearchOpenChange: (open: boolean) => void
-  onSidebarContextMenuClose: () => void
+  onClose: () => void
+  onOpenRightPanel: (panel: ResourceRightSidebarPanel) => void
+  onOverlayChange: (overlay: WorkspaceOverlay) => void
+  onRenameChange: (rename: WorkspaceRename) => void
 }) {
+  const menu = overlay.kind === 'resourceMenu' ? overlay : null
+  const currentRequest = menu ? currentResourceContextRequest(snapshot, menu.request) : null
   return (
     <>
-      {runtime.search.status === 'available' && (
-        <ResourceSearchDialog
-          actions={actions}
-          canEdit={canEditStructure}
-          open={searchOpen || moveResourceIds !== null}
-          purpose={
-            moveResourceIds ? { type: 'move', resourceIds: moveResourceIds } : { type: 'open' }
-          }
-          runtime={runtime}
-          onOpenChange={(open) => {
-            onSearchOpenChange(open)
-            if (!open) onMoveResourceIdsChange(null)
-          }}
-        />
-      )}
-      {contextMenu.status === 'open' && (
+      {runtime.search.status === 'available' &&
+        (overlay.kind === 'search' || overlay.kind === 'move') && (
+          <ResourceSearchDialog
+            actions={actions}
+            canEdit={canEditStructure}
+            open
+            purpose={
+              overlay.kind === 'move'
+                ? { type: 'move', resourceIds: overlay.resourceIds }
+                : { type: 'open' }
+            }
+            runtime={runtime}
+            onOpenChange={(open) => {
+              if (!open) onClose()
+            }}
+          />
+        )}
+      {menu && currentRequest && menu.request.origin !== 'topbar' && (
         <ResourceContextMenu
           actions={actions}
           bookmarksAvailable={runtime.resources.bookmarks.status === 'available'}
@@ -383,26 +392,46 @@ function ResourceShellMenus({
           canEdit={canEditStructure}
           clipboard={clipboard}
           navigation={runtime.navigation}
-          request={currentResourceContextRequest(snapshot, contextMenu.request)}
-          resourceIds={contextMenu.resourceIds}
+          request={currentRequest}
+          resourceIds={menu.resourceIds}
           runtime={runtime}
           surface="resource"
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
           onClipboardChange={onClipboardChange}
-          onClose={onCloseContextMenu}
-          onRequestMove={onMoveResourceIdsChange}
-          onRequestRename={() => onRequestSidebarRename(contextMenu.request.resource.id)}
+          onClose={onClose}
+          onRequestMove={(resourceIds) => onOverlayChange({ kind: 'move', resourceIds })}
+          onRequestRename={() =>
+            onRenameChange({ kind: 'sidebar', resourceId: menu.request.resource.id })
+          }
         />
       )}
-      {sidebarContextMenu && (
+      {menu && currentRequest && menu.request.origin === 'topbar' && (
+        <ResourceContextMenu
+          actions={actions}
+          activePanel={activeRightPanel}
+          canEdit={canEditStructure}
+          panels={resourceRightSidebarPanels(currentRequest.resource, runtime)}
+          request={currentRequest}
+          rightSidebarVisible={rightSidebarVisible}
+          runtime={runtime}
+          surface="topbar"
+          onClose={onClose}
+          onOpenPanel={onOpenRightPanel}
+          onRequestMove={(resourceIds) => onOverlayChange({ kind: 'move', resourceIds })}
+          onRequestRename={() =>
+            onRenameChange({ kind: 'topbar', resourceId: menu.request.resource.id })
+          }
+        />
+      )}
+      {overlay.kind === 'rootMenu' && (
         <ResourceSidebarContextMenu
           actions={actions}
           clipboard={clipboard}
           runtime={runtime}
-          x={sidebarContextMenu.x}
-          y={sidebarContextMenu.y}
+          x={overlay.x}
+          y={overlay.y}
           onClipboardChange={onClipboardChange}
-          onClose={onSidebarContextMenuClose}
+          onClose={onClose}
         />
       )}
     </>
@@ -474,11 +503,14 @@ function WorkspaceNotice({
   notice,
 }: {
   dismiss: (notice: null) => void
-  notice: WorkspaceNoticeState | null
+  notice: WorkspaceFeedback | null
 }) {
   useEffect(() => {
-    if (!notice || notice.pending || notice.progress) return
-    const timeout = window.setTimeout(() => dismiss(null), notice.retry ? 6_000 : 3_000)
+    if (!notice || notice.kind === 'pending') return
+    const timeout = window.setTimeout(
+      () => dismiss(null),
+      notice.kind === 'failed' && notice.retry ? 6_000 : 3_000,
+    )
     return () => window.clearTimeout(timeout)
   }, [dismiss, notice])
   if (!notice) return null
@@ -489,7 +521,7 @@ function WorkspaceNotice({
     >
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate">{notice.message}</span>
-        {notice.retry && (
+        {notice.kind === 'failed' && notice.retry && (
           <button type="button" className="font-medium underline" onClick={notice.retry}>
             Retry
           </button>
@@ -503,7 +535,9 @@ function WorkspaceNotice({
           ×
         </button>
       </div>
-      {notice.progress && <WorkspaceTransferProgress progress={notice.progress} />}
+      {notice.kind === 'pending' && notice.progress && (
+        <WorkspaceTransferProgress progress={notice.progress} />
+      )}
     </div>
   )
 }
@@ -749,58 +783,67 @@ function runResourceShortcut({
   }
 }
 
+function selectedResourceState(
+  resourceId: ResourceId | null,
+  knowledge: ResourceKnowledge<AuthorizedResourceSummary>,
+  load: { result: ResourceLoadResult | null; retry: () => void },
+): SelectedResourceState {
+  if (resourceId === null) return { kind: 'empty' }
+  if (knowledge.state === 'unknown') return { kind: 'loading', load }
+  if (knowledge.state === 'missing') return { kind: 'missing' }
+  return { kind: 'ready', resource: knowledge.value }
+}
+
 function SelectedResource({
   actions,
-  activeRightPanel,
   canEditStructure,
-  knowledge,
   noteHeadingNavigation,
   leftSidebarAvailable,
   leftSidebarVisible,
-  load,
   mode,
   onModeChange,
   onOpenHistory,
   onOpenContextMenu,
   onOpenLeftSidebar,
-  onOpenRightPanel,
   onToggleRightSidebar,
-  onRequestMove,
   onSelectionChange,
   rightSidebarVisible,
-  resourceId,
   runtime,
   selection,
   snapshot,
+  state,
   sort,
   target,
+  topbarEditing,
+  topbarMenuOpen,
+  onTopbarEditingChange,
+  onTopbarMenuChange,
 }: {
   actions: WorkspaceActions
-  activeRightPanel: ResourceRightSidebarPanel
   canEditStructure: boolean
-  knowledge: ResourceKnowledge<AuthorizedResourceSummary>
   noteHeadingNavigation: NoteHeadingNavigationRef
   leftSidebarAvailable: boolean
   leftSidebarVisible: boolean
-  load: { result: ResourceLoadResult | null; retry: () => void }
   mode: 'editor' | 'viewer'
   onModeChange: (mode: 'editor' | 'viewer') => void
   onOpenHistory: () => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onOpenLeftSidebar: () => void
-  onOpenRightPanel: (panel: ResourceRightSidebarPanel) => void
   onToggleRightSidebar: () => void
-  onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
-  resourceId: ResourceId | null
   rightSidebarVisible: boolean
   runtime: EditorRuntime
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
+  state: SelectedResourceState
   sort: typeof DEFAULT_WORKSPACE_PREFERENCES.sort
   target: ReturnType<EditorRuntime['navigation']['current']>
+  topbarEditing: boolean
+  topbarMenuOpen: boolean
+  onTopbarEditingChange: (editing: boolean) => void
+  onTopbarMenuChange: (request: ResourceContextMenuRequest | null) => void
 }) {
-  if (!resourceId) {
+  if (state.kind === 'empty') {
     return (
       <EmptyResourceState
         leftSidebarAvailable={leftSidebarAvailable}
@@ -809,17 +852,17 @@ function SelectedResource({
       />
     )
   }
-  if (knowledge.state === 'unknown') {
+  if (state.kind === 'loading') {
     return (
       <ResourceLoadingState
         leftSidebarAvailable={leftSidebarAvailable}
         leftSidebarVisible={leftSidebarVisible}
-        load={load}
+        load={state.load}
         onOpenLeftSidebar={onOpenLeftSidebar}
       />
     )
   }
-  if (knowledge.state === 'missing') {
+  if (state.kind === 'missing') {
     return (
       <EmptyResourceState
         label="Resource not found"
@@ -829,7 +872,7 @@ function SelectedResource({
       />
     )
   }
-  const resource = knowledge.value
+  const resource = state.resource
   const canEditContent =
     mode === 'editor' &&
     runtime.scope.projection !== 'view_as_player' &&
@@ -854,19 +897,20 @@ function SelectedResource({
     <>
       <ResourceTopbar
         actions={actions}
-        activeRightPanel={activeRightPanel}
         canEdit={canEditStructure}
+        editing={topbarEditing}
         leftSidebarAvailable={leftSidebarAvailable}
         leftSidebarVisible={leftSidebarVisible}
+        menuOpen={topbarMenuOpen}
         mode={mode}
         resource={resource}
         runtime={runtime}
         onModeChange={onModeChange}
         onOpenHistory={onOpenHistory}
         onOpenLeftSidebar={onOpenLeftSidebar}
-        onOpenRightPanel={onOpenRightPanel}
         onToggleRightSidebar={onToggleRightSidebar}
-        onRequestMove={onRequestMove}
+        onEditingChange={onTopbarEditingChange}
+        onMenuChange={onTopbarMenuChange}
         rightSidebarVisible={rightSidebarVisible}
       />
       {!canEditViewport && (

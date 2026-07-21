@@ -152,7 +152,10 @@ export async function finishWorkspaceResourceDrop(
     event.preventDefault()
     event.stopPropagation()
     if (browserPlainTransferBlocked(event)) {
-      actions.report('Drop files on a folder or empty resource area')
+      actions.report({
+        kind: 'failed',
+        message: 'Drop files on a folder or empty resource area',
+      })
       return
     }
     await actions.importExternal(target.parentId, event.dataTransfer)

@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, ReactNode } from 'react'
+import { useState } from 'react'
 import {
   Clipboard,
   ClipboardPaste,
   ChevronRight,
-  Check,
   Copy,
   Download,
   ExternalLink,
@@ -43,6 +41,11 @@ import type {
   ResourceRightSidebarPanel,
   ResourceRightSidebarPanelOption,
 } from './resource-right-sidebar-panels'
+import {
+  WorkspaceMenu,
+  WorkspaceMenuItem as MenuItem,
+  WorkspaceMenuSeparator as MenuSeparator,
+} from './workspace-menu'
 
 type ResourceContextMenuCommonProps = Readonly<{
   actions: WorkspaceActions
@@ -78,34 +81,20 @@ type TopbarContextMenuProps = ResourceContextMenuCommonProps &
 export function ResourceContextMenu(
   props: ResourceSurfaceContextMenuProps | TopbarContextMenuProps,
 ) {
-  const menu = useRef<HTMLDivElement>(null)
   const { onClose, onRequestMove, onRequestRename, request } = props
   const workspace = props.actions
   const resource = props.request.resource
   const resourceIds = props.surface === 'resource' ? props.resourceIds : [resource.id]
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  useEffect(() => {
-    menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus()
-    const close = (event: PointerEvent) => {
-      const target = event.target as Element
-      if (!menu.current?.contains(target) && !target.closest('[data-resource-appearance]'))
-        onClose()
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [onClose])
-
   const actions = { onClose, onRequestMove, onRequestRename, resource, resourceIds, workspace }
 
   return (
-    <div
-      ref={menu}
-      role="menu"
-      aria-label={`${resource.title} actions`}
-      className="fixed z-[70] w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
-      style={boundedMenuPosition(request.x, request.y)}
-      onKeyDown={(event) => navigateMenu(event, onClose)}
+    <WorkspaceMenu
+      label={`${resource.title} actions`}
+      x={request.x}
+      y={request.y}
+      onClose={onClose}
     >
       <ResourceContextMenuItems
         actions={actions}
@@ -113,7 +102,7 @@ export function ResourceContextMenu(
         props={props}
         onConfirmDelete={() => setConfirmDelete(true)}
       />
-    </div>
+    </WorkspaceMenu>
   )
 }
 
@@ -741,75 +730,4 @@ function ResourceLifecycleMenuItems({
 function runMenuOperation(actions: ResourceMenuActions, operation: () => unknown) {
   actions.onClose()
   void operation()
-}
-
-function MenuItem({
-  busy = false,
-  checked = false,
-  danger = false,
-  disabled = false,
-  icon,
-  label,
-  onActivate,
-  shortcut,
-}: {
-  busy?: boolean
-  checked?: boolean
-  danger?: boolean
-  disabled?: boolean
-  icon: ReactNode
-  label: string
-  onActivate?: () => void
-  shortcut?: string
-}) {
-  return (
-    <button
-      role="menuitem"
-      type="button"
-      aria-label={label}
-      aria-busy={busy}
-      aria-current={checked ? 'true' : undefined}
-      disabled={disabled}
-      className={`flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:pointer-events-none disabled:opacity-50 ${danger ? 'text-destructive' : ''}`}
-      onClick={onActivate}
-    >
-      <span className="[&>svg]:size-4">{icon}</span>
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {shortcut && <span className="text-xs text-muted-foreground">{shortcut}</span>}
-      {checked && <Check className="size-4" aria-hidden="true" />}
-    </button>
-  )
-}
-
-function MenuSeparator() {
-  return <hr className="my-1 border-0 border-t border-border" />
-}
-
-function navigateMenu(event: KeyboardEvent<HTMLDivElement>, onClose: () => void) {
-  if (event.key === 'Escape' || event.key === 'Tab') {
-    onClose()
-    return
-  }
-  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
-  event.preventDefault()
-  const items = [
-    ...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'),
-  ]
-  if (items.length === 0) return
-  const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement)
-  const nextIndex =
-    event.key === 'Home'
-      ? 0
-      : event.key === 'End'
-        ? items.length - 1
-        : (currentIndex + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
-  items[nextIndex]?.focus()
-}
-
-function boundedMenuPosition(x: number, y: number) {
-  if (typeof window === 'undefined') return { left: x, top: y }
-  return {
-    left: Math.max(8, Math.min(x, window.innerWidth - 232)),
-    top: Math.max(8, Math.min(y, window.innerHeight - 420)),
-  }
 }

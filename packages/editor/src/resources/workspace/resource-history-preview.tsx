@@ -25,6 +25,7 @@ import type {
   ItemHistoryRestoreState,
 } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
+import { reportWorkspaceTextFeedback } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import { renderEmbeddedNoteResource } from './embedded-note-resource-preview'
 
@@ -218,7 +219,7 @@ function YjsHistoryDocumentPreview({
       label={`${resource.title} historical note preview`}
       mode="view"
       resources={{
-        report: actions.report,
+        report: (message, retry) => reportWorkspaceTextFeedback(actions.report, message, retry),
         renderNote: renderEmbeddedNoteResource,
         runtime,
         sourceResourceId: resource.id,
