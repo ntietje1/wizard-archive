@@ -215,7 +215,7 @@ function readStructureCommand(
   }
 }
 
-async function createFixedContentResource(
+async function createServerInitializedContentResource(
   ctx: CampaignMutationCtx,
   args: Readonly<{ operationId: string; command: StoredResourceStructureCommand }>,
   kind: 'canvas' | 'file' | 'map',
@@ -223,7 +223,6 @@ async function createFixedContentResource(
     ctx: CampaignMutationCtx,
     campaignId: CampaignMutationCtx['resourceScope']['campaignId'],
     resourceId: Extract<ResourceStructureCommand, { type: 'create' }>['resourceId'],
-    title: string,
   ) => Promise<void>,
 ): Promise<StoredResourceStructureCommandResult> {
   const command = readStructureCommand(args.command)
@@ -236,7 +235,7 @@ async function createFixedContentResource(
     command,
   })
   if (result.status !== 'completed') return storedResult(result)
-  await createContent(ctx, ctx.resourceScope.campaignId, command.resourceId, command.title)
+  await createContent(ctx, ctx.resourceScope.campaignId, command.resourceId)
   return storedResult(result)
 }
 
@@ -524,21 +523,21 @@ export const createMapResource = campaignMutation({
   args: { operationId: operationIdValidator, command: resourceStructureCommandValidator },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
-    await createFixedContentResource(ctx, args, 'map', createMapContent),
+    await createServerInitializedContentResource(ctx, args, 'map', createMapContent),
 })
 
 export const createFileResource = campaignMutation({
   args: { operationId: operationIdValidator, command: resourceStructureCommandValidator },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
-    await createFixedContentResource(ctx, args, 'file', createFileContent),
+    await createServerInitializedContentResource(ctx, args, 'file', createFileContent),
 })
 
 export const createCanvasResource = campaignMutation({
   args: { operationId: operationIdValidator, command: resourceStructureCommandValidator },
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
-    await createFixedContentResource(ctx, args, 'canvas', createCanvasContent),
+    await createServerInitializedContentResource(ctx, args, 'canvas', createCanvasContent),
 })
 
 export const saveNoteContent = campaignMutation({

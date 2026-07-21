@@ -455,7 +455,14 @@ describe('ResourceShell', () => {
     if (!file) throw new Error('Expected created file')
     expect(core.runtime.content.files.get(file.id)).toMatchObject({
       status: 'ready',
-      content: { attachment: 'unattached', byteSize: 0 },
+      content: {
+        attachment: 'unattached',
+        byteSize: 0,
+        detectedFormat: null,
+        extension: null,
+        mediaType: 'application/octet-stream',
+        viewerUnavailableReason: 'empty_file',
+      },
     })
     core.dispose()
   })

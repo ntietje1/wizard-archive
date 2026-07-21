@@ -27,3 +27,12 @@ export type FileOwnedMetadata = Readonly<{
   mediaType: string
   viewerUnavailableReason: FileViewerUnavailableReason | null
 }>
+
+export const EMPTY_FILE_CONTENT_METADATA = {
+  classification: FILE_CLASSIFICATION.inert,
+  byteSize: 0,
+  detectedFormat: null,
+  extension: null,
+  mediaType: 'application/octet-stream',
+  viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
+} as const satisfies FileOwnedMetadata

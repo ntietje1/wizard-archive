@@ -13,13 +13,12 @@ import { prepareAssetCopies } from './assetContent'
 import { loadPendingAssetState } from './assetContentState'
 import { authorizeResourceContent } from './authorizeResourceContent'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
-import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
+import { EMPTY_FILE_CONTENT_METADATA } from '@wizard-archive/editor/resources/file-content-contract'
 
 export async function createFileContent(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   resourceId: ResourceId,
-  fileName: string,
 ): Promise<void> {
   const existing = await loadFileContentRow(ctx.db, resourceId)
   if (existing) {
@@ -27,17 +26,13 @@ export async function createFileContent(
     throw new TypeError('File content already exists')
   }
   const bytes = new Uint8Array()
-  const metadata = classifyFileResourceSource({ bytes, fileName })
-  if (metadata.classification === 'rejected') {
-    throw new TypeError('Empty file metadata was rejected')
-  }
   await ctx.db.insert('resourceFileContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,
     state: 'ready',
     assetUuid: null,
-    ...metadata,
-    version: await initialFileContentVersion(bytes, metadata),
+    ...EMPTY_FILE_CONTENT_METADATA,
+    version: await initialFileContentVersion(bytes, EMPTY_FILE_CONTENT_METADATA),
   })
 }
 

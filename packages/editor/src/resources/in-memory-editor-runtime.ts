@@ -52,6 +52,7 @@ import type { ResourceProjectionScope } from './resource-index-contract'
 import type { GrantedResourcePermission } from './resource-access-policy'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { classifyFileResourceSource } from './resource-source-classifier'
+import { EMPTY_FILE_CONTENT_METADATA } from './file-content-contract'
 import { canonicalizeResourceTitle } from './resource-record'
 import { ResourceSessionStore } from './resource-session-store'
 import {
@@ -268,17 +269,10 @@ class InMemoryFileContentSource
       this.campaignId,
       this.executeStructure,
       async () => {
-        const metadata = classifyFileResourceSource({
-          bytes,
-          fileName: envelope.command.title,
-        })
-        if (metadata.classification === 'rejected') {
-          throw new TypeError('Empty file metadata was rejected')
-        }
         this.setReady(
           envelope.command.resourceId,
-          { ...metadata, attachment: 'unattached' },
-          await initialFileContentVersion(bytes, metadata),
+          { ...EMPTY_FILE_CONTENT_METADATA, attachment: 'unattached' },
+          await initialFileContentVersion(bytes, EMPTY_FILE_CONTENT_METADATA),
           bytes,
         )
       },

@@ -204,7 +204,7 @@ describe('resource structure commands', () => {
         resourceId,
         kind: 'file' as const,
         parentId,
-        title: 'Untitled file',
+        title: 'Catalog label.png',
         icon: null,
         color: null,
       },
@@ -226,7 +226,7 @@ describe('resource structure commands', () => {
       expect(resource).toMatchObject({
         kind: 'file',
         parentResourceUuid: parentId,
-        title: 'Untitled file',
+        title: 'Catalog label.png',
       })
       const content = await ctx.db
         .query('resourceFileContents')
@@ -236,6 +236,9 @@ describe('resource structure commands', () => {
         assetUuid: null,
         byteSize: 0,
         classification: 'inert_file',
+        detectedFormat: null,
+        extension: null,
+        mediaType: 'application/octet-stream',
         state: 'ready',
         viewerUnavailableReason: 'empty_file',
       })

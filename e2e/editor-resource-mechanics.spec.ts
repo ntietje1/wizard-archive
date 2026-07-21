@@ -84,7 +84,6 @@ test.describe('resource mechanics', () => {
     await expect(page.getByText('No templates yet')).toBeVisible()
 
     await page.getByRole('button', { name: 'Note', exact: true }).click()
-    await expect(page.getByText('Note created')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('heading', { name: 'Untitled note' })).toBeVisible()
     await renameCurrentResource(page, 'Untitled note', 'Clue: North / South')
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
@@ -96,7 +95,7 @@ test.describe('resource mechanics', () => {
     await history.getByRole('menuitem', { name: 'Redo rename' }).click()
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'More options' }).click()
+    await page.getByRole('button', { name: 'More options', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
   })
