@@ -1,6 +1,8 @@
-import type { FunctionArgs, FunctionReturnType } from 'convex/server'
-import type { api } from 'convex/_generated/api'
-import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type {
   CreateCanvasResourceCommand,
   CreateFileResourceCommand,
@@ -19,8 +21,12 @@ import {
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
 
-type ContentCreateArgs = FunctionArgs<typeof api.resources.mutations.createMapResource>
-type ContentCreateResult = FunctionReturnType<typeof api.resources.mutations.createMapResource>
+type ContentCreateArgs = Readonly<{
+  campaignId: CampaignId
+  operationId: OperationId
+  command: ReturnType<typeof toLiveStructureMutationCommand>
+}>
+type ContentCreateResult = Parameters<typeof readLiveStructureResult>[0]
 
 export type LiveFixedContentCreateBackend = Readonly<{
   create(args: ContentCreateArgs): Promise<ContentCreateResult>
