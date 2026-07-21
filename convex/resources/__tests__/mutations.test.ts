@@ -630,12 +630,6 @@ describe('resource structure commands', () => {
         rawPath: 'payload.bin',
       })
     })
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
-        campaignId: campaignUuid,
-        resourceId,
-      }),
-    ).resolves.toMatchObject({ status: 'ready', preview: { kind: 'file' } })
   })
 
   it('commits one nested folder, note, and file inventory as one replayable transfer job', async () => {
@@ -1871,12 +1865,6 @@ describe('resource structure commands', () => {
       version: { revision: 3 },
       url: expect.any(String),
     })
-    await expect(
-      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
-        campaignId: campaignUuid,
-        resourceId,
-      }),
-    ).resolves.toMatchObject({ status: 'ready', preview: { kind: 'map' } })
   })
 
   it('retains replaced map assets until bounded history cleanup releases them', async () => {

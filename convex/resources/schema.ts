@@ -128,7 +128,7 @@ export const plainTransferPlanSnapshotValidator = v.union(
 
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
 export const resourcePermissionValidator = literals(...Object.values(RESOURCE_PERMISSION))
-export const resourcePreviewValidator = v.object({
+const legacyResourcePreviewValidator = v.object({
   kind: resourceKindValidator,
   excerpt: v.string(),
   outline: v.array(
@@ -139,14 +139,20 @@ export const resourcePreviewValidator = v.object({
     }),
   ),
 })
-export const resourcePreviewStateValidator = v.union(
+export const noteOutlineStateValidator = v.union(
   v.object({
     status: v.literal('unavailable'),
     reason: literals('scope_unavailable', 'unauthorized', 'integrity_error'),
   }),
   v.object({
     status: v.literal('ready'),
-    preview: resourcePreviewValidator,
+    headings: v.array(
+      v.object({
+        blockId: noteBlockIdValidator,
+        level: literals(1, 2, 3, 4, 5, 6),
+        text: v.string(),
+      }),
+    ),
   }),
 )
 const grantedResourcePermissionValidator = literals(
@@ -1596,7 +1602,7 @@ export const resourceTables = {
     title: v.string(),
     normalizedTitle: v.string(),
     body: v.string(),
-    preview: resourcePreviewValidator,
+    preview: v.optional(legacyResourcePreviewValidator),
   })
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])

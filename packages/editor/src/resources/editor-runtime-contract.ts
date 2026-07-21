@@ -34,8 +34,8 @@ import type { WorkspacePreferencesSource } from './workspace-preferences'
 import type { ResourceUndoHistory } from './resource-undo-history'
 import type { WorkspaceSearchOutcome } from './resource-search-policy'
 import type { ReferenceGraphEdge } from './authored-destination'
-import type { ResourceKind } from './resource-record'
 import type { PlainTransferGateway } from './transfer-job-contract'
+import type { NoteOutlineSource } from '../notes/document/outline'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -71,31 +71,6 @@ export interface ResourceBookmarkGateway {
     resourceIds: ReadonlyArray<ResourceId>,
     bookmarked: boolean,
   ): Promise<ResourceBookmarkMutationResult>
-}
-
-export type ResourcePreviewOutlineEntry = Readonly<{
-  blockId: NoteBlockId
-  level: 1 | 2 | 3 | 4 | 5 | 6
-  text: string
-}>
-
-export type ResourcePreview = Readonly<{
-  kind: ResourceKind
-  excerpt: string
-  outline: ReadonlyArray<ResourcePreviewOutlineEntry>
-}>
-
-export type ResourcePreviewState =
-  | Readonly<{ status: 'loading' }>
-  | Readonly<{
-      status: 'unavailable'
-      reason: 'scope_unavailable' | 'unauthorized' | 'integrity_error'
-    }>
-  | Readonly<{ status: 'ready'; preview: ResourcePreview }>
-
-export interface ResourcePreviewSource {
-  get(resourceId: ResourceId): ResourcePreviewState
-  subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
 export type ResourceReferenceDirection =
@@ -375,7 +350,7 @@ export interface EditorRuntime {
     readonly access: ResourceCapability<ResourceAccessGateway>
     readonly noteBlockAccess: ResourceCapability<NoteBlockAccessGateway>
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
-    readonly previews: ResourceCapability<ResourcePreviewSource>
+    readonly noteOutlines: ResourceCapability<NoteOutlineSource>
     readonly references: ResourceCapability<ResourceReferenceSource>
     readonly undo: ResourceCapability<ResourceUndoHistory>
   }

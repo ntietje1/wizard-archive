@@ -84,7 +84,7 @@ import type {
   PlainTransferReceipt,
 } from './transfer-job-contract'
 import { createInMemoryResourceReferenceSource } from './in-memory-resource-references'
-import { createInMemoryResourcePreviewSource } from './in-memory-resource-preview'
+import { createInMemoryNoteOutlineSource } from './in-memory-note-outline'
 import { markdownToNoteYDoc } from '../notes/document/headless-yjs'
 
 type ReadyContent<T> = Readonly<{
@@ -1217,7 +1217,7 @@ export function createInMemoryEditorRuntime({
     )
     return { status: 'completed', resourceId }
   }
-  const previews = createInMemoryResourcePreviewSource(snapshot.resources, content.notes ?? [])
+  const noteOutlines = createInMemoryNoteOutlineSource(content.notes ?? [])
   const transfers = createInMemoryPlainTransferGateway({
     appendAlias: resources.appendAlias,
     campaignId: scope.campaignId,
@@ -1236,7 +1236,7 @@ export function createInMemoryEditorRuntime({
         access: unsupported,
         noteBlockAccess: unsupported,
         bookmarks: { status: 'available', value: bookmarks },
-        previews: { status: 'available', value: previews.source },
+        noteOutlines: { status: 'available', value: noteOutlines.source },
         references: { status: 'available', value: references.source },
         undo: canEdit
           ? { status: 'available', value: undo.history }
@@ -1254,7 +1254,7 @@ export function createInMemoryEditorRuntime({
     },
     dispose: () => {
       references.dispose()
-      previews.dispose()
+      noteOutlines.dispose()
       search.dispose()
       for (const source of Object.values(contentSources)) source.dispose()
       resources.dispose()

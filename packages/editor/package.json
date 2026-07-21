@@ -158,10 +158,6 @@
       "types": "./dist/resources/item-history-controller.d.mts",
       "default": "./dist/resources/item-history-controller.mjs"
     },
-    "./resources/preview": {
-      "types": "./dist/resources/resource-preview.d.mts",
-      "default": "./dist/resources/resource-preview.mjs"
-    },
     "./resources/search-policy": {
       "types": "./dist/resources/resource-search-policy.d.mts",
       "default": "./dist/resources/resource-search-policy.mjs"

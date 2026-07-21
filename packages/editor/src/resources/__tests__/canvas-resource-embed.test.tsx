@@ -671,7 +671,7 @@ function previewRuntime({
       access: unsupported,
       noteBlockAccess: unsupported,
       bookmarks: unsupported,
-      previews: unsupported,
+      noteOutlines: unsupported,
       references: unsupported,
       undo: unsupported,
     },

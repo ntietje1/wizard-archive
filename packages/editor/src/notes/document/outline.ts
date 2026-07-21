@@ -1,11 +1,27 @@
 import type { NoteBlock } from './model'
-import type { NoteBlockId } from '../../resources/domain-id'
+import type { NoteBlockId, ResourceId } from '../../resources/domain-id'
 
-type NoteOutlineHeading = Readonly<{
+export const NOTE_OUTLINE_ENTRY_LIMIT = 64
+export const NOTE_OUTLINE_TEXT_CODE_POINT_LIMIT = 160
+
+export type NoteOutlineHeading = Readonly<{
   blockId: NoteBlockId
   level: 1 | 2 | 3 | 4 | 5 | 6
   text: string
 }>
+
+export type NoteOutlineState =
+  | Readonly<{ status: 'loading' }>
+  | Readonly<{
+      status: 'unavailable'
+      reason: 'scope_unavailable' | 'unauthorized' | 'integrity_error'
+    }>
+  | Readonly<{ status: 'ready'; headings: ReadonlyArray<NoteOutlineHeading> }>
+
+export interface NoteOutlineSource {
+  get(resourceId: ResourceId): NoteOutlineState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+}
 
 export type NoteOutlineNode = NoteOutlineHeading &
   Readonly<{ children: ReadonlyArray<NoteOutlineNode> }>
@@ -28,6 +44,15 @@ export function noteDocumentOutline(blocks: ReadonlyArray<NoteBlock>) {
   }
   for (const block of blocks) visit(block)
   return headings
+}
+
+export function projectedNoteOutline(blocks: ReadonlyArray<NoteBlock>) {
+  return noteDocumentOutline(blocks)
+    .slice(0, NOTE_OUTLINE_ENTRY_LIMIT)
+    .map((heading) => ({
+      ...heading,
+      text: Array.from(heading.text).slice(0, NOTE_OUTLINE_TEXT_CODE_POINT_LIMIT).join(''),
+    }))
 }
 
 export function noteOutlineTree(

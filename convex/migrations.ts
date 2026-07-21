@@ -19,6 +19,15 @@ import { replaceResourceReferenceProjection } from './resources/functions/resour
 
 const migrations = new Migrations<DataModel>(components.migrations)
 
+export const removeResourceSearchPreviews = migrations.define({
+  table: 'resourceSearchDocuments',
+  migrateOne: async (ctx, document) => {
+    if (document.preview === undefined) return
+    const { preview: _preview, ...searchDocument } = document
+    await ctx.db.replace(document._id, searchDocument)
+  },
+})
+
 export const addNoteContentGeneration = migrations.define({
   table: 'resourceNoteContents',
   migrateOne: (ctx, content) =>

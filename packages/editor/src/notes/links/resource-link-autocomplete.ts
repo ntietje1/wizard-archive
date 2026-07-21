@@ -1,10 +1,6 @@
 import type { ResourceId } from '../../resources/domain-id'
-import type {
-  EditorRuntime,
-  ResourcePreviewOutlineEntry,
-  ResourcePreviewSource,
-  ResourcePreviewState,
-} from '../../resources/editor-runtime-contract'
+import type { EditorRuntime } from '../../resources/editor-runtime-contract'
+import type { NoteOutlineHeading, NoteOutlineSource, NoteOutlineState } from '../document/outline'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
 import type { WorkspaceSearchResult } from '../../resources/resource-search-policy'
 import type { CanonicalTarget } from '../../resources/authored-destination-contract'
@@ -56,8 +52,8 @@ export async function resourceLinkSuggestions(
   const resources = loadKnownResources(runtime, results)
   return query.mode === 'resource'
     ? resources.slice(0, RESOURCE_SUGGESTION_LIMIT).map(resourceSuggestion)
-    : runtime.resources.previews.status === 'available'
-      ? headingSuggestions(runtime.resources.previews.value, resources, query.headingQuery)
+    : runtime.resources.noteOutlines.status === 'available'
+      ? headingSuggestions(runtime.resources.noteOutlines.value, resources, query.headingQuery)
       : []
 }
 
@@ -120,7 +116,7 @@ function resourceSuggestion({
 }
 
 async function headingSuggestions(
-  source: ResourcePreviewSource,
+  source: NoteOutlineSource,
   resources: ReadonlyArray<{
     resource: AuthorizedResourceSummary
     result: WorkspaceSearchResult
@@ -133,7 +129,7 @@ async function headingSuggestions(
   const loaded = await Promise.all(
     candidates.map(async ({ resource }) => ({
       resource,
-      headings: await loadResourcePreview(source, resource.id),
+      headings: await loadNoteOutline(source, resource.id),
     })),
   )
   const normalizedQuery = headingQuery.toLocaleLowerCase()
@@ -158,7 +154,7 @@ async function headingSuggestions(
     .slice(0, HEADING_SUGGESTION_LIMIT)
 }
 
-function headingPaths(headings: ReadonlyArray<ResourcePreviewOutlineEntry>) {
+function headingPaths(headings: ReadonlyArray<NoteOutlineHeading>) {
   const parents: Array<{ level: number; text: string }> = []
   return headings.map((heading) => {
     while (parents.length > 0 && parents.at(-1)!.level >= heading.level) parents.pop()
@@ -168,10 +164,10 @@ function headingPaths(headings: ReadonlyArray<ResourcePreviewOutlineEntry>) {
   })
 }
 
-function loadResourcePreview(
-  source: ResourcePreviewSource,
+function loadNoteOutline(
+  source: NoteOutlineSource,
   resourceId: ResourceId,
-): Promise<ReadonlyArray<ResourcePreviewOutlineEntry>> {
+): Promise<ReadonlyArray<NoteOutlineHeading>> {
   const current = source.get(resourceId)
   if (current.status !== 'loading') return Promise.resolve(headingsFromState(current))
   return new Promise((resolve) => {
@@ -187,8 +183,8 @@ function loadResourcePreview(
   })
 }
 
-function headingsFromState(state: ResourcePreviewState) {
-  return state.status === 'ready' && state.preview.kind === 'note' ? state.preview.outline : []
+function headingsFromState(state: NoteOutlineState) {
+  return state.status === 'ready' ? state.headings : []
 }
 
 function resourceContext(resource: AuthorizedResourceSummary) {

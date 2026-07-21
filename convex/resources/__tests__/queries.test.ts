@@ -44,11 +44,9 @@ import {
   serializeAuthoredDestination,
 } from '@wizard-archive/editor/resources/authored-destination'
 import {
-  createResourcePreview,
-  RESOURCE_PREVIEW_EXCERPT_CODE_POINT_LIMIT,
-  RESOURCE_PREVIEW_OUTLINE_LIMIT,
-  RESOURCE_PREVIEW_OUTLINE_TEXT_CODE_POINT_LIMIT,
-} from '@wizard-archive/editor/resources/preview'
+  NOTE_OUTLINE_ENTRY_LIMIT,
+  NOTE_OUTLINE_TEXT_CODE_POINT_LIMIT,
+} from '@wizard-archive/editor/notes/outline'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -601,23 +599,22 @@ describe('authorized resource projection', () => {
     ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
   })
 
-  it('projects bounded authorized note previews without opening content sessions', async () => {
+  it('projects bounded authorized note outlines without opening content sessions', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
-    const longText = '🧭'.repeat(RESOURCE_PREVIEW_EXCERPT_CODE_POINT_LIMIT + 50)
     const update = makeYjsUpdateWithBlocks([
       {
         type: 'paragraph',
-        content: [{ type: 'text', text: longText }],
+        content: [{ type: 'text', text: 'Not part of the outline' }],
       },
-      ...Array.from({ length: RESOURCE_PREVIEW_OUTLINE_LIMIT + 6 }, (_, index) => ({
+      ...Array.from({ length: NOTE_OUTLINE_ENTRY_LIMIT + 6 }, (_, index) => ({
         type: 'heading' as const,
         props: { level: 2 as const },
         content: [
           {
             type: 'text' as const,
-            text: `${index}:${'H'.repeat(RESOURCE_PREVIEW_OUTLINE_TEXT_CODE_POINT_LIMIT + 20)}`,
+            text: `${index}:${'H'.repeat(NOTE_OUTLINE_TEXT_CODE_POINT_LIMIT + 20)}`,
           },
         ],
       })),
@@ -630,35 +627,30 @@ describe('authorized resource projection', () => {
         resourceId,
         kind: 'note',
         parentId: null,
-        title: 'Preview note',
+        title: 'Outline note',
         icon: null,
         color: null,
       },
       update,
     })
 
-    const preview = await asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+    const outline = await asDm(campaign).query(api.resources.queries.loadNoteOutline, {
       campaignId: campaignUuid,
       resourceId,
     })
-    expect(preview.status).toBe('ready')
-    if (preview.status !== 'ready') throw new TypeError('Expected a ready preview')
-    expect(Array.from(preview.preview.excerpt)).toHaveLength(
-      RESOURCE_PREVIEW_EXCERPT_CODE_POINT_LIMIT,
-    )
-    expect(preview.preview.outline).toHaveLength(RESOURCE_PREVIEW_OUTLINE_LIMIT)
-    expect(Array.from(preview.preview.outline[0]!.text)).toHaveLength(
-      RESOURCE_PREVIEW_OUTLINE_TEXT_CODE_POINT_LIMIT,
-    )
+    expect(outline.status).toBe('ready')
+    if (outline.status !== 'ready') throw new TypeError('Expected a ready outline')
+    expect(outline.headings).toHaveLength(NOTE_OUTLINE_ENTRY_LIMIT)
+    expect(Array.from(outline.headings[0]!.text)).toHaveLength(NOTE_OUTLINE_TEXT_CODE_POINT_LIMIT)
     await expect(
-      asPlayer(campaign).query(api.resources.queries.loadResourcePreview, {
+      asPlayer(campaign).query(api.resources.queries.loadNoteOutline, {
         campaignId: campaignUuid,
         resourceId,
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
   })
 
-  it('projects note previews from actor-visible text without generated images', async () => {
+  it('projects note outlines from actor-visible content', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -672,7 +664,7 @@ describe('authorized resource projection', () => {
         resourceId,
         kind: 'note',
         parentId: null,
-        title: 'Shared preview',
+        title: 'Shared outline',
         icon: null,
         color: null,
       },
@@ -705,16 +697,13 @@ describe('authorized resource projection', () => {
     })
 
     await expect(
-      asPlayer(campaign).query(api.resources.queries.loadResourcePreview, {
+      asPlayer(campaign).query(api.resources.queries.loadNoteOutline, {
         campaignId: campaignUuid,
         resourceId,
       }),
     ).resolves.toMatchObject({
       status: 'ready',
-      preview: {
-        excerpt: expect.stringContaining('Hidden heading'),
-        outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
-      },
+      headings: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
     })
 
     await executeBlockAccess(campaign, campaignUuid, {
@@ -723,37 +712,29 @@ describe('authorized resource projection', () => {
       blockIds: [hiddenBlockId],
       shared: false,
     })
-    const playerPreview = await asPlayer(campaign).query(
-      api.resources.queries.loadResourcePreview,
-      { campaignId: campaignUuid, resourceId },
-    )
-    expect(playerPreview).toMatchObject({
-      status: 'ready',
-      preview: {
-        excerpt: expect.stringContaining('Visible heading'),
-        outline: [{ blockId: visibleBlockId }],
-      },
+    const playerOutline = await asPlayer(campaign).query(api.resources.queries.loadNoteOutline, {
+      campaignId: campaignUuid,
+      resourceId,
     })
-    if (playerPreview.status !== 'ready') throw new TypeError('Expected player preview')
-    expect(playerPreview.preview.excerpt).not.toContain('Hidden heading')
+    expect(playerOutline).toMatchObject({
+      status: 'ready',
+      headings: [{ blockId: visibleBlockId }],
+    })
     await expect(
-      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+      asDm(campaign).query(api.resources.queries.loadNoteOutline, {
         campaignId: campaignUuid,
         viewAsParticipantId: campaign.player.memberDomainId,
         resourceId,
       }),
-    ).resolves.toEqual(playerPreview)
+    ).resolves.toEqual(playerOutline)
     await expect(
-      asDm(campaign).query(api.resources.queries.loadResourcePreview, {
+      asDm(campaign).query(api.resources.queries.loadNoteOutline, {
         campaignId: campaignUuid,
         resourceId,
       }),
     ).resolves.toMatchObject({
       status: 'ready',
-      preview: {
-        excerpt: expect.stringContaining('Hidden heading'),
-        outline: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
-      },
+      headings: [{ blockId: visibleBlockId }, { blockId: hiddenBlockId }],
     })
 
     await executeAccess(campaign, campaignUuid, {
@@ -763,7 +744,7 @@ describe('authorized resource projection', () => {
       permission: 'none',
     })
     await expect(
-      asPlayer(campaign).query(api.resources.queries.loadResourcePreview, {
+      asPlayer(campaign).query(api.resources.queries.loadNoteOutline, {
         campaignId: campaignUuid,
         resourceId,
       }),
@@ -1465,7 +1446,6 @@ describe('authorized resource projection', () => {
           title: document.title,
           normalizedTitle: normalizeResourceSearchText(document.title),
           body: document.body,
-          preview: { ...createResourcePreview('note', document.body, []), outline: [] },
         })
       }
     })
@@ -1534,7 +1514,6 @@ describe('authorized resource projection', () => {
         title: 'Common',
         normalizedTitle: 'common',
         body: '',
-        preview: { ...createResourcePreview('note', '', []), outline: [] },
       })
       for (let index = 0; index < 1_025; index += 1) {
         const title = `Overflow ${index.toString().padStart(4, '0')}`
@@ -1544,10 +1523,6 @@ describe('authorized resource projection', () => {
           title,
           normalizedTitle: normalizeResourceSearchText(title),
           body: 'Common overflow body',
-          preview: {
-            ...createResourcePreview('note', 'Common overflow body', []),
-            outline: [],
-          },
         })
       }
     })

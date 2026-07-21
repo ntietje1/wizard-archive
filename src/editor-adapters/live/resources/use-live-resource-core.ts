@@ -28,7 +28,7 @@ import { createLiveNoteBlockAccessGateway } from './live-note-block-access-gatew
 import { executeResourceWrite, resourceQueryScope } from './resource-query-scope'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 import { createLiveResourceReferenceSource } from './live-resource-references'
-import { createLiveResourcePreviewSource } from './live-resource-preview-source'
+import { createLiveNoteOutlineSource } from './live-note-outline-source'
 import {
   createLiveItemHistory,
   readLiveItemHistoryEntry,
@@ -409,8 +409,8 @@ function createScopedLiveResourceRuntime(
     status: 'available',
     value: references.source,
   }
-  const previews = createLiveResourcePreviewSource((resourceId, apply) => {
-    const watch = convex.watchQuery(api.resources.queries.loadResourcePreview, {
+  const noteOutlines = createLiveNoteOutlineSource((resourceId, apply) => {
+    const watch = convex.watchQuery(api.resources.queries.loadNoteOutline, {
       ...queryScope,
       resourceId,
     })
@@ -519,7 +519,7 @@ function createScopedLiveResourceRuntime(
           currentScope.projection === 'dm'
             ? ({ status: 'available', value: bookmarks.gateway } as const)
             : unsupported,
-        previews: { status: 'available', value: previews.source },
+        noteOutlines: { status: 'available', value: noteOutlines.source },
         references: referencesCapability,
         undo: undoCapability,
       },
@@ -551,7 +551,7 @@ function createScopedLiveResourceRuntime(
       access.dispose()
       noteBlockAccess.dispose()
       references.dispose()
-      previews.dispose()
+      noteOutlines.dispose()
       history?.dispose()
       optimistic.dispose()
       base.dispose()

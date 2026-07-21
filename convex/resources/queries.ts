@@ -18,7 +18,7 @@ import {
   noteBlockAccessPresentationPageValidator,
   noteContentSnapshotValidator,
   resourcePresenceSnapshotValidator,
-  resourcePreviewStateValidator,
+  noteOutlineStateValidator,
   resourceReferenceSnapshotValidator,
   resourceAccessPresentationPageValidator,
   resourceCollectionQueryValidator,
@@ -54,9 +54,7 @@ import {
 import { normalizeNoteBlockAccessSelection } from '@wizard-archive/editor/resources/note-block-access-policy'
 import { loadResourceReferenceRows } from './functions/resourceReferences'
 import { projectResourceReferenceDirection } from './functions/projectResourceReferences'
-import { projectNoteSearchDocument } from './functions/resourceSearchProjection'
-import { createResourcePreview } from '@wizard-archive/editor/resources/preview'
-import type { ResourcePreview } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import { projectNoteDocument } from './functions/resourceSearchProjection'
 import {
   loadItemHistoryCheckpoint as loadItemHistoryCheckpointFn,
   loadItemHistoryPage as loadItemHistoryPageFn,
@@ -64,15 +62,8 @@ import {
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 type StoredResourceReferenceSnapshot = Infer<typeof resourceReferenceSnapshotValidator>
-type StoredResourcePreviewState = Infer<typeof resourcePreviewStateValidator>
+type StoredNoteOutlineState = Infer<typeof noteOutlineStateValidator>
 const NOTE_BLOCK_ACCESS_PARTICIPANT_PAGE_SIZE = 8
-
-function storedResourcePreview(preview: ResourcePreview) {
-  return {
-    ...preview,
-    outline: preview.outline.map((heading) => ({ ...heading })),
-  }
-}
 
 const authorizedResourceCollectionPageValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
@@ -140,49 +131,25 @@ export const loadResource = resourceQuery({
   },
 })
 
-export const loadResourcePreview = resourceQuery({
+export const loadNoteOutline = resourceQuery({
   args: { resourceId: resourceIdValidator },
-  returns: resourcePreviewStateValidator,
-  handler: async (ctx, args): Promise<StoredResourcePreviewState> => {
+  returns: noteOutlineStateValidator,
+  handler: async (ctx, args): Promise<StoredNoteOutlineState> => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     const snapshot = await loadAuthorizedResource(ctx, resourceId)
     const resource = snapshot.resources.find((candidate) => candidate.id === resourceId)
-    if (!resource) return { status: 'unavailable' as const, reason: 'unauthorized' as const }
-    if (resource.kind === 'note') {
-      const content = await loadNoteContentFn(ctx, resourceId)
-      if (content.status === 'integrity_error') {
-        return { status: 'unavailable' as const, reason: 'integrity_error' as const }
-      }
-      if (content.status === 'empty') {
-        return {
-          status: 'ready' as const,
-          preview: storedResourcePreview(createResourcePreview('note', '', [])),
-        }
-      }
-      if (content.status !== 'ready') {
-        return { status: 'unavailable' as const, reason: 'unauthorized' as const }
-      }
-      try {
-        return {
-          status: 'ready' as const,
-          preview: storedResourcePreview(projectNoteSearchDocument(content.update).preview),
-        }
-      } catch {
-        return { status: 'unavailable' as const, reason: 'integrity_error' as const }
-      }
+    if (!resource) return { status: 'unavailable', reason: 'unauthorized' }
+    if (resource.kind !== 'note') return { status: 'unavailable', reason: 'integrity_error' }
+    const content = await loadNoteContentFn(ctx, resourceId)
+    if (content.status === 'integrity_error') {
+      return { status: 'unavailable', reason: 'integrity_error' }
     }
-    const searchDocument = await ctx.db
-      .query('resourceSearchDocuments')
-      .withIndex('by_campaign_and_resource', (query) =>
-        query.eq('campaignUuid', ctx.resourceScope.campaignId).eq('resourceUuid', resourceId),
-      )
-      .unique()
-    if (!searchDocument || searchDocument.preview.kind !== resource.kind) {
-      return { status: 'unavailable' as const, reason: 'integrity_error' as const }
-    }
-    return {
-      status: 'ready' as const,
-      preview: searchDocument.preview,
+    if (content.status === 'empty') return { status: 'ready', headings: [] }
+    if (content.status !== 'ready') return { status: 'unavailable', reason: 'unauthorized' }
+    try {
+      return { status: 'ready', headings: projectNoteDocument(content.update).outline }
+    } catch {
+      return { status: 'unavailable', reason: 'integrity_error' }
     }
   },
 })
