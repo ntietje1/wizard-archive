@@ -54,7 +54,12 @@ import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 import { applyResourceDeletion, planResourceDeletion } from './resourceDeletion'
 import { prepareResourceContentCopies } from './resourceContentCopy'
-import { resourceRecordFromRow, resourceRowFromRecord } from './resourceRecordRow'
+import {
+  resourceRecordFromRow,
+  resourceRowFromRecord,
+  resourceTombstoneFromRow,
+  resourceTombstoneRowFromRecord,
+} from './resourceCatalogRow'
 import {
   copyResourceSearchBody,
   deleteResourceSearchProjection,
@@ -81,7 +86,7 @@ type AppliedCommand = Readonly<{
   compensation: ResourceCompensationPlan | null
 }>
 
-type LoadedGraph = ResourceGraph & {
+type LoadedCommandGraph = ResourceGraph & {
   rows: ReadonlyMap<ResourceId, Doc<'resources'>>
 }
 
@@ -163,11 +168,11 @@ async function loadDescendants(
   }
 }
 
-async function loadGraph(
+async function loadCommandGraph(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   command: ResourceStructureCommand,
-): Promise<LoadedGraph> {
+): Promise<LoadedCommandGraph> {
   const rows = new Map<ResourceId, Doc<'resources'>>()
   const resources = new Map<ResourceId, ResourceRecord>()
   const dependencies = resourceGraphDependencies(command)
@@ -196,13 +201,8 @@ async function loadGraph(
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', command.resourceId))
       .unique()
     if (tombstone) {
-      const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, tombstone.resourceUuid)
-      tombstones.set(resourceId, {
-        resourceId,
-        campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, tombstone.campaignUuid),
-        deletionVersion: assertVersionStamp(tombstone.deletionVersion),
-        deletedAt: tombstone.deletedAt,
-      })
+      const record = resourceTombstoneFromRow(tombstone)
+      tombstones.set(record.resourceId, record)
     }
   }
   return { resources, tombstones, rows }
@@ -212,7 +212,7 @@ async function loadCompensationGraph(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   plan: ResourceCompensationPlan,
-): Promise<LoadedGraph> {
+): Promise<LoadedCommandGraph> {
   const rows = new Map<ResourceId, Doc<'resources'>>()
   const resources = new Map<ResourceId, ResourceRecord>()
   await Promise.all(
@@ -250,7 +250,7 @@ async function loadCompensationGraph(
 
 async function persistTransition(
   ctx: CampaignMutationCtx,
-  loaded: LoadedGraph,
+  loaded: LoadedCommandGraph,
   transition: ResourceGraphTransition,
 ): Promise<void> {
   if (transition.deletedResourceIds.length > 0) {
@@ -269,12 +269,7 @@ async function persistTransition(
         deleteResourceSearchProjection(ctx, resourceId),
       ),
       ...transition.tombstones.map((tombstone) =>
-        ctx.db.insert('resourceTombstones', {
-          resourceUuid: tombstone.resourceId,
-          campaignUuid: tombstone.campaignId,
-          deletionVersion: tombstone.deletionVersion,
-          deletedAt: tombstone.deletedAt,
-        }),
+        ctx.db.insert('resourceTombstones', resourceTombstoneRowFromRecord(tombstone)),
       ),
     ])
   }
@@ -306,7 +301,7 @@ function copiedResourceId(
 
 async function deepCopyResources(
   ctx: CampaignMutationCtx,
-  graph: LoadedGraph,
+  graph: LoadedCommandGraph,
   campaignId: CampaignId,
   actorId: CampaignMemberId,
   operationId: OperationId,
@@ -622,7 +617,7 @@ async function applyCommand(
   operationId: OperationId,
   command: ResourceStructureCommand,
 ): Promise<AppliedCommand> {
-  const graph = await loadGraph(ctx, campaignId, command)
+  const graph = await loadCommandGraph(ctx, campaignId, command)
   if (command.type === 'deepCopy') {
     const result = await deepCopyResources(ctx, graph, campaignId, actorId, operationId, command)
     return {

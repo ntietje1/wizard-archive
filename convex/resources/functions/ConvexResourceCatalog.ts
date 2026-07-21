@@ -1,5 +1,4 @@
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import { assertSourcePathAlias } from '@wizard-archive/editor/resources/source-path-alias'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceCatalogPage,
@@ -11,32 +10,13 @@ import { assertResourceCatalogPageSize } from '@wizard-archive/editor/resources/
 import type { ResourceKind, ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
 import type { ResourceCollectionQuery } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceTombstone } from '@wizard-archive/editor/resources/resource-metadata-version'
-import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { Doc } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
-import { resourceRecordFromRow } from './resourceRecordRow'
-
-function toTombstone(tombstone: Doc<'resourceTombstones'>): ResourceTombstone {
-  return {
-    resourceId: assertDomainId(DOMAIN_ID_KIND.resource, tombstone.resourceUuid),
-    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, tombstone.campaignUuid),
-    deletionVersion: assertVersionStamp(tombstone.deletionVersion),
-    deletedAt: tombstone.deletedAt,
-  }
-}
-
-function toAlias(alias: Doc<'resourceSourcePathAliases'>): SourcePathAlias {
-  const sourcePathAlias = {
-    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, alias.campaignUuid),
-    resourceId: assertDomainId(DOMAIN_ID_KIND.resource, alias.resourceUuid),
-    importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, alias.importJobUuid),
-    sourceRootId: alias.sourceRootId,
-    rawPath: alias.rawPath,
-    normalizedPath: alias.normalizedPath,
-  }
-  assertSourcePathAlias(sourcePathAlias)
-  return sourcePathAlias
-}
+import {
+  resourceRecordFromRow,
+  resourceTombstoneFromRow,
+  sourcePathAliasFromRow,
+} from './resourceCatalogRow'
 
 type ResourceRow = Doc<'resources'>
 
@@ -162,7 +142,7 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
       .query('resourceTombstones')
       .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
       .unique()
-    return tombstone?.campaignUuid === campaignId ? toTombstone(tombstone) : null
+    return tombstone?.campaignUuid === campaignId ? resourceTombstoneFromRow(tombstone) : null
   }
 
   async listAliases(
@@ -175,7 +155,7 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
         query.eq('campaignUuid', campaignId).eq('resourceUuid', resourceId),
       )
       .collect()
-    return aliases.map(toAlias)
+    return aliases.map(sourcePathAliasFromRow)
   }
 
   async readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
@@ -196,8 +176,8 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
     return {
       campaignId,
       resources: resources.map(resourceRecordFromRow),
-      tombstones: tombstones.map(toTombstone),
-      aliases: aliases.map(toAlias),
+      tombstones: tombstones.map(resourceTombstoneFromRow),
+      aliases: aliases.map(sourcePathAliasFromRow),
     }
   }
 }

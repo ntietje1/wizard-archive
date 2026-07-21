@@ -12,7 +12,7 @@ import {
 } from '@wizard-archive/editor/resources/search-policy'
 import type { CampaignMutationCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
-import { resourceRecordFromRow } from './resourceRecordRow'
+import { resourceRecordFromRow } from './resourceCatalogRow'
 
 export async function syncResourceSearchProjection(
   ctx: Pick<CampaignMutationCtx, 'db'>,

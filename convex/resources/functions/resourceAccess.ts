@@ -22,7 +22,7 @@ import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-r
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
-import { resourceRecordFromRow } from './resourceRecordRow'
+import { resourceRecordFromRow } from './resourceCatalogRow'
 
 type ResourceAccessCtx = Pick<CampaignMutationCtx | CampaignQueryCtx, 'db'>
 type LoadResource = (resourceId: ResourceId) => Promise<ResourceRecord | null>

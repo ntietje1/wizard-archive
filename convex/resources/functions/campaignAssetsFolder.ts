@@ -10,7 +10,7 @@ import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/reso
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
 import type { MutationCtx } from '../../_generated/server'
 import { findCanonicalResource } from './findCanonicalResource'
-import { resourceRowFromRecord } from './resourceRecordRow'
+import { resourceRowFromRecord } from './resourceCatalogRow'
 import { syncResourceSearchProjection } from './resourceSearchProjection'
 
 export async function createCampaignAssetsFolder(
