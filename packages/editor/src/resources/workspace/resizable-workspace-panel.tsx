@@ -89,7 +89,7 @@ export function ResizableWorkspacePanel({
         aria-valuemax={MAX_WORKSPACE_PANEL_SIZE}
         aria-valuemin={MIN_WORKSPACE_PANEL_SIZE}
         aria-valuenow={size}
-        className={`absolute inset-y-0 z-30 w-px cursor-col-resize touch-none bg-border transition-[width,background-color] duration-100 ease-out hover:w-1 hover:bg-border focus-visible:w-1 focus-visible:bg-primary focus-visible:outline-none data-[resizing=true]:w-1 data-[resizing=true]:bg-primary ${panel === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'}`}
+        className={`allow-motion absolute inset-y-0 z-30 w-px cursor-col-resize touch-none bg-border transition-[width,background-color] duration-100 ease-out hover:w-1 hover:bg-border focus-visible:w-1 focus-visible:bg-primary focus-visible:outline-none data-[resizing=true]:w-1 data-[resizing=true]:bg-primary ${panel === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'}`}
         tabIndex={0}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
