@@ -12,16 +12,16 @@ const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
 const CONVEX_OPERATION_ATTEMPTS = 3
 
 export async function getCampaignInvitationPath(campaignId: CampaignId) {
-  const campaign = await getCampaignById(campaignId)
+  const campaign = await resolveCampaignRouteIdentity(campaignId)
   return `/join/${campaign.dmUserProfile.username}/${campaign.slug}`
 }
 
 export async function getCampaignEditorPath(campaignId: CampaignId) {
-  const campaign = await getCampaignById(campaignId)
+  const campaign = await resolveCampaignRouteIdentity(campaignId)
   return `/campaigns/${campaign.dmUserProfile.username}/${campaign.slug}/editor`
 }
 
-async function getCampaignById(campaignId: CampaignId) {
+async function resolveCampaignRouteIdentity(campaignId: CampaignId) {
   const client = await createE2EConvexClient()
   let cursor: string | null = null
   for (;;) {

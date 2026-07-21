@@ -63,7 +63,7 @@ async function fillCampaignNameInput(nameInput: Locator, name: string) {
 export async function navigateToCampaign(page: Page, campaignName: string) {
   await waitForCampaignsDashboard(page)
   await page.getByText(campaignName, { exact: true }).click()
-  await page.waitForURL(/\/campaigns\/[^/]+\/editor/)
+  await page.waitForURL(/\/campaigns\/[^/]+\/[^/]+\/editor/)
   await waitForWorkspaceReady(page, `Campaign card navigated to an unavailable campaign`)
 }
 

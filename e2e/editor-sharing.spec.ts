@@ -17,6 +17,7 @@ import {
 import {
   createE2EConvexClient,
   ensureAcceptedPlayerMember,
+  getCampaignEditorPath,
   getCampaignInvitationPath,
 } from './helpers/convex-helpers'
 import { provisionNoteResource } from './helpers/resource-helpers'
@@ -404,7 +405,7 @@ async function openPlayerNote(page: Page) {
 
 async function navigatePlayerToCampaign(page: Page, resourceId?: ResourceId) {
   const search = resourceId ? `?resource=${resourceId}` : ''
-  await page.goto(`/campaigns/${campaignId}/editor${search}`, { waitUntil: 'commit' })
+  await page.goto(`${await getCampaignEditorPath(campaignId)}${search}`, { waitUntil: 'commit' })
   const workspace = page.getByRole('region', { name: 'Editor workspace' })
   await expect(workspace).toBeVisible({ timeout: 30_000 })
   await expect(workspace).toHaveAttribute('aria-busy', 'false', { timeout: 30_000 })
