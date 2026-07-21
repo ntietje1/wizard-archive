@@ -11,12 +11,33 @@ import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceDisplayIcon } from './resource-icon'
-import './resource-card.css'
 
-const FOLDER_LEFT_PATH =
-  'M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z'
-const FOLDER_RIGHT_PATH =
-  'M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z'
+const FOLDER_CARD_HEIGHT = 140
+const FOLDER_CARD_RADIUS = 4
+const FOLDER_TAB_WIDTH = 80
+const FOLDER_TAB_HEIGHT = 12
+const FOLDER_NOTCH_WIDTH = 12
+
+const FOLDER_TAB_FILL = [
+  `M ${FOLDER_CARD_RADIUS},0`,
+  `L ${FOLDER_TAB_WIDTH},0`,
+  `L ${FOLDER_TAB_WIDTH + FOLDER_NOTCH_WIDTH},${FOLDER_TAB_HEIGHT}`,
+  `L ${FOLDER_TAB_WIDTH + FOLDER_NOTCH_WIDTH},${FOLDER_TAB_HEIGHT + 1}`,
+  `L ${FOLDER_CARD_RADIUS},${FOLDER_TAB_HEIGHT + 1}`,
+  `L ${FOLDER_CARD_RADIUS},${FOLDER_TAB_HEIGHT + FOLDER_CARD_RADIUS}`,
+  `L 0,${FOLDER_TAB_HEIGHT + FOLDER_CARD_RADIUS}`,
+  `L 0,${FOLDER_CARD_RADIUS}`,
+  `A ${FOLDER_CARD_RADIUS},${FOLDER_CARD_RADIUS} 0 0,1 ${FOLDER_CARD_RADIUS},0`,
+  'Z',
+].join(' ')
+
+const FOLDER_TAB_STROKE = [
+  `M 0,${FOLDER_TAB_HEIGHT + FOLDER_CARD_RADIUS}`,
+  `L 0,${FOLDER_CARD_RADIUS}`,
+  `A ${FOLDER_CARD_RADIUS},${FOLDER_CARD_RADIUS} 0 0,1 ${FOLDER_CARD_RADIUS},0`,
+  `L ${FOLDER_TAB_WIDTH},0`,
+  `L ${FOLDER_TAB_WIDTH + FOLDER_NOTCH_WIDTH},${FOLDER_TAB_HEIGHT}`,
+].join(' ')
 
 export function ResourceCard({
   actions,
@@ -55,7 +76,7 @@ export function ResourceCard({
       {...interaction}
       className={`group/resource-card relative flex h-[140px] w-full flex-col text-left outline-none ${
         folder
-          ? 'resource-folder-card overflow-visible rounded-sm'
+          ? 'overflow-visible rounded-sm'
           : 'overflow-hidden rounded-md border border-border bg-card p-2 shadow-sm hover:bg-muted/60 focus-within:ring-2 focus-within:ring-ring data-[drop-target=true]:outline data-[drop-target=true]:outline-2 data-[drop-target=true]:outline-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring'
       }`}
     >
@@ -89,39 +110,50 @@ export function ResourceCard({
 }
 
 function FolderCardShape({ selected }: { selected: boolean }) {
-  const fill = selected ? 'text-muted' : 'text-card'
+  const strokeClass = selected ? 'stroke-ring' : 'stroke-border'
+  const strokeWidth = selected ? 'stroke-[2.5]' : 'stroke-2'
+  const dropStroke =
+    'group-data-[drop-target=true]/resource-card:stroke-[3] group-data-[drop-target=true]/resource-card:stroke-ring'
   return (
-    <div
+    <svg
       aria-hidden="true"
-      className={`resource-folder-card-shape pointer-events-none absolute inset-0 flex size-full ${fill}`}
+      className="pointer-events-none absolute inset-0 size-full overflow-visible"
     >
-      <svg
-        className="-mr-px block h-full w-[120px] shrink-0 overflow-visible"
-        preserveAspectRatio="none"
-        viewBox="0 0 120 200"
-      >
-        <path d={FOLDER_LEFT_PATH} fill="currentColor" />
-      </svg>
-      <svg
-        className="-mr-px block h-full min-w-5 grow overflow-visible"
-        preserveAspectRatio="none"
-        viewBox="0 0 20 200"
-      >
-        <rect x="0" y="15" width="20" height="185" fill="currentColor" />
-      </svg>
-      <svg
-        className="block h-full w-[60px] shrink-0 overflow-visible"
-        preserveAspectRatio="none"
-        viewBox="0 0 60 200"
-      >
-        <path d={FOLDER_RIGHT_PATH} fill="currentColor" />
-      </svg>
-      <span
-        className={`absolute top-[10.75px] right-5 bottom-[1.5px] left-5 z-[1] ${
-          selected ? 'bg-muted' : 'bg-card'
-        }`}
+      <rect
+        y={FOLDER_TAB_HEIGHT}
+        width="100%"
+        height={FOLDER_CARD_HEIGHT - FOLDER_TAB_HEIGHT}
+        rx={FOLDER_CARD_RADIUS}
+        className={`fill-card [paint-order:stroke] ${strokeWidth} ${strokeClass} ${dropStroke}`}
       />
-    </div>
+      <path
+        d={FOLDER_TAB_STROKE}
+        className={`fill-none ${strokeWidth} ${strokeClass} ${dropStroke}`}
+      />
+      <path d={FOLDER_TAB_FILL} className="fill-card" />
+      <rect
+        y={FOLDER_TAB_HEIGHT + 1}
+        width="100%"
+        height={FOLDER_CARD_HEIGHT - FOLDER_TAB_HEIGHT - 1}
+        rx={FOLDER_CARD_RADIUS}
+        className="fill-ring/5 stroke-none opacity-0 group-data-[drop-target=true]/resource-card:opacity-100"
+      />
+      <path
+        d={FOLDER_TAB_FILL}
+        className="fill-ring/5 opacity-0 group-data-[drop-target=true]/resource-card:opacity-100"
+      />
+      <rect
+        y={FOLDER_TAB_HEIGHT + 1}
+        width="100%"
+        height={FOLDER_CARD_HEIGHT - FOLDER_TAB_HEIGHT - 1}
+        rx={FOLDER_CARD_RADIUS}
+        className="fill-muted/70 stroke-none opacity-0 group-hover/resource-card:opacity-100"
+      />
+      <path
+        d={FOLDER_TAB_FILL}
+        className="fill-muted/70 opacity-0 group-hover/resource-card:opacity-100"
+      />
+    </svg>
   )
 }
 
