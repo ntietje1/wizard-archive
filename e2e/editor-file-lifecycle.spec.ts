@@ -9,7 +9,7 @@ import {
   provisionCampaign,
 } from './helpers/campaign-helpers'
 import { testName } from './helpers/constants'
-import { sidebarResource } from './helpers/editor-resource-helpers'
+import { createNamedResource, sidebarResource } from './helpers/editor-resource-helpers'
 
 const campaignName = testName('File Lifecycle')
 let campaignId: CampaignId
@@ -68,28 +68,16 @@ test.describe.serial('canonical file lifecycle', () => {
     await expect(page.getByText('Page 1 of 1')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible()
   })
-
-  test('rejects oversized files before reading them', async ({ page }) => {
-    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-    await page.getByLabel('Create resource: choose file').evaluate((element) => {
-      const file = new File(['small'], 'oversized.txt', { type: 'text/plain' })
-      Object.defineProperty(file, 'size', { value: 100 * 1024 * 1024 + 1 })
-      const transfer = new DataTransfer()
-      transfer.items.add(file)
-      const fileInput = element as HTMLInputElement
-      fileInput.files = transfer.files
-      fileInput.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-    await expect(page.getByText('File must be less than 100MB')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'oversized.txt', exact: true })).toBeHidden()
-  })
 })
 
 async function uploadFile(page: Page, name: string, mimeType: string, buffer: Buffer) {
-  await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-  await page.getByLabel('Create resource: choose file').setInputFiles({ name, mimeType, buffer })
-  await expect(page.getByText('File uploaded')).toBeVisible({ timeout: 15_000 })
-  await expect(sidebarResource(page, name)).toBeVisible({ timeout: 15_000 })
+  await createNamedResource(page, 'File', name)
+  const file = page.getByLabel('File content')
+  await expect(file).toBeVisible({ timeout: 15_000 })
+  await file.getByLabel('Choose file replacement').setInputFiles({ name, mimeType, buffer })
+  await expect(file.getByRole('link', { name: 'Download', exact: true })).toBeVisible({
+    timeout: 15_000,
+  })
 }
 
 async function downloadText(file: Locator): Promise<string> {

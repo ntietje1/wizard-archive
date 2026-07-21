@@ -7,7 +7,7 @@ import type { ResourceRecord } from '../resource-record'
 import { createWorkspaceActions } from '../workspace/resource-operations'
 
 describe('resource application workflows', () => {
-  it('submits explicit uploads to the canonical transfer owner without authoring a resource', async () => {
+  it('creates an empty file through the same resource command path as other kinds', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
     const core = createInMemoryEditorRuntime({
@@ -32,27 +32,16 @@ describe('resource application workflows', () => {
     } satisfies EditorRuntime
     const report = vi.fn()
 
-    const result = await createWorkspaceActions(runtime, report).createFile(
-      null,
-      new File(['# Kept as a file'], 'Session.md', { type: 'text/markdown' }),
-    )
+    const result = await createWorkspaceActions(runtime, report).create('file', null, '')
 
     expect(result).toMatchObject({ status: 'completed' })
-    expect(execute).toHaveBeenCalledOnce()
-    const [intent, sources, entries] = execute.mock.calls[0]!
-    expect(intent).toMatchObject({
-      campaignId,
-      destinationParentId: null,
-      textFileHandling: 'files',
-    })
-    expect(sources).toEqual([{ id: 'selected-file', kind: 'file', name: 'Session.md' }])
-    expect(entries).toMatchObject([{ sourceId: 'selected-file', path: 'Session.md', type: 'file' }])
+    expect(execute).not.toHaveBeenCalled()
     if (result.status !== 'completed') throw new TypeError('Expected completed transfer')
     expect(runtime.resources.index.getSnapshot().lookup(result.resourceId)).toMatchObject({
       state: 'known',
-      value: { kind: 'file', title: 'Session.md' },
+      value: { kind: 'file', title: 'Untitled file' },
     })
-    expect(report).toHaveBeenLastCalledWith('File uploaded')
+    expect(report).not.toHaveBeenCalled()
     core.dispose()
   })
 
@@ -185,6 +174,7 @@ describe('resource application workflows', () => {
       content: {
         ...core.runtime.content,
         files: {
+          create: (envelope) => core.runtime.content.files.create(envelope),
           createAsset: vi.fn((source) =>
             Promise.resolve({
               status: 'retryable' as const,

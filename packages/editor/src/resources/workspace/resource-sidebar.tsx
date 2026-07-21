@@ -6,7 +6,6 @@ import {
   BookmarkCheck,
   ChevronDown,
   ChevronRight,
-  File,
   FolderDot,
   FolderOpenDot,
   Loader2,
@@ -979,7 +978,6 @@ export function ResourceCreateMenu({
   const [open, setOpen] = useState(false)
   const creation = useWorkspaceCreation(runtime.scope.campaignId, runtime.navigation, parentId)
   const blocked = creation.blocked
-  const upload = useRef<HTMLInputElement>(null)
   return (
     <div className={variant === 'card' ? 'relative h-[140px]' : 'relative'}>
       <button
@@ -1010,6 +1008,7 @@ export function ResourceCreateMenu({
               RESOURCE_KIND.folder,
               RESOURCE_KIND.map,
               RESOURCE_KIND.canvas,
+              RESOURCE_KIND.file,
             ] as const
           ).map((kind) => {
             const Icon = resourceKindIcon(kind)
@@ -1040,38 +1039,6 @@ export function ResourceCreateMenu({
               </button>
             )
           })}
-          <button
-            role="menuitem"
-            type="button"
-            aria-busy={creation.pendingControlId === 'file'}
-            disabled={blocked}
-            className="flex h-8 w-full items-center gap-2 rounded px-2 text-sm hover:bg-muted"
-            onClick={() => upload.current?.click()}
-          >
-            {creation.pendingControlId === 'file' ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <File className="size-4" />
-            )}
-            Upload file
-          </button>
-          <input
-            ref={upload}
-            type="file"
-            className="hidden"
-            aria-label={`${label}: choose file`}
-            onChange={async (event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (!file) return
-              const settlement = await creation.run('file', (signal) =>
-                actions.createFile(parentId, file, signal),
-              )
-              if (settlement.status === 'completed') {
-                setOpen(false)
-              }
-            }}
-          />
           <WorkspaceCreationStatus
             creation={creation}
             onCompleted={() => {

@@ -185,6 +185,63 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('creates an empty file with content at the requested location', async () => {
+    const campaign = await setupCampaignContext(t)
+    const parentId = await createResource(
+      campaign,
+      campaign.campaignDomainId,
+      'folder',
+      null,
+      'Handouts',
+    )
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const args = {
+      campaignId: campaign.campaignDomainId,
+      operationId,
+      command: {
+        type: 'create' as const,
+        resourceId,
+        kind: 'file' as const,
+        parentId,
+        title: 'Untitled file',
+        icon: null,
+        color: null,
+      },
+    }
+
+    const first = await asDm(campaign).mutation(api.resources.mutations.createFileResource, args)
+    const replay = await asDm(campaign).mutation(api.resources.mutations.createFileResource, args)
+
+    expect(replay).toEqual(first)
+    expect(first).toMatchObject({
+      status: 'completed',
+      receipt: { result: { type: 'created', resourceId } },
+    })
+    await t.run(async (ctx) => {
+      const resource = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      expect(resource).toMatchObject({
+        kind: 'file',
+        parentResourceUuid: parentId,
+        title: 'Untitled file',
+      })
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      expect(content).toMatchObject({
+        assetUuid: null,
+        byteSize: 0,
+        classification: 'inert_file',
+        state: 'ready',
+        viewerUnavailableReason: 'empty_file',
+      })
+    })
+  })
+
   it('replays safe compensation and rejects it after a conflicting edit', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

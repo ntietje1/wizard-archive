@@ -389,22 +389,48 @@ export async function transitionResourceCompensation(
   audit: AuditStamp,
 ): Promise<ResourceCompensationTransition | null> {
   if (!compensationMatches(graph, campaignId, plan)) return null
-  if (plan.type !== 'move') {
-    const command: Exclude<
-      ResourceStructureCommand,
-      { type: 'create' | 'deepCopy' | 'move' | 'permanentlyDelete' }
-    > =
-      plan.type === 'updateMetadata'
-        ? { type: plan.type, resourceId: plan.resourceId, changes: plan.changes }
-        : plan.type === 'restore'
-          ? { type: plan.type, resourceIds: plan.resourceIds, destination: 'previousParent' }
-          : { type: plan.type, resourceIds: plan.resourceIds }
-    const transition = await transitionResourceGraph(graph, campaignId, operationId, command, audit)
-    const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
-    if (!compensation) return reject('content_integrity_failure')
-    return { transition, compensation }
-  }
+  return plan.type === 'move'
+    ? await transitionMoveCompensation(graph, campaignId, operationId, plan, audit)
+    : await transitionNonMoveCompensation(graph, campaignId, operationId, plan, audit)
+}
 
+async function transitionNonMoveCompensation(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  operationId: OperationId,
+  plan: Exclude<ResourceCompensationPlan, { type: 'move' }>,
+  audit: AuditStamp,
+): Promise<ResourceCompensationTransition> {
+  const command = compensationCommand(plan)
+  const transition = await transitionResourceGraph(graph, campaignId, operationId, command, audit)
+  const compensation = planResourceCompensation(graph, campaignId, command, transition.receipt)
+  if (!compensation) return reject('content_integrity_failure')
+  return { transition, compensation }
+}
+
+function compensationCommand(
+  plan: Exclude<ResourceCompensationPlan, { type: 'move' }>,
+): Exclude<
+  ResourceStructureCommand,
+  { type: 'create' | 'deepCopy' | 'move' | 'permanentlyDelete' }
+> {
+  switch (plan.type) {
+    case 'updateMetadata':
+      return { type: plan.type, resourceId: plan.resourceId, changes: plan.changes }
+    case 'restore':
+      return { type: plan.type, resourceIds: plan.resourceIds, destination: 'previousParent' }
+    case 'trash':
+      return { type: plan.type, resourceIds: plan.resourceIds }
+  }
+}
+
+async function transitionMoveCompensation(
+  graph: ResourceGraph,
+  campaignId: CampaignId,
+  operationId: OperationId,
+  plan: Extract<ResourceCompensationPlan, { type: 'move' }>,
+  audit: AuditStamp,
+): Promise<ResourceCompensationTransition> {
   if (plan.placements.length === 0) return reject('invalid_command')
   const placementIds = new Set(plan.placements.map((placement) => placement.resourceId))
   if (placementIds.size !== plan.placements.length) return reject('invalid_command')

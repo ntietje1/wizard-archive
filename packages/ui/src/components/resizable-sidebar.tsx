@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import type { ReactNode } from 'react'
 
 const DEFAULT_MIN_WIDTH = 164
@@ -6,12 +6,6 @@ const DEFAULT_MAX_WIDTH = 600
 const SNAP_CLOSED_THRESHOLD = 50
 const ARROW_STEP = 10
 const PAGE_STEP = 50
-
-function abortActiveDrag(controllerRef: { current: AbortController | null }) {
-  const dragAbortController = controllerRef.current
-  dragAbortController?.abort()
-  controllerRef.current = null
-}
 
 function computeWidths(
   rawWidth: number,
@@ -64,74 +58,77 @@ export function ResizableSidebar({
   const outerRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const dragWidthRef = useRef(size)
-  const dragAbortControllerRef = useRef<AbortController | null>(null)
+  const dragStateRef = useRef<{
+    pointerId: number
+    startWidth: number
+    startX: number
+  } | null>(null)
 
-  useEffect(() => {
-    return () => abortActiveDrag(dragAbortControllerRef)
-  }, [])
+  const applyDraggedWidth = (rawWidth: number, fallbackContentWidth: number) => {
+    const { totalDisplay, totalContent } = computeWidths(
+      rawWidth,
+      fallbackContentWidth,
+      minWidth,
+      maxWidth,
+      extraWidth,
+    )
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+    if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
+    if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
+    if (handleRef.current) {
+      if (side === 'left') {
+        handleRef.current.style.left = `${totalDisplay}px`
+      } else {
+        handleRef.current.style.right = `${totalDisplay}px`
+      }
+    }
+  }
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (!visible || !isLoaded) return
     if (e.button !== 0) return
 
     e.preventDefault()
-    const startX = e.clientX
-    const startWidth = size
-    dragWidthRef.current = startWidth
-    const direction = side === 'left' ? 1 : -1
+    dragWidthRef.current = size
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startWidth: size,
+      startX: e.clientX,
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
 
     handleRef.current?.classList.add('bg-primary')
     handleRef.current?.classList.remove('hover:bg-border')
+  }
 
-    const applyDraggedWidth = (rawWidth: number) => {
-      const { totalDisplay, totalContent } = computeWidths(
-        rawWidth,
-        startWidth,
-        minWidth,
-        maxWidth,
-        extraWidth,
-      )
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== e.pointerId) return
 
-      if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
-      if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
-      if (handleRef.current) {
-        if (side === 'left') {
-          handleRef.current.style.left = `${totalDisplay}px`
-        } else {
-          handleRef.current.style.right = `${totalDisplay}px`
-        }
-      }
+    const direction = side === 'left' ? 1 : -1
+    const delta = (e.clientX - dragState.startX) * direction
+    const rawWidth = dragState.startWidth + delta
+    dragWidthRef.current = rawWidth
+    applyDraggedWidth(rawWidth, dragState.startWidth)
+  }
+
+  const finishPointerDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== e.pointerId) return
+    dragStateRef.current = null
+
+    handleRef.current?.classList.remove('bg-primary')
+    handleRef.current?.classList.add('hover:bg-border')
+
+    const finalWidth = dragWidthRef.current
+    const resolvedSize = resolveSize(finalWidth, minWidth, maxWidth)
+    if (resolvedSize === 0) {
+      onVisibleChange(false)
+    } else {
+      onSizeChange(resolvedSize)
     }
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const delta = (moveEvent.clientX - startX) * direction
-      const rawWidth = startWidth + delta
-      dragWidthRef.current = rawWidth
-      applyDraggedWidth(rawWidth)
-    }
-
-    const handleMouseUp = () => {
-      handleRef.current?.classList.remove('bg-primary')
-      handleRef.current?.classList.add('hover:bg-border')
-      abortActiveDrag(dragAbortControllerRef)
-
-      const finalWidth = dragWidthRef.current
-
-      const resolvedSize = resolveSize(finalWidth, minWidth, maxWidth)
-      if (resolvedSize === 0) {
-        onVisibleChange(false)
-      } else {
-        onSizeChange(resolvedSize)
-      }
-
-      applyDraggedWidth(finalWidth)
-    }
-
-    abortActiveDrag(dragAbortControllerRef)
-    const dragController = new AbortController()
-    dragAbortControllerRef.current = dragController
-    document.addEventListener('mousemove', handleMouseMove, { signal: dragController.signal })
-    document.addEventListener('mouseup', handleMouseUp, { signal: dragController.signal })
+    applyDraggedWidth(finalWidth, dragState.startWidth)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -205,9 +202,12 @@ export function ResizableSidebar({
         aria-valuemax={maxWidth}
         aria-valuenow={visible ? clampedSize : 0}
         tabIndex={visible ? 0 : undefined}
-        className={`absolute top-0 h-full w-1 -ml-0.5 z-10 appearance-none border-0 bg-transparent p-0 ${visible ? 'cursor-col-resize hover:bg-border hover:transition-colors hover:duration-100 ease-out focus-visible:bg-primary' : ''}`}
+        className={`absolute top-0 h-full w-1 -ml-0.5 z-10 touch-none appearance-none border-0 bg-transparent p-0 ${visible ? 'cursor-col-resize hover:bg-border hover:transition-colors hover:duration-100 ease-out focus-visible:bg-primary' : ''}`}
         style={handlePositionStyle}
-        onMouseDown={handleMouseDown}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerDrag}
+        onPointerCancel={finishPointerDrag}
         onKeyDown={handleKeyDown}
       />
     </>

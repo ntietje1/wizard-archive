@@ -3,6 +3,7 @@ import type { api } from 'convex/_generated/api'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CreateCanvasResourceCommand,
+  CreateFileResourceCommand,
   CreateMapResourceCommand,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
@@ -44,7 +45,9 @@ async function finalizeLiveContentCreate(
 
 export async function createLiveFixedContentResource(
   campaignId: CampaignId,
-  envelope: CommandEnvelope<CreateMapResourceCommand | CreateCanvasResourceCommand>,
+  envelope: CommandEnvelope<
+    CreateMapResourceCommand | CreateCanvasResourceCommand | CreateFileResourceCommand
+  >,
   backend: LiveFixedContentCreateBackend,
   beginCreateUndo: () => ResourceUndoRecording,
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> {

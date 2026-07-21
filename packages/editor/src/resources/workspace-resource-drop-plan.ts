@@ -19,7 +19,7 @@ type WorkspaceResourceDropCommand = Extract<
   { type: 'deepCopy' | 'move' | 'restore' | 'trash' }
 >
 
-export type WorkspaceResourceDropPlan =
+type WorkspaceResourceDropPlan =
   | Readonly<{
       status: 'accepted'
       effect: 'copy' | 'move' | 'restore' | 'trash'

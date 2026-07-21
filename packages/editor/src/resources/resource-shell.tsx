@@ -52,6 +52,23 @@ const EMPTY_BOOKMARK_IDS: ReadonlySet<ResourceId> = new Set()
 const UNKNOWN_BOOKMARKS = { state: 'unknown' as const }
 const ACTIVE_ROOT_QUERY = { parentId: null, lifecycle: 'active' as const }
 
+type WorkspaceNoticeState = Readonly<{
+  message: string
+  retry?: () => void
+  progress?: PlainTransferProgress
+  pending?: boolean
+}>
+
+type ResourceShellContextMenuState =
+  | Readonly<{ status: 'closed' }>
+  | Readonly<{
+      status: 'open'
+      request: ResourceContextMenuRequest
+      resourceIds: ReadonlyArray<ResourceId>
+    }>
+
+type SidebarContextMenuPosition = Readonly<{ x: number; y: number }>
+
 export function ResourceShell({
   ariaLabel,
   runtime,
@@ -95,30 +112,21 @@ export function ResourceShell({
   const [clipboard, setClipboard] = useState(EMPTY_WORKSPACE_CLIPBOARD)
   const [moveResourceIds, setMoveResourceIds] = useState<ReadonlyArray<ResourceId> | null>(null)
   const resourceDrag = useWorkspaceResourceDragOverlay(snapshot, workspaceName ?? 'Resources')
-  const [sidebarContextMenu, setSidebarContextMenu] = useState<Readonly<{
-    x: number
-    y: number
-  }> | null>(null)
-  const [contextMenu, setContextMenu] = useState<
-    | Readonly<{ status: 'closed' }>
-    | Readonly<{
-        status: 'open'
-        request: ResourceContextMenuRequest
-        resourceIds: ReadonlyArray<ResourceId>
-      }>
-  >({ status: 'closed' })
-  const [notice, setNotice] = useState<{
-    message: string
-    retry?: () => void
-    progress?: PlainTransferProgress
-  } | null>(null)
+  const [sidebarContextMenu, setSidebarContextMenu] = useState<SidebarContextMenuPosition | null>(
+    null,
+  )
+  const [contextMenu, setContextMenu] = useState<ResourceShellContextMenuState>({
+    status: 'closed',
+  })
+  const [notice, setNotice] = useState<WorkspaceNoticeState | null>(null)
   const [rightPanel, setRightPanel] = useState<ResourceRightSidebarPanel>('details')
   const noteHeadingNavigation = useRef<NoteHeadingNavigation | null>(null)
-  const report: WorkspaceReport = (message, retry, progress) =>
+  const report: WorkspaceReport = (message, retry, progress, pending) =>
     setNotice({
       message,
       ...(retry ? { retry } : {}),
       ...(progress ? { progress } : {}),
+      ...(pending ? { pending } : {}),
     })
   const actions = createWorkspaceActions(runtime, report)
   const leftVisible = showResourcePanel && preferences.panels.leftVisible
@@ -140,39 +148,20 @@ export function ResourceShell({
     setContextMenu({ status: 'open', request, resourceIds })
   }
   const closeContextMenu = () => setContextMenu({ status: 'closed' })
-  const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.defaultPrevented) return
-    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
-      if (runtime.search.status === 'available') {
-        event.preventDefault()
-        setSearchOpen(true)
-      }
-      return
-    }
-    const command = workspaceKeyboardCommand(event)
-    if (!command) return
-    if (command === 'undo' || command === 'redo') {
-      runUndoShortcut(command, event, actions, runtime.resources.undo.status === 'available')
-      return
-    }
-    if (!canEditStructure) return
-    runResourceShortcut({
+  const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLElement>) =>
+    handleResourceShellKeyDown(event, {
       actions,
+      canEditStructure,
       clipboard,
-      command,
-      focusedId: selection.focusedId ?? selectedResourceId,
-      resourceIds:
-        selection.selectedIds.length > 0
-          ? selection.selectedIds
-          : selectedResourceId
-            ? [selectedResourceId]
-            : [],
+      searchAvailable: runtime.search.status === 'available',
+      selectedResourceId,
+      selection,
       snapshot,
+      undoAvailable: runtime.resources.undo.status === 'available',
       onClipboardChange: setClipboard,
       onCloseContextMenu: closeContextMenu,
-      onPreventDefault: () => event.preventDefault(),
+      onSearch: () => setSearchOpen(true),
     })
-  }
 
   const patchPreference = (patch: WorkspacePreferencePatch) => {
     void runtime.preferences.patch(patch).catch(() => report('Could not save workspace preference'))
@@ -295,6 +284,69 @@ export function ResourceShell({
           />
         </ResizableWorkspacePanel>
       )}
+      <ResourceShellMenus
+        actions={actions}
+        bookmarks={bookmarks}
+        canEditStructure={canEditStructure}
+        clipboard={clipboard}
+        contextMenu={contextMenu}
+        moveResourceIds={moveResourceIds}
+        runtime={runtime}
+        searchOpen={searchOpen}
+        sidebarContextMenu={sidebarContextMenu}
+        snapshot={snapshot}
+        onClipboardChange={setClipboard}
+        onCloseContextMenu={closeContextMenu}
+        onMoveResourceIdsChange={setMoveResourceIds}
+        onSearchOpenChange={setSearchOpen}
+        onSidebarContextMenuClose={() => setSidebarContextMenu(null)}
+      />
+      <WorkspaceResourceDragOverlay
+        nativePreviewRef={resourceDrag.nativePreviewRef}
+        overlayRef={resourceDrag.overlayRef}
+        state={resourceDrag.state}
+      />
+      <ResourceViewAsBanner viewAs={runtime.viewAs} />
+      <WorkspaceNotice notice={notice} dismiss={setNotice} />
+    </section>
+  )
+}
+
+function ResourceShellMenus({
+  actions,
+  bookmarks,
+  canEditStructure,
+  clipboard,
+  contextMenu,
+  moveResourceIds,
+  runtime,
+  searchOpen,
+  sidebarContextMenu,
+  snapshot,
+  onClipboardChange,
+  onCloseContextMenu,
+  onMoveResourceIdsChange,
+  onSearchOpenChange,
+  onSidebarContextMenuClose,
+}: {
+  actions: WorkspaceActions
+  bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
+  canEditStructure: boolean
+  clipboard: WorkspaceClipboard
+  contextMenu: ResourceShellContextMenuState
+  moveResourceIds: ReadonlyArray<ResourceId> | null
+  runtime: EditorRuntime
+  searchOpen: boolean
+  sidebarContextMenu: SidebarContextMenuPosition | null
+  snapshot: WorkspaceResourceIndexSnapshot
+  onClipboardChange: (clipboard: WorkspaceClipboard) => void
+  onCloseContextMenu: () => void
+  onMoveResourceIdsChange: (resourceIds: ReadonlyArray<ResourceId> | null) => void
+  onSearchOpenChange: (open: boolean) => void
+  onSidebarContextMenuClose: () => void
+}) {
+  return (
+    <>
       {runtime.search.status === 'available' && (
         <ResourceSearchDialog
           actions={actions}
@@ -305,8 +357,8 @@ export function ResourceShell({
           }
           runtime={runtime}
           onOpenChange={(open) => {
-            setSearchOpen(open)
-            if (!open) setMoveResourceIds(null)
+            onSearchOpenChange(open)
+            if (!open) onMoveResourceIdsChange(null)
           }}
         />
       )}
@@ -318,12 +370,12 @@ export function ResourceShell({
           canEdit={canEditStructure}
           clipboard={clipboard}
           navigation={runtime.navigation}
-          request={contextMenu.request}
+          request={currentResourceContextRequest(snapshot, contextMenu.request)}
           resourceIds={contextMenu.resourceIds}
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
-          onClipboardChange={setClipboard}
-          onClose={closeContextMenu}
-          onRequestMove={setMoveResourceIds}
+          onClipboardChange={onClipboardChange}
+          onClose={onCloseContextMenu}
+          onRequestMove={onMoveResourceIdsChange}
         />
       )}
       {sidebarContextMenu && runtime.resources.undo.status === 'available' && (
@@ -332,31 +384,85 @@ export function ResourceShell({
           runtime={runtime}
           x={sidebarContextMenu.x}
           y={sidebarContextMenu.y}
-          onClose={() => setSidebarContextMenu(null)}
+          onClose={onSidebarContextMenuClose}
         />
       )}
-      <WorkspaceResourceDragOverlay
-        nativePreviewRef={resourceDrag.nativePreviewRef}
-        overlayRef={resourceDrag.overlayRef}
-        state={resourceDrag.state}
-      />
-      <ResourceViewAsBanner viewAs={runtime.viewAs} />
-      <WorkspaceNotice notice={notice} onDismiss={() => setNotice(null)} />
-    </section>
+    </>
   )
 }
 
+function handleResourceShellKeyDown(
+  event: KeyboardEvent<HTMLElement>,
+  input: Readonly<{
+    actions: WorkspaceActions
+    canEditStructure: boolean
+    clipboard: WorkspaceClipboard
+    searchAvailable: boolean
+    selectedResourceId: ResourceId | null
+    selection: WorkspaceSelection
+    snapshot: WorkspaceResourceIndexSnapshot
+    undoAvailable: boolean
+    onClipboardChange: (clipboard: WorkspaceClipboard) => void
+    onCloseContextMenu: () => void
+    onSearch: () => void
+  }>,
+): void {
+  if (event.defaultPrevented) return
+  if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
+    if (input.searchAvailable) {
+      event.preventDefault()
+      input.onSearch()
+    }
+    return
+  }
+  const command = workspaceKeyboardCommand(event)
+  if (!command) return
+  if (command === 'undo' || command === 'redo') {
+    runUndoShortcut(command, event, input.actions, input.undoAvailable)
+    return
+  }
+  if (!input.canEditStructure) return
+  runResourceShortcut({
+    actions: input.actions,
+    clipboard: input.clipboard,
+    command,
+    focusedId: input.selection.focusedId ?? input.selectedResourceId,
+    resourceIds: resourceShellCommandIds(input.selection, input.selectedResourceId),
+    snapshot: input.snapshot,
+    onClipboardChange: input.onClipboardChange,
+    onCloseContextMenu: input.onCloseContextMenu,
+    onPreventDefault: () => event.preventDefault(),
+  })
+}
+
+function resourceShellCommandIds(
+  selection: WorkspaceSelection,
+  selectedResourceId: ResourceId | null,
+): ReadonlyArray<ResourceId> {
+  if (selection.selectedIds.length > 0) return selection.selectedIds
+  return selectedResourceId ? [selectedResourceId] : []
+}
+
+function currentResourceContextRequest(
+  snapshot: WorkspaceResourceIndexSnapshot,
+  request: ResourceContextMenuRequest,
+): ResourceContextMenuRequest {
+  const current = snapshot.lookup(request.resource.id)
+  return current.state === 'known' ? { ...request, resource: current.value } : request
+}
+
 function WorkspaceNotice({
+  dismiss,
   notice,
-  onDismiss,
 }: {
-  notice: {
-    message: string
-    retry?: () => void
-    progress?: PlainTransferProgress
-  } | null
-  onDismiss: () => void
+  dismiss: (notice: null) => void
+  notice: WorkspaceNoticeState | null
 }) {
+  useEffect(() => {
+    if (!notice || notice.pending || notice.progress) return
+    const timeout = window.setTimeout(() => dismiss(null), notice.retry ? 6_000 : 3_000)
+    return () => window.clearTimeout(timeout)
+  }, [dismiss, notice])
   if (!notice) return null
   return (
     <div
@@ -374,7 +480,7 @@ function WorkspaceNotice({
           type="button"
           aria-label="Dismiss notification"
           className="text-muted-foreground"
-          onClick={onDismiss}
+          onClick={() => dismiss(null)}
         >
           ×
         </button>

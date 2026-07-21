@@ -271,11 +271,15 @@ function createScopedLiveResourceRuntime(
           resourceId,
         }),
       discard: discardUpload,
+      create: (args) =>
+        write(() => convex.mutation(api.resources.mutations.createFileResource, args)),
       createAsset: (args) =>
         write(() => convex.action(api.resources.actions.createAssetFile, args)),
       replace: (args) => write(() => convex.action(api.resources.actions.replaceFileContent, args)),
+      refresh,
       upload: uploadFile,
     },
+    undo.beginRecording,
     contentAuthority,
   )
   const maps = createLiveMapSessionSource(

@@ -17,6 +17,7 @@ import type {
   CanvasPreviewState,
   ContentExportResult,
   CreateCanvasResourceCommand,
+  CreateFileResourceCommand,
   CreateMapResourceCommand,
   CreateNoteResourceCommand,
   FileContentSource,
@@ -244,6 +245,8 @@ class InMemoryFileContentSource
 
   constructor(
     ready: ReadonlyArray<ReadyFileContent>,
+    private readonly campaignId: CampaignId,
+    private readonly executeStructure: ResourceStructureCommandGateway['execute'],
     private readonly createAssetFile: FileContentSource['createAsset'],
   ) {
     super({ status: 'loading' })
@@ -254,6 +257,32 @@ class InMemoryFileContentSource
 
   createAsset(source: FileResourceSource) {
     return this.createAssetFile(source)
+  }
+
+  async create(
+    envelope: CommandEnvelope<CreateFileResourceCommand>,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>> {
+    const bytes = new Uint8Array()
+    return await createOwnedContentResource(
+      envelope,
+      this.campaignId,
+      this.executeStructure,
+      async () => {
+        const metadata = classifyFileResourceSource({
+          bytes,
+          fileName: envelope.command.title,
+        })
+        if (metadata.classification === 'rejected') {
+          throw new TypeError('Empty file metadata was rejected')
+        }
+        this.setReady(
+          envelope.command.resourceId,
+          { ...metadata, attachment: 'unattached' },
+          await initialFileContentVersion(bytes, metadata),
+          bytes,
+        )
+      },
+    )
   }
 
   export(resourceId: ResourceId): ContentExportResult {
@@ -737,7 +766,9 @@ function isCompletedCreate(
 }
 
 async function createOwnedContentResource(
-  envelope: CommandEnvelope<CreateCanvasResourceCommand | CreateMapResourceCommand>,
+  envelope: CommandEnvelope<
+    CreateCanvasResourceCommand | CreateFileResourceCommand | CreateMapResourceCommand
+  >,
   campaignId: CampaignId,
   executeStructure: ResourceStructureCommandGateway['execute'],
   initialize: () => Promise<void>,
@@ -996,8 +1027,11 @@ export function createInMemoryEditorRuntime({
     executeStructure(envelope),
   )
   let createAssetFile: FileContentSource['createAsset']
-  const files = new InMemoryFileContentSource(content.files ?? [], (source) =>
-    createAssetFile(source),
+  const files = new InMemoryFileContentSource(
+    content.files ?? [],
+    scope.campaignId,
+    (envelope) => executeStructure(envelope),
+    (source) => createAssetFile(source),
   )
   let currentCatalogSnapshot = () => snapshot
   const maps = new InMemoryMapSessionSource(

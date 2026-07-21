@@ -10,8 +10,8 @@ import {
 import type { WorkspaceActions } from './resource-operations'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { resourceContextMenuRequest } from './resource-context-menu-request'
+import { resourceDisplayIcon } from './resource-icon'
 import { resourceKindLabel } from './resource-operations'
-import { resourceKindIcon } from './resource-presentation'
 
 const FOLDER_CARD_HEIGHT = 140
 const FOLDER_CARD_WIDTH = 400
@@ -132,11 +132,15 @@ export function ResourceCard({
 }
 
 function ResourceCardIcon({ resource }: { resource: AuthorizedResourceSummary }) {
-  const Icon = resourceKindIcon(resource.kind)
+  const Icon = resourceDisplayIcon(resource)
   return (
     <div inert aria-hidden="true" className="min-h-0 flex-1 overflow-hidden rounded-sm bg-muted">
       <span className="flex size-full items-center justify-center">
-        <Icon className="size-12 text-muted-foreground" aria-hidden="true" />
+        <Icon
+          className="size-12 text-muted-foreground"
+          aria-hidden="true"
+          style={{ color: resource.color ?? undefined }}
+        />
       </span>
     </div>
   )

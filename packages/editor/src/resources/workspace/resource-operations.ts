@@ -34,6 +34,7 @@ export type WorkspaceReport = (
   message: string,
   retry?: () => void,
   progress?: PlainTransferProgress,
+  pending?: boolean,
 ) => void
 
 export type WorkspaceCreationSettlement =
@@ -65,13 +66,11 @@ export function createWorkspaceActions(runtime: EditorRuntime, report: Workspace
     copyLink: (resource: AuthorizedResourceSummary) =>
       copyWorkspaceResourceLink(runtime, resource, report),
     create: (
-      kind: Exclude<ResourceKind, 'file'>,
+      kind: ResourceKind,
       parentId: ResourceId | null,
       title: string,
       signal?: AbortSignal,
     ) => createWorkspaceResource(runtime, kind, parentId, title, report, signal),
-    createFile: (parentId: ResourceId | null, file: File, signal?: AbortSignal) =>
-      createWorkspaceFile(runtime, parentId, file, report, signal),
     createAssetFile: (file: File, signal?: AbortSignal) =>
       createWorkspaceAssetFile(runtime, file, report, signal),
     download: (resource: AuthorizedResourceSummary) =>
@@ -112,7 +111,7 @@ export type WorkspaceActions = Readonly<ReturnType<typeof createWorkspaceActions
 
 async function createWorkspaceResource(
   runtime: EditorRuntime,
-  kind: Exclude<ResourceKind, 'file'>,
+  kind: ResourceKind,
   parentId: ResourceId | null,
   title: string,
   report: WorkspaceReport,
@@ -146,6 +145,11 @@ async function createWorkspaceResource(
     switch (kind) {
       case 'folder':
         return structure.value.execute(envelope)
+      case 'file':
+        return runtime.content.files.create({
+          ...envelope,
+          command: { ...command, kind: 'file' },
+        })
       case 'note': {
         if (!noteDocument) throw new TypeError('Note creation document is unavailable')
         return runtime.content.notes.create(
@@ -165,58 +169,7 @@ async function createWorkspaceResource(
         })
     }
   }
-  return await completeWorkspaceCreation(
-    { state: 'expected', resourceId },
-    deliver,
-    `${resourceKindLabel(kind)} created`,
-    report,
-    signal,
-  )
-}
-
-async function createWorkspaceFile(
-  runtime: EditorRuntime,
-  parentId: ResourceId | null,
-  file: File,
-  report: WorkspaceReport,
-  signal?: AbortSignal,
-) {
-  if (signal?.aborted) return { status: 'cancelled' } as const
-  if (runtime.resources.structure.status !== 'available') {
-    return { status: 'rejected', reason: 'read_only' } as const
-  }
-  if (runtime.transfers.status !== 'available') {
-    return { status: 'rejected', reason: runtime.transfers.reason } as const
-  }
-  const validation = validateFileUploadSize(file.size)
-  if (!validation.valid) {
-    return { status: 'rejected', reason: validation.error } as const
-  }
-  const jobId = generateDomainId(DOMAIN_ID_KIND.importJob)
-  const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
-  let bytes: Uint8Array
-  try {
-    bytes = new Uint8Array(await file.arrayBuffer())
-  } catch {
-    if (signal?.aborted) return { status: 'cancelled' } as const
-    return { status: 'rejected', reason: 'file_read_failed' } as const
-  }
-  if (signal?.aborted) return { status: 'cancelled' } as const
-  const intent = {
-    campaignId: runtime.scope.campaignId,
-    jobId,
-    operationId,
-    destinationParentId: parentId,
-    textFileHandling: 'files' as const,
-  }
-  const sourceId = 'selected-file'
-  const deliver = createWorkspaceTransferDelivery(
-    runtime,
-    intent,
-    [{ id: sourceId, kind: 'file', name: file.name }],
-    [{ sourceId, path: file.name, type: 'file', bytes }],
-  )
-  return await completeWorkspaceTransfer(deliver, report, signal)
+  return await completeWorkspaceCreation({ state: 'expected', resourceId }, deliver, report, signal)
 }
 
 async function importWorkspaceDataTransfer(
@@ -232,7 +185,7 @@ async function importWorkspaceDataTransfer(
     report('Files cannot be imported in this workspace')
     return
   }
-  report('Reading dropped files…')
+  reportPending(report, 'Reading dropped files…')
   let transfer
   try {
     transfer = await readBrowserPlainTransfer(dataTransfer)
@@ -364,14 +317,22 @@ async function createWorkspaceAssetFile(
   }
   const validation = validateFileUploadSize(file.size)
   if (!validation.valid) return { status: 'rejected', reason: validation.error }
+  reportPending(report, `Uploading ${file.name || 'file'}…`)
   let bytes
   try {
     bytes = new Uint8Array(await file.arrayBuffer())
   } catch {
-    if (signal?.aborted) return { status: 'cancelled' }
+    if (signal?.aborted) {
+      report('Upload cancelled')
+      return { status: 'cancelled' }
+    }
+    report('Upload failed: file could not be read')
     return { status: 'rejected', reason: 'file_read_failed' }
   }
-  if (signal?.aborted) return { status: 'cancelled' }
+  if (signal?.aborted) {
+    report('Upload cancelled')
+    return { status: 'cancelled' }
+  }
   return await settleAssetFileCreation(
     await runtime.content.files.createAsset({ bytes, fileName: file.name }),
     report,
@@ -384,18 +345,23 @@ function settleAssetFileCreation(
   report: WorkspaceReport,
   signal?: AbortSignal,
 ): Promise<WorkspaceCreationSettlement> {
-  if (signal?.aborted) return Promise.resolve({ status: 'cancelled' })
+  if (signal?.aborted) {
+    report('Upload cancelled')
+    return Promise.resolve({ status: 'cancelled' })
+  }
   if (result.status === 'completed') {
     report('File uploaded')
     return Promise.resolve(result)
   }
   if (result.status === 'retryable') {
+    report('Upload status is unknown')
     return Promise.resolve({
       status: 'indeterminate',
       reason: result.reason,
       retry: async () => await settleAssetFileCreation(await result.retry(), report),
     })
   }
+  report(`Upload failed: ${humanizeReason(result.reason)}`)
   return Promise.resolve({ status: 'rejected', reason: result.reason })
 }
 
@@ -408,6 +374,7 @@ async function downloadWorkspaceResource(
     report('Folders cannot be downloaded directly')
     return
   }
+  reportPending(report, `Preparing ${resource.title}…`)
   const retry = () => void downloadWorkspaceResource(runtime, resource, report)
   try {
     const source = runtime.content[contentSourceName(resource.kind)]
@@ -466,7 +433,6 @@ async function completeWorkspaceCreation(
     | Readonly<{ state: 'authoritative' }>
     | Readonly<{ state: 'expected'; resourceId: ResourceId }>,
   deliver: (signal?: AbortSignal) => Promise<CommandDelivery<ResourceStructureCommandResult>>,
-  successMessage: string,
   report: WorkspaceReport,
   signal?: AbortSignal,
 ): Promise<WorkspaceCreationSettlement> {
@@ -475,16 +441,16 @@ async function completeWorkspaceCreation(
   try {
     delivery = await deliver(signal)
   } catch {
-    const retry = () => completeWorkspaceCreation(expectation, deliver, successMessage, report)
+    const retry = () => completeWorkspaceCreation(expectation, deliver, report)
     return { status: 'failed', reason: 'provider_failure', retry }
   }
   if (delivery.status === 'indeterminate') {
-    const retry = () => completeWorkspaceCreation(expectation, deliver, successMessage, report)
+    const retry = () => completeWorkspaceCreation(expectation, deliver, report)
     return { status: 'indeterminate', reason: delivery.reason, retry }
   }
   if (delivery.status === 'not_committed') {
     const retry = delivery.retryable
-      ? () => completeWorkspaceCreation(expectation, deliver, successMessage, report)
+      ? () => completeWorkspaceCreation(expectation, deliver, report)
       : null
     return { status: 'failed', reason: delivery.reason, retry }
   }
@@ -496,63 +462,10 @@ async function completeWorkspaceCreation(
     ) {
       return { status: 'failed', reason: 'invalid_response', retry: null }
     }
-    report(successMessage)
     return { status: 'completed', resourceId: result.resourceId }
   }
   report(deliveryMessage(delivery))
   return { status: 'rejected', reason: delivery.result.reason }
-}
-
-async function completeWorkspaceTransfer(
-  deliver: (
-    signal?: AbortSignal,
-  ) => ReturnType<Extract<EditorRuntime['transfers'], { status: 'available' }>['value']['execute']>,
-  report: WorkspaceReport,
-  signal?: AbortSignal,
-): Promise<WorkspaceCreationSettlement> {
-  if (signal?.aborted) return { status: 'cancelled' }
-  let result
-  try {
-    result = await deliver(signal)
-  } catch {
-    return {
-      status: 'failed',
-      reason: 'provider_failure',
-      retry: () => completeWorkspaceTransfer(deliver, report),
-    }
-  }
-  if (result.status === 'indeterminate') {
-    return {
-      status: 'indeterminate',
-      reason: result.reason,
-      retry: () => completeWorkspaceTransfer(deliver, report),
-    }
-  }
-  if (result.status === 'rejected') {
-    return { status: 'rejected', reason: result.reason }
-  }
-  if (result.status !== 'settled') {
-    return {
-      status: 'indeterminate',
-      reason: 'response_lost',
-      retry: () => completeWorkspaceTransfer(deliver, report),
-    }
-  }
-  if (result.entries.every((entry) => entry.status === 'cancelled')) {
-    return { status: 'cancelled' }
-  }
-  const completed = result.entries.filter((entry) => entry.status === 'completed')
-  const rejected = result.entries.filter((entry) => entry.status === 'rejected')
-  const created = completed[0]
-  if (completed.length !== 1 || rejected.length !== 0 || !created) {
-    return {
-      status: 'failed',
-      reason: rejected[0]?.reason ?? 'invalid_response',
-      retry: null,
-    }
-  }
-  report(created.kind === 'note' ? 'Note imported' : 'File uploaded')
-  return { status: 'completed', resourceId: created.resourceId }
 }
 
 async function updateWorkspaceResource(
@@ -610,7 +523,9 @@ async function changeWorkspaceResourcesLifecycle(
       : { type, resourceIds }
   return await executeWorkspaceStructureCommand(runtime, command, report, (delivery) => {
     clearDeletedTarget(runtime, delivery)
-    report(deliveryMessage(delivery))
+    if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
+      report(deliveryMessage(delivery))
+    }
   })
 }
 
@@ -626,24 +541,15 @@ async function executeWorkspaceResourceDrop(
     report(plan.label)
     return false
   }
-  return await executeWorkspaceStructureCommand(runtime, plan.command, report, (delivery) => {
-    if (
-      plan.command.type === 'deepCopy' &&
-      delivery.status === 'received' &&
-      delivery.result.status === 'completed' &&
-      delivery.result.receipt.result.type === 'deepCopied'
-    ) {
-      const roots = delivery.result.receipt.result.roots
-      if (roots.length === 1 && roots[0]) {
-        runtime.navigation.open({ kind: 'resource', resourceId: roots[0].destinationRootId })
-      }
-      report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
-      return
-    }
-    if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
-      report(deliveryMessage(delivery))
-    }
-  })
+  if (plan.command.type === 'deepCopy') {
+    reportPending(
+      report,
+      drag.resourceIds.length === 1 ? 'Duplicating resource…' : 'Duplicating resources…',
+    )
+  }
+  return await executeWorkspaceStructureCommand(runtime, plan.command, report, (delivery) =>
+    finishWorkspaceDeepCopy(runtime, delivery, report),
+  )
 }
 
 function clearDeletedTarget(
@@ -669,6 +575,10 @@ async function duplicateWorkspaceResources(
   destinationParentId: ResourceId | null,
   report: WorkspaceReport,
 ) {
+  reportPending(
+    report,
+    resourceIds.length === 1 ? 'Duplicating resource…' : 'Duplicating resources…',
+  )
   return await executeWorkspaceStructureCommand(
     runtime,
     {
@@ -677,25 +587,32 @@ async function duplicateWorkspaceResources(
       destinationParentId,
     },
     report,
-    (delivery) => {
-      if (
-        delivery.status === 'received' &&
-        delivery.result.status === 'completed' &&
-        delivery.result.receipt.result.type === 'deepCopied'
-      ) {
-        const roots = delivery.result.receipt.result.roots
-        if (roots.length === 1 && roots[0]) {
-          runtime.navigation.open({
-            kind: 'resource',
-            resourceId: roots[0].destinationRootId,
-          })
-        }
-        report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
-        return
-      }
-      report(deliveryMessage(delivery))
-    },
+    (delivery) => finishWorkspaceDeepCopy(runtime, delivery, report),
   )
+}
+
+function finishWorkspaceDeepCopy(
+  runtime: EditorRuntime,
+  delivery: CommandDelivery<ResourceStructureCommandResult>,
+  report: WorkspaceReport,
+): void {
+  if (
+    delivery.status !== 'received' ||
+    delivery.result.status !== 'completed' ||
+    delivery.result.receipt.result.type !== 'deepCopied'
+  ) {
+    report(
+      delivery.status === 'received' && delivery.result.status === 'completed'
+        ? 'The copy response was invalid'
+        : deliveryMessage(delivery),
+    )
+    return
+  }
+  const roots = delivery.result.receipt.result.roots
+  if (roots.length === 1 && roots[0]) {
+    runtime.navigation.open({ kind: 'resource', resourceId: roots[0].destinationRootId })
+  }
+  report(roots.length === 1 ? 'Resource duplicated' : `${roots.length} resources duplicated`)
 }
 
 async function pasteWorkspaceClipboard(
@@ -765,7 +682,6 @@ async function setWorkspaceBookmarkState(
       report(`rejected: ${result.reason}`)
       return false
     }
-    report(bookmarked ? 'Bookmarked' : 'Bookmark removed')
     return true
   } catch {
     report(
@@ -808,8 +724,11 @@ async function executeWorkspaceStructureCommand(
   runtime: EditorRuntime,
   command: ResourceStructureCommand,
   report: WorkspaceReport,
-  handle: (delivery: CommandDelivery<ResourceStructureCommandResult>) => void = (delivery) =>
-    report(deliveryMessage(delivery)),
+  handle: (delivery: CommandDelivery<ResourceStructureCommandResult>) => void = (delivery) => {
+    if (delivery.status !== 'received' || delivery.result.status !== 'completed') {
+      report(deliveryMessage(delivery))
+    }
+  },
 ) {
   const structure = runtime.resources.structure
   if (structure.status !== 'available') {
@@ -835,10 +754,19 @@ async function executeWorkspaceStructureCommand(
 
 function deliveryMessage(delivery: CommandDelivery<ResourceStructureCommandResult>) {
   if (delivery.status === 'indeterminate') return 'Delivery is uncertain. Retry safely.'
-  if (delivery.status === 'not_committed') return `Not committed: ${delivery.reason}`
-  return delivery.result.status === 'completed'
-    ? 'Completed'
-    : `${delivery.result.status}: ${delivery.result.reason}`
+  if (delivery.status === 'not_committed') {
+    return `The change was not saved: ${humanizeReason(delivery.reason)}`
+  }
+  if (delivery.result.status === 'completed') return 'The change was saved'
+  return `The change could not be completed: ${humanizeReason(delivery.result.reason)}`
+}
+
+function humanizeReason(reason: string): string {
+  return reason.replaceAll('_', ' ')
+}
+
+function reportPending(report: WorkspaceReport, message: string): void {
+  report(message, undefined, undefined, true)
 }
 
 export function resourceKindLabel(kind: ResourceKind) {

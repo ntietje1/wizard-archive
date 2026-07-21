@@ -55,7 +55,7 @@ export function ResourceAppearancePopover({
         align={align}
         side={side}
         sideOffset={4}
-        className="w-72 gap-3 p-3"
+        className="z-[90] w-72 gap-3 p-3"
       >
         <div role="group" aria-label="Resource color">
           <div className="flex gap-2">

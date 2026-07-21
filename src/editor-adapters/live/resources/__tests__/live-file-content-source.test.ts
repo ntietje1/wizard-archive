@@ -5,15 +5,21 @@ import type { Id } from 'convex/_generated/dataModel'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { createLiveFileContentSource as createSource } from '../live-file-content-source'
 import { createLiveResourceContentAuthorityFixture } from './live-resource-content-authority.fixture'
 
 function createLiveFileContentSource(
   campaign: Parameters<typeof createSource>[0],
   backend: Parameters<typeof createSource>[1],
-  _beginUndo: () => unknown,
+  beginUndo: Parameters<typeof createSource>[2],
 ) {
-  return createSource(campaign, backend, createLiveResourceContentAuthorityFixture().authority)
+  return createSource(
+    campaign,
+    backend,
+    beginUndo,
+    createLiveResourceContentAuthorityFixture().authority,
+  )
 }
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
@@ -21,6 +27,73 @@ type Snapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 afterEach(() => vi.unstubAllGlobals())
 
 describe('LiveFileContentSource', () => {
+  it('creates an empty file through the content-owned mutation and records its undo receipt', async () => {
+    const campaignId = testDomainId('campaign', 'file-create-campaign')
+    const resourceId = testDomainId('resource', 'file-create-resource')
+    const parentId = testDomainId('resource', 'file-create-parent')
+    const operationId = testDomainId('operation', 'file-create-operation')
+    const receipt = {
+      campaignId,
+      operationId,
+      result: { type: 'created' as const, resourceId },
+      postconditions: [
+        {
+          state: 'present' as const,
+          resourceId,
+          metadataVersion: {
+            scheme: 'authoritative-revision-v1' as const,
+            revision: 1,
+            digest: 'a'.repeat(64),
+          },
+        },
+      ],
+    }
+    const create = vi.fn(() => Promise.resolve({ status: 'completed' as const, receipt }))
+    const refresh = vi.fn()
+    const recording = { abandon: vi.fn(), completed: vi.fn() }
+    const source = createLiveFileContentSource(
+      campaignId,
+      {
+        create,
+        createAsset: vi.fn(),
+        discard: vi.fn(),
+        download: vi.fn(),
+        load: vi.fn(),
+        refresh,
+        replace: vi.fn(),
+        upload: vi.fn(),
+        watch: vi.fn(() => () => undefined),
+      },
+      () => recording,
+    )
+    const envelope = {
+      campaignId,
+      operationId,
+      command: {
+        type: 'create' as const,
+        resourceId,
+        kind: 'file' as const,
+        parentId,
+        title: canonicalizeResourceTitle('Untitled file'),
+        icon: null,
+        color: null,
+      },
+    }
+
+    await expect(source.create(envelope)).resolves.toEqual({
+      status: 'received',
+      result: {
+        status: 'completed',
+        receipt,
+      },
+    })
+    expect(create).toHaveBeenCalledOnce()
+    expect(refresh).toHaveBeenCalledWith(resourceId, parentId)
+    expect(recording.completed).toHaveBeenCalledWith(receipt)
+    expect(recording.abandon).not.toHaveBeenCalled()
+    source.dispose()
+  })
+
   it('retries authored creation with the same server upload identity', async () => {
     const campaignId = testDomainId('campaign', 'asset-create-campaign')
     const resourceId = testDomainId('resource', 'asset-create-resource')
@@ -37,8 +110,10 @@ describe('LiveFileContentSource', () => {
         load: vi.fn(() => Promise.reject(new Error('projection not loaded'))),
         watch: vi.fn(() => () => undefined),
         discard,
+        create: vi.fn(),
         createAsset,
         download: vi.fn(),
+        refresh: vi.fn(),
         replace: vi.fn(),
         upload,
       },
@@ -69,11 +144,14 @@ describe('LiveFileContentSource', () => {
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         discard: vi.fn(),
+        create: vi.fn(),
         createAsset: vi.fn(),
         download: vi.fn(),
+        refresh: vi.fn(),
         replace,
         upload,
       },
+      () => ({ abandon: vi.fn(), completed: vi.fn() }),
       fixture.authority,
     )
 
@@ -108,8 +186,10 @@ describe('LiveFileContentSource', () => {
           return unsubscribe
         },
         discard: vi.fn(),
+        create: vi.fn(),
         createAsset: vi.fn(),
         download: vi.fn(),
+        refresh: vi.fn(),
         replace: vi.fn(),
         upload: vi.fn(),
       },
@@ -179,9 +259,11 @@ describe('LiveFileContentSource', () => {
         load: () => Promise.resolve(snapshot),
         watch: vi.fn(() => () => undefined),
         discard: vi.fn(),
+        create: vi.fn(),
         createAsset: vi.fn(),
         download: () =>
           Promise.resolve({ status: 'ready', url: 'https://files.test/evidence', version }),
+        refresh: vi.fn(),
         replace: vi.fn(),
         upload: vi.fn(),
       },
@@ -226,9 +308,11 @@ describe('LiveFileContentSource', () => {
           }),
         watch: vi.fn(() => () => undefined),
         discard: vi.fn(),
+        create: vi.fn(),
         createAsset: vi.fn(),
         download: () =>
           Promise.resolve({ status: 'ready', url: 'https://files.test/tampered', version }),
+        refresh: vi.fn(),
         replace: vi.fn(),
         upload: vi.fn(),
       },
@@ -278,8 +362,10 @@ describe('LiveFileContentSource', () => {
         load,
         watch: vi.fn(() => () => undefined),
         discard,
+        create: vi.fn(),
         createAsset: vi.fn(),
         download: vi.fn(),
+        refresh: vi.fn(),
         replace,
         upload: vi.fn(() => Promise.resolve(sessionId)),
       },
@@ -325,8 +411,10 @@ describe('LiveFileContentSource', () => {
         load: vi.fn(),
         watch: vi.fn(() => () => undefined),
         discard,
+        create: vi.fn(),
         createAsset: vi.fn(),
         download: vi.fn(),
+        refresh: vi.fn(),
         replace: vi.fn(() =>
           Promise.resolve({
             status: 'retryable' as const,

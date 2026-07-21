@@ -284,6 +284,7 @@ describe('CanvasResourceEmbed', () => {
       version,
     }
     const files = {
+      create: () => Promise.reject(new Error('Not used')),
       createAsset: () => Promise.resolve({ status: 'rejected' as const, reason: 'unsupported' }),
       get: () => fileState,
       subscribe: () => () => {},
@@ -638,6 +639,7 @@ function previewRuntime({
     suppliedFiles ??
     ({
       ...unavailable,
+      create: () => Promise.reject(new Error('Not used')),
       createAsset: () => Promise.resolve({ status: 'rejected' as const, reason: 'unsupported' }),
       export: () => ({
         status: 'unavailable' as const,

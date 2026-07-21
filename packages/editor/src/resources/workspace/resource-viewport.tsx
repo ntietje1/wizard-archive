@@ -1,5 +1,5 @@
-import { FileUp, Folder, Loader2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Folder, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import type { AuthoredDestination, CanonicalTarget } from '../authored-destination-contract'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -455,14 +455,13 @@ function CreateNewDashboard({
   folder: AuthorizedResourceSummary
 }) {
   const blocked = creation.blocked
-  const upload = useRef<HTMLInputElement>(null)
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
       <div className="w-full max-w-2xl">
         <p className="mb-1 text-center text-sm text-muted-foreground">{folder.title}</p>
         <h2 className="mb-6 text-center text-xl font-semibold">Create New</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {(['note', 'folder', 'map', 'canvas'] as const).map((kind) => {
+          {(['note', 'folder', 'map', 'canvas', 'file'] as const).map((kind) => {
             const Icon = resourceKindIcon(kind)
             const isPending = creation.pendingControlId === kind
             return (
@@ -488,32 +487,6 @@ function CreateNewDashboard({
               </button>
             )
           })}
-          <button
-            type="button"
-            aria-busy={creation.pendingControlId === 'file'}
-            disabled={blocked}
-            className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-3 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
-            onClick={() => upload.current?.click()}
-          >
-            {creation.pendingControlId === 'file' ? (
-              <Loader2 className="size-7 animate-spin text-muted-foreground" />
-            ) : (
-              <FileUp className="size-7 text-muted-foreground" />
-            )}
-            Upload File
-          </button>
-          <input
-            ref={upload}
-            type="file"
-            className="hidden"
-            aria-label={`Upload file to ${folder.title}`}
-            onChange={async (event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (!file) return
-              await creation.run('file', (signal) => actions.createFile(folder.id, file, signal))
-            }}
-          />
         </div>
         <WorkspaceCreationStatus creation={creation} />
         <div className="mt-8 border-t border-border pt-5 text-center">

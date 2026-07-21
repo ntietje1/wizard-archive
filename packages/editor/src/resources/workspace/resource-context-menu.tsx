@@ -3,11 +3,11 @@ import type { KeyboardEvent, ReactNode } from 'react'
 import {
   Clipboard,
   ClipboardPaste,
+  ChevronRight,
   Copy,
   Download,
   ExternalLink,
   FileInput,
-  FileUp,
   FolderInput,
   Hash,
   Loader2,
@@ -27,6 +27,7 @@ import type { ResourceContextMenuRequest } from './resource-context-menu-request
 import { ResourceAppearancePopover } from './resource-appearance-popover'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
+import { resourceKindIcon } from './resource-presentation'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
 
@@ -97,6 +98,7 @@ export function ResourceContextMenu({
           clipboard={clipboard}
           creation={creation}
           onClipboardChange={onClipboardChange}
+          submenuSide={request.x > globalThis.innerWidth - 460 ? 'left' : 'right'}
         />
       )}
       {canEdit && active && resourceIds.length === 1 && (
@@ -167,14 +169,15 @@ function ActiveResourceMenuItems({
   clipboard,
   creation,
   onClipboardChange,
+  submenuSide,
 }: {
   actions: ResourceMenuActions
   clipboard: WorkspaceClipboard
   creation: ReturnType<typeof useWorkspaceCreation>
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
+  submenuSide: 'left' | 'right'
 }) {
   const { resource, resourceIds, workspace } = actions
-  const upload = useRef<HTMLInputElement>(null)
   const destinationId = resource.kind === 'folder' ? resource.id : null
   const canPaste =
     destinationId !== null &&
@@ -189,53 +192,11 @@ function ActiveResourceMenuItems({
       <MenuSeparator />
       {destinationId !== null && (
         <>
-          {(['note', 'folder', 'map', 'canvas'] as const).map((kind) => (
-            <MenuItem
-              busy={creation.pendingControlId === kind}
-              disabled={creation.blocked}
-              key={kind}
-              icon={
-                creation.pendingControlId === kind ? <Loader2 className="animate-spin" /> : <Plus />
-              }
-              label={`New ${resourceKindLabel(kind)}`}
-              onActivate={() =>
-                void creation
-                  .run(kind, (signal) => workspace.create(kind, destinationId, '', signal))
-                  .then((settlement) => {
-                    if (settlement.status === 'completed') actions.onClose()
-                  })
-              }
-            />
-          ))}
-          <MenuItem
-            busy={creation.pendingControlId === 'file'}
-            disabled={creation.blocked}
-            icon={
-              creation.pendingControlId === 'file' ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <FileUp />
-              )
-            }
-            label="Upload File"
-            onActivate={() => upload.current?.click()}
-          />
-          <input
-            ref={upload}
-            type="file"
-            className="hidden"
-            aria-label={`Upload file to ${resource.title}`}
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file) {
-                void creation
-                  .run('file', (signal) => workspace.createFile(destinationId, file, signal))
-                  .then((settlement) => {
-                    if (settlement.status === 'completed') actions.onClose()
-                  })
-              }
-            }}
+          <NewResourceSubmenu
+            actions={actions}
+            creation={creation}
+            destinationId={destinationId}
+            side={submenuSide}
           />
           <WorkspaceCreationStatus creation={creation} onCompleted={actions.onClose} />
           <MenuSeparator />
@@ -284,6 +245,68 @@ function ActiveResourceMenuItems({
         onActivate={() => runMenuOperation(actions, () => actions.onRequestMove(resourceIds))}
       />
     </>
+  )
+}
+
+function NewResourceSubmenu({
+  actions,
+  creation,
+  destinationId,
+  side,
+}: {
+  actions: ResourceMenuActions
+  creation: ReturnType<typeof useWorkspaceCreation>
+  destinationId: ResourceId
+  side: 'left' | 'right'
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative" onPointerEnter={() => setOpen(true)}>
+      <button
+        role="menuitem"
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Plus className="size-4" />
+        <span className="min-w-0 flex-1">New…</span>
+        <ChevronRight className={`size-4 ${side === 'left' ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label="New resource"
+          className={`absolute top-0 z-10 w-44 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md ${
+            side === 'left' ? 'right-full mr-1' : 'left-full ml-1'
+          }`}
+        >
+          {(['note', 'folder', 'map', 'canvas', 'file'] as const).map((kind) => {
+            const Icon = resourceKindIcon(kind)
+            const pending = creation.pendingControlId === kind
+            return (
+              <MenuItem
+                busy={pending}
+                disabled={creation.blocked}
+                key={kind}
+                icon={pending ? <Loader2 className="animate-spin" /> : <Icon />}
+                label={resourceKindLabel(kind)}
+                onActivate={() =>
+                  void creation
+                    .run(kind, (signal) =>
+                      actions.workspace.create(kind, destinationId, '', signal),
+                    )
+                    .then((settlement) => {
+                      if (settlement.status === 'completed') actions.onClose()
+                    })
+                }
+              />
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 

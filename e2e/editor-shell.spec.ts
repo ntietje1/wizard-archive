@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import {
   createNamedResource,
+  dropFileOnResourceCollection,
   sidebarResource,
   viewAsYourself,
 } from './helpers/editor-resource-helpers'
@@ -30,7 +31,8 @@ test.describe('editor shell', () => {
     await expect(destination).toBeVisible()
     await expect(invoice).toHaveAttribute('draggable', 'true')
     await invoice.dragTo(destination)
-    await expect(page.getByRole('status')).toContainText('Completed')
+    await page.getByRole('button', { name: 'Expand Drop destination' }).click()
+    await expect(invoice).toBeVisible()
 
     await sidebarResource(page, 'The Lantern Market').click()
     await expect(page.getByRole('heading', { name: 'The Lantern Market' })).toBeVisible()
@@ -148,14 +150,13 @@ test.describe('editor shell', () => {
 
   test('retains opaque files independently of browser metadata', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await page.getByRole('button', { name: 'Create resource', exact: true }).click()
-    await page.getByLabel('Create resource: choose file').setInputFiles({
-      name: 'payload.exe',
-      mimeType: 'application/octet-stream',
-      buffer: Buffer.from('opaque bytes'),
-    })
+    await dropFileOnResourceCollection(
+      page,
+      'payload.exe',
+      'application/octet-stream',
+      Buffer.from('opaque bytes'),
+    )
 
-    await expect(page.getByText('File uploaded')).toBeVisible()
     await sidebarResource(page, 'payload.exe').click()
     await expect(page.getByText('This file type cannot be previewed.')).toBeVisible()
   })

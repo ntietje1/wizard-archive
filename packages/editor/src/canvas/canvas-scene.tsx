@@ -745,7 +745,7 @@ function CanvasDrawingOverlay({ interaction }: { interaction: CanvasInteractionS
   const path = canvasStrokePath(getCanvasDrawingPoints(drawing), drawing.style.size)
   return (
     <svg
-      className="pointer-events-none absolute left-0 top-0 overflow-visible"
+      className="pointer-events-none absolute left-0 top-0 z-20 overflow-visible"
       data-testid="canvas-drawing-preview"
       width="1"
       height="1"

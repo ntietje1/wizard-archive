@@ -7,15 +7,24 @@ import {
   versionStampEquals,
 } from '@wizard-archive/editor/resources/component-version'
 import type {
+  CreateFileResourceCommand,
   FileContentSource,
   FileContentState,
   FileResourceSource,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CommandDelivery,
+  CommandEnvelope,
+  ResourceStructureCommandResult,
+} from '@wizard-archive/editor/resources/command-contract'
+import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createResourceWatchStore } from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
+import { createLiveFixedContentResource } from './live-fixed-content-create'
+import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 
 type FileDownloadResult = FunctionReturnType<typeof api.resources.queries.loadFileDownload>
 type ReplaceFileArgs = FunctionArgs<typeof api.resources.actions.replaceFileContent>
@@ -24,15 +33,16 @@ type CreateAssetFileArgs = FunctionArgs<typeof api.resources.actions.createAsset
 type CreateAssetFileResult = FunctionReturnType<typeof api.resources.actions.createAssetFile>
 type FileSnapshot = FunctionReturnType<typeof api.resources.queries.loadFileContent>
 
-type LiveFileContentBackend = Readonly<{
-  load(resourceId: ResourceId): Promise<FileSnapshot>
-  watch(resourceId: ResourceId, apply: (snapshot: FileSnapshot) => void): () => void
-  download(resourceId: ResourceId): Promise<FileDownloadResult>
-  discard(sessionId: Id<'fileStorage'>): Promise<void>
-  createAsset(args: CreateAssetFileArgs): Promise<CreateAssetFileResult>
-  replace(args: ReplaceFileArgs): Promise<ReplaceFileResult>
-  upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
-}>
+type LiveFileContentBackend = LiveFixedContentCreateBackend &
+  Readonly<{
+    load(resourceId: ResourceId): Promise<FileSnapshot>
+    watch(resourceId: ResourceId, apply: (snapshot: FileSnapshot) => void): () => void
+    download(resourceId: ResourceId): Promise<FileDownloadResult>
+    discard(sessionId: Id<'fileStorage'>): Promise<void>
+    createAsset(args: CreateAssetFileArgs): Promise<CreateAssetFileResult>
+    replace(args: ReplaceFileArgs): Promise<ReplaceFileResult>
+    upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
+  }>
 
 type FileContentStore = ReturnType<typeof createResourceWatchStore<FileSnapshot, FileContentState>>
 
@@ -84,10 +94,15 @@ class LiveFileContentStateSource {
 export function createLiveFileContentSource(
   campaignId: CampaignId,
   backend: LiveFileContentBackend,
+  beginCreateUndo: () => ResourceUndoRecording,
   authority: LiveResourceContentAuthority,
 ): FileContentSource {
   const content = new LiveFileContentStateSource(backend)
   return {
+    create: async (
+      envelope: CommandEnvelope<CreateFileResourceCommand>,
+    ): Promise<CommandDelivery<ResourceStructureCommandResult>> =>
+      await createLiveFixedContentResource(campaignId, envelope, backend, beginCreateUndo),
     get: (resourceId) => content.get(resourceId),
     subscribe: (resourceId, listener) => content.subscribe(resourceId, listener),
     export: async (resourceId) => {

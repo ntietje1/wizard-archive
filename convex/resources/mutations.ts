@@ -79,6 +79,7 @@ import { executeNoteBlockAccessCommand as executeNoteBlockAccessCommandFn } from
 import { createNoteContent, prepareNoteContentCreation } from './functions/noteContent'
 import { createMapContent } from './functions/mapContent'
 import { createCanvasContent } from './functions/canvasContent'
+import { createFileContent } from './functions/fileContent'
 import { syncNoteSearchProjection } from './functions/resourceSearchProjection'
 import { authorizeResourceContent } from './functions/authorizeResourceContent'
 import {
@@ -217,11 +218,12 @@ function readStructureCommand(
 async function createFixedContentResource(
   ctx: CampaignMutationCtx,
   args: Readonly<{ operationId: string; command: StoredResourceStructureCommand }>,
-  kind: 'canvas' | 'map',
+  kind: 'canvas' | 'file' | 'map',
   createContent: (
     ctx: CampaignMutationCtx,
     campaignId: CampaignMutationCtx['resourceScope']['campaignId'],
     resourceId: Extract<ResourceStructureCommand, { type: 'create' }>['resourceId'],
+    title: string,
   ) => Promise<void>,
 ): Promise<StoredResourceStructureCommandResult> {
   const command = readStructureCommand(args.command)
@@ -234,7 +236,7 @@ async function createFixedContentResource(
     command,
   })
   if (result.status !== 'completed') return storedResult(result)
-  await createContent(ctx, ctx.resourceScope.campaignId, command.resourceId)
+  await createContent(ctx, ctx.resourceScope.campaignId, command.resourceId, command.title)
   return storedResult(result)
 }
 
@@ -296,13 +298,7 @@ function resourceStructureCommand(
       return {
         ...command,
         resourceId: resourceId(command.resourceId),
-        changes: {
-          ...(command.changes.title === undefined
-            ? {}
-            : { title: canonicalizeResourceTitle(command.changes.title) }),
-          ...(command.changes.icon === undefined ? {} : { icon: command.changes.icon }),
-          ...(command.changes.color === undefined ? {} : { color: command.changes.color }),
-        },
+        changes: resourceMetadataChanges(command.changes),
       }
     case 'move':
       return {
@@ -330,6 +326,16 @@ function resourceStructureCommand(
         destinationParentId:
           command.destinationParentId === null ? null : resourceId(command.destinationParentId),
       }
+  }
+}
+
+function resourceMetadataChanges(
+  changes: Extract<StoredResourceStructureCommand, { type: 'updateMetadata' }>['changes'],
+) {
+  return {
+    ...(changes.title === undefined ? {} : { title: canonicalizeResourceTitle(changes.title) }),
+    ...(changes.icon === undefined ? {} : { icon: changes.icon }),
+    ...(changes.color === undefined ? {} : { color: changes.color }),
   }
 }
 
@@ -519,6 +525,13 @@ export const createMapResource = campaignMutation({
   returns: resourceStructureCommandResultValidator,
   handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
     await createFixedContentResource(ctx, args, 'map', createMapContent),
+})
+
+export const createFileResource = campaignMutation({
+  args: { operationId: operationIdValidator, command: resourceStructureCommandValidator },
+  returns: resourceStructureCommandResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> =>
+    await createFixedContentResource(ctx, args, 'file', createFileContent),
 })
 
 export const createCanvasResource = campaignMutation({

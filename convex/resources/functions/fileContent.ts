@@ -12,6 +12,34 @@ import type { ContentCopyPreparation } from './contentCopyTypes'
 import { prepareAssetCopies } from './assetContent'
 import { loadPendingAssetState } from './assetContentState'
 import { authorizeResourceContent } from './authorizeResourceContent'
+import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { classifyFileResourceSource } from '@wizard-archive/editor/resources/source-classifier'
+
+export async function createFileContent(
+  ctx: CampaignMutationCtx,
+  campaignId: CampaignId,
+  resourceId: ResourceId,
+  fileName: string,
+): Promise<void> {
+  const existing = await loadFileContentRow(ctx.db, resourceId)
+  if (existing) {
+    if (existing.campaignUuid === campaignId) return
+    throw new TypeError('File content already exists')
+  }
+  const bytes = new Uint8Array()
+  const metadata = classifyFileResourceSource({ bytes, fileName })
+  if (metadata.classification === 'rejected') {
+    throw new TypeError('Empty file metadata was rejected')
+  }
+  await ctx.db.insert('resourceFileContents', {
+    campaignUuid: campaignId,
+    resourceUuid: resourceId,
+    state: 'ready',
+    assetUuid: null,
+    ...metadata,
+    version: await initialFileContentVersion(bytes, metadata),
+  })
+}
 
 export async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
   const authorization = await authorizeResourceContent(ctx, resourceId, 'file')

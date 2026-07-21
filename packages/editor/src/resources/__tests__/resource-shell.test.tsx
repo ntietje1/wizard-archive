@@ -375,6 +375,11 @@ describe('ResourceShell', () => {
         value: { icon: 'BookOpen' },
       }),
     )
+    await waitFor(() =>
+      expect(
+        within(appearance).getByRole('button', { name: 'BookOpen resource icon' }),
+      ).toHaveAttribute('aria-pressed', 'true'),
+    )
     const red = within(appearance).getByRole('button', { name: 'Red resource color' })
     await waitFor(() => expect(red).toBeEnabled())
     fireEvent.click(red)
@@ -384,6 +389,7 @@ describe('ResourceShell', () => {
         value: { title: 'Renamed folder', icon: 'BookOpen', color: '#f15b64' },
       }),
     )
+    await waitFor(() => expect(red).toHaveAttribute('aria-pressed', 'true'))
     core.dispose()
   })
 
@@ -421,7 +427,7 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('uploads a file from the sidebar through the file content owner', async () => {
+  it('creates an empty file from the sidebar through the file content owner', async () => {
     const { core } = await shellRuntime(true)
     render(
       <ResourceShell
@@ -432,59 +438,65 @@ describe('ResourceShell', () => {
     )
 
     fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
-    expect(screen.getByRole('menuitem', { name: 'Upload file' })).toBeEnabled()
-    const file = new File(['uploaded text'], 'evidence.txt', { type: 'text/plain' })
-    fireEvent.change(screen.getByLabelText('Create resource: choose file'), {
-      target: { files: [file] },
-    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'File' }))
 
-    expect(await screen.findByText('File uploaded')).toBeInTheDocument()
-    const uploaded = core.runtime.resources.index
+    expect(await screen.findByRole('heading', { name: 'Untitled file' })).toBeInTheDocument()
+    const created = core.runtime.resources.index
       .getSnapshot()
       .list({ parentId: null, lifecycle: 'active' })
-    expect(uploaded).toMatchObject({
+    expect(created).toMatchObject({
       state: 'known',
       items: expect.arrayContaining([
-        expect.objectContaining({ kind: 'file', title: 'evidence.txt' }),
+        expect.objectContaining({ kind: 'file', title: 'Untitled file' }),
       ]),
+    })
+    if (created.state !== 'known') throw new Error('Expected created file')
+    const file = created.items.find((item) => item.kind === 'file')
+    if (!file) throw new Error('Expected created file')
+    expect(core.runtime.content.files.get(file.id)).toMatchObject({
+      status: 'ready',
+      content: { attachment: 'unattached', byteSize: 0 },
     })
     core.dispose()
   })
 
-  it('keeps the upload control pending without projecting a transient file', async () => {
+  it('keeps the file creation control pending without projecting a transient file', async () => {
     const { core } = await shellRuntime(true)
-    if (core.runtime.transfers.status !== 'available') throw new Error('Expected transfers')
-    const transfers = core.runtime.transfers.value
+    const files = core.runtime.content.files
     let release!: () => void
     const gate = new Promise<void>((resolve) => {
       release = resolve
     })
-    const controlledTransfers: typeof transfers = {
-      execute: async (...args) => {
+    const controlledFiles: typeof files = {
+      create: async (...args) => {
         await gate
-        return await transfers.execute(...args)
+        return await files.create(...args)
       },
+      createAsset: (source) => files.createAsset(source),
+      dispose: () => files.dispose(),
+      export: (resourceId) => files.export(resourceId),
+      get: (resourceId) => files.get(resourceId),
+      replace: (resourceId, version, source) => files.replace(resourceId, version, source),
+      subscribe: (resourceId, listener) => files.subscribe(resourceId, listener),
     }
     const runtime = {
       ...core.runtime,
-      transfers: { status: 'available' as const, value: controlledTransfers },
+      content: { ...core.runtime.content, files: controlledFiles },
     }
-    render(<ResourceShell ariaLabel="Pending upload" runtime={runtime} workspaceName="DM view" />)
+    render(<ResourceShell ariaLabel="Pending file" runtime={runtime} workspaceName="DM view" />)
 
     fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
-    const uploadButton = screen.getByRole('menuitem', { name: 'Upload file' })
-    fireEvent.change(screen.getByLabelText('Create resource: choose file'), {
-      target: { files: [new File(['pending'], 'pending.txt', { type: 'text/plain' })] },
-    })
+    const fileButton = screen.getByRole('menuitem', { name: 'File' })
+    fireEvent.click(fileButton)
 
-    expect(uploadButton).toHaveAttribute('aria-busy', 'true')
-    expect(uploadButton).toBeDisabled()
-    expect(screen.queryByText('pending.txt')).not.toBeInTheDocument()
+    expect(fileButton).toHaveAttribute('aria-busy', 'true')
+    expect(fileButton).toBeDisabled()
+    expect(screen.queryByText('Untitled file')).not.toBeInTheDocument()
     expect(screen.getByRole('menu')).toBeInTheDocument()
 
     release()
 
-    expect(await screen.findByText('File uploaded')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Untitled file' })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
     core.dispose()
   })
@@ -527,7 +539,6 @@ describe('ResourceShell', () => {
 
     release()
 
-    expect(await screen.findByText('Folder created')).toBeInTheDocument()
     await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
     core.dispose()
@@ -543,7 +554,6 @@ describe('ResourceShell', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Note$/ }))
 
     expect(await screen.findByRole('heading', { name: 'Untitled note' })).toBeInTheDocument()
-    expect(screen.getByText('Note created')).toBeInTheDocument()
     core.dispose()
   })
 
@@ -764,7 +774,6 @@ describe('ResourceShell', () => {
     expect(screen.queryByText('Creating…')).not.toBeInTheDocument()
     releaseRetry()
 
-    expect(await screen.findByText('Folder created')).toBeVisible()
     await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     expect(operationIds).toHaveLength(2)
     expect(operationIds[1]).toBe(operationIds[0])
@@ -808,7 +817,7 @@ describe('ResourceShell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
 
-    expect(await screen.findByText('Note created')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Untitled note' })).toBeVisible()
     expect(documents).toHaveLength(2)
     expect(documents[1]).toBe(documents[0])
     core.dispose()
@@ -985,7 +994,6 @@ describe('ResourceShell', () => {
     expect(trigger).toBeEnabled()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
 
-    expect(await screen.findByText('Folder created')).toBeVisible()
     await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     expect(operationIds).toHaveLength(2)
     expect(operationIds[1]).not.toBe(operationIds[0])
@@ -1077,33 +1085,6 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('rejects oversized files before reading or creating content', async () => {
-    const { core } = await shellRuntime(true)
-    render(
-      <ResourceShell
-        ariaLabel="Editable resources"
-        runtime={core.runtime}
-        workspaceName="DM view"
-      />,
-    )
-    fireEvent.click(await screen.findByRole('button', { name: 'Create resource' }))
-    const file = new File(['small'], 'oversized.txt', { type: 'text/plain' })
-    const arrayBuffer = vi.fn()
-    Object.defineProperties(file, {
-      arrayBuffer: { value: arrayBuffer },
-      size: { value: 100 * 1024 * 1024 + 1 },
-    })
-    fireEvent.change(screen.getByLabelText('Create resource: choose file'), {
-      target: { files: [file] },
-    })
-
-    expect(
-      await screen.findByText('Creation rejected: File must be less than 100MB'),
-    ).toBeInTheDocument()
-    expect(arrayBuffer).not.toHaveBeenCalled()
-    core.dispose()
-  })
-
   it('creates resources inside folders from the folder context menu', async () => {
     const { core, navigation, resource } = await shellRuntime(true)
     render(
@@ -1119,10 +1100,14 @@ describe('ResourceShell', () => {
       clientX: 40,
       clientY: 50,
     })
-    expect(screen.getByRole('menuitem', { name: 'Upload File' })).toBeEnabled()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'New Map' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New…' }))
+    fireEvent.click(
+      within(screen.getByRole('menu', { name: 'New resource' })).getByRole('menuitem', {
+        name: 'Map',
+      }),
+    )
 
-    expect(await screen.findByText('Map created')).toBeInTheDocument()
+    await waitFor(() => expect(navigation.current()?.resourceId).not.toBe(resource.id))
     const createdId = navigation.current()?.resourceId
     if (!createdId) throw new Error('expected created map to open')
     expect(core.runtime.resources.index.getSnapshot().lookup(createdId)).toMatchObject({
@@ -1180,10 +1165,11 @@ describe('ResourceShell', () => {
     expect(screen.queryByRole('textbox', { name: 'New resource title' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Folder' }))
 
-    expect(await screen.findByText('Folder created')).toBeInTheDocument()
-    const roots = core.runtime.resources.index
-      .getSnapshot()
-      .list({ parentId: null, lifecycle: 'active' })
+    await screen.findByRole('heading', { name: 'Untitled folder' })
+    const roots = core.runtime.resources.index.getSnapshot().list({
+      parentId: null,
+      lifecycle: 'active',
+    })
     expect(roots).toMatchObject({ state: 'known', complete: true })
     if (roots.state === 'known') {
       expect(roots.items.filter((item) => item.title === 'Untitled folder')).toHaveLength(1)
@@ -1576,7 +1562,14 @@ describe('ResourceShell', () => {
       clientY: 50,
     })
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bookmark' }))
-    expect(await screen.findByText('Bookmarked')).toBeInTheDocument()
+    if (core.runtime.resources.bookmarks.status !== 'available') {
+      throw new Error('Expected bookmarks')
+    }
+    const bookmarks = core.runtime.resources.bookmarks.value
+    await waitFor(() => {
+      const bookmarkState = bookmarks.get()
+      expect(bookmarkState.state === 'known' && bookmarkState.value.has(resource.id)).toBe(true)
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Show bookmarks' }))
 
     expect(screen.getByRole('button', { name: 'Exit bookmarks' })).toHaveAttribute(

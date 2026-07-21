@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test'
 
 const DEFAULT_RESOURCE_TITLES = {
   Canvas: 'Untitled canvas',
+  File: 'Untitled file',
   Folder: 'Untitled folder',
   Map: 'Untitled map',
   Note: 'Untitled note',
@@ -33,6 +34,30 @@ export async function renameCurrentResource(page: Page, currentTitle: string, ne
   await input.fill(nextTitle)
   await input.press('Enter')
   await expect(page.getByRole('heading', { name: nextTitle, exact: true })).toBeVisible()
+}
+
+export async function dropFileOnResourceCollection(
+  page: Page,
+  name: string,
+  mimeType: string,
+  bytes: Uint8Array,
+) {
+  await page.getByLabel('resources resource drop zone').evaluate(
+    (element, file) => {
+      const transfer = new DataTransfer()
+      transfer.items.add(
+        new File([Uint8Array.from(file.bytes)], file.name, { type: file.mimeType }),
+      )
+      element.dispatchEvent(
+        new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer }),
+      )
+      element.dispatchEvent(
+        new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }),
+      )
+    },
+    { name, mimeType, bytes: Array.from(bytes) },
+  )
+  await expect(sidebarResource(page, name)).toBeVisible({ timeout: 15_000 })
 }
 
 export async function viewAsYourself(page: Page) {

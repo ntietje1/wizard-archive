@@ -402,6 +402,7 @@ function fileSource(
   replace: FileContentSource['replace'] = vi.fn(),
 ): FileContentSource {
   return {
+    create: () => Promise.reject(new Error('Not used')),
     createAsset: () => Promise.resolve({ status: 'rejected', reason: 'unsupported' }),
     dispose: vi.fn(),
     export: exportFile,
