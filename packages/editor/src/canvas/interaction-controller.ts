@@ -1085,13 +1085,15 @@ class CanvasInteractionControllerState {
     this.#assertActive()
     const interaction = this.#snapshot.interaction
     if (interaction.type !== 'selecting' || interaction.pointerId !== pointerId) return false
+    const tool = interaction.kind === 'lasso' ? 'select' : this.#snapshot.tool
     if (interaction.candidate === null) {
-      this.#publish({ ...this.#snapshot, interaction: { type: 'idle' } })
+      this.#publish({ ...this.#snapshot, tool, interaction: { type: 'idle' } })
       return false
     }
     const selection = getVisualCanvasSelection(this.#snapshot)
     this.#publish({
       ...this.#snapshot,
+      tool,
       selection: cloneSelection(selection),
       interaction: { type: 'idle' },
     })

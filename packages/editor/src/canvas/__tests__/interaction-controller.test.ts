@@ -110,6 +110,23 @@ describe('CanvasInteractionController selection', () => {
     controller.dispose()
   })
 
+  it('returns to the pointer tool after every lasso gesture', () => {
+    const controller = contentController()
+    controller.setTool('lasso')
+    controller.beginSelection('lasso', 'replace', 1, { x: 0, y: 0 })
+    controller.updateSelection(1, { x: 400, y: 0 })
+    controller.updateSelection(1, { x: 400, y: 200 })
+
+    expect(controller.commitSelection(1)).toBe(true)
+    expect(controller.get()).toMatchObject({ tool: 'select', interaction: { type: 'idle' } })
+
+    controller.setTool('lasso')
+    controller.beginSelection('lasso', 'replace', 2, { x: 0, y: 0 })
+    expect(controller.commitSelection(2)).toBe(false)
+    expect(controller.get()).toMatchObject({ tool: 'select', interaction: { type: 'idle' } })
+    controller.dispose()
+  })
+
   it('cancels previews on escape or tool change without changing committed selection', () => {
     const controller = contentController()
     controller.selectNode(NODE_A, false)
