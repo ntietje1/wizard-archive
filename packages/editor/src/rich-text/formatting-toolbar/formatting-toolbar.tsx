@@ -291,7 +291,7 @@ function ToolbarContent({ children, mode }: { children: ReactNode; mode: Formatt
   return (
     <ScrollArea
       className="h-full min-w-0 flex-1"
-      contentClassName="flex h-full w-max items-center gap-1 px-3"
+      contentClassName="flex h-full w-max items-center gap-1 px-1"
       scrollOrientation="horizontal"
     >
       {children}
