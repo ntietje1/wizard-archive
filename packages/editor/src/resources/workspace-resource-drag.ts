@@ -31,6 +31,13 @@ type WorkspaceDropEvent = Pick<
 > &
   Readonly<{ dataTransfer: WorkspaceDataTransfer }>
 
+type WorkspaceResourceSurfaceDropAction = 'canvasEmbed' | 'mapPin' | 'noteEmbed' | 'noteLink'
+
+type WorkspaceResourceSurfaceDropFeedback = Readonly<{
+  status: 'accepted' | 'rejected'
+  label: string
+}>
+
 function beginWorkspaceResourceDrag(
   event: DragEvent<HTMLElement>,
   resource: AuthorizedResourceSummary,
@@ -43,14 +50,14 @@ function beginWorkspaceResourceDrag(
   if (!selection.selectedIds.includes(resource.id)) {
     onSelectionChange({ type: 'normalizeContext', resourceId: resource.id })
   }
-  event.dataTransfer.effectAllowed = 'copyMove'
-  event.dataTransfer.setData(
-    WORKSPACE_RESOURCE_DRAG_TYPE,
-    JSON.stringify({
-      schema: WORKSPACE_RESOURCE_DRAG_SCHEMA,
-      resourceIds,
-    }),
-  )
+  writeWorkspaceResourceDrag(event, resourceIds)
+}
+
+export function workspaceResourceDragSourceProps(resourceIds: ReadonlyArray<ResourceId>) {
+  return {
+    draggable: true as const,
+    onDragStart: (event: DragEvent<HTMLElement>) => writeWorkspaceResourceDrag(event, resourceIds),
+  }
 }
 
 export function workspaceResourceInteractionProps({
@@ -128,15 +135,66 @@ export function allowWorkspaceInternalResourceDrop(event: WorkspaceDropEvent) {
 export function leaveWorkspaceResourceDrop(event: DragEvent<HTMLElement>) {
   const nextTarget = event.relatedTarget
   if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
-  delete event.currentTarget.dataset.dropTarget
-  delete event.currentTarget.dataset.dropOperation
+  clearWorkspaceResourceDropTarget(event.currentTarget)
 }
 
 export function clearWorkspaceResourceDropTargets(root: ParentNode) {
   for (const target of root.querySelectorAll<HTMLElement>('[data-drop-operation]')) {
-    delete target.dataset.dropTarget
-    delete target.dataset.dropOperation
+    clearWorkspaceResourceDropTarget(target)
   }
+}
+
+export function clearWorkspaceResourceDropTarget(target: HTMLElement) {
+  delete target.dataset.dropTarget
+  delete target.dataset.dropOperation
+  delete target.dataset.dropFeedback
+  delete target.dataset.dropBlocked
+}
+
+export function workspaceResourceSurfaceDropFeedback(
+  dataTransfer: Pick<DataTransfer, 'getData' | 'types'>,
+  action: WorkspaceResourceSurfaceDropAction,
+): WorkspaceResourceSurfaceDropFeedback | null {
+  if (!hasWorkspaceResourceDrag(dataTransfer)) return null
+  const drag = readWorkspaceResourceDrag(dataTransfer)
+  if (!drag) return null
+  return workspaceResourceSurfaceDropLabel(action, drag.resourceIds.length)
+}
+
+export function workspaceResourceSurfaceDropLabel(
+  action: WorkspaceResourceSurfaceDropAction,
+  count: number,
+  destinationTitle?: string,
+): WorkspaceResourceSurfaceDropFeedback {
+  const item = count === 1 ? 'item' : `${count} items`
+  switch (action) {
+    case 'canvasEmbed':
+      return { status: 'accepted', label: `Embed ${item} in canvas` }
+    case 'mapPin':
+      return {
+        status: 'accepted',
+        label: `Pin ${item} to ${destinationTitle ? `“${destinationTitle}”` : 'map'}`,
+      }
+    case 'noteEmbed':
+      return { status: 'accepted', label: `Embed ${item} here` }
+    case 'noteLink':
+      return { status: 'accepted', label: `Add ${count === 1 ? 'link' : `${count} links`} here` }
+  }
+}
+
+export function markWorkspaceResourceSurfaceDrop(
+  event: WorkspaceDropEvent,
+  feedback: WorkspaceResourceSurfaceDropFeedback,
+) {
+  event.preventDefault()
+  event.stopPropagation()
+  clearWorkspaceResourceDropTargets(event.currentTarget.ownerDocument)
+  const accepted = feedback.status === 'accepted'
+  event.dataTransfer.dropEffect = accepted ? 'copy' : 'none'
+  event.currentTarget.dataset.dropTarget = 'true'
+  event.currentTarget.dataset.dropOperation = accepted ? 'copy' : 'none'
+  event.currentTarget.dataset.dropFeedback = feedback.label
+  event.currentTarget.dataset.dropBlocked = accepted ? 'false' : 'true'
 }
 
 export async function finishWorkspaceResourceDrop(
@@ -144,8 +202,7 @@ export async function finishWorkspaceResourceDrop(
   actions: Pick<WorkspaceActions, 'drop' | 'importExternal' | 'report'>,
   target: Extract<WorkspaceResourceDropTarget, { type: 'collection' }>,
 ) {
-  delete event.currentTarget.dataset.dropTarget
-  delete event.currentTarget.dataset.dropOperation
+  clearWorkspaceResourceDropTarget(event.currentTarget)
   const drag = readWorkspaceResourceDrag(event.dataTransfer)
   if (!drag) {
     if (!hasBrowserPlainTransfer(event.dataTransfer)) return
@@ -170,8 +227,7 @@ export async function finishWorkspaceTrashDrop(
   event: DragEvent<HTMLElement>,
   actions: WorkspaceActions,
 ) {
-  delete event.currentTarget.dataset.dropTarget
-  delete event.currentTarget.dataset.dropOperation
+  clearWorkspaceResourceDropTarget(event.currentTarget)
   const drag = readWorkspaceResourceDrag(event.dataTransfer)
   if (!drag) return
   event.preventDefault()
@@ -212,6 +268,20 @@ function parseWorkspaceResourceDrag(value: string): WorkspaceResourceDragPayload
     resourceIds.push(resourceId)
   }
   return { resourceIds: Array.from(new Set(resourceIds)) }
+}
+
+function writeWorkspaceResourceDrag(
+  event: DragEvent<HTMLElement>,
+  resourceIds: ReadonlyArray<ResourceId>,
+) {
+  event.dataTransfer.effectAllowed = 'copyMove'
+  event.dataTransfer.setData(
+    WORKSPACE_RESOURCE_DRAG_TYPE,
+    JSON.stringify({
+      schema: WORKSPACE_RESOURCE_DRAG_SCHEMA,
+      resourceIds,
+    }),
+  )
 }
 
 function copyDragRequested(event: Pick<WorkspaceDropEvent, 'altKey' | 'ctrlKey' | 'metaKey'>) {

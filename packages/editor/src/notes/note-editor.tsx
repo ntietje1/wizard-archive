@@ -26,6 +26,7 @@ import { NoteResourceRuntimeProvider } from './note-resource-runtime'
 import type { NoteResourceBinding } from './note-resource-runtime-context'
 import { NoteResourceLinkMenu } from './links/resource-link-menu'
 import type { NoteBlockNoteEditor } from './note-editor-schema'
+import { noteEditorResourceDropTarget } from './note-editor-drop-target'
 
 type NoteEditorProps = {
   activation?: BlockNoteActivation
@@ -114,9 +115,16 @@ function NoteDocumentEditor(props: NoteEditorProps) {
     }
   }, [editor, headingNavigationRef])
   useNoteScrollPersistence(props.scroll, viewport)
+  const resourceDrop = noteEditorResourceDropTarget({
+    drop: props.resources?.drop ?? null,
+    editable,
+    editor,
+    sourceResourceId: props.resources?.sourceResourceId ?? null,
+  })
   const content = (
     <div
       className="resource-note-editor relative flex min-h-0 flex-1 flex-col"
+      onDragOver={resourceDrop.onDragOver}
       onBlurCapture={
         flush
           ? (event) => {
@@ -125,13 +133,14 @@ function NoteDocumentEditor(props: NoteEditorProps) {
           : undefined
       }
       onDropCapture={(event) => {
-        if (!editable || !isExternalFileDrop(event.dataTransfer)) return
         if (
           event.target instanceof Element &&
           event.target.closest('[data-blocknote-external-drop-target="true"]')
         ) {
           return
         }
+        if (resourceDrop.onDrop(event)) return
+        if (!editable || !isExternalFileDrop(event.dataTransfer)) return
         event.preventDefault()
         event.stopPropagation()
       }}

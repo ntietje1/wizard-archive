@@ -58,6 +58,24 @@ describe('workspace canvas drops', () => {
     expect(createAssetFile).toHaveBeenNthCalledWith(2, rejected, expect.any(AbortSignal))
   })
 
+  it('does not advertise trashed resources to authored surfaces', () => {
+    const resolver = createWorkspaceAuthoredDestinationDropResolver({
+      actions: { createAssetFile: vi.fn() },
+      resolveResource: (resourceId) => ({
+        ...activeResource(resourceId as typeof RESOURCE_A),
+        lifecycle: 'trashed',
+      }),
+    })
+    const transfer = createDataTransfer({
+      'application/x-wizard-archive-resource-ids': JSON.stringify({
+        schema: 'resource-drag-v2',
+        resourceIds: [RESOURCE_A],
+      }),
+    })
+
+    expect(resolver.canResolve(transfer)).toBe(false)
+  })
+
   it('uses the same canonical file creation path for picker uploads', async () => {
     const image = new File(['image'], 'map.png', { type: 'image/png' })
     const createAssetFile = vi.fn(() =>

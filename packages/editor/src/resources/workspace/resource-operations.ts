@@ -556,15 +556,18 @@ async function executeWorkspaceResourceDrop(
     reportFailure(report, plan.label)
     return false
   }
+  if (plan.execution === 'noop') return true
   if (plan.command.type === 'deepCopy') {
     reportPending(
       report,
       drag.resourceIds.length === 1 ? 'Duplicating resource…' : 'Duplicating resources…',
     )
   }
-  return await executeWorkspaceStructureCommand(runtime, plan.command, report, (delivery) =>
-    finishWorkspaceDeepCopy(runtime, delivery, report),
-  )
+  return plan.command.type === 'deepCopy'
+    ? await executeWorkspaceStructureCommand(runtime, plan.command, report, (delivery) =>
+        finishWorkspaceDeepCopy(runtime, delivery, report),
+      )
+    : await executeWorkspaceStructureCommand(runtime, plan.command, report)
 }
 
 function clearDeletedTarget(

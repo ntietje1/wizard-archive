@@ -592,12 +592,17 @@ function useWorkspaceResourceDragOverlay(
       const drag = readWorkspaceResourceDrag(event.dataTransfer)
       const plan =
         drag && destination ? planWorkspaceResourceDrop(snapshot, drag, destination, copy) : null
-      const feedback = plan
+      const feedback = activeTarget?.dataset.dropFeedback
         ? {
-            blocked: plan.status === 'rejected',
-            label: plan.label,
+            blocked: activeTarget.dataset.dropBlocked === 'true',
+            label: activeTarget.dataset.dropFeedback,
           }
-        : { blocked: true, label: 'Cannot drop here' }
+        : plan
+          ? {
+              blocked: plan.status === 'rejected',
+              label: plan.label,
+            }
+          : { blocked: true, label: 'Cannot drop here' }
       const feedbackKey = `${feedback.blocked}:${feedback.label}`
       if (lastFeedbackKey.current === feedbackKey) return
       lastFeedbackKey.current = feedbackKey

@@ -27,6 +27,11 @@ import type { EmbedMediaLayout } from '../../resources/embed-media-layout'
 import { EmbeddedMedia } from '../../resources/embedded-media'
 import { presentExternalUrl } from '../../resources/external-url-presentation'
 import type { AuthorizedResourceSummary } from '../../resources/resource-index-contract'
+import {
+  clearWorkspaceResourceDropTarget,
+  markWorkspaceResourceSurfaceDrop,
+  workspaceResourceSurfaceDropFeedback,
+} from '../../resources/workspace-resource-drag'
 import { EmbeddedResourceSurface } from '../../resources/workspace/embedded-resource-surface'
 import { useWorkspaceIndexSnapshot } from '../../resources/workspace/resource-store-snapshot'
 import { useNoteResourceRuntime } from '../use-note-resource-runtime'
@@ -341,6 +346,11 @@ function useNoteEmbedBlockDrop({
     onDragOver: enabled
       ? (event: DragEvent<HTMLElement>) => {
           if (!surface.drop?.canResolve(event.dataTransfer)) return
+          const feedback = workspaceResourceSurfaceDropFeedback(event.dataTransfer, 'noteEmbed')
+          if (feedback) {
+            markWorkspaceResourceSurfaceDrop(event, feedback)
+            return
+          }
           event.preventDefault()
           event.stopPropagation()
           event.currentTarget.dataset.dropTarget = 'true'
@@ -349,7 +359,7 @@ function useNoteEmbedBlockDrop({
     onDragLeave: (event: DragEvent<HTMLElement>) => {
       const next = event.relatedTarget
       if (next instanceof Node && event.currentTarget.contains(next)) return
-      event.currentTarget.dataset.dropTarget = 'false'
+      clearWorkspaceResourceDropTarget(event.currentTarget)
     },
     onDrop: finish,
     uploadFile: (file: File) => {

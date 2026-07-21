@@ -20,6 +20,7 @@ import type { ResourceRecord } from '../resource-record'
 import { ResourceShell } from '../resource-shell'
 import { DEFAULT_WORKSPACE_PREFERENCES } from '../workspace-preferences'
 import { EMPTY_WORKSPACE_SELECTION } from '../workspace-selection'
+import { readWorkspaceResourceDrag } from '../workspace-resource-drag'
 import { createWorkspaceActions } from '../workspace/resource-operations'
 import { ResourceViewport } from '../workspace/resource-viewport'
 import { MutableWorkspaceResourceIndex, indexRevision } from '../workspace-resource-index'
@@ -911,7 +912,9 @@ describe('ResourceShell', () => {
       'translate3d(88px, 98px, 0)',
     )
     await waitFor(() =>
-      expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent('Already in “DM view”'),
+      expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(
+        'Move item to “DM view”',
+      ),
     )
 
     fireEvent.dragEnd(row, { dataTransfer })
@@ -1914,7 +1917,27 @@ describe('ResourceShell', () => {
         name: 'Trash',
       }),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Trash' })).toBeInTheDocument()
+    const trashRegion = screen.getByRole('region', { name: 'Trash' })
+    expect(trashRegion).toBeInTheDocument()
+    const trashRow = within(trashRegion)
+      .getByText(resource.title)
+      .closest<HTMLElement>('[draggable="true"]')
+    if (!trashRow) throw new TypeError('Expected a draggable trash row')
+    const values = new Map<string, string>()
+    const dataTransfer = {
+      dropEffect: 'none' as DataTransfer['dropEffect'],
+      effectAllowed: 'uninitialized' as DataTransfer['effectAllowed'],
+      getData: (type: string) => values.get(type) ?? '',
+      setData: (type: string, value: string) => {
+        values.set(type, value)
+        dataTransfer.types = [...values.keys()]
+      },
+      setDragImage: vi.fn(),
+      types: [] as Array<string>,
+    }
+    fireEvent.dragStart(trashRow, { dataTransfer })
+    expect(readWorkspaceResourceDrag(dataTransfer)).toEqual({ resourceIds: [resource.id] })
+    fireEvent.dragEnd(trashRow, { dataTransfer })
     fireEvent.click(await screen.findByRole('button', { name: `Restore ${resource.title}` }))
 
     await waitFor(() =>

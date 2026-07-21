@@ -23,9 +23,16 @@ type WorkspaceResourceDropCommand = Extract<
 type WorkspaceResourceDropPlan =
   | Readonly<{
       status: 'accepted'
+      execution: 'command'
       effect: 'copy' | 'move' | 'restore' | 'trash'
       label: string
       command: WorkspaceResourceDropCommand
+    }>
+  | Readonly<{
+      status: 'accepted'
+      execution: 'noop'
+      effect: 'move'
+      label: string
     }>
   | Readonly<{ status: 'rejected'; label: string }>
 
@@ -74,6 +81,7 @@ export function planWorkspaceResourceDrop(
   if (copy) {
     return {
       status: 'accepted',
+      execution: 'command',
       effect: 'copy',
       label: `Copy ${itemCountLabel(resources.length)} to ${destinationLabel}`,
       command: {
@@ -116,6 +124,7 @@ function planTrashDrop(
   if (rejection) return rejection
   return {
     status: 'accepted',
+    execution: 'command',
     effect: 'trash',
     label: `Trash ${itemCountLabel(resourceCount)}`,
     command,
@@ -138,6 +147,7 @@ function planRestoreDrop({
   if (rejection) return rejection
   return {
     status: 'accepted',
+    execution: 'command',
     effect: 'restore',
     label: `Restore ${itemCountLabel(resourceCount)} to ${destinationLabel}`,
     command,
@@ -151,6 +161,14 @@ function planMoveDrop({
   resourceIds,
   snapshot,
 }: CollectionDropContext): WorkspaceResourceDropPlan {
+  const label = `Move ${itemCountLabel(resourceCount)} to ${destinationLabel}`
+  if (
+    resourceIds.length === 1 &&
+    destinationParentId !== null &&
+    resourceIds[0] === destinationParentId
+  ) {
+    return { status: 'accepted', execution: 'noop', effect: 'move', label }
+  }
   const command = {
     type: 'move' as const,
     resourceIds,
@@ -165,12 +183,13 @@ function planMoveDrop({
       ({ before }) => before.parentId === command.destinationParentId,
     )
   ) {
-    return { status: 'rejected', label: `Already in ${destinationLabel}` }
+    return { status: 'accepted', execution: 'noop', effect: 'move', label }
   }
   return {
     status: 'accepted',
+    execution: 'command',
     effect: 'move',
-    label: `Move ${itemCountLabel(resourceCount)} to ${destinationLabel}`,
+    label,
     command,
   }
 }

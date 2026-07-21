@@ -7,7 +7,7 @@ import type { AuthoredDestination } from '../authored-destination-contract'
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import type { ResourceId } from '../domain-id'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
-import { hasWorkspaceResourceDrag, readWorkspaceResourceDrag } from '../workspace-resource-drag'
+import { readWorkspaceResourceDrag } from '../workspace-resource-drag'
 import type { WorkspaceActions, WorkspaceCreationSettlement } from './resource-operations'
 
 const EMPTY_DROP_RESULT: AuthoredDestinationDropResult = {
@@ -23,19 +23,17 @@ export function createWorkspaceAuthoredDestinationDropResolver({
   resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null
 }): AuthoredDestinationDropResolver {
   return {
-    canResolve: (dataTransfer) =>
-      hasWorkspaceResourceDrag(dataTransfer) ||
-      dataTransfer.types.includes('Files') ||
-      dataTransfer.types.includes('text/uri-list'),
+    canResolve: (dataTransfer) => {
+      return (
+        resolveActiveWorkspaceDrag(dataTransfer, resolveResource) !== null ||
+        dataTransfer.types.includes('Files') ||
+        dataTransfer.types.includes('text/uri-list')
+      )
+    },
     resolve: (dataTransfer, maximumDestinations, signal) => {
       if (signal.aborted) return Promise.resolve(EMPTY_DROP_RESULT)
-      const resourceDrag = readWorkspaceResourceDrag(dataTransfer)
-      if (
-        resourceDrag &&
-        resourceDrag.resourceIds.every(
-          (resourceId) => resolveResource(resourceId)?.lifecycle === 'active',
-        )
-      ) {
+      const resourceDrag = resolveActiveWorkspaceDrag(dataTransfer, resolveResource)
+      if (resourceDrag) {
         return Promise.resolve({
           kind: 'destinations',
           destinations: resourceDrag.resourceIds
@@ -54,6 +52,18 @@ export function createWorkspaceAuthoredDestinationDropResolver({
     resolveFiles: (files, maximumDestinations, signal) =>
       createFileResources(files.slice(0, maximumDestinations), actions, signal),
   }
+}
+
+function resolveActiveWorkspaceDrag(
+  dataTransfer: Pick<DataTransfer, 'getData'>,
+  resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null,
+) {
+  const drag = readWorkspaceResourceDrag(dataTransfer)
+  return drag?.resourceIds.every(
+    (resourceId) => resolveResource(resourceId)?.lifecycle === 'active',
+  )
+    ? drag
+    : null
 }
 
 function resourceDestination(resourceId: ResourceId): AuthoredDestination {

@@ -11,8 +11,12 @@ import type {
 import type { AuthorizedResourceSummary } from '../resources/resource-index-contract'
 import { presentExternalUrl } from '../resources/external-url-presentation'
 import {
+  clearWorkspaceResourceDropTarget,
+  leaveWorkspaceResourceDrop,
+  markWorkspaceResourceSurfaceDrop,
   hasWorkspaceResourceDrag,
   readWorkspaceResourceDrag,
+  workspaceResourceSurfaceDropLabel,
 } from '../resources/workspace-resource-drag'
 import { MapImagePinLayout } from './map-image-pin-layout'
 import { planMapResourcePins } from './map-pin-placement'
@@ -47,7 +51,6 @@ export function MapPinSurface({
   src: string
   title: string
 }) {
-  const [resourceDragActive, setResourceDragActive] = useState(false)
   const [selection, setSelection] = useState<{
     focusedPinId: MapPinId | null
     selectedPinId: MapPinId | null
@@ -67,6 +70,46 @@ export function MapPinSurface({
   const selectedPinId =
     selection.focusedPinId === focusedPinId ? selection.selectedPinId : focusedPinId
   const selectPin = (pinId: MapPinId) => setSelection({ focusedPinId, selectedPinId: pinId })
+  const planResourceDrop = (
+    dataTransfer: Pick<DataTransfer, 'getData'>,
+    input: { clientX: number; clientY: number },
+  ) => {
+    const drag = readWorkspaceResourceDrag(dataTransfer)
+    const position = imagePosition(imageRef.current, input)
+    if (
+      !drag ||
+      !position ||
+      drag.resourceIds.some((resourceId) => resolveResource(resourceId)?.lifecycle !== 'active')
+    ) {
+      return {
+        status: 'rejected' as const,
+        feedback: {
+          status: 'rejected' as const,
+          label: position ? 'Some resources are unavailable' : 'Drop resources on the map image',
+        },
+      }
+    }
+    const command = planMapResourcePins({
+      existingPins: session.content.pins,
+      layerId,
+      mapResourceId,
+      position,
+      resourceIds: drag.resourceIds,
+    })
+    return command
+      ? {
+          status: 'accepted' as const,
+          command,
+          feedback: workspaceResourceSurfaceDropLabel('mapPin', command.pins.length, title),
+        }
+      : {
+          status: 'rejected' as const,
+          feedback: {
+            status: 'rejected' as const,
+            label: 'Those resources are already pinned or unavailable',
+          },
+        }
+  }
 
   const execute = async (command: MapContentCommand, success: string) => {
     const result = await session.execute(command)
@@ -95,6 +138,7 @@ export function MapPinSurface({
     <MapImagePinLayout
       alt={`${title} map`}
       aria-label="Map canvas"
+      className="data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-primary"
       imageRef={imageRef}
       pins={pins.map((pin) => {
         const targetId = pinDestinationResourceId(pin)
@@ -160,63 +204,36 @@ export function MapPinSurface({
         setMenu(null)
         if (movingPinId) movePin(movingPinId, event)
       }}
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setResourceDragActive(false)
-        }
-      }}
+      onDragLeave={leaveWorkspaceResourceDrop}
       onDragOver={(event) => {
         if (!canEdit || !hasWorkspaceResourceDrag(event.dataTransfer)) return
-        event.preventDefault()
-        event.stopPropagation()
-        event.dataTransfer.dropEffect = 'copy'
-        setResourceDragActive(true)
+        markWorkspaceResourceSurfaceDrop(
+          event,
+          planResourceDrop(event.dataTransfer, event).feedback,
+        )
       }}
       onDrop={(event) => {
-        if (!canEdit) return
-        const drag = readWorkspaceResourceDrag(event.dataTransfer)
-        if (!drag) return
+        if (!canEdit || !hasWorkspaceResourceDrag(event.dataTransfer)) return
+        const plan = planResourceDrop(event.dataTransfer, event)
         event.preventDefault()
         event.stopPropagation()
-        setResourceDragActive(false)
-        const position = imagePosition(imageRef.current, event)
-        if (
-          !position ||
-          drag.resourceIds.some((resourceId) => resolveResource(resourceId)?.lifecycle !== 'active')
-        ) {
+        clearWorkspaceResourceDropTarget(event.currentTarget)
+        if (plan.status === 'rejected') {
           setFeedback({
-            message: 'Resources can only be pinned to the map image.',
-            retry: null,
-            failed: true,
-          })
-          return
-        }
-        const command = planMapResourcePins({
-          existingPins: session.content.pins,
-          layerId,
-          mapResourceId,
-          position,
-          resourceIds: drag.resourceIds,
-        })
-        if (!command) {
-          setFeedback({
-            message: 'Those resources are already pinned or unavailable.',
+            message: `${plan.feedback.label}.`,
             retry: null,
             failed: true,
           })
           return
         }
         void execute(
-          command,
-          command.pins.length === 1 ? 'Pin created' : `${command.pins.length} pins created`,
+          plan.command,
+          plan.command.pins.length === 1
+            ? 'Pin created'
+            : `${plan.command.pins.length} pins created`,
         )
       }}
     >
-      {resourceDragActive && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/70 text-sm font-medium">
-          Drop resources to create pins
-        </div>
-      )}
       {movingPinId && (
         <div className="pointer-events-none absolute inset-x-0 top-3 text-center text-sm font-medium">
           Click the map to move the pin

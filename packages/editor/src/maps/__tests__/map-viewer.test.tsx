@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { assertSha256Digest, initialVersion, sha256Digest } from '../../resources/component-version'
 import type { ReactNode } from 'react'
@@ -207,13 +207,15 @@ describe('MapViewer', () => {
         mapResourceId={testDomainId('resource', 'map-viewer')}
         openDestination={openDestination}
         resolveResource={(resourceId) =>
-          resourceId === targetId
+          resourceId === targetId || resourceId === droppedId
             ? {
-                id: targetId,
+                id: resourceId,
                 campaignId: testDomainId('campaign', 'pin-campaign'),
                 displayParentId: null,
                 kind: 'note',
-                title: canonicalizeResourceTitle('Pinned note'),
+                title: canonicalizeResourceTitle(
+                  resourceId === targetId ? 'Pinned note' : 'Dropped note',
+                ),
                 icon: null,
                 color: null,
                 lifecycle: 'active',
@@ -256,8 +258,15 @@ describe('MapViewer', () => {
       resourceIds: [droppedId],
     })
     const mapSurface = imageElement.parentElement!
-    fireEvent.dragOver(mapSurface, { dataTransfer })
-    expect(screen.getByText('Drop resources to create pins')).toBeVisible()
+    const dragOver = createEvent.dragOver(mapSurface, { dataTransfer })
+    Object.defineProperties(dragOver, {
+      clientX: { value: 50 },
+      clientY: { value: 25 },
+    })
+    fireEvent(mapSurface, dragOver)
+    expect(mapSurface).toHaveAttribute('data-drop-feedback', 'Pin item to “Harbor”')
+    expect(mapSurface).toHaveAttribute('data-drop-target', 'true')
+    expect(screen.queryByText('Drop resources to create pins')).toBeNull()
     expect(
       planMapResourcePins({
         existingPins: content.pins,

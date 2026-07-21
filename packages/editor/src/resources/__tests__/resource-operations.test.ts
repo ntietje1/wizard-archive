@@ -7,6 +7,36 @@ import type { ResourceRecord } from '../resource-record'
 import { createWorkspaceActions } from '../workspace/resource-operations'
 
 describe('resource application workflows', () => {
+  it('does not decode move receipts as deep-copy responses', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const core = createInMemoryEditorRuntime({
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: { campaignId, resources: [], tombstones: [], aliases: [] },
+      navigation: navigation(generateDomainId(DOMAIN_ID_KIND.resource)),
+    })
+    const report = vi.fn()
+    const actions = createWorkspaceActions(core.runtime, report)
+    const source = await actions.create('file', null, 'Source')
+    const folder = await actions.create('folder', null, 'Folder')
+    if (source.status !== 'completed' || folder.status !== 'completed') {
+      throw new TypeError('Expected resource creation to complete')
+    }
+
+    await actions.drop(
+      { resourceIds: [source.resourceId] },
+      { type: 'collection', parentId: folder.resourceId, title: 'Folder' },
+      false,
+    )
+
+    expect(report).not.toHaveBeenCalled()
+    expect(core.runtime.resources.index.getSnapshot().lookup(source.resourceId)).toMatchObject({
+      state: 'known',
+      value: { displayParentId: folder.resourceId },
+    })
+    core.dispose()
+  })
+
   it('creates an empty file through the same resource command path as other kinds', async () => {
     const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
     const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)

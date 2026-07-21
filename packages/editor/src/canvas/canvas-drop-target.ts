@@ -6,6 +6,11 @@ import type { CanvasInteractionController } from './interaction-controller'
 import { screenToCanvasPoint } from './canvas-viewport'
 import { CANVAS_WORKLOAD_LIMITS } from './workload'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
+import {
+  clearWorkspaceResourceDropTarget,
+  markWorkspaceResourceSurfaceDrop,
+  workspaceResourceSurfaceDropFeedback,
+} from '../resources/workspace-resource-drag'
 
 const EMBED_SIZE = { width: 320, height: 240 }
 const STACK_OFFSET = 20
@@ -13,8 +18,7 @@ const STACK_OFFSET = 20
 function clearCanvasDropTarget(event: DragEvent<HTMLElement>) {
   const nextTarget = event.relatedTarget
   if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
-  delete event.currentTarget.dataset.dropTarget
-  delete event.currentTarget.dataset.dropOperation
+  clearWorkspaceResourceDropTarget(event.currentTarget)
 }
 
 export function useCanvasDropTarget({
@@ -40,11 +44,16 @@ export function useCanvasDropTarget({
     }
   }, [])
 
-  const canResolve = (dataTransfer: Pick<DataTransfer, 'types'>) =>
+  const canResolve = (dataTransfer: Pick<DataTransfer, 'getData' | 'types'>) =>
     canEdit && drop?.canResolve(dataTransfer) === true
 
   const mark = (event: DragEvent<HTMLElement>) => {
     if (!canResolve(event.dataTransfer)) return
+    const feedback = workspaceResourceSurfaceDropFeedback(event.dataTransfer, 'canvasEmbed')
+    if (feedback) {
+      markWorkspaceResourceSurfaceDrop(event, feedback)
+      return
+    }
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'copy'

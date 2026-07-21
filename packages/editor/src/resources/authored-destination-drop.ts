@@ -27,7 +27,7 @@ export type AuthoredDestinationDropResult =
     }>
 
 export type AuthoredDestinationDropResolver = Readonly<{
-  canResolve(dataTransfer: Pick<DataTransfer, 'types'>): boolean
+  canResolve(dataTransfer: Pick<DataTransfer, 'getData' | 'types'>): boolean
   resolveFiles(
     files: ReadonlyArray<File>,
     maximumDestinations: number,

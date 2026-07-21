@@ -14,6 +14,7 @@ import {
   allowWorkspaceInternalResourceDrop,
   finishWorkspaceTrashDrop,
   leaveWorkspaceResourceDrop,
+  workspaceResourceDragSourceProps,
 } from '../workspace-resource-drag'
 import type { WorkspaceActions } from './resource-operations'
 import { resourceKindLabel } from './resource-operations'
@@ -100,6 +101,7 @@ export function ResourceTrashControl({
               <div
                 key={resource.id}
                 className="group flex min-w-0 items-center rounded-md px-1 py-1 hover:bg-muted"
+                {...(canEdit ? workspaceResourceDragSourceProps([resource.id]) : {})}
               >
                 <button
                   type="button"

@@ -79,6 +79,7 @@ describe('planWorkspaceResourceDrop', () => {
       ),
     ).toEqual({
       status: 'accepted',
+      execution: 'command',
       effect: 'move',
       label: 'Move item to “Lore”',
       command: {
@@ -123,7 +124,7 @@ describe('planWorkspaceResourceDrop', () => {
     ).toEqual({ status: 'rejected', label: 'Cannot move a folder into itself' })
   })
 
-  it('uses a distinct Trash action and rejects an already satisfied move', () => {
+  it('uses a distinct Trash action and accepts an already satisfied move as a no-op', () => {
     const source = summary(1)
     const current = snapshot([source])
 
@@ -137,6 +138,29 @@ describe('planWorkspaceResourceDrop', () => {
         { type: 'collection', parentId: null, title: 'Campaign' },
         false,
       ),
-    ).toEqual({ status: 'rejected', label: 'Already in “Campaign”' })
+    ).toEqual({
+      status: 'accepted',
+      execution: 'noop',
+      effect: 'move',
+      label: 'Move item to “Campaign”',
+    })
+  })
+
+  it('accepts dropping a folder onto itself without hiding real hierarchy cycles', () => {
+    const folder = summary(1, { kind: 'folder', title: canonicalizeResourceTitle('Lore') })
+
+    expect(
+      planWorkspaceResourceDrop(
+        snapshot([folder]),
+        { resourceIds: [folder.id] },
+        { type: 'collection', parentId: folder.id, title: folder.title },
+        false,
+      ),
+    ).toEqual({
+      status: 'accepted',
+      execution: 'noop',
+      effect: 'move',
+      label: 'Move item to “Lore”',
+    })
   })
 })
