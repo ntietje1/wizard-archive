@@ -474,7 +474,8 @@ function PermissionSelect({
       <SelectContent
         align="end"
         alignItemWithTrigger={false}
-        className="z-[10000] p-1"
+        className="p-1"
+        positionerClassName="z-[10000]"
         onPointerDown={(event) => event.stopPropagation()}
       >
         <SelectItem value="default">{defaultLabel}</SelectItem>

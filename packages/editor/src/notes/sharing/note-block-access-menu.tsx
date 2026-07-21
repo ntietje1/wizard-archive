@@ -430,7 +430,12 @@ function VisibilityRow({
         <SelectTrigger size="sm" className="h-7 min-w-24 text-xs">
           <SelectValue>{visibilityLabel(value)}</SelectValue>
         </SelectTrigger>
-        <SelectContent align="end" className="z-[80]" data-note-block-access-overlay>
+        <SelectContent
+          align="end"
+          alignItemWithTrigger={false}
+          positionerClassName="z-[80]"
+          data-note-block-access-overlay
+        >
           {value === 'mixed' && (
             <>
               <SelectItem value="mixed" disabled>
