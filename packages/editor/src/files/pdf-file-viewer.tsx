@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import { useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { intrinsicMediaAspectRatio } from '../resources/embed-media-layout'
 import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -122,7 +123,7 @@ export function PdfFileViewer(props: PdfFileViewerProps) {
           </div>
         </div>
       )}
-      <div className="relative min-h-0 flex-1 overflow-auto">
+      <div className="relative min-h-0 flex-1">
         {state.status === 'loading' && (
           <output
             aria-label="Loading PDF"
@@ -131,21 +132,23 @@ export function PdfFileViewer(props: PdfFileViewerProps) {
             Loading PDF…
           </output>
         )}
-        <Document
-          file={url}
-          loading={null}
-          onLoadError={() => setState({ status: 'failed' })}
-          onLoadSuccess={({ numPages }) => {
-            setPage(1)
-            setState({ status: 'ready', pages: numPages })
-          }}
-        >
-          {pages > 0 && (
-            <div className="flex min-h-full min-w-full justify-center p-4">
-              <Page pageNumber={page} scale={scale} />
-            </div>
-          )}
-        </Document>
+        <ScrollArea className="size-full" scrollOrientation="both">
+          <Document
+            file={url}
+            loading={null}
+            onLoadError={() => setState({ status: 'failed' })}
+            onLoadSuccess={({ numPages }) => {
+              setPage(1)
+              setState({ status: 'ready', pages: numPages })
+            }}
+          >
+            {pages > 0 && (
+              <div className="flex min-h-full min-w-full justify-center p-4">
+                <Page pageNumber={page} scale={scale} />
+              </div>
+            )}
+          </Document>
+        </ScrollArea>
       </div>
     </div>
   )

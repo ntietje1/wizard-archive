@@ -16,7 +16,10 @@ describe('SelectContent', () => {
     )
 
     const selectContent = document.body.querySelector('[data-slot="select-content"]')
+    const list = document.body.querySelector('[role="listbox"]')
     expect(selectContent).toBeInTheDocument()
     expect(selectContent?.parentElement).toHaveClass('z-[10000]')
+    expect(list).toHaveAttribute('data-slot', 'scroll-area-viewport')
+    expect(list).toHaveStyle({ overflow: 'hidden scroll' })
   })
 })

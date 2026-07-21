@@ -2,6 +2,7 @@ import { Check, ChevronRight } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 
 export function WorkspaceMenu({
   children,
@@ -40,16 +41,17 @@ export function WorkspaceMenu({
   }, [onClose])
   if (typeof document === 'undefined') return null
   return createPortal(
-    <div
+    <ScrollArea
       ref={menu}
       role="menu"
       aria-label={label}
-      className="fixed z-[70] max-h-[calc(100vh-16px)] w-56 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+      className="fixed z-[70] max-h-[calc(100vh-16px)] w-56 rounded-md border border-border bg-popover text-popover-foreground shadow-md"
+      contentClassName="p-1"
       style={{ left: x, top: y }}
       onKeyDown={(event) => navigateWorkspaceMenu(event, onClose)}
     >
       {children}
-    </div>,
+    </ScrollArea>,
     document.body,
   )
 }

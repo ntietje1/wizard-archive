@@ -1,5 +1,6 @@
 import { Music, Video } from 'lucide-react'
 import { useState } from 'react'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 
 const UNAVAILABLE_CAPTIONS = `data:text/vtt;charset=utf-8,${encodeURIComponent(
   ['WEBVTT', '', '00:00:00.000 --> 99:59:59.000', 'Captions are not available.', ''].join('\n'),
@@ -36,7 +37,11 @@ export function MediaFileViewer({ kind, url }: { kind: 'audio' | 'video'; url: s
     )
 
   return (
-    <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-auto bg-background p-4">
+    <ScrollArea
+      className="h-full min-h-0 bg-background"
+      contentClassName="flex min-h-full min-w-full flex-col items-center justify-center gap-4 p-4"
+      scrollOrientation="both"
+    >
       <Icon className="size-16 text-muted-foreground" aria-hidden="true" />
       {failed && (
         <p className="text-sm text-destructive" role="alert">
@@ -45,6 +50,6 @@ export function MediaFileViewer({ kind, url }: { kind: 'audio' | 'video'; url: s
       )}
       {player}
       <p className="text-sm text-muted-foreground">Captions unavailable</p>
-    </div>
+    </ScrollArea>
   )
 }

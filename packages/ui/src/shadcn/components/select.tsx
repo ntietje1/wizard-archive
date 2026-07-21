@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Select as SelectPrimitive } from '@base-ui/react/select'
 
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 function Select<Value, Multiple extends boolean | undefined = false>(
@@ -89,13 +90,20 @@ function SelectContent({
       <SelectPrimitive.Popup
         data-slot="select-content"
         className={cn(
-          'bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 min-w-[max(9rem,var(--anchor-width))] rounded-lg shadow-md ring-1 duration-100 relative isolate z-50 max-h-(--available-height) w-max origin-(--transform-origin) overflow-x-hidden overflow-y-auto',
+          'bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 min-w-[max(9rem,var(--anchor-width))] rounded-lg shadow-md ring-1 duration-100 relative isolate z-50 max-h-(--available-height) w-max origin-(--transform-origin) overflow-hidden',
           className,
         )}
         {...props}
       >
         <SelectScrollUpButton />
-        <SelectPrimitive.List>{children}</SelectPrimitive.List>
+        <ScrollArea
+          className="max-h-full"
+          viewportRender={<SelectPrimitive.List />}
+          viewportClassName="relative"
+          viewportRole="listbox"
+        >
+          {children}
+        </ScrollArea>
         <SelectScrollDownButton />
       </SelectPrimitive.Popup>
     </SelectPrimitive.Positioner>

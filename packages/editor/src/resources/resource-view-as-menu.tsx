@@ -124,7 +124,7 @@ function ViewAsPicker<TParticipantId extends string>({
       <DropdownMenuContent
         align={presentation === 'menu-item' ? 'start' : 'end'}
         side={presentation === 'menu-item' ? 'right' : 'bottom'}
-        className="z-[80] max-h-[var(--radix-dropdown-menu-content-available-height)] w-max min-w-56 max-w-[min(24rem,calc(100vw-1rem))] overflow-y-auto"
+        className="z-[80] w-max min-w-56 max-w-[min(24rem,calc(100vw-1rem))] overflow-hidden"
       >
         <DropdownMenuGroup>
           <DropdownMenuLabel className="pb-0 pt-0.5">View as...</DropdownMenuLabel>

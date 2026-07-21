@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import type {
   MapImageAttachment,
   MapResourceContent,
@@ -137,10 +138,12 @@ function MapFloatingControls({
   return (
     <>
       {layers.length > 0 && (
-        <div
+        <ScrollArea
           aria-label="Map layers"
-          className="absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 overflow-x-auto rounded-md border border-border bg-background/95 p-1 shadow-sm"
+          className="absolute left-3 top-3 z-10 w-fit max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 shadow-sm"
           role="toolbar"
+          scrollOrientation="horizontal"
+          contentClassName="flex items-center gap-1 p-1"
         >
           <MapLayerButton
             active={layerId === null}
@@ -155,7 +158,7 @@ function MapFloatingControls({
               onSelect={() => onSelectLayer(layer.id)}
             />
           ))}
-        </div>
+        </ScrollArea>
       )}
       {image.status === 'attached' && (
         <div className="absolute right-3 top-3 z-10">

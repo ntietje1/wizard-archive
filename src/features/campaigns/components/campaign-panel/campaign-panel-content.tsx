@@ -4,6 +4,7 @@ import { ArrowLeftRight, History, Play, Settings, Square, UserPlus } from 'lucid
 import type { Session } from 'shared/sessions/types'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
 import { handleError } from '~/shared/utils/logger'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import type { CampaignPanelSource } from './campaign-panel-source'
 import { getSessionStatusDotColor } from './session-status-dot'
 
@@ -65,7 +66,7 @@ export function CampaignPanelContent({
           Back
         </button>
         <div className="border-t" />
-        <div className="max-h-64 overflow-y-auto p-1">
+        <ScrollArea className="max-h-64" contentClassName="p-1">
           {previousSessions.length === 0 && (
             <div className="px-2 py-1.5 text-sm text-muted-foreground">No previous sessions</div>
           )}
@@ -83,7 +84,7 @@ export function CampaignPanelContent({
               </div>
             </button>
           ))}
-        </div>
+        </ScrollArea>
       </div>
     )
   }

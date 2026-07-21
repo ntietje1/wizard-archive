@@ -29,4 +29,17 @@ describe('ScrollArea', () => {
       ),
     ).toBe(false)
   })
+
+  it('composes another primitive onto its scrolling viewport', () => {
+    render(
+      <ScrollArea viewportRender={<div role="listbox" />}>
+        <div>Option</div>
+      </ScrollArea>,
+    )
+
+    const viewport = screen.getByRole('listbox')
+    expect(viewport).toHaveAttribute('data-slot', 'scroll-area-viewport')
+    expect(viewport).toHaveStyle({ overflow: 'hidden scroll' })
+    expect(viewport).toContainElement(screen.getByText('Option'))
+  })
 })

@@ -1,5 +1,6 @@
 import { Pilcrow, Redo2, Undo2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
 import {
   applyFormattingToolbarBlockType,
   applyFormattingToolbarStyleColor,
@@ -37,6 +38,7 @@ import type {
 } from './formatting-toolbar-model'
 import type { BlockNoteSelectionSnapshot } from '../blocknote/blocknote-selection-adapter'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 
 interface RichTextFormattingToolbarProps {
   ariaLabel: string
@@ -196,7 +198,7 @@ function FormattingToolbarContent({
       aria-label={ariaLabel}
       className={cn(
         'flex items-center gap-1 border bg-background/95 backdrop-blur-sm',
-        mode === 'full' && 'h-9 w-full shrink-0 overflow-x-auto border-x-0 border-t-0 px-3',
+        mode === 'full' && 'h-9 w-full shrink-0 overflow-hidden border-x-0 border-t-0',
         mode === 'compact' && 'rounded-lg p-1 shadow-md',
         className,
       )}
@@ -206,79 +208,94 @@ function FormattingToolbarContent({
         preventEditorBlur(event)
       }}
     >
-      {mode === 'full' && (
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Undo note edit"
-            title="Undo note edit (Ctrl+Z)"
-            disabled={!snapshot.canUndo}
-            onClick={() => editor.undo()}
-          >
-            <Undo2 className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Redo note edit"
-            title="Redo note edit (Ctrl+Shift+Z)"
-            disabled={!snapshot.canRedo}
-            onClick={() => editor.redo()}
-          >
-            <Redo2 className="size-4" />
-          </Button>
-          <Separator orientation="vertical" />
-        </>
-      )}
-      <BlockTypeControl
-        activeBlockTypeId={snapshot.activeBlockTypeId}
-        blockTypeIcon={BlockTypeIcon}
-        blockTypeLabel={blockTypeLabel}
-        captureSelection={selectionController.captureSelection}
-        onBlockTypeChange={handleBlockTypeChange}
-        onOpenChange={blockTypeMenu.handleOpenChange}
-        open={blockTypeMenu.open}
-        supportedBlockTypes={snapshot.supportedBlockTypes}
-      />
+      <ToolbarContent mode={mode}>
+        {mode === 'full' && (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Undo note edit"
+              title="Undo note edit (Ctrl+Z)"
+              disabled={!snapshot.canUndo}
+              onClick={() => editor.undo()}
+            >
+              <Undo2 className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Redo note edit"
+              title="Redo note edit (Ctrl+Shift+Z)"
+              disabled={!snapshot.canRedo}
+              onClick={() => editor.redo()}
+            >
+              <Redo2 className="size-4" />
+            </Button>
+            <Separator orientation="vertical" />
+          </>
+        )}
+        <BlockTypeControl
+          activeBlockTypeId={snapshot.activeBlockTypeId}
+          blockTypeIcon={BlockTypeIcon}
+          blockTypeLabel={blockTypeLabel}
+          captureSelection={selectionController.captureSelection}
+          onBlockTypeChange={handleBlockTypeChange}
+          onOpenChange={blockTypeMenu.handleOpenChange}
+          open={blockTypeMenu.open}
+          supportedBlockTypes={snapshot.supportedBlockTypes}
+        />
 
-      <Separator orientation="vertical" />
+        <Separator orientation="vertical" />
 
-      <ColorControls
-        activeColor={
-          pendingFormattingController.pendingStyleColors.textColor ?? snapshot.activeTextColor
-        }
-        disabled={!textColorSupported}
-        kind="text"
-        label="Text color"
-        onColorChange={setTextColor}
-      />
+        <ColorControls
+          activeColor={
+            pendingFormattingController.pendingStyleColors.textColor ?? snapshot.activeTextColor
+          }
+          disabled={!textColorSupported}
+          kind="text"
+          label="Text color"
+          onColorChange={setTextColor}
+        />
 
-      <ColorControls
-        activeColor={
-          pendingFormattingController.pendingStyleColors.backgroundColor ??
-          snapshot.activeBackgroundColor
-        }
-        disabled={!backgroundColorSupported}
-        kind="background"
-        label="Highlight color"
-        onColorChange={setBackgroundColor}
-      />
+        <ColorControls
+          activeColor={
+            pendingFormattingController.pendingStyleColors.backgroundColor ??
+            snapshot.activeBackgroundColor
+          }
+          disabled={!backgroundColorSupported}
+          kind="background"
+          label="Highlight color"
+          onColorChange={setBackgroundColor}
+        />
 
-      <Separator orientation="vertical" />
+        <Separator orientation="vertical" />
 
-      <InlineStyleControls
-        editor={editor}
-        onToggleInlineStyle={toggleInlineStyle}
-        snapshot={{ ...snapshot, activeStyles: activeInlineStyles }}
-      />
+        <InlineStyleControls
+          editor={editor}
+          onToggleInlineStyle={toggleInlineStyle}
+          snapshot={{ ...snapshot, activeStyles: activeInlineStyles }}
+        />
 
-      <Separator orientation="vertical" />
+        <Separator orientation="vertical" />
 
-      <TextAlignmentControls onTextAlignmentChange={setTextAlignment} snapshot={snapshot} />
+        <TextAlignmentControls onTextAlignmentChange={setTextAlignment} snapshot={snapshot} />
+      </ToolbarContent>
     </div>
+  )
+}
+
+function ToolbarContent({ children, mode }: { children: ReactNode; mode: FormattingToolbarMode }) {
+  if (mode === 'compact') return children
+  return (
+    <ScrollArea
+      className="h-full min-w-0 flex-1"
+      contentClassName="flex h-full w-max items-center gap-1 px-3"
+      scrollOrientation="horizontal"
+    >
+      {children}
+    </ScrollArea>
   )
 }
 

@@ -23,6 +23,8 @@ const ScrollArea = React.forwardRef<
     scrollOrientation?: 'vertical' | 'horizontal' | 'both' | 'none'
     viewportClassName?: string
     viewportStyle?: Omit<React.CSSProperties, 'overflow' | 'overflowX' | 'overflowY'>
+    viewportRender?: React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Viewport>['render']
+    viewportRole?: React.AriaRole
     contentClassName?: string
     viewportRef?: React.Ref<HTMLDivElement>
   }
@@ -35,6 +37,8 @@ const ScrollArea = React.forwardRef<
       scrollOrientation = 'vertical',
       viewportClassName,
       viewportStyle,
+      viewportRender,
+      viewportRole,
       contentClassName,
       viewportRef,
       ...props
@@ -62,6 +66,8 @@ const ScrollArea = React.forwardRef<
         >
           <ScrollAreaPrimitive.Viewport
             ref={viewportRef}
+            render={viewportRender}
+            role={viewportRole}
             data-slot="scroll-area-viewport"
             className={cn(
               'focus-ring size-full rounded-[inherit] w-full max-w-full',

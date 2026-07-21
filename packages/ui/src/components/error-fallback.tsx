@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 
 export function ErrorFallback({
   error,
@@ -37,13 +38,15 @@ export function ErrorFallback({
                   )}
                   Stack trace
                 </button>
-                <pre
+                <ScrollArea
                   id={stackTraceId}
                   hidden={!showDetails}
-                  className="mt-1 max-h-48 overflow-auto rounded bg-muted p-2 text-xs text-muted-foreground"
+                  className="mt-1 max-h-48 rounded bg-muted text-xs text-muted-foreground"
+                  contentClassName="p-2"
+                  scrollOrientation="both"
                 >
-                  {error.stack}
-                </pre>
+                  <pre>{error.stack}</pre>
+                </ScrollArea>
               </>
             )}
           </div>

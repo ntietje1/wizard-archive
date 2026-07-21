@@ -1,16 +1,21 @@
 import * as React from 'react'
 
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <ScrollArea
+      data-slot="table-container"
+      className="relative w-full"
+      scrollOrientation="horizontal"
+    >
       <table
         data-slot="table"
         className={cn('w-full caption-bottom text-sm', className)}
         {...props}
       />
-    </div>
+    </ScrollArea>
   )
 }
 
