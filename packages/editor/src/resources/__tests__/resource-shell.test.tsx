@@ -894,9 +894,18 @@ describe('ResourceShell', () => {
     fireEvent.dragStart(row, { clientX: 20, clientY: 30, dataTransfer })
 
     expect(dataTransfer.setDragImage).toHaveBeenCalledOnce()
-    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(resource.title)
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(
+      `${resource.title}Move item`,
+    )
 
     const rootDropZone = screen.getByLabelText('resources resource drop zone')
+    fireEvent(
+      screen.getByRole('region', { name: 'Editable resources' }),
+      dragEventWithPosition('dragover', dataTransfer, { clientX: 0, clientY: 0 }),
+    )
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(
+      `${resource.title}Move item`,
+    )
     fireEvent(
       rootDropZone,
       dragEventWithPosition('dragover', dataTransfer, { clientX: 40, clientY: 50 }),

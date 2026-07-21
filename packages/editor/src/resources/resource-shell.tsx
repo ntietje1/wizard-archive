@@ -202,7 +202,6 @@ export function ResourceShell({
       aria-busy="false"
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
       onDragEnd={resourceDrag.end}
-      onDragEnterCapture={resourceDrag.updateEffect}
       onDragLeave={resourceDrag.leave}
       onDragOverCapture={resourceDrag.updateEffect}
       onDragStart={resourceDrag.begin}
@@ -554,7 +553,7 @@ function useWorkspaceResourceDragOverlay(
   const lastFeedbackKey = useRef<string | null>(null)
   useEffect(() => {
     const position = (event: globalThis.DragEvent) => {
-      if (!dragging.current || (event.clientX === 0 && event.clientY === 0)) return
+      if (!dragging.current || !hasUsableDragPosition(event)) return
       positionWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
     }
     document.addEventListener('dragover', position, true)
@@ -563,27 +562,31 @@ function useWorkspaceResourceDragOverlay(
   const begin = (event: DragEvent<HTMLElement>) => {
     const drag = readWorkspaceResourceDrag(event.dataTransfer)
     if (!drag) return
-    const targetResourceId =
-      event.target instanceof Element
-        ? event.target.closest<HTMLElement>('[data-resource-id]')?.dataset.resourceId
-        : undefined
+    const target = event.target instanceof Element ? event.target : null
+    const targetResourceId = target?.closest<HTMLElement>('[data-resource-id]')?.dataset.resourceId
     const sourceId =
       drag.resourceIds.find((resourceId) => resourceId === targetResourceId) ?? drag.resourceIds[0]
     const source = sourceId ? snapshot.lookup(sourceId) : null
     if (!source || source.state !== 'known') return
+    const copy = event.altKey || event.ctrlKey || event.metaKey
+    const feedback = {
+      blocked: false,
+      label: initialWorkspaceDragLabel(source.value.lifecycle, drag.resourceIds.length, copy),
+    }
     if (nativePreviewRef.current) {
       event.dataTransfer.setDragImage(nativePreviewRef.current, 0, 0)
     }
     dragging.current = true
     showWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
-    lastFeedbackKey.current = null
+    lastFeedbackKey.current = `${feedback.blocked}:${feedback.label}`
     setState({
       count: drag.resourceIds.length,
-      feedback: null,
+      feedback,
       resource: source.value,
     })
   }
   const updateEffect = (event: DragEvent<HTMLElement>) => {
+    if (!hasUsableDragPosition(event)) return
     const target = event.target instanceof Element ? event.target : null
     const copy = event.altKey || event.ctrlKey || event.metaKey
     queueMicrotask(() => {
@@ -631,6 +634,20 @@ function useWorkspaceResourceDragOverlay(
     state,
     updateEffect,
   }
+}
+
+function hasUsableDragPosition(event: Readonly<{ clientX: number; clientY: number }>) {
+  return event.clientX !== 0 || event.clientY !== 0
+}
+
+function initialWorkspaceDragLabel(
+  lifecycle: AuthorizedResourceSummary['lifecycle'],
+  count: number,
+  copy: boolean,
+) {
+  const items = count === 1 ? 'item' : `${count} items`
+  const action = lifecycle === 'trashed' ? 'Restore' : copy ? 'Copy' : 'Move'
+  return `${action} ${items}`
 }
 
 function workspaceDropTarget(
