@@ -737,17 +737,19 @@ function ResourceRowMenuButton({
   resource: AuthorizedResourceSummary
 }) {
   return (
-    <button
-      type="button"
-      aria-label={`More options for ${resource.title}`}
-      className="pointer-events-none absolute right-1 z-10 inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-background hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
-      onClick={(event) => {
-        event.stopPropagation()
-        onOpenContextMenu(resourceContextMenuRequest(event, resource, 'sidebar'))
-      }}
-    >
-      <MoreHorizontal className="size-4" />
-    </button>
+    <div className="flex w-0 shrink-0 items-center overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 focus-within:w-auto focus-within:overflow-visible focus-within:opacity-100">
+      <button
+        type="button"
+        aria-label={`More options for ${resource.title}`}
+        className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+        onClick={(event) => {
+          event.stopPropagation()
+          onOpenContextMenu(resourceContextMenuRequest(event, resource, 'sidebar'))
+        }}
+      >
+        <MoreHorizontal className="size-4" />
+      </button>
+    </div>
   )
 }
 
