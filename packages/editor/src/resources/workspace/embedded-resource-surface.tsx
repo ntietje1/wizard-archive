@@ -10,7 +10,7 @@ import { FileEmbedPreview } from '../../files/file-embed-preview'
 import { MapEmbedPreview } from '../../maps/map-embed-preview'
 import type {
   FileContentState,
-  MapPreviewState,
+  MapContentSnapshotState,
   NoteSessionState,
 } from '../content-session-contract'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -216,7 +216,7 @@ function EmbeddedMapResource({
   runtime: EditorRuntime
   target: CanonicalTarget
 }) {
-  const state = useResourceStoreSnapshot(runtime.content.maps.previews, resource.id)
+  const state = useResourceStoreSnapshot(runtime.content.maps.snapshots, resource.id)
   if (target.kind !== 'resource' && target.kind !== 'mapPin') {
     return <EmbeddedContentState label="Target unavailable" />
   }
@@ -224,7 +224,7 @@ function EmbeddedMapResource({
     <MapEmbedPreview
       focusedPinId={target.kind === 'mapPin' ? target.pinId : null}
       onMediaLayout={onMediaLayout}
-      preview={state.preview}
+      preview={state.snapshot}
       title={resource.title}
     />
   ) : (
@@ -265,7 +265,7 @@ function EmbeddedCanvasResource({
   runtime: EditorRuntime
   target: CanonicalTarget
 }) {
-  const state = useResourceStoreSnapshot(runtime.content.canvases.previews, resource.id)
+  const state = useResourceStoreSnapshot(runtime.content.canvases.snapshots, resource.id)
   if (target.kind !== 'resource' && target.kind !== 'canvasNode') {
     return <EmbeddedContentState label="Target unavailable" />
   }
@@ -304,7 +304,7 @@ function folderContinuation(
 type PreviewPendingState =
   | Exclude<NoteSessionState, RenderableNoteState>
   | Exclude<FileContentState, { status: 'ready' }>
-  | Exclude<MapPreviewState, { status: 'ready' }>
+  | Exclude<MapContentSnapshotState, { status: 'ready' }>
 
 function EmbeddedResourceState({
   kind,

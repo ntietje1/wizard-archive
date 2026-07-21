@@ -1,5 +1,5 @@
 import { Image as ImageIcon, MapPin } from 'lucide-react'
-import type { MapPreview } from '../resources/content-session-contract'
+import type { MapContentSnapshot } from '../resources/content-session-contract'
 import type { MapPinId } from '../resources/domain-id'
 import { intrinsicMediaAspectRatio } from '../resources/embed-media-layout'
 import type { EmbedMediaLayoutReporter } from '../resources/embed-media-layout'
@@ -14,7 +14,7 @@ export function MapEmbedPreview({
 }: {
   focusedPinId?: MapPinId | null
   onMediaLayout?: EmbedMediaLayoutReporter
-  preview: MapPreview
+  preview: MapContentSnapshot
   title: string
 }) {
   const focusedPin = focusedPinId

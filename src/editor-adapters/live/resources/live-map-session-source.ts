@@ -19,7 +19,7 @@ import type {
   MapContentMutationResult,
   MapContentCommand,
   MapImageAttachment,
-  MapPreviewState,
+  MapContentSnapshotState,
   MapResourceContent,
   MapSession,
   MapSessionSource,
@@ -31,12 +31,16 @@ import {
   mapImageAttachment,
   reconcileMapSnapshot,
 } from '@wizard-archive/editor/resources/map-session-policy'
-import { createResourceWatchStore } from './resource-watch-store'
+import {
+  createResourceSubscriptionRetainer,
+  createResourceWatchStore,
+} from './resource-watch-store'
 import { liveContentPendingState } from './live-content-pending-state'
 import { createLiveFixedContentResource } from './live-fixed-content-create'
 import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
 import { downloadMapImage } from './map-image-download'
+import { ResourceSessionStore } from '@wizard-archive/editor/resources/session-store'
 
 type MapSnapshot = FunctionReturnType<typeof api.resources.queries.loadMapContent>
 type RawMapImage =
@@ -75,8 +79,9 @@ type LiveMapBackend = LiveFixedContentCreateBackend &
     upload(source: FileResourceSource): Promise<Id<'fileStorage'>>
   }>
 
-type MapStore = ReturnType<typeof createResourceWatchStore<MapSnapshot, MapSessionState>>
-type MapPreviewStore = ReturnType<typeof createResourceWatchStore<MapSnapshot, MapPreviewState>>
+type MapSnapshotStore = ReturnType<
+  typeof createResourceWatchStore<MapSnapshot, MapContentSnapshotState>
+>
 
 export function createLiveMapSessionSource(
   campaignId: CampaignId,
@@ -85,18 +90,18 @@ export function createLiveMapSessionSource(
   authority: LiveResourceContentAuthority,
 ): MapSessionSource {
   const sessions = new Map<ResourceId, LiveMapSession>()
-  let store: MapStore
-  let previewStore: MapPreviewStore
-  const apply = (resourceId: ResourceId, snapshot: MapSnapshot) => {
-    if (snapshot.status !== 'ready') {
+  const store = new ResourceSessionStore<MapSessionState>({ status: 'loading' })
+  let snapshotStore: MapSnapshotStore
+  const reconcileSession = (resourceId: ResourceId) => {
+    const state = snapshotStore.get(resourceId)
+    if (state.status !== 'ready') {
       sessions.get(resourceId)?.dispose()
       sessions.delete(resourceId)
-      store.set(resourceId, liveContentPendingState(snapshot))
+      store.set(resourceId, state)
       return
     }
     try {
-      const content = readMapContent(snapshot.content)
-      const version = assertVersionStamp(snapshot.version)
+      const { content, version } = state.snapshot
       const session =
         sessions.get(resourceId) ??
         new LiveMapSession(campaignId, resourceId, content, version, backend, authority, () => {
@@ -114,65 +119,69 @@ export function createLiveMapSessionSource(
       store.set(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
     }
   }
-  store = createResourceWatchStore<MapSnapshot, MapSessionState>(backend.watch, apply, {
-    status: 'loading',
-  })
-  previewStore = createResourceWatchStore<MapSnapshot, MapPreviewState>(
+  snapshotStore = createResourceWatchStore<MapSnapshot, MapContentSnapshotState>(
     backend.watch,
-    (resourceId, snapshot) => {
-      if (snapshot.status !== 'ready') {
-        const pending = liveContentPendingState(snapshot)
-        previewStore.set(
-          resourceId,
-          pending.status === 'initializing' ? { status: 'loading' } : pending,
-        )
-        return
-      }
-      try {
-        const content = readMapContent(snapshot.content)
-        previewStore.set(resourceId, {
-          status: 'ready',
-          preview: {
-            content,
-            version: assertVersionStamp(snapshot.version),
-            loadImage: (layerId) =>
-              loadMapImage(resourceId, layerId, mapImageAttachment(content, layerId), backend),
-          },
-        })
-      } catch {
-        previewStore.set(resourceId, { status: 'integrity_error', issue: 'content_corrupt' })
-      }
-    },
+    (resourceId, snapshot) =>
+      snapshotStore.set(resourceId, decodeMapSnapshot(resourceId, snapshot, backend)),
     { status: 'loading' },
+  )
+  const sessionSubscriptions = createResourceSubscriptionRetainer(
+    (resourceId) => {
+      const releaseSnapshot = snapshotStore.subscribe(resourceId, () =>
+        reconcileSession(resourceId),
+      )
+      reconcileSession(resourceId)
+      return releaseSnapshot
+    },
+    (resourceId) => {
+      sessions.get(resourceId)?.dispose()
+      sessions.delete(resourceId)
+      store.set(resourceId, { status: 'loading' })
+    },
   )
 
   return {
     create: async (envelope) =>
       await createLiveFixedContentResource(campaignId, envelope, backend, beginCreateUndo),
     dispose: () => {
+      sessionSubscriptions.dispose()
+      snapshotStore.dispose()
       store.dispose()
-      previewStore.dispose()
       for (const session of sessions.values()) session.dispose()
       sessions.clear()
     },
     export: async (resourceId) => {
-      const state = await loadMap(resourceId, backend, apply, store)
-      if (state.status !== 'ready') {
-        return state.status === 'initializing' ? { status: 'loading' } : state
+      const before = store.get(resourceId)
+      if (before.status === 'ready') return exportMapContent(before.session.content)
+      const loaded = decodeMapSnapshot(resourceId, await backend.load(resourceId), backend)
+      const current = store.get(resourceId)
+      if (current !== before && current.status === 'ready') {
+        return exportMapContent(current.session.content)
       }
-      return {
-        status: 'ready',
-        bytes: encodeWizardMapDocument(state.session.content),
-        extension: 'wizardmap',
-        mediaType: 'application/vnd.wizard-archive.map+json',
-      }
+      return loaded.status === 'ready' ? exportMapContent(loaded.snapshot.content) : loaded
     },
     get: (resourceId) => store.get(resourceId),
-    previews: {
-      get: (resourceId) => previewStore.get(resourceId),
-      subscribe: (resourceId, listener) => previewStore.subscribe(resourceId, listener),
+    snapshots: {
+      get: (resourceId) => snapshotStore.get(resourceId),
+      subscribe: (resourceId, listener) => snapshotStore.subscribe(resourceId, listener),
     },
-    subscribe: (resourceId, listener) => store.subscribe(resourceId, listener),
+    subscribe: (resourceId, listener) => {
+      const releaseStore = store.subscribe(resourceId, listener)
+      const releaseSession = sessionSubscriptions.retain(resourceId)
+      return () => {
+        releaseStore()
+        releaseSession()
+      }
+    },
+  }
+}
+
+function exportMapContent(content: MapResourceContent): ContentExportResult {
+  return {
+    status: 'ready',
+    bytes: encodeWizardMapDocument(content),
+    extension: 'wizardmap',
+    mediaType: 'application/vnd.wizard-archive.map+json',
   }
 }
 
@@ -383,19 +392,29 @@ function storedDestination(
   }
 }
 
-async function loadMap(
+function decodeMapSnapshot(
   resourceId: ResourceId,
+  source: MapSnapshot,
   backend: LiveMapBackend,
-  apply: (resourceId: ResourceId, snapshot: MapSnapshot) => void,
-  store: MapStore,
-): Promise<MapSessionState> {
-  const before = store.get(resourceId)
-  if (before.status === 'ready') return before
-  const snapshot = await backend.load(resourceId)
-  const current = store.get(resourceId)
-  if (current !== before) return current
-  apply(resourceId, snapshot)
-  return store.get(resourceId)
+): MapContentSnapshotState {
+  if (source.status !== 'ready') {
+    const pending = liveContentPendingState(source)
+    return pending.status === 'initializing' ? { status: 'loading' } : pending
+  }
+  try {
+    const content = readMapContent(source.content)
+    return {
+      status: 'ready',
+      snapshot: {
+        content,
+        version: assertVersionStamp(source.version),
+        loadImage: (layerId) =>
+          loadMapImage(resourceId, layerId, mapImageAttachment(content, layerId), backend),
+      },
+    }
+  } catch {
+    return { status: 'integrity_error', issue: 'content_corrupt' }
+  }
 }
 
 function readMapContent(content: RawMapContent | MapResourceContent): MapResourceContent {

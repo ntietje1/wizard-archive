@@ -276,7 +276,7 @@ describe('createInMemoryEditorRuntime', () => {
     core.dispose()
   })
 
-  it('creates a valid empty canvas and publishes its readonly preview', async () => {
+  it('creates a valid empty canvas and publishes its readonly snapshot', async () => {
     const snapshot = emptySnapshot()
     const canvasId = generateDomainId(DOMAIN_ID_KIND.resource)
     const core = createInMemoryEditorRuntime({
@@ -308,7 +308,7 @@ describe('createInMemoryEditorRuntime', () => {
       status: 'ready',
       session: { version: { revision: 1 } },
     })
-    expect(core.runtime.content.canvases.previews.get(canvasId)).toMatchObject({
+    expect(core.runtime.content.canvases.snapshots.get(canvasId)).toMatchObject({
       status: 'ready',
       version: { revision: 1 },
     })
@@ -435,10 +435,10 @@ describe('createInMemoryEditorRuntime', () => {
       bytes,
       mediaType: 'application/octet-stream',
     })
-    const preview = core.runtime.content.maps.previews.get(mapId)
-    if (preview.status !== 'ready') throw new TypeError('Expected a ready map preview')
-    expect('execute' in preview.preview).toBe(false)
-    await expect(preview.preview.loadImage(null)).resolves.toMatchObject({
+    const preview = core.runtime.content.maps.snapshots.get(mapId)
+    if (preview.status !== 'ready') throw new TypeError('Expected a ready map snapshot')
+    expect('execute' in preview.snapshot).toBe(false)
+    await expect(preview.snapshot.loadImage(null)).resolves.toMatchObject({
       status: 'ready',
       bytes,
       mediaType: 'application/octet-stream',

@@ -18,7 +18,7 @@ import {
 import type { ContentGeneration } from '@wizard-archive/editor/resources/content-generation'
 import type {
   CanvasSession,
-  CanvasPreviewState,
+  CanvasContentSnapshotState,
   CanvasSessionSource,
   CanvasSessionState,
   CollaborationUser,
@@ -33,7 +33,10 @@ import type {
 import type { ResourceUndoRecording } from '@wizard-archive/editor/resources/undo-history'
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
-import { createResourceWatchStore } from './resource-watch-store'
+import {
+  createResourceSubscriptionRetainer,
+  createResourceWatchStore,
+} from './resource-watch-store'
 import { createLiveFixedContentResource } from './live-fixed-content-create'
 import type { LiveFixedContentCreateBackend } from './live-fixed-content-create'
 import {
@@ -58,6 +61,7 @@ import type {
   LiveResourceContentAuthority,
   YjsSessionAuthorityBinding,
 } from './live-resource-content-authority'
+import { ResourceSessionStore } from '@wizard-archive/editor/resources/session-store'
 
 type CanvasSnapshot = FunctionReturnType<typeof api.resources.queries.loadCanvasContent>
 type SaveCanvasContentArgs = FunctionArgs<typeof api.resources.mutations.saveCanvasContent>
@@ -76,9 +80,8 @@ type LiveCanvasBackend = LiveFixedContentCreateBackend &
     save(args: SaveCanvasContentArgs): Promise<SaveCanvasContentResult>
   }>
 
-type CanvasStore = ReturnType<typeof createResourceWatchStore<CanvasSnapshot, CanvasSessionState>>
-type CanvasPreviewStore = ReturnType<
-  typeof createResourceWatchStore<CanvasSnapshot, CanvasPreviewState>
+type CanvasSnapshotStore = ReturnType<
+  typeof createResourceWatchStore<CanvasSnapshot, DecodedCanvasSnapshot>
 >
 
 function createLiveCanvasSession(
@@ -118,16 +121,18 @@ function createLiveCanvasSession(
 type LiveCanvasSession = ReturnType<typeof createLiveCanvasSession>
 
 class LiveCanvasSessionSource implements CanvasSessionSource {
-  readonly #store: CanvasStore
-  readonly #previewStore: CanvasPreviewStore
-  readonly #previewDocuments = new Map<ResourceId, Y.Doc>()
+  readonly #store = new ResourceSessionStore<CanvasSessionState>({ status: 'loading' })
+  readonly #snapshotStore: CanvasSnapshotStore
+  readonly #snapshotDocuments = new Map<ResourceId, Y.Doc>()
+  readonly #sessionSubscriptions: ReturnType<typeof createResourceSubscriptionRetainer>
   readonly #generations = new Map<ResourceId, ContentGeneration>()
   readonly #sessions = new Map<ResourceId, LiveCanvasSession | ReadonlyYjsSession>()
   readonly #authorityBinding: YjsSessionAuthorityBinding
-  readonly previews = {
-    get: (resourceId: ResourceId) => this.#previewStore.get(resourceId),
+  readonly snapshots = {
+    get: (resourceId: ResourceId): CanvasContentSnapshotState =>
+      this.#snapshotStore.get(resourceId),
     subscribe: (resourceId: ResourceId, listener: () => void) =>
-      this.#previewStore.subscribe(resourceId, listener),
+      this.#snapshotStore.subscribe(resourceId, listener),
   }
 
   constructor(
@@ -138,15 +143,21 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     private readonly beginCreateUndo: () => ResourceUndoRecording,
     private readonly authority: LiveResourceContentAuthority,
   ) {
-    this.#store = createResourceWatchStore<CanvasSnapshot, CanvasSessionState>(
+    this.#snapshotStore = createResourceWatchStore<CanvasSnapshot, DecodedCanvasSnapshot>(
       backend.watch,
-      (resourceId, snapshot) => this.#apply(resourceId, snapshot),
+      (resourceId, snapshot) => this.#replaceSnapshot(resourceId, decodeCanvasSnapshot(snapshot)),
       { status: 'loading' },
+      { releaseState: (resourceId) => this.#releaseSnapshot(resourceId) },
     )
-    this.#previewStore = createResourceWatchStore<CanvasSnapshot, CanvasPreviewState>(
-      backend.watch,
-      (resourceId, snapshot) => this.#applyPreview(resourceId, snapshot),
-      { status: 'loading' },
+    this.#sessionSubscriptions = createResourceSubscriptionRetainer(
+      (resourceId) => {
+        const releaseSnapshot = this.#snapshotStore.subscribe(resourceId, () =>
+          this.#applySnapshot(resourceId),
+        )
+        this.#applySnapshot(resourceId)
+        return releaseSnapshot
+      },
+      (resourceId) => this.#replaceState(resourceId, { status: 'loading' }),
     )
     this.#authorityBinding = createYjsSessionAuthorityBinding(
       authority,
@@ -179,24 +190,30 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
   }
 
   subscribe(resourceId: ResourceId, listener: () => void): () => void {
-    return this.#store.subscribe(resourceId, listener)
+    const releaseStore = this.#store.subscribe(resourceId, listener)
+    const releaseSession = this.#sessionSubscriptions.retain(resourceId)
+    return () => {
+      releaseStore()
+      releaseSession()
+    }
   }
 
   async export(resourceId: ResourceId): Promise<ContentExportResult> {
-    this.#apply(resourceId, await this.backend.load(resourceId))
-    const state = this.get(resourceId)
+    const before = this.get(resourceId)
+    if (before.status === 'ready') return exportCanvasDocument(before.session.document)
+    const state = decodeCanvasSnapshot(await this.backend.load(resourceId))
+    const current = this.get(resourceId)
+    if (current !== before && current.status === 'ready') {
+      if (state.status === 'ready') state.document.destroy()
+      return exportCanvasDocument(current.session.document)
+    }
     if (state.status !== 'ready') {
-      if (state.status === 'initializing') return { status: 'loading' }
-      if (state.status === 'recovery_required') {
-        return { status: 'integrity_error', issue: state.issue }
-      }
       return state
     }
-    return {
-      status: 'ready',
-      bytes: encodeWizardCanvasDocument(state.session.document),
-      extension: 'wizardcanvas',
-      mediaType: 'application/vnd.wizard-archive.canvas',
+    try {
+      return exportCanvasDocument(state.document)
+    } finally {
+      state.document.destroy()
     }
   }
 
@@ -205,22 +222,24 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
 
   dispose(): void {
     this.#authorityBinding.dispose()
+    this.#sessionSubscriptions.dispose()
     this.#store.dispose()
-    this.#previewStore.dispose()
+    this.#snapshotStore.dispose()
     for (const session of this.#sessions.values()) session.dispose()
-    for (const document of this.#previewDocuments.values()) document.destroy()
+    for (const document of this.#snapshotDocuments.values()) document.destroy()
     this.#sessions.clear()
     this.#generations.clear()
-    this.#previewDocuments.clear()
+    this.#snapshotDocuments.clear()
   }
 
-  #apply(resourceId: ResourceId, snapshot: CanvasSnapshot): void {
-    const decoded = decodeCanvasPreviewSnapshot(snapshot)
-    if (decoded.status !== 'ready') {
-      this.#replaceState(resourceId, decoded)
+  #applySnapshot(resourceId: ResourceId): void {
+    const snapshot = this.#snapshotStore.get(resourceId)
+    if (snapshot.status !== 'ready') {
+      this.#replaceState(resourceId, snapshot)
       return
     }
-    const { document, generation, version } = decoded
+    const { generation, version } = snapshot
+    const document = cloneCanvasDocument(snapshot.document)
     this.#authorityBinding.reconcile(resourceId)
     if (this.#setRecovery(resourceId)) {
       document.destroy()
@@ -335,10 +354,6 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     this.#store.set(resourceId, { status: 'ready', session })
   }
 
-  #applyPreview(resourceId: ResourceId, snapshot: CanvasSnapshot): void {
-    this.#replacePreview(resourceId, decodeCanvasPreviewSnapshot(snapshot))
-  }
-
   #fail(resourceId: ResourceId, session: LiveCanvasSession, result: RejectedYjsSave): void {
     if (this.#sessions.get(resourceId) !== session) return
     this.#sessions.delete(resourceId)
@@ -355,11 +370,15 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
     this.#store.set(resourceId, state)
   }
 
-  #replacePreview(resourceId: ResourceId, state: CanvasPreviewState): void {
-    this.#previewDocuments.get(resourceId)?.destroy()
-    if (state.status === 'ready') this.#previewDocuments.set(resourceId, state.document)
-    else this.#previewDocuments.delete(resourceId)
-    this.#previewStore.set(resourceId, state)
+  #replaceSnapshot(resourceId: ResourceId, state: DecodedCanvasSnapshot): void {
+    this.#releaseSnapshot(resourceId)
+    if (state.status === 'ready') this.#snapshotDocuments.set(resourceId, state.document)
+    this.#snapshotStore.set(resourceId, state)
+  }
+
+  #releaseSnapshot(resourceId: ResourceId): void {
+    this.#snapshotDocuments.get(resourceId)?.destroy()
+    this.#snapshotDocuments.delete(resourceId)
   }
 
   #setRecovery(resourceId: ResourceId): boolean {
@@ -367,7 +386,7 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
       this.#store.set(resourceId, { status: 'loading' })
       void this.backend
         .load(resourceId)
-        .then((snapshot) => this.#apply(resourceId, snapshot))
+        .then((snapshot) => this.#replaceSnapshot(resourceId, decodeCanvasSnapshot(snapshot)))
         .catch(() =>
           this.#store.set(resourceId, {
             status: 'unavailable',
@@ -397,10 +416,11 @@ class LiveCanvasSessionSource implements CanvasSessionSource {
 }
 
 type DecodedCanvasSnapshot =
-  | Exclude<CanvasPreviewState, { status: 'ready' }>
-  | (Extract<CanvasPreviewState, { status: 'ready' }> & Readonly<{ generation: ContentGeneration }>)
+  | Exclude<CanvasContentSnapshotState, { status: 'ready' }>
+  | (Extract<CanvasContentSnapshotState, { status: 'ready' }> &
+      Readonly<{ generation: ContentGeneration }>)
 
-function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): DecodedCanvasSnapshot {
+function decodeCanvasSnapshot(snapshot: CanvasSnapshot): DecodedCanvasSnapshot {
   if (snapshot.status !== 'ready') {
     const pending = liveContentPendingState(snapshot)
     return pending.status === 'initializing' ? { status: 'loading' } : pending
@@ -419,6 +439,21 @@ function decodeCanvasPreviewSnapshot(snapshot: CanvasSnapshot): DecodedCanvasSna
   } catch {
     document.destroy()
     return { status: 'integrity_error', issue: 'content_corrupt' }
+  }
+}
+
+function cloneCanvasDocument(source: Y.Doc): Y.Doc {
+  const document = new Y.Doc()
+  Y.applyUpdate(document, Y.encodeStateAsUpdate(source))
+  return document
+}
+
+function exportCanvasDocument(document: Y.Doc): ContentExportResult {
+  return {
+    status: 'ready',
+    bytes: encodeWizardCanvasDocument(document),
+    extension: 'wizardcanvas',
+    mediaType: 'application/vnd.wizard-archive.canvas',
   }
 }
 

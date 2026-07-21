@@ -14,7 +14,7 @@ import type {
   CanvasSessionSource,
   CanvasSessionState,
   CanvasSession,
-  CanvasPreviewState,
+  CanvasContentSnapshotState,
   ContentExportResult,
   CreateCanvasResourceCommand,
   CreateFileResourceCommand,
@@ -27,7 +27,7 @@ import type {
   FileResourceContent,
   MapResourceContent,
   MapContentCommand,
-  MapPreviewState,
+  MapContentSnapshotState,
   MapSession,
   MapSessionSource,
   MapSessionState,
@@ -421,12 +421,12 @@ class InMemoryMapSessionSource
   implements MapSessionSource
 {
   readonly #sessions = new Map<ResourceId, InMemoryMapSession>()
-  readonly #previewStates = new Map<
+  readonly #snapshotStates = new Map<
     ResourceId,
-    Readonly<{ source: MapSessionState; state: MapPreviewState }>
+    Readonly<{ source: MapSessionState; state: MapContentSnapshotState }>
   >()
-  readonly previews = {
-    get: (resourceId: ResourceId) => this.#previewState(resourceId),
+  readonly snapshots = {
+    get: (resourceId: ResourceId) => this.#snapshotState(resourceId),
     subscribe: (resourceId: ResourceId, listener: () => void) =>
       this.subscribe(resourceId, listener),
   }
@@ -497,19 +497,19 @@ class InMemoryMapSessionSource
   override dispose(): void {
     for (const session of this.#sessions.values()) session.dispose()
     this.#sessions.clear()
-    this.#previewStates.clear()
+    this.#snapshotStates.clear()
     super.dispose()
   }
 
-  #previewState(resourceId: ResourceId): MapPreviewState {
+  #snapshotState(resourceId: ResourceId): MapContentSnapshotState {
     const source = this.get(resourceId)
-    const cached = this.#previewStates.get(resourceId)
+    const cached = this.#snapshotStates.get(resourceId)
     if (cached?.source === source) return cached.state
-    const state: MapPreviewState =
+    const state: MapContentSnapshotState =
       source.status === 'ready'
         ? {
             status: 'ready',
-            preview: {
+            snapshot: {
               content: source.session.content,
               version: source.session.version,
               loadImage: (layerId) => source.session.loadImage(layerId),
@@ -518,7 +518,7 @@ class InMemoryMapSessionSource
         : source.status === 'initializing'
           ? { status: 'loading' }
           : source
-    this.#previewStates.set(resourceId, { source, state })
+    this.#snapshotStates.set(resourceId, { source, state })
     return state
   }
 }
@@ -648,20 +648,20 @@ class InMemoryCanvasSessionSource
   extends InMemoryOwnedSessionSource<CanvasSessionState>
   implements CanvasSessionSource
 {
-  readonly #previews = new ResourceSessionStore<CanvasPreviewState>({ status: 'loading' })
+  readonly #snapshots = new ResourceSessionStore<CanvasContentSnapshotState>({ status: 'loading' })
   readonly #sessions = createInMemoryYjsSessionRegistry(
     createInMemoryCanvasSession,
     (resourceId, session: CanvasSession) => this.set(resourceId, { status: 'ready', session }),
   )
-  readonly previews = {
-    get: (resourceId: ResourceId) => this.#previews.get(resourceId),
+  readonly snapshots = {
+    get: (resourceId: ResourceId) => this.#snapshots.get(resourceId),
     subscribe: (resourceId: ResourceId, listener: () => void) =>
-      this.#previews.subscribe(resourceId, listener),
+      this.#snapshots.subscribe(resourceId, listener),
   }
 
   override set(resourceId: ResourceId, state: CanvasSessionState): void {
     super.set(resourceId, state)
-    this.#previews.set(
+    this.#snapshots.set(
       resourceId,
       state.status === 'ready'
         ? { status: 'ready', document: state.session.document, version: state.session.version }
@@ -700,7 +700,7 @@ class InMemoryCanvasSessionSource
 
   override readonly dispose = () =>
     this.#sessions.dispose(() => {
-      this.#previews.dispose()
+      this.#snapshots.dispose()
       super.dispose()
     })
 }

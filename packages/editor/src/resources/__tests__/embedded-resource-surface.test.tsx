@@ -81,8 +81,8 @@ describe('EmbeddedResourceSurface', () => {
           local: noteDocument,
         }),
         files: source({ status: 'ready', content: {}, version: {} }),
-        maps: { previews: source({ status: 'ready', preview: {} }) },
-        canvases: { previews: source({ status: 'ready', document: {}, version: {} }) },
+        maps: { snapshots: source({ status: 'ready', snapshot: {} }) },
+        canvases: { snapshots: source({ status: 'ready', document: {}, version: {} }) },
       },
     } as unknown as EditorRuntime
 

@@ -505,7 +505,7 @@ describe('LiveCanvasSessionSource', () => {
     await vi.waitFor(() => expect(disconnectPresence).toHaveBeenCalledOnce())
   })
 
-  it('projects readonly canvas previews without creating awareness or a mutable session', () => {
+  it('shares one decoded canvas snapshot without creating an edit session for embeds', () => {
     const campaignId = testDomainId('campaign', 'canvas-preview-campaign')
     const resourceId = testDomainId('resource', 'canvas-preview-resource')
     const nodeId = testDomainId('canvasNode', 'canvas-preview-node')
@@ -523,6 +523,10 @@ describe('LiveCanvasSessionSource', () => {
     })
     const update = Uint8Array.from(Y.encodeStateAsUpdate(document)).buffer
     document.destroy()
+    const watch = vi.fn((_resourceId, updateSnapshot: typeof apply) => {
+      apply = updateSnapshot
+      return () => undefined
+    })
     const source = createLiveCanvasSessionSource(
       campaignId,
       testDomainId('campaignMember', 'canvas-preview-member'),
@@ -534,18 +538,15 @@ describe('LiveCanvasSessionSource', () => {
         load: () => Promise.resolve({ status: 'integrity_error', issue: 'content_missing' }),
         refresh: vi.fn(),
         save: vi.fn(),
-        watch: (_resourceId, updatePreview) => {
-          apply = updatePreview
-          return () => undefined
-        },
+        watch,
       },
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
     )
 
-    source.previews.subscribe(resourceId, () => {})
+    source.snapshots.subscribe(resourceId, () => {})
     apply({ status: 'ready', generation, update, version })
 
-    const preview = source.previews.get(resourceId)
+    const preview = source.snapshots.get(resourceId)
     expect(preview.status).toBe('ready')
     if (preview.status !== 'ready') throw new Error('Expected ready canvas preview')
     expect(readCanvasDocumentContent(preview.document).nodes).toEqual([
@@ -553,6 +554,11 @@ describe('LiveCanvasSessionSource', () => {
     ])
     expect(source.get(resourceId)).toEqual({ status: 'loading' })
     expect(heartbeatPresence).not.toHaveBeenCalled()
+
+    const releaseSession = source.subscribe(resourceId, () => undefined)
+    expect(watch).toHaveBeenCalledOnce()
+    expect(source.get(resourceId)).toMatchObject({ status: 'ready' })
+    releaseSession()
 
     source.dispose()
   })

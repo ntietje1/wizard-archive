@@ -242,7 +242,7 @@ export interface MapSession {
   dispose(): void
 }
 
-export interface MapPreview {
+export interface MapContentSnapshot {
   readonly content: MapResourceContent
   readonly version: VersionStamp
   loadImage(layerId: string | null): Promise<ContentExportResult>
@@ -273,11 +273,11 @@ export type MapSessionState =
       readonly session: MapSession
     }
 
-export type MapPreviewState =
+export type MapContentSnapshotState =
   | ContentUnavailableState
   | {
       readonly status: 'ready'
-      readonly preview: MapPreview
+      readonly snapshot: MapContentSnapshot
     }
 
 export type CanvasSessionState =
@@ -288,7 +288,7 @@ export type CanvasSessionState =
       readonly session: CanvasSession
     }
 
-export type CanvasPreviewState =
+export type CanvasContentSnapshotState =
   | ContentUnavailableState
   | {
       readonly status: 'ready'
@@ -296,8 +296,8 @@ export type CanvasPreviewState =
       readonly version: VersionStamp
     }
 
-export interface CanvasPreviewSource {
-  get(resourceId: ResourceId): CanvasPreviewState
+export interface CanvasContentSnapshotSource {
+  get(resourceId: ResourceId): CanvasContentSnapshotState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
@@ -359,7 +359,7 @@ export interface FileContentSource {
 }
 
 export interface MapSessionSource {
-  readonly previews: MapPreviewSource
+  readonly snapshots: MapContentSnapshotSource
   get(resourceId: ResourceId): MapSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>
@@ -369,13 +369,13 @@ export interface MapSessionSource {
   dispose(): void
 }
 
-export interface MapPreviewSource {
-  get(resourceId: ResourceId): MapPreviewState
+export interface MapContentSnapshotSource {
+  get(resourceId: ResourceId): MapContentSnapshotState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
 export interface CanvasSessionSource {
-  readonly previews: CanvasPreviewSource
+  readonly snapshots: CanvasContentSnapshotSource
   get(resourceId: ResourceId): CanvasSessionState
   subscribe(resourceId: ResourceId, listener: () => void): () => void
   export(resourceId: ResourceId): ContentExportResult | Promise<ContentExportResult>

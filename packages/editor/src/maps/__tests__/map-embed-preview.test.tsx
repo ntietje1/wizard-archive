@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { MapEmbedPreview } from '../map-embed-preview'
-import type { MapPreview } from '../../resources/content-session-contract'
+import type { MapContentSnapshot } from '../../resources/content-session-contract'
 import { assertSha256Digest, initialVersion } from '../../resources/component-version'
 import { generateDomainId, DOMAIN_ID_KIND } from '../../resources/domain-id'
 
@@ -36,7 +36,7 @@ describe('MapEmbedPreview', () => {
   })
 })
 
-function mapPreview(loadImage: MapPreview['loadImage']): MapPreview {
+function mapPreview(loadImage: MapContentSnapshot['loadImage']): MapContentSnapshot {
   return {
     content: {
       image: {

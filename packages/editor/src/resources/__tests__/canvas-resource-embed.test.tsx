@@ -7,10 +7,10 @@ import { CanvasResourceEmbed } from '../workspace/canvas-resource-embed'
 import { createInMemoryNoteSession } from '../in-memory-note-session'
 import type {
   CanvasSessionSource,
-  CanvasPreviewSource,
+  CanvasContentSnapshotSource,
   FileContentSource,
   MapSessionSource,
-  MapPreviewSource,
+  MapContentSnapshotSource,
   NoteSessionSource,
 } from '../content-session-contract'
 import type { EditorRuntime } from '../editor-runtime-contract'
@@ -76,11 +76,11 @@ describe('CanvasResourceEmbed', () => {
     const canvases = {
       get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
       subscribe: () => () => {},
-    } satisfies CanvasPreviewSource
+    } satisfies CanvasContentSnapshotSource
     const maps = {
       get: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
       subscribe: () => () => {},
-    } satisfies MapPreviewSource
+    } satisfies MapContentSnapshotSource
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
     const note = {
       id: resourceId,
@@ -619,11 +619,11 @@ function previewRuntime({
   notes,
   scope,
 }: {
-  canvases: CanvasPreviewSource
+  canvases: CanvasContentSnapshotSource
   files?: FileContentSource
   index: EditorRuntime['resources']['index']
   loader: EditorRuntime['resources']['loader']
-  maps: MapPreviewSource
+  maps: MapContentSnapshotSource
   notes: NoteSessionSource
   scope: ResourceProjectionScope
 }): EditorRuntime {
@@ -650,14 +650,14 @@ function previewRuntime({
     } satisfies FileContentSource)
   const mapSessions = {
     ...unavailable,
-    previews: maps,
+    snapshots: maps,
     export: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
     create: () => Promise.reject(new Error('Not used')),
     dispose: () => {},
   } satisfies MapSessionSource
   const canvasSessions = {
     ...unavailable,
-    previews: canvases,
+    snapshots: canvases,
     export: () => ({ status: 'unavailable' as const, reason: 'capability_not_supported' as const }),
     create: () => Promise.reject(new Error('Not used')),
     dispose: () => {},

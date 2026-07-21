@@ -179,7 +179,7 @@ function pendingNoteSource(): NoteSessionSource {
 
 function pendingCanvasSource(): CanvasSessionSource {
   return {
-    previews: { get: () => ({ status: 'loading' }), subscribe: () => () => {} },
+    snapshots: { get: () => ({ status: 'loading' }), subscribe: () => () => {} },
     get: () => ({ status: 'loading' }),
     subscribe: () => () => {},
     export: () => ({ status: 'loading' }),
@@ -192,7 +192,7 @@ function pendingCanvasSource(): CanvasSessionSource {
 
 function pendingMapSource(): MapSessionSource {
   return {
-    previews: { get: () => ({ status: 'loading' }), subscribe: () => () => {} },
+    snapshots: { get: () => ({ status: 'loading' }), subscribe: () => () => {} },
     get: () => ({ status: 'loading' }),
     subscribe: () => () => {},
     export: () => ({ status: 'loading' }),

@@ -173,7 +173,7 @@ describe('LiveMapSessionSource', () => {
     source.dispose()
   })
 
-  it('shares a read-only preview watch and releases it with the last subscriber', () => {
+  it('shares one content watch between snapshots and editing sessions', () => {
     const resourceId = testDomainId('resource', 'map-preview')
     const campaignId = testDomainId('campaign', 'map-preview-campaign')
     const stopWatch = vi.fn()
@@ -198,8 +198,8 @@ describe('LiveMapSessionSource', () => {
       () => ({ abandon: vi.fn(), completed: vi.fn() }),
     )
 
-    const releaseFirst = source.previews.subscribe(resourceId, () => undefined)
-    const releaseSecond = source.previews.subscribe(resourceId, () => undefined)
+    const releaseFirst = source.snapshots.subscribe(resourceId, () => undefined)
+    const releaseSecond = source.snapshots.subscribe(resourceId, () => undefined)
     expect(watch).toHaveBeenCalledOnce()
 
     apply({
@@ -211,17 +211,23 @@ describe('LiveMapSessionSource', () => {
         digest: 'a'.repeat(64),
       },
     })
-    const state = source.previews.get(resourceId)
+    const state = source.snapshots.get(resourceId)
     expect(state.status).toBe('ready')
-    expect(state.status === 'ready' && 'execute' in state.preview).toBe(false)
+    expect(state.status === 'ready' && 'execute' in state.snapshot).toBe(false)
     expect(source.get(resourceId)).toEqual({ status: 'loading' })
+
+    const releaseSession = source.subscribe(resourceId, () => undefined)
+    expect(watch).toHaveBeenCalledOnce()
+    expect(source.get(resourceId)).toMatchObject({ status: 'ready' })
 
     releaseFirst()
     expect(stopWatch).not.toHaveBeenCalled()
     releaseSecond()
+    expect(stopWatch).not.toHaveBeenCalled()
+    releaseSession()
     expect(stopWatch).toHaveBeenCalledOnce()
 
-    const releaseThird = source.previews.subscribe(resourceId, () => undefined)
+    const releaseThird = source.snapshots.subscribe(resourceId, () => undefined)
     expect(watch).toHaveBeenCalledTimes(2)
     releaseThird()
     expect(stopWatch).toHaveBeenCalledTimes(2)
