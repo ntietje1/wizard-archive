@@ -1012,12 +1012,15 @@ function ResizableWorkspacePanel({
   }
 
   const startResize = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
     event.preventDefault()
     const startX = event.clientX
     const startSize = panelElement.current?.getBoundingClientRect().width ?? size
     activeResize.current?.abort()
     const controller = new AbortController()
     activeResize.current = controller
+    const resizeHandle = event.currentTarget
+    resizeHandle.setAttribute('data-resizing', 'true')
     resize(startSize)
     const move = (moveEvent: globalThis.PointerEvent) => {
       const delta = moveEvent.clientX - startX
@@ -1026,6 +1029,7 @@ function ResizableWorkspacePanel({
     const finish = () => {
       controller.abort()
       if (activeResize.current === controller) activeResize.current = null
+      resizeHandle.removeAttribute('data-resizing')
       onCommit(draggedSize.current)
     }
     window.addEventListener('pointermove', move, { signal: controller.signal })
@@ -1036,7 +1040,7 @@ function ResizableWorkspacePanel({
   return (
     <div
       ref={panelElement}
-      className={`relative z-20 h-full min-h-0 shrink-0 ${panel === 'left' ? 'border-r' : 'border-l'} border-border max-md:absolute max-md:inset-y-0 ${panel === 'left' ? 'max-md:left-0' : 'max-md:right-0'}`}
+      className={`relative z-20 h-full min-h-0 shrink-0 max-md:absolute max-md:inset-y-0 ${panel === 'left' ? 'max-md:left-0' : 'max-md:right-0'}`}
       style={{ width: size }}
     >
       <div ref={contentElement} className="h-full overflow-hidden" style={{ width: size }}>
@@ -1049,7 +1053,7 @@ function ResizableWorkspacePanel({
         aria-valuemax={600}
         aria-valuemin={200}
         aria-valuenow={size}
-        className={`absolute inset-y-0 z-30 w-1 cursor-col-resize touch-none ${panel === 'left' ? '-right-0.5' : '-left-0.5'}`}
+        className={`absolute inset-y-0 z-30 w-px cursor-col-resize touch-none bg-border transition-[width,background-color] duration-100 ease-out hover:w-1 hover:bg-border focus-visible:w-1 focus-visible:bg-primary focus-visible:outline-none data-[resizing=true]:w-1 data-[resizing=true]:bg-primary ${panel === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'}`}
         tabIndex={0}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return

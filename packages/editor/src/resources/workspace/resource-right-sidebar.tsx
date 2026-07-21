@@ -41,7 +41,7 @@ export function ResourceRightSidebar({
   const selected = panels.find((panel) => panel.id === activePanel && panel.available) ?? panels[0]
   return (
     <aside aria-label="Resource panel" className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex h-8 shrink-0 items-center border-b border-border px-1">
+      <div className="flex h-9 shrink-0 items-center border-b border-border px-1">
         <div className="flex items-center gap-0.5">
           {panels.map((panel) => (
             <button

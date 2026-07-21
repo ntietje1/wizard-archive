@@ -61,7 +61,7 @@ export function ResourceTopbar({
   const rightSidebarPanels = resourceRightSidebarPanels(resource, runtime)
 
   return (
-    <header className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border px-1">
+    <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-1">
       {leftSidebarAvailable && !leftSidebarVisible && (
         <TopbarIcon label="Open sidebar" onClick={onOpenLeftSidebar}>
           <PanelLeftOpen className="size-4" />
