@@ -29,20 +29,23 @@ type WorkspaceResourceDropPlan =
     }>
   | Readonly<{ status: 'rejected'; label: string }>
 
+type CollectionDropContext = Readonly<{
+  snapshot: WorkspaceResourceIndexSnapshot
+  resourceIds: ReadonlyArray<ResourceId>
+  destinationParentId: ResourceId | null
+  resourceCount: number
+  destinationLabel: string
+}>
+
 export function planWorkspaceResourceDrop(
   snapshot: WorkspaceResourceIndexSnapshot,
   drag: WorkspaceResourceDragPayload,
   target: WorkspaceResourceDropTarget,
   copy: boolean,
 ): WorkspaceResourceDropPlan {
-  const resources: Array<AuthorizedResourceSummary> = []
-  for (const resourceId of drag.resourceIds) {
-    const resource = snapshot.lookup(resourceId)
-    if (resource.state !== 'known') {
-      return { status: 'rejected', label: 'Resource details are still loading' }
-    }
-    resources.push(resource.value)
-  }
+  const selection = resolveDraggedResources(snapshot, drag.resourceIds)
+  if (selection.status === 'rejected') return selection
+  const { resources } = selection
   if (resources.some((resource) => resource.permission !== 'edit')) {
     return { status: 'rejected', label: 'You do not have permission to move this item' }
   }
@@ -52,39 +55,21 @@ export function planWorkspaceResourceDrop(
   }
 
   if (target.type === 'trash') {
-    const command = { type: 'trash' as const, resourceIds: drag.resourceIds }
-    const rejection = rejectedStructurePlan(
-      planProjectedResourceStructureCommand(snapshot, command),
-      'Already in Trash',
-    )
-    if (rejection) return rejection
-    return {
-      status: 'accepted',
-      effect: 'trash',
-      label: `Trash ${itemCountLabel(resources.length)}`,
-      command,
-    }
+    return planTrashDrop(snapshot, drag.resourceIds, resources.length)
   }
 
   const destination = validateDestination(snapshot, target.parentId)
   if (destination) return destination
   const destinationLabel = quotedDestination(target.title)
+  const context: CollectionDropContext = {
+    snapshot,
+    resourceIds: drag.resourceIds,
+    destinationParentId: target.parentId,
+    resourceCount: resources.length,
+    destinationLabel,
+  }
   if (lifecycle === 'trashed') {
-    const command = {
-      type: 'restore' as const,
-      resourceIds: drag.resourceIds,
-      destination: target.parentId,
-    }
-    const rejection = rejectedStructurePlan(
-      planProjectedResourceStructureCommand(snapshot, command),
-    )
-    if (rejection) return rejection
-    return {
-      status: 'accepted',
-      effect: 'restore',
-      label: `Restore ${itemCountLabel(resources.length)} to ${destinationLabel}`,
-      command,
-    }
+    return planRestoreDrop(context)
   }
   if (copy) {
     return {
@@ -98,10 +83,78 @@ export function planWorkspaceResourceDrop(
       },
     }
   }
+  return planMoveDrop(context)
+}
+
+function resolveDraggedResources(
+  snapshot: WorkspaceResourceIndexSnapshot,
+  resourceIds: ReadonlyArray<ResourceId>,
+):
+  | Readonly<{ status: 'resolved'; resources: ReadonlyArray<AuthorizedResourceSummary> }>
+  | Extract<WorkspaceResourceDropPlan, { status: 'rejected' }> {
+  const resources: Array<AuthorizedResourceSummary> = []
+  for (const resourceId of resourceIds) {
+    const resource = snapshot.lookup(resourceId)
+    if (resource.state !== 'known') {
+      return { status: 'rejected', label: 'Resource details are still loading' }
+    }
+    resources.push(resource.value)
+  }
+  return { status: 'resolved', resources }
+}
+
+function planTrashDrop(
+  snapshot: WorkspaceResourceIndexSnapshot,
+  resourceIds: ReadonlyArray<ResourceId>,
+  resourceCount: number,
+): WorkspaceResourceDropPlan {
+  const command = { type: 'trash' as const, resourceIds }
+  const rejection = rejectedStructurePlan(
+    planProjectedResourceStructureCommand(snapshot, command),
+    'Already in Trash',
+  )
+  if (rejection) return rejection
+  return {
+    status: 'accepted',
+    effect: 'trash',
+    label: `Trash ${itemCountLabel(resourceCount)}`,
+    command,
+  }
+}
+
+function planRestoreDrop({
+  destinationLabel,
+  destinationParentId,
+  resourceCount,
+  resourceIds,
+  snapshot,
+}: CollectionDropContext): WorkspaceResourceDropPlan {
+  const command = {
+    type: 'restore' as const,
+    resourceIds,
+    destination: destinationParentId,
+  }
+  const rejection = rejectedStructurePlan(planProjectedResourceStructureCommand(snapshot, command))
+  if (rejection) return rejection
+  return {
+    status: 'accepted',
+    effect: 'restore',
+    label: `Restore ${itemCountLabel(resourceCount)} to ${destinationLabel}`,
+    command,
+  }
+}
+
+function planMoveDrop({
+  destinationLabel,
+  destinationParentId,
+  resourceCount,
+  resourceIds,
+  snapshot,
+}: CollectionDropContext): WorkspaceResourceDropPlan {
   const command = {
     type: 'move' as const,
-    resourceIds: drag.resourceIds,
-    destinationParentId: target.parentId,
+    resourceIds,
+    destinationParentId,
   }
   const structurePlan = planProjectedResourceStructureCommand(snapshot, command)
   const rejection = rejectedStructurePlan(structurePlan)
@@ -117,7 +170,7 @@ export function planWorkspaceResourceDrop(
   return {
     status: 'accepted',
     effect: 'move',
-    label: `Move ${itemCountLabel(resources.length)} to ${destinationLabel}`,
+    label: `Move ${itemCountLabel(resourceCount)} to ${destinationLabel}`,
     command,
   }
 }
