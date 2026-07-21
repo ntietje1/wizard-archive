@@ -894,7 +894,9 @@ describe('ResourceShell', () => {
     fireEvent.dragStart(row, { clientX: 20, clientY: 30, dataTransfer })
 
     expect(dataTransfer.setDragImage).toHaveBeenCalledOnce()
-    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(resource.title)
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(
+      `${resource.title}Move item to “${resource.title}”`,
+    )
 
     const rootDropZone = screen.getByLabelText('resources resource drop zone')
     fireEvent(
@@ -911,11 +913,7 @@ describe('ResourceShell', () => {
     expect(screen.getByTestId('resource-drag-overlay').style.transform).toBe(
       'translate3d(88px, 98px, 0)',
     )
-    await waitFor(() =>
-      expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(
-        'Move item to “DM view”',
-      ),
-    )
+    expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent('Move item to “DM view”')
 
     fireEvent.dragEnd(row, { dataTransfer })
     expect(screen.getByTestId('resource-drag-overlay')).toHaveClass('hidden')

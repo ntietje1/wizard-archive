@@ -24,6 +24,7 @@ type WorkspaceDropEvent = Pick<
   | 'altKey'
   | 'ctrlKey'
   | 'currentTarget'
+  | 'defaultPrevented'
   | 'metaKey'
   | 'preventDefault'
   | 'stopPropagation'
@@ -111,11 +112,11 @@ export function workspaceResourceDropTargetProps({
 }
 
 export function allowWorkspaceResourceDrop(event: WorkspaceDropEvent) {
+  if (event.defaultPrevented) return
   const resourceDrag = hasWorkspaceResourceDrag(event.dataTransfer)
   const fileDrop = hasBrowserPlainTransfer(event.dataTransfer)
   if (!resourceDrag && !fileDrop) return
   event.preventDefault()
-  event.stopPropagation()
   clearWorkspaceResourceDropTargets(event.currentTarget.ownerDocument)
   if (fileDrop && browserPlainTransferBlocked(event)) {
     event.dataTransfer.dropEffect = 'none'
@@ -186,8 +187,8 @@ export function markWorkspaceResourceSurfaceDrop(
   event: WorkspaceDropEvent,
   feedback: WorkspaceResourceSurfaceDropFeedback,
 ) {
+  if (event.defaultPrevented) return
   event.preventDefault()
-  event.stopPropagation()
   clearWorkspaceResourceDropTargets(event.currentTarget.ownerDocument)
   const accepted = feedback.status === 'accepted'
   event.dataTransfer.dropEffect = accepted ? 'copy' : 'none'

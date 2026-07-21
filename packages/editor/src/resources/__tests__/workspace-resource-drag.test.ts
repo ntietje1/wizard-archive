@@ -17,8 +17,25 @@ describe('workspace external resource drops', () => {
     expect(previous).not.toHaveAttribute('data-drop-operation')
     expect(current).toHaveAttribute('data-drop-target', 'true')
     expect(current).toHaveAttribute('data-drop-operation', 'copy')
+    expect(drop.stopPropagation).not.toHaveBeenCalled()
     previous.remove()
     current.remove()
+  })
+
+  it('preserves the nearest drop surface claim while the event bubbles', () => {
+    const parent = document.createElement('div')
+    const child = document.createElement('div')
+    child.dataset.dropTarget = 'true'
+    child.dataset.dropOperation = 'move'
+    parent.append(child)
+    document.body.append(parent)
+    const drop = dropEvent(parent, child, browserDataTransfer())
+
+    allowWorkspaceResourceDrop({ ...drop.event, defaultPrevented: true })
+
+    expect(child).toHaveAttribute('data-drop-target', 'true')
+    expect(parent).not.toHaveAttribute('data-drop-target')
+    parent.remove()
   })
 
   it('routes browser files to the destination through the workspace transfer action', async () => {
@@ -90,6 +107,7 @@ function dropEvent(
       altKey: false,
       ctrlKey: false,
       currentTarget,
+      defaultPrevented: false,
       dataTransfer,
       metaKey: false,
       preventDefault,

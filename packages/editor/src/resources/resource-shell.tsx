@@ -22,7 +22,10 @@ import {
   readWorkspaceResourceDrag,
 } from './workspace-resource-drag'
 import { planWorkspaceResourceDrop } from './workspace-resource-drop-plan'
-import type { WorkspaceResourceDropTarget } from './workspace-resource-drop-plan'
+import type {
+  WorkspaceResourceDragPayload,
+  WorkspaceResourceDropTarget,
+} from './workspace-resource-drop-plan'
 import { useEnsureResource, useEnsureResourceCollection } from './workspace/resource-loading'
 import { ResourceContextMenu } from './workspace/resource-context-menu'
 import type { ResourceContextMenuRequest } from './workspace/resource-context-menu-request'
@@ -202,9 +205,8 @@ export function ResourceShell({
       aria-busy="false"
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
       onDragEnd={resourceDrag.end}
-      onDragEnterCapture={resourceDrag.updateEffect}
       onDragLeave={resourceDrag.leave}
-      onDragOverCapture={resourceDrag.updateEffect}
+      onDragOver={resourceDrag.updateEffect}
       onDragStart={resourceDrag.begin}
       onDropCapture={resourceDrag.end}
       onKeyDown={handleWorkspaceKeyDown}
@@ -576,40 +578,32 @@ function useWorkspaceResourceDragOverlay(
     }
     dragging.current = true
     showWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
-    lastFeedbackKey.current = null
+    const feedback = workspaceDragFeedback(
+      event.target instanceof Element ? event.target : null,
+      snapshot,
+      workspaceName,
+      drag,
+      event.altKey || event.ctrlKey || event.metaKey,
+    )
+    lastFeedbackKey.current = `${feedback.blocked}:${feedback.label}`
     setState({
       count: drag.resourceIds.length,
-      feedback: null,
+      feedback,
       resource: source.value,
     })
   }
   const updateEffect = (event: DragEvent<HTMLElement>) => {
     const target = event.target instanceof Element ? event.target : null
     const copy = event.altKey || event.ctrlKey || event.metaKey
-    queueMicrotask(() => {
-      const activeTarget = target?.closest<HTMLElement>('[data-drop-target=true]') ?? null
-      const destination = workspaceDropTarget(activeTarget, snapshot, workspaceName)
-      const drag = readWorkspaceResourceDrag(event.dataTransfer)
-      const plan =
-        drag && destination ? planWorkspaceResourceDrop(snapshot, drag, destination, copy) : null
-      const feedback = activeTarget?.dataset.dropFeedback
-        ? {
-            blocked: activeTarget.dataset.dropBlocked === 'true',
-            label: activeTarget.dataset.dropFeedback,
-          }
-        : plan
-          ? {
-              blocked: plan.status === 'rejected',
-              label: plan.label,
-            }
-          : { blocked: true, label: 'Cannot drop here' }
-      const feedbackKey = `${feedback.blocked}:${feedback.label}`
-      if (lastFeedbackKey.current === feedbackKey) return
-      lastFeedbackKey.current = feedbackKey
-      setState((current) => {
-        if (!current) return null
-        return { ...current, feedback }
-      })
+    const drag = readWorkspaceResourceDrag(event.dataTransfer)
+    if (!drag) return
+    const feedback = workspaceDragFeedback(target, snapshot, workspaceName, drag, copy)
+    const feedbackKey = `${feedback.blocked}:${feedback.label}`
+    if (lastFeedbackKey.current === feedbackKey) return
+    lastFeedbackKey.current = feedbackKey
+    setState((current) => {
+      if (!current) return null
+      return { ...current, feedback }
     })
   }
   const end = (event: DragEvent<HTMLElement>) => {
@@ -631,6 +625,29 @@ function useWorkspaceResourceDragOverlay(
     state,
     updateEffect,
   }
+}
+
+function workspaceDragFeedback(
+  element: Element | null,
+  snapshot: WorkspaceResourceIndexSnapshot,
+  workspaceName: string,
+  drag: WorkspaceResourceDragPayload,
+  copy: boolean,
+) {
+  const activeTarget = element?.closest<HTMLElement>('[data-drop-target=true]') ?? null
+  const target =
+    activeTarget ?? element?.closest<HTMLElement>('[data-workspace-drop-target]') ?? null
+  if (activeTarget?.dataset.dropFeedback) {
+    return {
+      blocked: activeTarget.dataset.dropBlocked === 'true',
+      label: activeTarget.dataset.dropFeedback,
+    }
+  }
+  const destination = workspaceDropTarget(target, snapshot, workspaceName)
+  const plan = destination ? planWorkspaceResourceDrop(snapshot, drag, destination, copy) : null
+  return plan
+    ? { blocked: plan.status === 'rejected', label: plan.label }
+    : { blocked: true, label: 'Cannot drop here' }
 }
 
 function workspaceDropTarget(

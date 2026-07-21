@@ -6,6 +6,40 @@ import {
 } from './helpers/editor-resource-helpers'
 
 test.describe('editor shell', () => {
+  test('shows valid drop feedback on the first drag movement', async ({ page }) => {
+    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
+    const source = sidebarResource(page, 'Blue-glass Invoice')
+    const destination = page.getByLabel('resources resource drop zone')
+    await expect(source).toBeVisible()
+    await expect(destination).toBeVisible()
+    const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+
+    await source.dispatchEvent('dragstart', { clientX: 20, clientY: 30, dataTransfer })
+    const overlay = page.getByTestId('resource-drag-overlay')
+    await expect(overlay).toContainText('Move item to “Demo workspace”')
+    await page.evaluate(() => {
+      const element = document.querySelector('[data-testid="resource-drag-overlay"]')
+      if (!element) throw new Error('Expected resource drag overlay')
+      const feedbackHistory: Array<string> = []
+      const record = () => feedbackHistory.push(element.textContent ?? '')
+      new MutationObserver(record).observe(element, { childList: true, subtree: true })
+      ;(
+        window as unknown as { resourceDragFeedbackHistory: Array<string> }
+      ).resourceDragFeedbackHistory = feedbackHistory
+    })
+
+    await destination.dispatchEvent('dragover', { clientX: 80, clientY: 90, dataTransfer })
+    await expect(overlay).toContainText('Move item to “Demo workspace”')
+    const feedbackHistory = await page.evaluate(
+      () =>
+        (window as unknown as { resourceDragFeedbackHistory: Array<string> })
+          .resourceDragFeedbackHistory,
+    )
+    expect(feedbackHistory.every((feedback) => !feedback.includes('Cannot drop here'))).toBe(true)
+
+    await source.dispatchEvent('dragend', { dataTransfer })
+  })
+
   test('navigates resources and preserves workspace controls', async ({ page }) => {
     await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
 
