@@ -3,9 +3,7 @@ import { useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
-import { validateFileUploadSize } from '../../../../shared/storage/validation'
 import type {
-  MapContentMutationResult,
   MapImageAttachment,
   MapResourceContent,
   MapSession,
@@ -14,9 +12,6 @@ import type { MapPinId, ResourceId } from '../resources/domain-id'
 import type { AuthoredDestination } from '../resources/authored-destination-contract'
 import type { AuthorizedResourceSummary } from '../resources/resource-index-contract'
 import { MapPinSurface } from './map-pins'
-import { useAssetReplacement } from '../resources/asset-replacement'
-import type { AssetReplacementController } from '../resources/asset-replacement'
-import { AssetReplacementButton } from '../resources/asset-replacement-button'
 import { useMapImageUrl } from './use-map-image-url'
 import { resolveMapFocus } from './map-focus'
 import type { MapFocus } from './map-focus'
@@ -39,7 +34,6 @@ export function MapViewer({
   title: string
 }) {
   const layer = useSelectedMapLayer(session, focusedPinId ?? null)
-  const replacement = useMapImageReplacement(session, mapResourceId, layer.id)
   const transform = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
@@ -47,31 +41,17 @@ export function MapViewer({
   return (
     <div
       aria-label="Map content"
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/20 data-[map-drag-active=true]:ring-2 data-[map-drag-active=true]:ring-inset data-[map-drag-active=true]:ring-ring"
-      data-map-drag-active={replacement.dragActive}
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/20"
       data-workspace-mode={canEdit ? 'editor' : 'viewer'}
       onClick={() => setMenu(null)}
-      onDragLeave={canEdit ? replacement.onDragLeave : undefined}
-      onDragOver={canEdit ? replacement.onDragOver : undefined}
-      onDrop={canEdit ? replacement.onDrop : undefined}
     >
-      <MapViewerHeader
-        canEdit={canEdit}
+      <MapFloatingControls
         image={layer.image}
         layerId={layer.id}
-        layerName={layer.name}
         layers={session.content.layers}
         onSelectLayer={layer.select}
-        replacement={replacement}
-        title={title}
         transform={transform}
       />
-      {!canEdit && (
-        <div className="shrink-0 border-b bg-background px-3 py-2 text-center text-sm text-muted-foreground">
-          Viewing map — changes are disabled
-        </div>
-      )}
-      <MapReplacementStatus replacement={replacement} />
       <MapImageCanvas
         image={layer.image}
         imageRef={imageRef}
@@ -79,7 +59,6 @@ export function MapViewer({
         layerId={layer.id}
         mapResourceId={mapResourceId}
         openDestination={openDestination}
-        replacement={replacement}
         session={session}
         resolveResource={resolveResource}
         title={title}
@@ -90,13 +69,7 @@ export function MapViewer({
           setMenu({ x: event.clientX, y: event.clientY })
         }}
       />
-      <MapImageActionsMenu
-        canEdit={canEdit}
-        menu={menu}
-        onClose={() => setMenu(null)}
-        replacement={replacement}
-        transform={transform}
-      />
+      <MapImageActionsMenu menu={menu} onClose={() => setMenu(null)} transform={transform} />
     </div>
   )
 }
@@ -118,7 +91,6 @@ function useSelectedMapLayer(session: MapSession, focusedPinId: MapPinId | null)
   return {
     id,
     image: selectedLayer?.image ?? session.content.image,
-    name: selectedLayer?.name ?? 'Base map',
     select: (layerId: string | null) => setSelected({ focus, session, layerId }),
   }
 }
@@ -149,83 +121,79 @@ function mapFocusesEqual(left: MapFocus, right: MapFocus) {
   }
 }
 
-function MapViewerHeader({
-  canEdit,
+function MapFloatingControls({
   image,
   layerId,
-  layerName,
   layers,
   onSelectLayer,
-  replacement,
-  title,
   transform,
 }: {
-  canEdit: boolean
   image: MapImageAttachment
   layerId: string | null
-  layerName: string
   layers: MapResourceContent['layers']
   onSelectLayer: (layerId: string | null) => void
-  replacement: MapImageReplacementController
-  title: string
   transform: React.RefObject<ReactZoomPanPinchRef | null>
 }) {
   return (
-    <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{layerName}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {layers.length > 0 && (
-          <select
-            aria-label="Map layer"
-            className="h-8 rounded-md border border-border bg-background px-2 text-sm"
-            value={layerId ?? ''}
-            onChange={(event) => onSelectLayer(event.currentTarget.value || null)}
-          >
-            <option value="">Base map</option>
-            {layers.map((layer) => (
-              <option key={layer.id} value={layer.id}>
-                {layer.name}
-              </option>
-            ))}
-          </select>
-        )}
-        <MapTransformControls transform={transform} />
-        {canEdit && image.status === 'attached' && (
-          <MapImageControl compact replacement={replacement} />
-        )}
-      </div>
-    </header>
+    <>
+      {layers.length > 0 && (
+        <div
+          aria-label="Map layers"
+          className="absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 overflow-x-auto rounded-md border border-border bg-background/95 p-1 shadow-sm"
+          role="toolbar"
+        >
+          <MapLayerButton
+            active={layerId === null}
+            label="Base map"
+            onSelect={() => onSelectLayer(null)}
+          />
+          {layers.map((layer) => (
+            <MapLayerButton
+              active={layer.id === layerId}
+              key={layer.id}
+              label={layer.name}
+              onSelect={() => onSelectLayer(layer.id)}
+            />
+          ))}
+        </div>
+      )}
+      {image.status === 'attached' && (
+        <div className="absolute right-3 top-3 z-10">
+          <MapTransformControls transform={transform} />
+        </div>
+      )}
+    </>
   )
 }
 
-function MapReplacementStatus({ replacement }: { replacement: MapImageReplacementController }) {
-  if (!replacement.message) return null
+function MapLayerButton({
+  active,
+  label,
+  onSelect,
+}: {
+  active: boolean
+  label: string
+  onSelect: () => void
+}) {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-3 py-2 text-sm">
-      <p role={replacement.failed ? 'alert' : 'status'}>{replacement.message}</p>
-      {replacement.canRetry && (
-        <button type="button" className="underline" onClick={replacement.retry}>
-          Try again
-        </button>
-      )}
-    </div>
+    <button
+      type="button"
+      aria-pressed={active}
+      className="h-7 shrink-0 rounded px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground"
+      onClick={onSelect}
+    >
+      {label}
+    </button>
   )
 }
 
 function MapImageActionsMenu({
-  canEdit,
   menu,
   onClose,
-  replacement,
   transform,
 }: {
-  canEdit: boolean
   menu: { x: number; y: number } | null
   onClose: () => void
-  replacement: MapImageReplacementController
   transform: React.RefObject<ReactZoomPanPinchRef | null>
 }) {
   if (!menu) return null
@@ -248,19 +216,6 @@ function MapImageActionsMenu({
       >
         Fit map
       </button>
-      {canEdit && (
-        <button
-          type="button"
-          role="menuitem"
-          className="block w-full rounded-sm px-2 py-1.5 text-left hover:bg-muted"
-          onClick={() => {
-            replacement.open()
-            onClose()
-          }}
-        >
-          Replace image
-        </button>
-      )}
     </div>
   )
 }
@@ -274,7 +229,6 @@ function MapImageCanvas({
   mapResourceId,
   onContextMenu,
   openDestination,
-  replacement,
   session,
   resolveResource,
   title,
@@ -288,7 +242,6 @@ function MapImageCanvas({
   mapResourceId: ResourceId
   onContextMenu: (event: ReactMouseEvent) => void
   openDestination: (destination: AuthoredDestination) => void
-  replacement: MapImageReplacementController
   session: MapSession
   resolveResource: (resourceId: ResourceId) => AuthorizedResourceSummary | null
   title: string
@@ -300,7 +253,6 @@ function MapImageCanvas({
       <MapState
         title="No map image"
         description={canEdit ? 'Upload an image to begin placing map content.' : undefined}
-        action={canEdit ? <MapImageControl replacement={replacement} /> : undefined}
       />
     )
   }
@@ -388,96 +340,6 @@ function MapTransformControls({
       </button>
     </div>
   )
-}
-
-type MapImageReplacementController = AssetReplacementController
-
-function useMapImageReplacement(
-  session: MapSession,
-  mapResourceId: ResourceId,
-  layerId: string | null,
-): MapImageReplacementController {
-  return useAssetReplacement({
-    target: {
-      owner: session,
-      key: JSON.stringify([
-        mapResourceId,
-        layerId,
-        session.version.revision,
-        session.version.digest,
-      ]),
-      value: { session, mapResourceId, layerId, expectedVersion: session.version },
-    },
-    replace: async (target, source) =>
-      await target.session.replaceImage(target.layerId, target.expectedVersion, source),
-    validate: (file) => {
-      const result = validateFileUploadSize(file.size)
-      return result.valid ? null : result.error
-    },
-    message: mapImageMutationMessage,
-    retryable: (result) => result.status === 'retryable',
-    readingMessage: 'Reading map image…',
-    uploadingMessage: 'Uploading map image…',
-    readFailureMessage: 'The selected image could not be read.',
-    responseLostMessage: 'The map image replacement could not be confirmed.',
-  })
-}
-
-function MapImageControl({
-  compact = false,
-  replacement,
-}: {
-  compact?: boolean
-  replacement: MapImageReplacementController
-}) {
-  return (
-    <div className={compact ? '' : 'mt-4 flex flex-col items-center gap-2'}>
-      <AssetReplacementButton
-        ariaLabel="Choose map image"
-        compact={compact}
-        compactLabel="Replace image"
-        fullLabel="Choose image"
-        pendingLabel="Uploading…"
-        replacement={replacement}
-      />
-      {!compact && (
-        <p className="text-xs text-muted-foreground">
-          {replacement.dragActive ? 'Drop the image here' : 'Or drag and drop an image here'}
-        </p>
-      )}
-    </div>
-  )
-}
-
-function mapImageMutationMessage(
-  result: Exclude<MapContentMutationResult, { status: 'completed' }>,
-) {
-  switch (result.reason) {
-    case 'content_initializing':
-      return 'The map is still being prepared.'
-    case 'response_lost':
-      return 'The map image replacement could not be confirmed.'
-    case 'version_conflict':
-      return 'This map changed while the image was uploading.'
-    case 'layer_missing':
-      return 'The selected map layer no longer exists.'
-    case 'content_corrupt':
-    case 'content_missing':
-      return 'The existing map content is unavailable.'
-    case 'invalid_command':
-      return 'The map change was invalid.'
-    case 'operation_id_reused':
-      return 'The map change could not be safely retried.'
-    case 'pin_missing':
-      return 'The selected map pin no longer exists.'
-    case 'resource_missing':
-    case 'unauthorized':
-      return 'You can no longer edit this map.'
-    case 'target_missing':
-      return 'The pinned resource is unavailable.'
-    case 'version_exhausted':
-      return 'This map cannot accept another revision.'
-  }
 }
 
 function MapState({

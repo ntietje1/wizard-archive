@@ -264,7 +264,9 @@ function NoteViewport({
   return (
     <div
       className="flex min-h-0 flex-1"
-      onContextMenu={(event) => onOpenContextMenu(resourceContextMenuRequest(event, resource))}
+      onContextMenu={(event) =>
+        onOpenContextMenu(resourceContextMenuRequest(event, resource, 'workspace'))
+      }
     >
       <NoteSessionEditor
         blockAccess={

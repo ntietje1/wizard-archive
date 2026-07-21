@@ -56,12 +56,14 @@ function beginWorkspaceResourceDrag(
 
 export function workspaceResourceInteractionProps({
   canEdit,
+  contextMenuOrigin,
   onOpenContextMenu,
   onSelectionChange,
   resource,
   selection,
 }: {
   canEdit: boolean
+  contextMenuOrigin: ResourceContextMenuRequest['origin']
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   resource: AuthorizedResourceSummary
@@ -69,7 +71,7 @@ export function workspaceResourceInteractionProps({
 }) {
   const interaction = {
     onContextMenu: (event: MouseEvent<HTMLElement>) =>
-      onOpenContextMenu(resourceContextMenuRequest(event, resource)),
+      onOpenContextMenu(resourceContextMenuRequest(event, resource, contextMenuOrigin)),
     onFocus: () => onSelectionChange({ type: 'focus' as const, resourceId: resource.id }),
   }
   if (!canEdit) return { ...interaction, draggable: false as const }

@@ -14,6 +14,7 @@ import type { WorkspaceActions } from './resource-operations'
 import { ResourceSharingControl } from './resource-sharing-control'
 import { ResourceViewAsMenu } from '../resource-view-as-menu'
 import { ResourceContextMenu } from './resource-context-menu'
+import { ResourceRenameInput } from './resource-rename-input'
 import { resourceRightSidebarPanels } from './resource-right-sidebar-panels'
 import type { ResourceRightSidebarPanel } from './resource-right-sidebar-panels'
 
@@ -80,8 +81,10 @@ export function ResourceTopbar({
           </span>
         ))}
         {editing ? (
-          <ResourceTitleInput
+          <ResourceRenameInput
             actions={actions}
+            ariaLabel="Resource title"
+            className="h-7 min-w-32 flex-1 rounded border border-input bg-background px-2 text-sm"
             resource={resource}
             onComplete={() => setEditing(false)}
           />
@@ -156,56 +159,18 @@ export function ResourceTopbar({
             activePanel={activeRightPanel}
             canEdit={canEdit}
             panels={rightSidebarPanels}
-            request={{ resource, ...menuPosition }}
+            request={{ origin: 'topbar', resource, ...menuPosition }}
             rightSidebarVisible={rightSidebarVisible}
+            runtime={runtime}
             surface="topbar"
             onClose={() => setMenuPosition(null)}
             onOpenPanel={onOpenRightPanel}
             onRequestMove={onRequestMove}
+            onRequestRename={() => setEditing(true)}
           />
         )}
       </div>
     </header>
-  )
-}
-
-function ResourceTitleInput({
-  actions,
-  onComplete,
-  resource,
-}: {
-  actions: WorkspaceActions
-  onComplete: () => void
-  resource: AuthorizedResourceSummary
-}) {
-  const cancelled = useRef(false)
-  const commit = (title: string) => {
-    if (cancelled.current || title === resource.title) {
-      onComplete()
-      return
-    }
-    void actions.update(resource.id, { title }).then((completed) => {
-      if (completed) onComplete()
-    })
-  }
-  return (
-    <input
-      autoFocus
-      aria-label="Resource title"
-      className="h-7 min-w-32 flex-1 rounded border border-input bg-background px-2 text-sm"
-      defaultValue={resource.title}
-      onBlur={(event) => commit(event.currentTarget.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          cancelled.current = true
-          onComplete()
-        } else if (event.key === 'Enter') {
-          event.preventDefault()
-          event.currentTarget.blur()
-        }
-      }}
-    />
   )
 }
 

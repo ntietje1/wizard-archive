@@ -58,6 +58,10 @@ test.describe('resource mechanics', () => {
     await expect(topbarMenu.getByRole('menuitem', { name: 'Outgoing links' })).toBeVisible()
     await expect(topbarMenu.getByRole('menuitem', { name: 'Duplicate' })).toHaveCount(0)
     await expect(topbarMenu.getByRole('menuitem', { name: 'Paste' })).toHaveCount(0)
+    await topbarMenu.getByRole('menuitem', { name: 'Rename' }).click()
+    await expect(page.getByRole('textbox', { name: 'Resource title' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'More options', exact: true }).click()
     await topbarMenu.getByRole('menuitem', { name: 'Backlinks' }).click()
     const details = page.getByRole('complementary', { name: 'Resource panel' })
     await expect(details.getByRole('button', { name: 'Backlinks' })).toHaveAttribute(
@@ -113,7 +117,12 @@ test.describe('resource mechanics', () => {
     await expect(page.getByRole('heading', { name: 'Clue: North / South' })).toBeVisible()
 
     const sidebar = workspace.getByRole('navigation', { name: 'Sidebar' })
-    await sidebar.getByRole('button', { name: 'Clue: North / South', exact: true }).click({
+    const clue = sidebar.getByRole('button', { name: 'Clue: North / South', exact: true })
+    await clue.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await expect(sidebar.getByRole('textbox', { name: 'Rename Clue: North / South' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await clue.click({
       button: 'right',
     })
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()

@@ -13,22 +13,30 @@ import {
   Hash,
   Loader2,
   Palette,
+  Pencil,
   Plus,
   RotateCcw,
   Scissors,
   Star,
   StarOff,
   Trash2,
+  Upload,
 } from 'lucide-react'
 import type { CampaignId, ResourceId } from '../domain-id'
-import type { ResourceNavigation } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourceNavigation } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
+import type { AssetReplacementController } from '../asset-replacement'
+import type { VersionStamp } from '../component-version'
+import type { MapSession } from '../content-session-contract'
 import type { WorkspaceClipboard } from '../workspace-clipboard'
+import { useFileReplacement } from '../../files/file-replacement'
+import { useMapImageReplacement } from '../../maps/map-image-replacement'
 import type { ResourceContextMenuRequest } from './resource-context-menu-request'
 import { ResourceAppearancePopover } from './resource-appearance-popover'
 import { resourceKindLabel } from './resource-operations'
 import type { WorkspaceActions } from './resource-operations'
 import { resourceKindIcon } from './resource-presentation'
+import { useResourceStoreSnapshot } from './resource-store-snapshot'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
 import type {
@@ -39,7 +47,9 @@ import type {
 type ResourceContextMenuCommonProps = Readonly<{
   actions: WorkspaceActions
   canEdit: boolean
+  runtime: EditorRuntime
   onClose: () => void
+  onRequestRename: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
   request: ResourceContextMenuRequest
 }>
@@ -69,7 +79,7 @@ export function ResourceContextMenu(
   props: ResourceSurfaceContextMenuProps | TopbarContextMenuProps,
 ) {
   const menu = useRef<HTMLDivElement>(null)
-  const { onClose, onRequestMove, request } = props
+  const { onClose, onRequestMove, onRequestRename, request } = props
   const workspace = props.actions
   const resource = props.request.resource
   const resourceIds = props.surface === 'resource' ? props.resourceIds : [resource.id]
@@ -86,7 +96,7 @@ export function ResourceContextMenu(
     return () => document.removeEventListener('pointerdown', close)
   }, [onClose])
 
-  const actions = { onClose, onRequestMove, resource, resourceIds, workspace }
+  const actions = { onClose, onRequestMove, onRequestRename, resource, resourceIds, workspace }
 
   return (
     <div
@@ -166,6 +176,8 @@ function ResourceSurfaceMenuItems({
           campaignId={props.campaignId}
           clipboard={props.clipboard}
           navigation={props.navigation}
+          runtime={props.runtime}
+          showRename={singleResource && props.request.origin === 'sidebar'}
           onClipboardChange={props.onClipboardChange}
           submenuSide={props.request.x > globalThis.innerWidth - 460 ? 'left' : 'right'}
         />
@@ -203,13 +215,17 @@ function TopbarSurfaceMenuItems({
   return (
     <>
       {props.canEdit && active && (
-        <MenuItem
-          icon={<FolderInput />}
-          label="Move…"
-          onActivate={() =>
-            runMenuOperation(actions, () => props.onRequestMove(actions.resourceIds))
-          }
-        />
+        <>
+          <ResourceRenameMenuItem actions={actions} />
+          <MenuItem
+            icon={<FolderInput />}
+            label="Move…"
+            onActivate={() =>
+              runMenuOperation(actions, () => props.onRequestMove(actions.resourceIds))
+            }
+          />
+          <ResourceReplacementMenuItem actions={actions} runtime={props.runtime} />
+        </>
       )}
       {props.canEdit && active && <ResourceAppearanceMenuItem actions={actions} />}
       <ResourceLinkMenuItems actions={actions} separated={props.canEdit && active} />
@@ -277,16 +293,171 @@ function ResourceBookmarkMenuItem({
 type ResourceMenuActions = Readonly<{
   onClose: () => void
   onRequestMove: (resourceIds: ReadonlyArray<ResourceId>) => void
+  onRequestRename: () => void
   resource: AuthorizedResourceSummary
   resourceIds: ReadonlyArray<ResourceId>
   workspace: WorkspaceActions
 }>
+
+function ResourceRenameMenuItem({ actions }: { actions: ResourceMenuActions }) {
+  return (
+    <MenuItem
+      icon={<Pencil />}
+      label="Rename"
+      onActivate={() => runMenuOperation(actions, actions.onRequestRename)}
+    />
+  )
+}
+
+function ResourceReplacementMenuItem({
+  actions,
+  runtime,
+}: {
+  actions: ResourceMenuActions
+  runtime: EditorRuntime
+}) {
+  switch (actions.resource.kind) {
+    case 'file':
+      return <FileReplacementMenuItem resourceId={actions.resource.id} runtime={runtime} />
+    case 'map':
+      return <MapReplacementMenuItem resourceId={actions.resource.id} runtime={runtime} />
+    case 'canvas':
+    case 'folder':
+    case 'note':
+      return null
+  }
+}
+
+function FileReplacementMenuItem({
+  resourceId,
+  runtime,
+}: {
+  resourceId: ResourceId
+  runtime: EditorRuntime
+}) {
+  const state = useResourceStoreSnapshot(runtime.content.files, resourceId)
+  if (state.status !== 'ready') {
+    return <UnavailableReplacementMenuItem label="Replace File" />
+  }
+  return (
+    <ReadyFileReplacementMenuItem
+      resourceId={resourceId}
+      runtime={runtime}
+      version={state.version}
+    />
+  )
+}
+
+function ReadyFileReplacementMenuItem({
+  resourceId,
+  runtime,
+  version,
+}: {
+  resourceId: ResourceId
+  runtime: EditorRuntime
+  version: VersionStamp
+}) {
+  const replacement = useFileReplacement(runtime.content.files, resourceId, version)
+  return (
+    <AssetReplacementMenuItem
+      chooseLabel="Choose file replacement"
+      label="Replace File"
+      replacement={replacement}
+    />
+  )
+}
+
+function MapReplacementMenuItem({
+  resourceId,
+  runtime,
+}: {
+  resourceId: ResourceId
+  runtime: EditorRuntime
+}) {
+  const state = useResourceStoreSnapshot(runtime.content.maps, resourceId)
+  if (state.status !== 'ready') {
+    return <UnavailableReplacementMenuItem label="Replace Map Image" />
+  }
+  return <ReadyMapReplacementMenuItem resourceId={resourceId} session={state.session} />
+}
+
+function ReadyMapReplacementMenuItem({
+  resourceId,
+  session,
+}: {
+  resourceId: ResourceId
+  session: MapSession
+}) {
+  const replacement = useMapImageReplacement(session, resourceId)
+  return (
+    <AssetReplacementMenuItem
+      chooseLabel="Choose map image replacement"
+      label="Replace Map Image"
+      replacement={replacement}
+    />
+  )
+}
+
+function UnavailableReplacementMenuItem({ label }: { label: string }) {
+  return <MenuItem disabled icon={<Upload />} label={label} />
+}
+
+function AssetReplacementMenuItem({
+  chooseLabel,
+  label,
+  replacement,
+}: {
+  chooseLabel: string
+  label: string
+  replacement: AssetReplacementController
+}) {
+  return (
+    <>
+      <MenuItem
+        busy={replacement.pending}
+        disabled={replacement.pending}
+        icon={replacement.pending ? <Loader2 className="animate-spin" /> : <Upload />}
+        label={label}
+        onActivate={replacement.open}
+      />
+      <input
+        ref={replacement.input}
+        aria-label={chooseLabel}
+        className="sr-only"
+        disabled={replacement.pending}
+        type="file"
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0]
+          event.currentTarget.value = ''
+          if (file) replacement.choose(file)
+        }}
+      />
+      {replacement.message && (
+        <div className="px-2 py-1 text-xs text-muted-foreground">
+          <p role={replacement.failed ? 'alert' : 'status'}>{replacement.message}</p>
+          {replacement.canRetry && (
+            <button
+              type="button"
+              role="menuitem"
+              className="mt-1 underline"
+              onClick={replacement.retry}
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
 
 function ActiveResourceMenuItems({
   actions,
   campaignId,
   clipboard,
   navigation,
+  runtime,
+  showRename,
   onClipboardChange,
   submenuSide,
 }: {
@@ -294,6 +465,8 @@ function ActiveResourceMenuItems({
   campaignId: CampaignId
   clipboard: WorkspaceClipboard
   navigation: ResourceNavigation
+  runtime: EditorRuntime
+  showRename: boolean
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   submenuSide: 'left' | 'right'
 }) {
@@ -311,6 +484,10 @@ function ActiveResourceMenuItems({
   return (
     <>
       <MenuSeparator />
+      {showRename && <ResourceRenameMenuItem actions={actions} />}
+      {resourceIds.length === 1 && (
+        <ResourceReplacementMenuItem actions={actions} runtime={runtime} />
+      )}
       {destinationId !== null && (
         <>
           <NewResourceSubmenu

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { Awareness } from 'y-protocols/awareness'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
@@ -6,6 +7,9 @@ import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { EditorRuntime, ResourceNavigation } from '../editor-runtime-contract'
 import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
+import { EMPTY_FILE_CONTENT_METADATA } from '../file-content-contract'
+import { initialFileContentVersion } from '../resource-content-version'
+import { initialMapContentVersion } from '../map-session-policy'
 import {
   RESOURCE_INDEX_SCHEMA,
   authorizedResourceSummaryFromRecord,
@@ -19,6 +23,11 @@ import { EMPTY_WORKSPACE_SELECTION } from '../workspace-selection'
 import { createWorkspaceActions } from '../workspace/resource-operations'
 import { ResourceViewport } from '../workspace/resource-viewport'
 import { MutableWorkspaceResourceIndex, indexRevision } from '../workspace-resource-index'
+
+vi.mock('react-zoom-pan-pinch', () => ({
+  TransformWrapper: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TransformComponent: ({ children }: { children: ReactNode }) => <>{children}</>,
+}))
 
 describe('ResourceShell', () => {
   it('becomes ready only after the initial root collection is known', async () => {
@@ -357,6 +366,7 @@ describe('ResourceShell', () => {
     if (!destinationId) throw new Error('expected destination folder')
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeVisible()
     expect(screen.getByRole('menuitem', { name: 'Move…' })).toBeVisible()
     expect(screen.getByRole('menuitem', { name: 'Copy link' })).toBeVisible()
     expect(screen.getByRole('menuitem', { name: 'Details' })).toBeVisible()
@@ -387,7 +397,7 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
-  it('renames from the topbar and edits appearance from the resource context menu', async () => {
+  it('renames from the topbar menu and edits appearance from the resource context menu', async () => {
     const { core, resource } = await shellRuntime(true)
 
     render(
@@ -398,13 +408,15 @@ describe('ResourceShell', () => {
       />,
     )
 
-    fireEvent.click(
-      within(await screen.findByRole('heading', { name: resource.title })).getByRole('button'),
-    )
-    fireEvent.change(screen.getByRole('textbox', { name: 'Resource title' }), {
+    await screen.findByRole('heading', { name: resource.title })
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
+    const title = screen.getByRole('textbox', { name: 'Resource title' })
+    expect(title).toHaveFocus()
+    fireEvent.change(title, {
       target: { value: 'Renamed folder' },
     })
-    fireEvent.blur(screen.getByRole('textbox', { name: 'Resource title' }))
+    fireEvent.blur(title)
 
     expect(await screen.findByRole('heading', { name: 'Renamed folder' })).toBeInTheDocument()
     const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
@@ -442,6 +454,34 @@ describe('ResourceShell', () => {
       }),
     )
     await waitFor(() => expect(red).toHaveAttribute('aria-pressed', 'true'))
+    core.dispose()
+  })
+
+  it('renames a sidebar resource inline from its context menu', async () => {
+    const { core, resource } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(await sidebar.findByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
+    const input = sidebar.getByRole('textbox', { name: `Rename ${resource.title}` })
+    expect(input).toHaveFocus()
+    fireEvent.change(input, { target: { value: 'Inline sidebar name' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(await screen.findByRole('heading', { name: 'Inline sidebar name' })).toBeVisible()
+    await waitFor(() =>
+      expect(sidebar.getByRole('button', { name: 'Inline sidebar name' })).toBeVisible(),
+    )
     core.dispose()
   })
 
@@ -584,6 +624,69 @@ describe('ResourceShell', () => {
         mediaType: 'application/octet-stream',
         viewerUnavailableReason: 'empty_file',
       },
+    })
+    core.dispose()
+  })
+
+  it('replaces a file from the topbar menu without file-view controls', async () => {
+    const { core, resource } = await shellRuntime(true, 'active', 'edit', 'file')
+    render(
+      <ResourceShell ariaLabel="Editable file" runtime={core.runtime} workspaceName="DM view" />,
+    )
+
+    const fileView = await screen.findByLabelText('File content')
+    expect(within(fileView).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(fileView).queryByRole('link', { name: 'Download' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Replace File' }))
+    const bytes = new TextEncoder().encode('replacement')
+    const file = new File([bytes], 'replacement.txt', { type: 'text/plain' })
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(bytes.buffer) })
+    fireEvent.change(screen.getByLabelText('Choose file replacement'), {
+      target: { files: [file] },
+    })
+
+    await waitFor(() =>
+      expect(core.runtime.content.files.get(resource.id)).toMatchObject({
+        status: 'ready',
+        content: { attachment: 'attached', byteSize: bytes.byteLength, extension: 'txt' },
+      }),
+    )
+    core.dispose()
+  })
+
+  it('replaces the base map image from the sidebar menu without map-view replacement controls', async () => {
+    const { core, resource } = await shellRuntime(true, 'active', 'edit', 'map')
+    render(
+      <ResourceShell ariaLabel="Editable map" runtime={core.runtime} workspaceName="DM view" />,
+    )
+
+    const mapView = await screen.findByLabelText('Map content')
+    expect(
+      within(mapView).queryByRole('button', { name: /choose|replace/i }),
+    ).not.toBeInTheDocument()
+    expect(within(mapView).queryByText(resource.title)).not.toBeInTheDocument()
+
+    const sidebar = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+    fireEvent.contextMenu(sidebar.getByRole('button', { name: resource.title }), {
+      clientX: 40,
+      clientY: 50,
+    })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Replace Map Image' }))
+    const bytes = new Uint8Array([1, 2, 3])
+    const file = new File([bytes], 'replacement.png', { type: 'image/png' })
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(bytes.buffer) })
+    fireEvent.change(screen.getByLabelText('Choose map image replacement'), {
+      target: { files: [file] },
+    })
+
+    await waitFor(() => {
+      const state = core.runtime.content.maps.get(resource.id)
+      expect(state.status === 'ready' ? state.session.content.image : null).toMatchObject({
+        status: 'attached',
+        byteSize: bytes.byteLength,
+      })
     })
     core.dispose()
   })
@@ -1889,7 +1992,7 @@ async function shellRuntime(
   canEdit: boolean,
   lifecycle: 'active' | 'trashed' = 'active',
   permission: 'edit' | 'view' = canEdit ? 'edit' : 'view',
-  kind: 'folder' | 'note' = 'folder',
+  kind: ResourceRecord['kind'] = 'folder',
   projection: 'dm' | 'player' | 'view_as_player' = canEdit ? 'dm' : 'player',
 ) {
   const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
@@ -1911,6 +2014,46 @@ async function shellRuntime(
     updated: { at: 1, by: actorId },
   }
   const navigation = createNavigation(resourceId)
+  const emptyBytes = new Uint8Array()
+  const fileContent = { ...EMPTY_FILE_CONTENT_METADATA, attachment: 'unattached' as const }
+  const mapContent = { image: { status: 'unattached' as const }, layers: [], pins: [] }
+  const content =
+    kind === 'note'
+      ? {
+          notes: [
+            {
+              resourceId,
+              content: noteBlocksToYDoc(
+                [{ type: 'paragraph', content: [{ type: 'text', text: 'Player note' }] }],
+                NOTE_YJS_FRAGMENT,
+              ),
+              version,
+            },
+          ],
+        }
+      : kind === 'file'
+        ? {
+            files: [
+              {
+                resourceId,
+                content: fileContent,
+                version: await initialFileContentVersion(emptyBytes, EMPTY_FILE_CONTENT_METADATA),
+                bytes: emptyBytes,
+              },
+            ],
+          }
+        : kind === 'map'
+          ? {
+              maps: [
+                {
+                  resourceId,
+                  content: mapContent,
+                  version: await initialMapContentVersion(mapContent),
+                  images: [],
+                },
+              ],
+            }
+          : undefined
   const core = createInMemoryEditorRuntime({
     canEdit,
     permission,
@@ -1926,22 +2069,7 @@ async function shellRuntime(
       tombstones: [],
       aliases: [],
     },
-    ...(kind === 'note'
-      ? {
-          content: {
-            notes: [
-              {
-                resourceId,
-                content: noteBlocksToYDoc(
-                  [{ type: 'paragraph', content: [{ type: 'text', text: 'Player note' }] }],
-                  NOTE_YJS_FRAGMENT,
-                ),
-                version,
-              },
-            ],
-          },
-        }
-      : {}),
+    ...(content ? { content } : {}),
     navigation,
   })
   return { core, navigation, resource }

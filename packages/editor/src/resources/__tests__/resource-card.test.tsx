@@ -38,7 +38,12 @@ describe('ResourceCard', () => {
       clientY: 24,
     })
 
-    expect(onOpenContextMenu).toHaveBeenCalledWith({ resource, x: 18, y: 24 })
+    expect(onOpenContextMenu).toHaveBeenCalledWith({
+      origin: 'workspace',
+      resource,
+      x: 18,
+      y: 24,
+    })
     expect(onSelectionChange).not.toHaveBeenCalled()
     expect(open).not.toHaveBeenCalled()
   })

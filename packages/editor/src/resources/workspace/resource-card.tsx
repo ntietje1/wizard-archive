@@ -65,6 +65,7 @@ export function ResourceCard({
   const folder = resource.kind === 'folder'
   const interaction = workspaceResourceInteractionProps({
     canEdit,
+    contextMenuOrigin: 'workspace',
     onOpenContextMenu,
     onSelectionChange,
     resource,
@@ -170,5 +171,5 @@ function openCardMenu(
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void,
 ) {
   event.stopPropagation()
-  onOpenContextMenu(resourceContextMenuRequest(event, resource))
+  onOpenContextMenu(resourceContextMenuRequest(event, resource, 'workspace'))
 }

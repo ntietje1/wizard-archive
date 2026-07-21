@@ -41,7 +41,7 @@ test.describe.serial('canonical map lifecycle', () => {
 
     const map = page.getByLabel('Map content')
     await expect(map).toBeVisible()
-    await map.getByLabel('Choose map image').setInputFiles({
+    await replaceMapImage(page, {
       name: 'moonwell.png',
       mimeType: 'image/png',
       buffer: createPng(200, 160, 0x33),
@@ -54,7 +54,7 @@ test.describe.serial('canonical map lifecycle', () => {
     await map.getByRole('button', { name: 'Zoom out' }).click()
     await map.getByRole('button', { name: 'Fit map' }).click()
 
-    await map.getByLabel('Choose map image').setInputFiles({
+    await replaceMapImage(page, {
       name: 'moonwell-replacement.png',
       mimeType: 'image/png',
       buffer: createPng(240, 180, 0x66),
@@ -64,7 +64,7 @@ test.describe.serial('canonical map lifecycle', () => {
     await map.click({ button: 'right', position: { x: 40, y: 80 } })
     const menu = page.getByRole('menu', { name: 'Map image actions' })
     await expect(menu.getByRole('menuitem', { name: 'Fit map' })).toBeVisible()
-    await expect(menu.getByRole('menuitem', { name: 'Replace image' })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: 'Replace image' })).toHaveCount(0)
   })
 
   test('creates a UUID pin by sidebar drop and restores move, visibility, readonly, and removal', async ({
@@ -99,9 +99,11 @@ test.describe.serial('canonical map lifecycle', () => {
     await expect(pin).toBeVisible()
 
     await viewAsYourself(page)
-    await expect(map.getByText('Viewing map — changes are disabled')).toBeVisible()
+    await expect(map).toHaveAttribute('data-workspace-mode', 'viewer')
     await expect(pin).toBeHidden()
-    await expect(map.getByLabel('Choose map image')).toBeHidden()
+    await page.getByRole('button', { name: 'More options', exact: true }).click()
+    await expect(page.getByRole('menuitem', { name: 'Replace Map Image' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
 
     await exitViewAs(page)
     pin = map.getByRole('button', { name: `${noteName} (hidden)`, exact: true })
@@ -123,6 +125,18 @@ test.describe.serial('canonical map lifecycle', () => {
 
 async function createResource(page: Page, kind: 'Map' | 'Note', title: string) {
   await createNamedResource(page, kind, title)
+}
+
+async function replaceMapImage(
+  page: Page,
+  file: Readonly<{ name: string; mimeType: string; buffer: Buffer }>,
+) {
+  await page.getByRole('button', { name: 'More options', exact: true }).click()
+  const menu = page.getByRole('menu', { name: `${mapName} actions` })
+  await expect(menu.getByRole('menuitem', { name: 'Replace Map Image' })).toBeVisible()
+  await page.getByLabel('Choose map image replacement').setInputFiles(file)
+  await expect(menu.getByRole('menuitem', { name: 'Replace Map Image' })).toBeEnabled()
+  await page.keyboard.press('Escape')
 }
 
 function createPng(width: number, height: number, value: number): Buffer {

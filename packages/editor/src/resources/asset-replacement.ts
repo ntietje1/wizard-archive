@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DragEvent, RefObject } from 'react'
+import type { RefObject } from 'react'
 import type { FileResourceSource } from './content-session-contract'
 
 type ReplacementResult =
@@ -30,15 +30,11 @@ type ReplacementState<T> =
 
 export type AssetReplacementController = Readonly<{
   canRetry: boolean
-  dragActive: boolean
   failed: boolean
   input: RefObject<HTMLInputElement | null>
   message: string | null
   pending: boolean
   choose(file: File): void
-  onDragLeave(event: DragEvent<HTMLDivElement>): void
-  onDragOver(event: DragEvent<HTMLDivElement>): void
-  onDrop(event: DragEvent<HTMLDivElement>): void
   open(): void
   retry(): void
 }>
@@ -59,7 +55,6 @@ export function useAssetReplacement<T>(options: {
   const targetKey = options.target.key
   const targetOwner = options.target.owner
   const currentTarget = useRef<ReplacementTargetIdentity>({ key: targetKey, owner: targetOwner })
-  const [dragTarget, setDragTarget] = useState<ReplacementTarget<T> | null>(null)
   const [state, setState] = useState<ReplacementState<T>>({ status: 'idle' })
   useEffect(() => {
     currentTarget.current = { key: targetKey, owner: targetOwner }
@@ -123,7 +118,6 @@ export function useAssetReplacement<T>(options: {
   const pending = visibleState.status === 'reading' || visibleState.status === 'uploading'
   return {
     canRetry: visibleState.status === 'retry',
-    dragActive: dragTarget !== null && sameTarget(dragTarget, options.target),
     failed: visibleState.status === 'failed' || visibleState.status === 'retry',
     input,
     message:
@@ -136,19 +130,6 @@ export function useAssetReplacement<T>(options: {
             : null,
     pending,
     choose,
-    onDragLeave: (event) => {
-      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragTarget(null)
-    },
-    onDragOver: (event) => {
-      event.preventDefault()
-      setDragTarget(options.target)
-    },
-    onDrop: (event) => {
-      event.preventDefault()
-      setDragTarget(null)
-      const file = event.dataTransfer.files[0]
-      if (file && !pending) choose(file)
-    },
     open: () => input.current?.click(),
     retry: () => {
       if (visibleState.status !== 'retry') return

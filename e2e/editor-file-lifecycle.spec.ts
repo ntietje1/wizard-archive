@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { PDFDocument } from 'pdf-lib'
 import { expect, test } from '@playwright/test'
-import type { Locator, Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import {
   deleteCampaignById,
@@ -34,21 +34,20 @@ test.describe.serial('canonical file lifecycle', () => {
     await expect(file).toBeVisible()
     await expect(file).toContainText('This file type cannot be previewed.')
 
-    expect(await downloadText(file)).toBe('original evidence')
+    expect(await downloadText(page, 'evidence.txt')).toBe('original evidence')
 
-    const originalUrl = await file
-      .getByRole('link', { name: 'Download', exact: true })
-      .getAttribute('href')
-    await file.getByLabel('Choose file replacement').setInputFiles({
+    const menu = await openResourceMenu(page, 'evidence.txt')
+    await expect(menu.getByRole('menuitem', { name: 'Replace File' })).toBeVisible()
+    await page.getByLabel('Choose file replacement').setInputFiles({
       name: 'replacement.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('replacement evidence'),
     })
-    await expect
-      .poll(() => file.getByRole('link', { name: 'Download', exact: true }).getAttribute('href'))
-      .not.toBe(originalUrl)
+    const replace = menu.getByRole('menuitem', { name: 'Replace File' })
+    await expect(replace).toHaveAttribute('aria-busy', 'true')
+    await expect(replace).toHaveAttribute('aria-busy', 'false')
 
-    expect(await downloadText(file)).toBe('replacement evidence')
+    expect(await downloadText(page, 'evidence.txt')).toBe('replacement evidence')
   })
 
   test('renders inspected image and PDF content through canonical viewers', async ({ page }) => {
@@ -74,17 +73,29 @@ async function uploadFile(page: Page, name: string, mimeType: string, buffer: Bu
   await createNamedResource(page, 'File', name)
   const file = page.getByLabel('File content')
   await expect(file).toBeVisible({ timeout: 15_000 })
-  await file.getByLabel('Choose file replacement').setInputFiles({ name, mimeType, buffer })
-  await expect(file.getByRole('link', { name: 'Download', exact: true })).toBeVisible({
-    timeout: 15_000,
-  })
+  const menu = await openResourceMenu(page, name)
+  await page.getByLabel('Choose file replacement').setInputFiles({ name, mimeType, buffer })
+  const replace = menu.getByRole('menuitem', { name: 'Replace File' })
+  await expect(replace).toHaveAttribute('aria-busy', 'true')
+  await expect(replace).toHaveAttribute('aria-busy', 'false')
+  await page.keyboard.press('Escape')
 }
 
-async function downloadText(file: Locator): Promise<string> {
-  const started = file.page().waitForEvent('download')
-  await file.getByRole('link', { name: 'Download', exact: true }).click()
+async function downloadText(page: Page, resourceTitle: string): Promise<string> {
+  const menu = await openResourceMenu(page, resourceTitle)
+  const started = page.waitForEvent('download')
+  await menu.getByRole('menuitem', { name: 'Download' }).click()
   const download = await started
   const path = await download.path()
   if (!path) throw new Error('Downloaded file is unavailable')
   return await readFile(path, 'utf8')
+}
+
+async function openResourceMenu(page: Page, resourceTitle: string) {
+  const menu = page.getByRole('menu', { name: `${resourceTitle} actions` })
+  if (!(await menu.isVisible())) {
+    await page.getByRole('button', { name: 'More options', exact: true }).click()
+  }
+  await expect(menu).toBeVisible()
+  return menu
 }

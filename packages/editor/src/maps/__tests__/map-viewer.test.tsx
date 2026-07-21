@@ -62,9 +62,8 @@ describe('MapViewer', () => {
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Fit map' })).toBeVisible()
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Map layer' }), {
-      target: { value: '' },
-    })
+    expect(screen.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Base map' }))
     await waitFor(() => expect(loadImage).toHaveBeenCalledWith(null))
     view.unmount()
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:verified-map')
@@ -107,13 +106,11 @@ describe('MapViewer', () => {
     const session = mapSession(content)
     Object.defineProperty(session, 'content', { get: () => content })
     const view = render(mapViewer(session, true, basePinId))
-    const layer = screen.getByRole('combobox', { name: 'Map layer' })
-
-    expect(layer).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Base map' })).toHaveAttribute('aria-pressed', 'true')
     view.rerender(mapViewer(session, true, layerPinId))
-    expect(layer).toHaveValue('night')
+    expect(screen.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'true')
     view.rerender(mapViewer(session, true, delayedPinId))
-    expect(layer).toHaveValue('day')
+    expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 
     content = {
       ...content,
@@ -130,15 +127,15 @@ describe('MapViewer', () => {
       ],
     }
     view.rerender(mapViewer(session, true, delayedPinId))
-    expect(layer).toHaveValue('night')
+    expect(screen.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'true')
 
-    fireEvent.change(layer, { target: { value: 'day' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Day' }))
     content = { ...content, pins: [...content.pins] }
     view.rerender(mapViewer(session, true, delayedPinId))
-    expect(layer).toHaveValue('day')
+    expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true')
 
     view.rerender(mapViewer(session, true, basePinId))
-    expect(layer).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Base map' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('keeps the verified image mounted across pin-only content projections', async () => {
@@ -164,146 +161,11 @@ describe('MapViewer', () => {
     expect(revokeObjectURL).not.toHaveBeenCalled()
   })
 
-  it('uploads opaque map bytes without inspecting them', async () => {
-    const replaceImage = vi.fn(() =>
-      Promise.resolve({
-        status: 'completed' as const,
-        content: emptyMap(),
-        version: testVersion(),
-      }),
-    )
-    const session = mapSession(emptyMap(), { replaceImage })
-    renderMap(session)
-    const input = screen.getByLabelText('Choose map image')
-    const bytes = new Uint8Array([1, 2, 3])
-    const invalid = new File([Uint8Array.from(bytes).buffer], 'notes.txt', { type: 'text/plain' })
-    Object.defineProperty(invalid, 'arrayBuffer', {
-      value: () => Promise.resolve(Uint8Array.from(bytes).buffer),
-    })
-    fireEvent.change(input, { target: { files: [invalid] } })
-    await waitFor(() =>
-      expect(replaceImage).toHaveBeenCalledWith(null, session.version, {
-        bytes,
-        fileName: 'notes.txt',
-      }),
-    )
-  })
-
-  it('requires a fresh image replacement after a version conflict', async () => {
-    const firstVersion = testVersion()
-    const currentVersion = initialVersion(assertSha256Digest('b'.repeat(64)))
-    const replaceImage = vi
-      .fn<MapSession['replaceImage']>()
-      .mockResolvedValueOnce({ status: 'rejected', reason: 'version_conflict' })
-      .mockResolvedValueOnce({
-        status: 'completed',
-        content: emptyMap(),
-        version: initialVersion(assertSha256Digest('c'.repeat(64))),
-      })
-    let version = firstVersion
-    const session = mapSession(emptyMap(), { replaceImage })
-    Object.defineProperty(session, 'version', { get: () => version })
-    const staleBytes = new Uint8Array([1])
-    const currentBytes = new Uint8Array([2])
-    const staleImage = new File([staleBytes], 'stale.png', { type: 'image/png' })
-    const currentImage = new File([currentBytes], 'current.png', { type: 'image/png' })
-    Object.defineProperty(staleImage, 'arrayBuffer', {
-      value: () => Promise.resolve(staleBytes.buffer),
-    })
-    Object.defineProperty(currentImage, 'arrayBuffer', {
-      value: () => Promise.resolve(currentBytes.buffer),
-    })
-    const view = renderMap(session)
-
-    fireEvent.change(screen.getByLabelText('Choose map image'), {
-      target: { files: [staleImage] },
-    })
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This map changed while the image was uploading.',
-    )
-    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
-    expect(replaceImage).toHaveBeenCalledOnce()
-
-    version = currentVersion
-    view.rerender(mapViewer(session))
-    fireEvent.change(screen.getByLabelText('Choose map image'), {
-      target: { files: [currentImage] },
-    })
-
-    await waitFor(() => expect(replaceImage).toHaveBeenCalledTimes(2))
-    expect(replaceImage.mock.calls[0]![1]).toBe(firstVersion)
-    expect(replaceImage.mock.calls[1]![1]).toBe(currentVersion)
-    expect(replaceImage.mock.calls[1]![2]).not.toBe(replaceImage.mock.calls[0]![2])
-  })
-
-  it('retries an uncertain image replacement against the exact captured target', async () => {
-    const replaceImage = vi
-      .fn<MapSession['replaceImage']>()
-      .mockResolvedValueOnce({ status: 'retryable', reason: 'response_lost' })
-      .mockResolvedValueOnce({
-        status: 'completed',
-        content: emptyMap(),
-        version: initialVersion(assertSha256Digest('d'.repeat(64))),
-      })
-    const session = mapSession(emptyMap(), { replaceImage })
-    const bytes = new Uint8Array([1, 2, 3])
-    const image = new File([bytes], 'map.png', { type: 'image/png' })
-    Object.defineProperty(image, 'arrayBuffer', {
-      value: () => Promise.resolve(bytes.buffer),
-    })
-    renderMap(session)
-
-    fireEvent.change(screen.getByLabelText('Choose map image'), { target: { files: [image] } })
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'The map image replacement could not be confirmed.',
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
-
-    await waitFor(() => expect(replaceImage).toHaveBeenCalledTimes(2))
-    expect(replaceImage.mock.calls[1]![0]).toBe(replaceImage.mock.calls[0]![0])
-    expect(replaceImage.mock.calls[1]![1]).toBe(replaceImage.mock.calls[0]![1])
-    expect(replaceImage.mock.calls[1]![2]).toBe(replaceImage.mock.calls[0]![2])
-  })
-
-  it('retires a retry when layer selection changes its immutable target', async () => {
-    const replaceImage = vi.fn<MapSession['replaceImage']>(() =>
-      Promise.resolve({ status: 'retryable' as const, reason: 'response_lost' as const }),
-    )
-    const session = mapSession(
-      {
-        image: { status: 'unattached' },
-        layers: [
-          { id: 'day', image: { status: 'unattached' }, name: 'Day' },
-          { id: 'night', image: { status: 'unattached' }, name: 'Night' },
-        ],
-        pins: [],
-      },
-      { replaceImage },
-    )
-    renderMap(session)
-    const bytes = new Uint8Array([1, 2, 3])
-    const image = new File([Uint8Array.from(bytes).buffer], 'map.png', { type: 'image/png' })
-    Object.defineProperty(image, 'arrayBuffer', {
-      value: () => Promise.resolve(Uint8Array.from(bytes).buffer),
-    })
-
-    fireEvent.change(screen.getByLabelText('Choose map image'), { target: { files: [image] } })
-    expect(await screen.findByRole('alert')).toBeVisible()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Map layer' }), {
-      target: { value: 'night' },
-    })
-
-    expect(screen.queryByRole('alert')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
-    expect(replaceImage).toHaveBeenCalledOnce()
-    expect(replaceImage.mock.calls[0]![0]).toBe('day')
-  })
-
-  it('shows a truthful readonly banner and keeps image replacement unavailable', () => {
+  it('keeps replacement controls and duplicate bars out of the map view', () => {
     renderMap(mapSession(emptyMap()), false)
-    expect(screen.getByText('Viewing map — changes are disabled')).toBeVisible()
+    expect(screen.getByLabelText('Map content')).toHaveAttribute('data-workspace-mode', 'viewer')
     expect(screen.queryByRole('button', { name: /choose image|replace image/i })).toBeNull()
+    expect(screen.queryByText('Harbor')).toBeNull()
   })
 
   it('renders permission-safe pins and creates new pins from workspace resource drops', async () => {

@@ -55,6 +55,7 @@ import {
   resourceKindIcon,
   resourcePresentationKey,
 } from './resource-presentation'
+import { ResourceRenameInput } from './resource-rename-input'
 import { ResourceTrashControl } from './resource-trash-control'
 import { useWorkspaceCreation } from './use-workspace-creation'
 import { WorkspaceCreationStatus } from './workspace-creation-status'
@@ -125,10 +126,12 @@ export function ResourceSidebar({
   onClose,
   onOpenBackgroundContextMenu,
   onOpenContextMenu,
+  onRenamingResourceIdChange,
   onSearch,
   onSelectionChange,
   onSortChange,
   runtime,
+  renamingResourceId,
   selectedResourceId,
   selection,
   slots,
@@ -144,10 +147,12 @@ export function ResourceSidebar({
   onClose: () => void
   onOpenBackgroundContextMenu: (position: Readonly<{ x: number; y: number }>) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
   onSearch: () => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onSortChange: (sort: WorkspaceSort) => void
   runtime: EditorRuntime
+  renamingResourceId: ResourceId | null
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
   slots?: Readonly<{ footer?: ReactNode; headerEnd?: ReactNode; headerStart?: ReactNode }>
@@ -267,6 +272,7 @@ export function ResourceSidebar({
             actions={actions}
             bookmarks={bookmarks}
             canEdit={canEdit}
+            renamingResourceId={renamingResourceId}
             selectedResourceId={selectedResourceId}
             selection={selection}
             snapshot={snapshot}
@@ -274,6 +280,7 @@ export function ResourceSidebar({
             visibleIds={visibleIds}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
+            onRenamingResourceIdChange={onRenamingResourceIdChange}
           />
         ) : (
           <ResourceCollection
@@ -282,6 +289,7 @@ export function ResourceSidebar({
             expansion={expansion}
             query={query}
             runtime={runtime}
+            renamingResourceId={renamingResourceId}
             initialFocusId={initialFocusId}
             selectedResourceId={selectedResourceId}
             selection={selection}
@@ -291,6 +299,7 @@ export function ResourceSidebar({
             depth={0}
             onSelectionChange={onSelectionChange}
             onOpenContextMenu={onOpenContextMenu}
+            onRenamingResourceIdChange={onRenamingResourceIdChange}
           />
         )}
       </div>
@@ -438,8 +447,10 @@ function BookmarkedResourceCollection({
   bookmarks,
   canEdit,
   onOpenContextMenu,
+  onRenamingResourceIdChange,
   onSelectionChange,
   selectedResourceId,
+  renamingResourceId,
   selection,
   snapshot,
   sort,
@@ -449,7 +460,9 @@ function BookmarkedResourceCollection({
   bookmarks: ResourceKnowledge<ReadonlySet<ResourceId>>
   canEdit: boolean
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
   onSelectionChange: (action: WorkspaceSelectionAction) => void
+  renamingResourceId: ResourceId | null
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
@@ -497,6 +510,7 @@ function BookmarkedResourceCollection({
               canEdit={canEdit}
               expansion={{ status: 'unavailable' }}
               initialFocusId={initialFocusId}
+              renaming={renamingResourceId === resource.id}
               resource={resource}
               selectedResourceId={selectedResourceId}
               selection={selection}
@@ -504,8 +518,13 @@ function BookmarkedResourceCollection({
               visibleIds={visibleIds}
               onSelectionChange={onSelectionChange}
               onOpenContextMenu={onOpenContextMenu}
+              onRenamingChange={(renaming) =>
+                onRenamingResourceIdChange(renaming ? resource.id : null)
+              }
             />
-            <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
+            {renamingResourceId !== resource.id && (
+              <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
+            )}
           </div>
         </li>
       ))}
@@ -520,8 +539,10 @@ function ResourceCollection({
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
+  onRenamingResourceIdChange,
   query,
   runtime,
+  renamingResourceId,
   selectedResourceId,
   selection,
   snapshot,
@@ -535,8 +556,10 @@ function ResourceCollection({
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
   query: ResourceCollectionQuery
   runtime: EditorRuntime
+  renamingResourceId: ResourceId | null
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
   snapshot: WorkspaceResourceIndexSnapshot
@@ -570,6 +593,7 @@ function ResourceCollection({
           key={resource.id}
           resource={resource}
           runtime={runtime}
+          renamingResourceId={renamingResourceId}
           initialFocusId={initialFocusId}
           selectedResourceId={selectedResourceId}
           selection={selection}
@@ -579,6 +603,7 @@ function ResourceCollection({
           depth={depth}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
+          onRenamingResourceIdChange={onRenamingResourceIdChange}
         />
       ))}
       {!collection.complete && (
@@ -602,7 +627,9 @@ function ResourceTreeRow({
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
+  onRenamingResourceIdChange,
   resource,
+  renamingResourceId,
   runtime,
   selectedResourceId,
   selection,
@@ -618,6 +645,8 @@ function ResourceTreeRow({
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onRenamingResourceIdChange: (resourceId: ResourceId | null) => void
+  renamingResourceId: ResourceId | null
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
   selectedResourceId: ResourceId | null
@@ -662,15 +691,19 @@ function ResourceTreeRow({
             onChange: (value) => expansion.setExpanded(resource.id, value),
           }}
           initialFocusId={initialFocusId}
+          renaming={renamingResourceId === resource.id}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
+          onRenamingChange={(renaming) => onRenamingResourceIdChange(renaming ? resource.id : null)}
           resource={resource}
           selectedResourceId={selectedResourceId}
           selection={selection}
           showIcon={false}
           visibleIds={visibleIds}
         />
-        <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
+        {renamingResourceId !== resource.id && (
+          <ResourceRowMenuButton resource={resource} onOpenContextMenu={onOpenContextMenu} />
+        )}
       </div>
       {resource.kind === 'folder' && expanded && (
         <ResourceCollection
@@ -679,6 +712,7 @@ function ResourceTreeRow({
           expansion={expansion}
           query={childQuery}
           runtime={runtime}
+          renamingResourceId={renamingResourceId}
           initialFocusId={initialFocusId}
           selectedResourceId={selectedResourceId}
           selection={selection}
@@ -688,6 +722,7 @@ function ResourceTreeRow({
           depth={depth + 1}
           onSelectionChange={onSelectionChange}
           onOpenContextMenu={onOpenContextMenu}
+          onRenamingResourceIdChange={onRenamingResourceIdChange}
         />
       )}
     </li>
@@ -708,7 +743,7 @@ function ResourceRowMenuButton({
       className="pointer-events-none absolute right-1 z-10 inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-background hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
       onClick={(event) => {
         event.stopPropagation()
-        onOpenContextMenu(resourceContextMenuRequest(event, resource))
+        onOpenContextMenu(resourceContextMenuRequest(event, resource, 'sidebar'))
       }}
     >
       <MoreHorizontal className="size-4" />
@@ -792,6 +827,8 @@ function ResourceTreeButton({
   initialFocusId,
   onSelectionChange,
   onOpenContextMenu,
+  onRenamingChange,
+  renaming,
   resource,
   selectedResourceId,
   selection,
@@ -805,12 +842,25 @@ function ResourceTreeButton({
   initialFocusId: ResourceId | null
   onSelectionChange: (action: WorkspaceSelectionAction) => void
   onOpenContextMenu: (request: ResourceContextMenuRequest) => void
+  onRenamingChange: (renaming: boolean) => void
+  renaming: boolean
   resource: AuthorizedResourceSummary
   selectedResourceId: ResourceId | null
   selection: WorkspaceSelection
   showIcon?: boolean
   visibleIds: () => ReadonlyArray<ResourceId>
 }) {
+  if (renaming) {
+    return (
+      <ResourceRenameInput
+        actions={actions}
+        ariaLabel={`Rename ${resource.title}`}
+        className="h-7 min-w-0 flex-1 rounded border border-input bg-background px-1 text-sm"
+        resource={resource}
+        onComplete={() => onRenamingChange(false)}
+      />
+    )
+  }
   const Icon = resourceKindIcon(resource.kind)
   const tabbable =
     selection.focusedId === resource.id ||
@@ -824,6 +874,7 @@ function ResourceTreeButton({
       data-selected={selection.selectedIds.includes(resource.id)}
       {...workspaceResourceInteractionProps({
         canEdit,
+        contextMenuOrigin: 'sidebar',
         onOpenContextMenu,
         onSelectionChange,
         resource,

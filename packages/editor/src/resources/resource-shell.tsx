@@ -115,6 +115,9 @@ export function ResourceShell({
   const [sidebarContextMenu, setSidebarContextMenu] = useState<SidebarContextMenuPosition | null>(
     null,
   )
+  const [sidebarRenamingResourceId, setSidebarRenamingResourceId] = useState<ResourceId | null>(
+    null,
+  )
   const [contextMenu, setContextMenu] = useState<ResourceShellContextMenuState>({
     status: 'closed',
   })
@@ -218,6 +221,7 @@ export function ResourceShell({
             bookmarks={bookmarks}
             view={sidebarView}
             runtime={runtime}
+            renamingResourceId={sidebarRenamingResourceId}
             selectedResourceId={selectedResourceId}
             selection={selection}
             slots={resourcePanelSlots}
@@ -232,6 +236,7 @@ export function ResourceShell({
               setSidebarContextMenu(position)
             }}
             onOpenContextMenu={openContextMenu}
+            onRenamingResourceIdChange={setSidebarRenamingResourceId}
             onSelectionChange={changeSelection}
             onSortChange={(sort) => patchPreference({ field: 'sort', value: sort })}
           />
@@ -303,6 +308,7 @@ export function ResourceShell({
         onClipboardChange={setClipboard}
         onCloseContextMenu={closeContextMenu}
         onMoveResourceIdsChange={setMoveResourceIds}
+        onRequestSidebarRename={setSidebarRenamingResourceId}
         onSearchOpenChange={setSearchOpen}
         onSidebarContextMenuClose={() => setSidebarContextMenu(null)}
       />
@@ -331,6 +337,7 @@ function ResourceShellMenus({
   onClipboardChange,
   onCloseContextMenu,
   onMoveResourceIdsChange,
+  onRequestSidebarRename,
   onSearchOpenChange,
   onSidebarContextMenuClose,
 }: {
@@ -347,6 +354,7 @@ function ResourceShellMenus({
   onClipboardChange: (clipboard: WorkspaceClipboard) => void
   onCloseContextMenu: () => void
   onMoveResourceIdsChange: (resourceIds: ReadonlyArray<ResourceId> | null) => void
+  onRequestSidebarRename: (resourceId: ResourceId) => void
   onSearchOpenChange: (open: boolean) => void
   onSidebarContextMenuClose: () => void
 }) {
@@ -377,11 +385,13 @@ function ResourceShellMenus({
           navigation={runtime.navigation}
           request={currentResourceContextRequest(snapshot, contextMenu.request)}
           resourceIds={contextMenu.resourceIds}
+          runtime={runtime}
           surface="resource"
           bookmarkedIds={bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARK_IDS}
           onClipboardChange={onClipboardChange}
           onClose={onCloseContextMenu}
           onRequestMove={onMoveResourceIdsChange}
+          onRequestRename={() => onRequestSidebarRename(contextMenu.request.resource.id)}
         />
       )}
       {sidebarContextMenu && (
