@@ -66,7 +66,11 @@ export function CampaignPanelContent({
           Back
         </button>
         <div className="border-t" />
-        <ScrollArea className="max-h-64" contentClassName="p-1">
+        <ScrollArea
+          className="max-h-64"
+          contentClassName="p-1"
+          viewportClassName="h-auto max-h-[inherit]"
+        >
           {previousSessions.length === 0 && (
             <div className="px-2 py-1.5 text-sm text-muted-foreground">No previous sessions</div>
           )}

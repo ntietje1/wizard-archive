@@ -44,6 +44,7 @@ export function ErrorFallback({
                   className="mt-1 max-h-48 rounded bg-muted text-xs text-muted-foreground"
                   contentClassName="p-2"
                   scrollOrientation="both"
+                  viewportClassName="h-auto max-h-[inherit]"
                 >
                   <pre>{error.stack}</pre>
                 </ScrollArea>

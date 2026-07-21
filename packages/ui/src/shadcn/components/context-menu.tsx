@@ -272,7 +272,11 @@ function ContextMenuContent({
           )}
           {...props}
         >
-          <ScrollArea className="max-h-(--available-height)" contentClassName="p-1">
+          <ScrollArea
+            className="max-h-(--available-height) w-auto"
+            contentClassName="p-1"
+            viewportClassName="h-auto max-h-[inherit]"
+          >
             {children}
           </ScrollArea>
         </MenuPrimitive.Popup>

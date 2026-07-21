@@ -87,7 +87,11 @@ export function ResourceTrashControl({
         sideOffset={4}
         className="w-80 gap-0 rounded-md p-0"
       >
-        <ScrollArea className="max-h-[300px]" contentClassName="p-2">
+        <ScrollArea
+          className="max-h-[300px]"
+          contentClassName="p-2"
+          viewportClassName="h-auto max-h-[inherit]"
+        >
           {collection.state === 'unknown' && (
             <p className="px-2 py-5 text-center text-sm text-muted-foreground">Loading trash…</p>
           )}

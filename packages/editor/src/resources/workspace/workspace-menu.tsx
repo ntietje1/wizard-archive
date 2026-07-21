@@ -41,17 +41,22 @@ export function WorkspaceMenu({
   }, [onClose])
   if (typeof document === 'undefined') return null
   return createPortal(
-    <ScrollArea
+    <div
       ref={menu}
       role="menu"
       aria-label={label}
-      className="fixed z-[70] max-h-[calc(100vh-16px)] w-56 rounded-md border border-border bg-popover text-popover-foreground shadow-md"
-      contentClassName="p-1"
+      className="fixed z-[70] w-56 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md"
       style={{ left: x, top: y }}
       onKeyDown={(event) => navigateWorkspaceMenu(event, onClose)}
     >
-      {children}
-    </ScrollArea>,
+      <ScrollArea
+        className="max-h-[calc(100vh-16px)]"
+        contentClassName="p-1"
+        viewportClassName="h-auto max-h-[inherit]"
+      >
+        {children}
+      </ScrollArea>
+    </div>,
     document.body,
   )
 }

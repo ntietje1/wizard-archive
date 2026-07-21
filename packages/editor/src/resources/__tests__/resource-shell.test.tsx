@@ -567,8 +567,11 @@ describe('ResourceShell', () => {
 
     const root = screen.getByLabelText('resources resource drop zone')
     fireEvent.contextMenu(root, { clientX: 10, clientY: 100 })
-    const rootMenu = within(screen.getByRole('menu', { name: 'Sidebar actions' }))
-    expect(screen.getByRole('menu', { name: 'Sidebar actions' }).parentElement).toBe(document.body)
+    const rootMenuElement = screen.getByRole('menu', { name: 'Sidebar actions' })
+    const rootMenu = within(rootMenuElement)
+    expect(rootMenuElement.parentElement).toBe(document.body)
+    expect(rootMenuElement).not.toHaveAttribute('data-slot', 'scroll-area')
+    expect(rootMenuElement.querySelector('[data-slot="scroll-area-viewport"]')).toBeInTheDocument()
     expect(rootMenu.getByRole('menuitem', { name: 'Undo' })).toBeDisabled()
     expect(rootMenu.getByRole('menuitem', { name: 'Redo' })).toBeDisabled()
     expect(rootMenu.getByRole('menuitem', { name: 'New…' })).toBeVisible()
