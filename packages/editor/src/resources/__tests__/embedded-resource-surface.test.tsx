@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
 import { assertSha256Digest } from '../component-version'
+import type { NoteSessionState } from '../content-session-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
@@ -164,6 +165,32 @@ describe('EmbeddedResourceSurface', () => {
 
     expect(screen.getByTestId('interactive-note')).toHaveTextContent('Note')
     noteDocument.destroy()
+  })
+
+  it('renders notes without visible content as empty note surfaces', () => {
+    const note = resource('note', 'Empty note')
+    const emptyDocument = noteBlocksToYDoc([{ type: 'paragraph' }], NOTE_YJS_FRAGMENT)
+    let noteState: NoteSessionState = {
+      status: 'initializing',
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      local: emptyDocument,
+    }
+    const noteSource = {
+      get: () => noteState,
+      subscribe: () => () => undefined,
+    }
+    const runtime = { content: { notes: noteSource } } as unknown as EditorRuntime
+    const view = render(<EmbeddedResourceSurface resource={note} runtime={runtime} />)
+
+    expect(screen.getByLabelText('Empty note preview')).toBeEmptyDOMElement()
+    expect(screen.queryByText('No visible note content')).not.toBeInTheDocument()
+
+    noteState = { status: 'empty', reason: 'no_visible_blocks' }
+    view.rerender(<EmbeddedResourceSurface resource={note} runtime={runtime} />)
+
+    expect(screen.getByLabelText('Empty note preview')).toBeEmptyDOMElement()
+    expect(screen.queryByText('No visible note content')).not.toBeInTheDocument()
+    emptyDocument.destroy()
   })
 })
 

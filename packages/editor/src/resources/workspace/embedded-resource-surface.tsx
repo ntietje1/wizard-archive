@@ -105,6 +105,9 @@ function EmbeddedNoteResource({
   if (target.kind !== 'resource' && target.kind !== 'noteBlock') {
     return <EmbeddedContentState label="Target unavailable" />
   }
+  if (state.status === 'empty') {
+    return <StaticEmbeddedNoteText resource={resource} text="" />
+  }
   if (state.status !== 'initializing' && state.status !== 'ready') {
     return <EmbeddedResourceState kind={resource.kind} state={state} />
   }
@@ -130,16 +133,23 @@ function StaticEmbeddedNoteResource({
   const blocks = noteYDocToBlocks(document, NOTE_YJS_FRAGMENT)
   const targetBlocks = target.kind === 'noteBlock' ? findNoteBlock(blocks, target.blockId) : blocks
   if (!targetBlocks) return <EmbeddedContentState label="Target unavailable" />
-  const text = noteBlocksPlainText(targetBlocks)
-  return text ? (
+  return <StaticEmbeddedNoteText resource={resource} text={noteBlocksPlainText(targetBlocks)} />
+}
+
+function StaticEmbeddedNoteText({
+  resource,
+  text,
+}: {
+  resource: AuthorizedResourceSummary
+  text: string
+}) {
+  return (
     <div
       aria-label={`${resource.title} preview`}
       className="size-full overflow-hidden whitespace-pre-wrap p-3 text-sm leading-relaxed text-foreground"
     >
       {text}
     </div>
-  ) : (
-    <EmbeddedContentState label="No visible note content" />
   )
 }
 
@@ -302,7 +312,7 @@ function folderContinuation(
 }
 
 type PreviewPendingState =
-  | Exclude<NoteSessionState, RenderableNoteState>
+  | Exclude<NoteSessionState, RenderableNoteState | { status: 'empty' }>
   | Exclude<FileContentState, { status: 'ready' }>
   | Exclude<MapContentSnapshotState, { status: 'ready' }>
 
@@ -318,8 +328,6 @@ function EmbeddedResourceState({
       return <EmbeddedContentState label={`Loading ${kind}`} />
     case 'initializing':
       return <EmbeddedContentState label={`Preparing ${kind}`} />
-    case 'empty':
-      return <EmbeddedContentState label="No visible note content" />
     case 'unavailable':
       return <EmbeddedContentState label={`${kind} unavailable`} />
     case 'recovery_required':
