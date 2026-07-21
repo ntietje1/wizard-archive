@@ -550,7 +550,7 @@ function ResourceTreeRow({
         canEdit: tree.row.canEdit,
         resource,
       })}
-      className="relative rounded-md data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-inset data-[drop-target=true]:ring-ring"
+      className="relative rounded-md data-[drop-target=true]:outline data-[drop-target=true]:outline-2 data-[drop-target=true]:outline-ring"
     >
       <ResourceRow depth={depth} expansion={expansion} resource={resource} row={tree.row} />
       {expansion.status === 'available' && expansion.expanded && (
