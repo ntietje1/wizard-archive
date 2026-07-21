@@ -176,12 +176,12 @@ describe('ResourceSharingControl', () => {
 
   it('loads another participant page only when the expanded player list requests it', async () => {
     const user = userEvent.setup()
-    const loadMorePresentation = vi.fn()
+    const loadMore = vi.fn()
     const pagedKnowledge = {
       state: 'known',
       value: { ...presentation, participantsComplete: false },
     } as const
-    const access = editableAccess(vi.fn(), pagedKnowledge, loadMorePresentation)
+    const access = editableAccess(vi.fn(), pagedKnowledge, loadMore)
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('sharing-pages'))
     index.replaceSnapshot({
       scope,
@@ -205,14 +205,40 @@ describe('ResourceSharingControl', () => {
     await user.click(screen.getByRole('button', { name: /Other Players/ }))
     await user.click(screen.getByRole('button', { name: 'Load more players' }))
 
-    expect(loadMorePresentation).toHaveBeenCalledOnce()
+    expect(loadMore).toHaveBeenCalledOnce()
+  })
+
+  it('keeps a synchronous presentation subscription mounted across hydration', async () => {
+    let current: ResourceKnowledge<ResourceAccessPresentation> = { state: 'unknown' }
+    const subscribe = vi.fn((listener: () => void) => {
+      current = { state: 'known', value: presentation }
+      listener()
+      return () => {
+        current = { state: 'unknown' }
+      }
+    })
+    const access = editableAccess(vi.fn(), () => current, vi.fn(), subscribe)
+    const runtime = {
+      scope,
+      resources: {
+        access: { status: 'available', value: access },
+      },
+    } as unknown as EditorRuntime
+
+    render(<ResourceSharingControl resource={folder} runtime={runtime} />)
+
+    expect(await screen.findByRole('button', { name: 'Shared' })).toBeInTheDocument()
+    expect(subscribe).toHaveBeenCalledOnce()
   })
 })
 
 function editableAccess(
   execute: ResourceAccessCommandGateway['execute'],
-  knowledge: ResourceKnowledge<ResourceAccessPresentation>,
-  loadMorePresentation: (resourceId: typeof folderId) => void,
+  knowledge:
+    | ResourceKnowledge<ResourceAccessPresentation>
+    | (() => ResourceKnowledge<ResourceAccessPresentation>),
+  loadMore: (resourceId: typeof folderId) => void,
+  subscribe: (listener: () => void) => () => void = () => () => undefined,
 ): Extract<ResourceAccess, { mode: 'editable' }> {
   return {
     mode: 'editable',
@@ -222,9 +248,9 @@ function editableAccess(
     },
     commands: { execute },
     presentation: {
-      getPresentation: () => knowledge,
-      loadMorePresentation,
-      subscribe: () => () => undefined,
+      get: () => (typeof knowledge === 'function' ? knowledge() : knowledge),
+      loadMore,
+      subscribe: (_resourceId, listener) => subscribe(listener),
     },
   }
 }

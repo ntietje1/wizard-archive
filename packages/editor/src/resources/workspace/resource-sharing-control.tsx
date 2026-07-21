@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ChevronDown, ChevronUp, LoaderCircle, Lock, Users } from 'lucide-react'
 import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
@@ -36,6 +36,7 @@ import type {
 } from '../resource-access-policy'
 import type { EditorRuntime, ResourceAccessPresentationSource } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
+import { useResourceStoreSnapshot } from './resource-store-snapshot'
 
 type PermissionValue = 'default' | ResourcePermission
 
@@ -80,9 +81,7 @@ function AvailableResourceSharingControl({
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
-  const subscribe = (listener: () => void) => presentation.subscribe(resource.id, listener)
-  const getSnapshot = () => presentation.getPresentation(resource.id)
-  const knowledge = useSyncExternalStore(subscribe, getSnapshot)
+  const knowledge = useResourceStoreSnapshot(presentation, resource.id)
 
   const ready = knowledge.state === 'known'
   const shared = ready && hasSharedAccess(knowledge.value)
@@ -132,7 +131,7 @@ function AvailableResourceSharingControl({
             disabled={pending}
             error={error}
             execute={execute}
-            loadMoreParticipants={() => presentation.loadMorePresentation(resource.id)}
+            loadMoreParticipants={() => presentation.loadMore(resource.id)}
             pending={pending}
             presentation={knowledge.value}
             resource={resource}

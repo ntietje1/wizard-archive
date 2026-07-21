@@ -72,9 +72,7 @@ export function resourceRowFromRecord(
       }
 }
 
-export function resourceTombstoneFromRow(
-  tombstone: Doc<'resourceTombstones'>,
-): ResourceTombstone {
+export function resourceTombstoneFromRow(tombstone: Doc<'resourceTombstones'>): ResourceTombstone {
   return {
     resourceId: assertDomainId(DOMAIN_ID_KIND.resource, tombstone.resourceUuid),
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, tombstone.campaignUuid),

@@ -76,8 +76,8 @@ export function createLiveResourceAccess(
     mode: 'editable',
     source,
     presentation: {
-      getPresentation: presentations.get,
-      loadMorePresentation: presentations.loadMore,
+      get: presentations.get,
+      loadMore: presentations.loadMore,
       subscribe: presentations.subscribe,
     },
     commands: {

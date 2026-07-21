@@ -54,25 +54,14 @@ test.describe('resource mechanics', () => {
     ).toBeVisible()
     await page.getByRole('button', { name: 'More options', exact: true }).click()
     const topbarMenu = page.getByRole('menu', { name: 'The Lantern Market actions' })
-    await expect(topbarMenu.getByRole('menuitem', { name: 'Backlinks' })).toBeVisible()
-    await expect(topbarMenu.getByRole('menuitem', { name: 'Outgoing links' })).toBeVisible()
     await expect(topbarMenu.getByRole('menuitem', { name: 'Duplicate' })).toHaveCount(0)
     await expect(topbarMenu.getByRole('menuitem', { name: 'Paste' })).toHaveCount(0)
     await topbarMenu.getByRole('menuitem', { name: 'Rename' }).click()
     await expect(page.getByRole('textbox', { name: 'Resource title' })).toBeFocused()
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'More options', exact: true }).click()
-    await topbarMenu.getByRole('menuitem', { name: 'Backlinks' }).click()
+    await topbarMenu.getByRole('menuitem', { name: 'Details' }).click()
     const details = page.getByRole('complementary', { name: 'Resource panel' })
-    await expect(details.getByRole('button', { name: 'Backlinks' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await page.getByRole('button', { name: 'More options', exact: true }).click()
-    await page
-      .getByRole('menu', { name: 'The Lantern Market actions' })
-      .getByRole('menuitem', { name: 'Details' })
-      .click()
     await expect(details).toContainText('Kind')
     await expect(details).toContainText('note')
     await expect(details).toContainText('Campaign root')

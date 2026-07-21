@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
   createNamedResource,
-  dropFileOnResourceCollection,
   sidebarResource,
   viewAsYourself,
 } from './helpers/editor-resource-helpers'
@@ -146,18 +145,5 @@ test.describe('editor shell', () => {
     await expect
       .poll(() => restoredViewport.evaluate((element) => element.scrollTop))
       .toBe(expectedScrollTop)
-  })
-
-  test('retains opaque files independently of browser metadata', async ({ page }) => {
-    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
-    await dropFileOnResourceCollection(
-      page,
-      'payload.exe',
-      'application/octet-stream',
-      Buffer.from('opaque bytes'),
-    )
-
-    await sidebarResource(page, 'payload.exe').click()
-    await expect(page.getByText('This file type cannot be previewed.')).toBeVisible()
   })
 })

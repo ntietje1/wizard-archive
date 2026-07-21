@@ -50,8 +50,8 @@ export interface ResourceAccessSource {
 }
 
 export interface ResourceAccessPresentationSource {
-  getPresentation(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
-  loadMorePresentation(resourceId: ResourceId): void
+  get(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
+  loadMore(resourceId: ResourceId): void
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 

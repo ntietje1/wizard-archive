@@ -94,9 +94,9 @@ describe('createLiveResourceAccess', () => {
     const access = editableAccess(vi.fn(), watch)
     const { presentation: source } = access
 
-    const unknown = source.getPresentation(resourceId)
+    const unknown = source.get(resourceId)
     expect(unknown).toEqual({ state: 'unknown' })
-    expect(source.getPresentation(resourceId)).toBe(unknown)
+    expect(source.get(resourceId)).toBe(unknown)
     const unsubscribeFirst = source.subscribe(resourceId, vi.fn())
     const unsubscribeSecond = source.subscribe(resourceId, vi.fn())
     apply?.({
@@ -113,16 +113,16 @@ describe('createLiveResourceAccess', () => {
     })
 
     expect(watch).toHaveBeenCalledTimes(1)
-    expect(source.getPresentation(resourceId)).toMatchObject({
+    expect(source.get(resourceId)).toMatchObject({
       state: 'known',
       value: { policy: { resourceId } },
     })
-    expect(source.getPresentation(resourceId)).toBe(source.getPresentation(resourceId))
+    expect(source.get(resourceId)).toBe(source.get(resourceId))
     unsubscribeFirst()
     expect(dispose).not.toHaveBeenCalled()
     unsubscribeSecond()
     expect(dispose).toHaveBeenCalledOnce()
-    expect(source.getPresentation(resourceId)).toEqual({ state: 'unknown' })
+    expect(source.get(resourceId)).toEqual({ state: 'unknown' })
     access.dispose()
     expect(dispose).toHaveBeenCalledOnce()
   })
@@ -143,7 +143,7 @@ describe('createLiveResourceAccess', () => {
     const unsubscribe = source.subscribe(resourceId, listener)
 
     expect(listener).not.toHaveBeenCalled()
-    expect(source.getPresentation(resourceId)).toMatchObject({
+    expect(source.get(resourceId)).toMatchObject({
       state: 'known',
       value: { participants: [{ id: memberId }] },
     })
@@ -168,18 +168,18 @@ describe('createLiveResourceAccess', () => {
       cursor: 'next',
       presentation: presentation([memberId]),
     })
-    expect(source.getPresentation(resourceId)).toMatchObject({
+    expect(source.get(resourceId)).toMatchObject({
       state: 'known',
       value: { participants: [{ id: memberId }], participantsComplete: false },
     })
 
-    source.loadMorePresentation(resourceId)
+    source.loadMore(resourceId)
     const secondMember = testDomainId('campaignMember', 'live-access-second-target')
     publishes[1]!({
       cursor: null,
       presentation: presentation([secondMember]),
     })
-    expect(source.getPresentation(resourceId)).toMatchObject({
+    expect(source.get(resourceId)).toMatchObject({
       state: 'known',
       value: {
         participants: [{ id: memberId }, { id: secondMember }],
@@ -205,21 +205,21 @@ describe('createLiveResourceAccess', () => {
     const { presentation: source } = access
     const unsubscribe = source.subscribe(resourceId, vi.fn())
     publishes[0]!({ cursor: 'old-next', presentation: presentation([memberId]) })
-    source.loadMorePresentation(resourceId)
+    source.loadMore(resourceId)
     const oldSecondMember = testDomainId('campaignMember', 'old-second')
     publishes[1]!({ cursor: null, presentation: presentation([oldSecondMember]) })
 
     publishes[0]!({ cursor: 'new-next', presentation: presentation([memberId]) })
 
     expect(disposes[1]).toHaveBeenCalledOnce()
-    expect(source.getPresentation(resourceId)).toMatchObject({
+    expect(source.get(resourceId)).toMatchObject({
       state: 'known',
       value: { participants: [{ id: memberId }], participantsComplete: false },
     })
-    source.loadMorePresentation(resourceId)
+    source.loadMore(resourceId)
     const newSecondMember = testDomainId('campaignMember', 'new-second')
     publishes[2]!({ cursor: null, presentation: presentation([newSecondMember]) })
-    expect(source.getPresentation(resourceId)).toMatchObject({
+    expect(source.get(resourceId)).toMatchObject({
       state: 'known',
       value: {
         participants: [{ id: memberId }, { id: newSecondMember }],
