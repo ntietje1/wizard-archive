@@ -3,9 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../../shared/test/domain-id'
 import { assertVersionStamp } from '../component-version'
-import type { EditorRuntime, ResourceAccessGateway } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourceAccess } from '../editor-runtime-contract'
+import type { ResourceAccessCommandGateway } from '../resource-command-contract'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
-import type { AuthorizedResourceSummary, ResourceProjectionScope } from '../resource-index-contract'
+import type {
+  AuthorizedResourceSummary,
+  ResourceKnowledge,
+  ResourceProjectionScope,
+} from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceAccessPresentation } from '../resource-access-policy'
 import { ResourceSharingControl } from '../workspace/resource-sharing-control'
@@ -83,7 +88,7 @@ describe('ResourceSharingControl', () => {
     let finish!: () => void
     const execute = vi.fn(
       () =>
-        new Promise<Awaited<ReturnType<ResourceAccessGateway['execute']>>>((resolve) => {
+        new Promise<Awaited<ReturnType<ResourceAccessCommandGateway['execute']>>>((resolve) => {
           finish = () =>
             resolve({
               status: 'received',
@@ -99,13 +104,7 @@ describe('ResourceSharingControl', () => {
         }),
     )
     const presentationKnowledge = { state: 'known', value: presentation } as const
-    const access: ResourceAccessGateway = {
-      execute,
-      get: () => ({ state: 'known', value: 'edit' }),
-      getPresentation: () => presentationKnowledge,
-      loadMorePresentation: vi.fn(),
-      subscribe: () => () => undefined,
-    }
+    const access = editableAccess(execute, presentationKnowledge, vi.fn())
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('sharing-menu'))
     index.replaceSnapshot({
       scope,
@@ -182,13 +181,7 @@ describe('ResourceSharingControl', () => {
       state: 'known',
       value: { ...presentation, participantsComplete: false },
     } as const
-    const access: ResourceAccessGateway = {
-      execute: vi.fn(),
-      get: () => ({ state: 'known', value: 'edit' }),
-      getPresentation: () => pagedKnowledge,
-      loadMorePresentation,
-      subscribe: () => () => undefined,
-    }
+    const access = editableAccess(vi.fn(), pagedKnowledge, loadMorePresentation)
     const index = new MutableWorkspaceResourceIndex(scope, indexRevision('sharing-pages'))
     index.replaceSnapshot({
       scope,
@@ -215,3 +208,23 @@ describe('ResourceSharingControl', () => {
     expect(loadMorePresentation).toHaveBeenCalledOnce()
   })
 })
+
+function editableAccess(
+  execute: ResourceAccessCommandGateway['execute'],
+  knowledge: ResourceKnowledge<ResourceAccessPresentation>,
+  loadMorePresentation: (resourceId: typeof folderId) => void,
+): Extract<ResourceAccess, { mode: 'editable' }> {
+  return {
+    mode: 'editable',
+    source: {
+      get: () => ({ state: 'known', value: 'edit' }),
+      subscribe: () => () => undefined,
+    },
+    commands: { execute },
+    presentation: {
+      getPresentation: () => knowledge,
+      loadMorePresentation,
+      subscribe: () => () => undefined,
+    },
+  }
+}

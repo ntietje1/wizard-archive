@@ -9,7 +9,7 @@ import {
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import type { ResourceAccessPresentation } from '@wizard-archive/editor/resources/access-policy'
-import { createLiveResourceAccessGateway } from '../live-resource-access-gateway'
+import { createLiveResourceAccess } from '../live-resource-access'
 
 const campaignId = testDomainId('campaign', 'live-access')
 const actorId = testDomainId('campaignMember', 'live-access')
@@ -23,15 +23,16 @@ const scope = {
   schema: RESOURCE_INDEX_SCHEMA,
 } satisfies ResourceProjectionScope
 
-describe('createLiveResourceAccessGateway', () => {
+describe('createLiveResourceAccess', () => {
   it('reads effective access from the authorized index projection', () => {
     const index = resourceIndex('view')
-    const gateway = createLiveResourceAccessGateway(campaignId, index, vi.fn())
+    const access = createLiveResourceAccess(index, { mode: 'readonly' })
 
-    expect(gateway.get(resourceId)).toEqual({ state: 'known', value: 'view' })
-    expect(gateway.get(testDomainId('resource', 'unknown-access'))).toEqual({
+    expect(access.source.get(resourceId)).toEqual({ state: 'known', value: 'view' })
+    expect(access.source.get(testDomainId('resource', 'unknown-access'))).toEqual({
       state: 'unknown',
     })
+    expect(access.mode).toBe('readonly')
   })
 
   it('normalizes commands and validates completed receipt identity', async () => {
@@ -41,10 +42,10 @@ describe('createLiveResourceAccessGateway', () => {
         receipt: { campaignId, operationId, resourceIds: [resourceId] },
       }),
     )
-    const gateway = createLiveResourceAccessGateway(campaignId, resourceIndex('edit'), execute)
+    const access = editableAccess(execute)
 
     await expect(
-      gateway.execute({
+      access.commands.execute({
         campaignId,
         operationId,
         command: {
@@ -73,23 +74,12 @@ describe('createLiveResourceAccessGateway', () => {
     })
   })
 
-  it('rejects access mutation outside an authoritative DM runtime', async () => {
-    const gateway = createLiveResourceAccessGateway(campaignId, resourceIndex('view'), null)
+  it('does not expose mutation or sharing presentation outside an editable runtime', () => {
+    const access = createLiveResourceAccess(resourceIndex('view'), { mode: 'readonly' })
 
-    await expect(
-      gateway.execute({
-        campaignId,
-        operationId,
-        command: {
-          type: 'setAudienceAccess',
-          resourceIds: [resourceId],
-          permission: 'view',
-        },
-      }),
-    ).resolves.toEqual({
-      status: 'received',
-      result: { status: 'rejected', reason: 'unauthorized' },
-    })
+    expect(access).toMatchObject({ mode: 'readonly', source: expect.any(Object) })
+    expect('commands' in access).toBe(false)
+    expect('presentation' in access).toBe(false)
   })
 
   it('starts one live sharing projection and disposes its source subscription', () => {
@@ -101,18 +91,14 @@ describe('createLiveResourceAccessGateway', () => {
       apply = publish
       return dispose
     })
-    const gateway = createLiveResourceAccessGateway(
-      campaignId,
-      resourceIndex('edit'),
-      vi.fn(),
-      watch,
-    )
+    const access = editableAccess(vi.fn(), watch)
+    const { presentation: source } = access
 
-    const unknown = gateway.getPresentation(resourceId)
+    const unknown = source.getPresentation(resourceId)
     expect(unknown).toEqual({ state: 'unknown' })
-    expect(gateway.getPresentation(resourceId)).toBe(unknown)
-    const unsubscribeFirst = gateway.subscribe(resourceId, vi.fn())
-    const unsubscribeSecond = gateway.subscribe(resourceId, vi.fn())
+    expect(source.getPresentation(resourceId)).toBe(unknown)
+    const unsubscribeFirst = source.subscribe(resourceId, vi.fn())
+    const unsubscribeSecond = source.subscribe(resourceId, vi.fn())
     apply?.({
       cursor: null,
       presentation: {
@@ -127,17 +113,17 @@ describe('createLiveResourceAccessGateway', () => {
     })
 
     expect(watch).toHaveBeenCalledTimes(1)
-    expect(gateway.getPresentation(resourceId)).toMatchObject({
+    expect(source.getPresentation(resourceId)).toMatchObject({
       state: 'known',
       value: { policy: { resourceId } },
     })
-    expect(gateway.getPresentation(resourceId)).toBe(gateway.getPresentation(resourceId))
+    expect(source.getPresentation(resourceId)).toBe(source.getPresentation(resourceId))
     unsubscribeFirst()
     expect(dispose).not.toHaveBeenCalled()
     unsubscribeSecond()
     expect(dispose).toHaveBeenCalledOnce()
-    expect(gateway.getPresentation(resourceId)).toEqual({ state: 'unknown' })
-    gateway.dispose()
+    expect(source.getPresentation(resourceId)).toEqual({ state: 'unknown' })
+    access.dispose()
     expect(dispose).toHaveBeenCalledOnce()
   })
 
@@ -150,18 +136,14 @@ describe('createLiveResourceAccessGateway', () => {
       apply({ cursor: null, presentation: presentation([memberId]) })
       return vi.fn()
     })
-    const gateway = createLiveResourceAccessGateway(
-      campaignId,
-      resourceIndex('edit'),
-      vi.fn(),
-      watch,
-    )
+    const access = editableAccess(vi.fn(), watch)
+    const { presentation: source } = access
     const listener = vi.fn()
 
-    const unsubscribe = gateway.subscribe(resourceId, listener)
+    const unsubscribe = source.subscribe(resourceId, listener)
 
     expect(listener).not.toHaveBeenCalled()
-    expect(gateway.getPresentation(resourceId)).toMatchObject({
+    expect(source.getPresentation(resourceId)).toMatchObject({
       state: 'known',
       value: { participants: [{ id: memberId }] },
     })
@@ -179,29 +161,25 @@ describe('createLiveResourceAccessGateway', () => {
       const index = publishes.push(publish) - 1
       return disposes[index]!
     })
-    const gateway = createLiveResourceAccessGateway(
-      campaignId,
-      resourceIndex('edit'),
-      vi.fn(),
-      watch,
-    )
-    const unsubscribe = gateway.subscribe(resourceId, vi.fn())
+    const access = editableAccess(vi.fn(), watch)
+    const { presentation: source } = access
+    const unsubscribe = source.subscribe(resourceId, vi.fn())
     publishes[0]!({
       cursor: 'next',
       presentation: presentation([memberId]),
     })
-    expect(gateway.getPresentation(resourceId)).toMatchObject({
+    expect(source.getPresentation(resourceId)).toMatchObject({
       state: 'known',
       value: { participants: [{ id: memberId }], participantsComplete: false },
     })
 
-    gateway.loadMorePresentation(resourceId)
+    source.loadMorePresentation(resourceId)
     const secondMember = testDomainId('campaignMember', 'live-access-second-target')
     publishes[1]!({
       cursor: null,
       presentation: presentation([secondMember]),
     })
-    expect(gateway.getPresentation(resourceId)).toMatchObject({
+    expect(source.getPresentation(resourceId)).toMatchObject({
       state: 'known',
       value: {
         participants: [{ id: memberId }, { id: secondMember }],
@@ -223,29 +201,25 @@ describe('createLiveResourceAccessGateway', () => {
       const index = publishes.push(publish) - 1
       return disposes[index]!
     })
-    const gateway = createLiveResourceAccessGateway(
-      campaignId,
-      resourceIndex('edit'),
-      vi.fn(),
-      watch,
-    )
-    const unsubscribe = gateway.subscribe(resourceId, vi.fn())
+    const access = editableAccess(vi.fn(), watch)
+    const { presentation: source } = access
+    const unsubscribe = source.subscribe(resourceId, vi.fn())
     publishes[0]!({ cursor: 'old-next', presentation: presentation([memberId]) })
-    gateway.loadMorePresentation(resourceId)
+    source.loadMorePresentation(resourceId)
     const oldSecondMember = testDomainId('campaignMember', 'old-second')
     publishes[1]!({ cursor: null, presentation: presentation([oldSecondMember]) })
 
     publishes[0]!({ cursor: 'new-next', presentation: presentation([memberId]) })
 
     expect(disposes[1]).toHaveBeenCalledOnce()
-    expect(gateway.getPresentation(resourceId)).toMatchObject({
+    expect(source.getPresentation(resourceId)).toMatchObject({
       state: 'known',
       value: { participants: [{ id: memberId }], participantsComplete: false },
     })
-    gateway.loadMorePresentation(resourceId)
+    source.loadMorePresentation(resourceId)
     const newSecondMember = testDomainId('campaignMember', 'new-second')
     publishes[2]!({ cursor: null, presentation: presentation([newSecondMember]) })
-    expect(gateway.getPresentation(resourceId)).toMatchObject({
+    expect(source.getPresentation(resourceId)).toMatchObject({
       state: 'known',
       value: {
         participants: [{ id: memberId }, { id: newSecondMember }],
@@ -279,6 +253,25 @@ function presentation(participantIds: ReadonlyArray<typeof memberId>): PagePrese
 }
 
 type PagePresentation = Omit<ResourceAccessPresentation, 'participantsComplete'>
+
+type EditableAccessInput = Extract<
+  Parameters<typeof createLiveResourceAccess>[1],
+  { mode: 'editable' }
+>
+
+function editableAccess(
+  execute: EditableAccessInput['execute'],
+  watchPresentation: EditableAccessInput['watchPresentation'] = () => () => undefined,
+) {
+  const access = createLiveResourceAccess(resourceIndex('edit'), {
+    mode: 'editable',
+    campaignId,
+    execute,
+    watchPresentation,
+  })
+  if (access.mode !== 'editable') throw new TypeError('Expected editable resource access')
+  return access
+}
 
 function resourceIndex(permission: 'view' | 'edit') {
   const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))

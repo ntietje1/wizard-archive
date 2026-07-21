@@ -12,7 +12,7 @@ describe('resource watch ownership', () => {
     const releaseState = vi.fn()
     let publish: (snapshot: number) => void = () => undefined
     let store: ReturnType<typeof createResourceWatchStore<number, number>>
-    store = createResourceWatchStore(
+    store = createResourceWatchStore<number, number>(
       (_resourceId, apply) => {
         publish = apply
         return stop

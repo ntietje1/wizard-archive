@@ -16,13 +16,11 @@ type LoadedPage<T> = {
 }
 
 export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
-  watch:
-    | ((
-        id: TId,
-        cursor: string | null,
-        apply: (page: PresentationPage<TPage>) => void,
-      ) => () => void)
-    | null,
+  watch: (
+    id: TId,
+    cursor: string | null,
+    apply: (page: PresentationPage<TPage>) => void,
+  ) => () => void,
   merge: (pages: ReadonlyArray<TPage>, complete: boolean) => TPresentation,
 ) {
   const presentations = new Map<TId, ResourceKnowledge<TPresentation>>()
@@ -45,7 +43,7 @@ export function createLivePaginatedPresentationStore<TId, TPage, TPresentation>(
   }
 
   const start = (id: TId, cursor: string | null) => {
-    if (!watch || !subscriptions.has(id)) return
+    if (!subscriptions.has(id)) return
     const loaded = pages.get(id) ?? []
     if (loaded.some((page) => page.cursor === cursor)) return
     const page: LoadedPage<TPage> = {

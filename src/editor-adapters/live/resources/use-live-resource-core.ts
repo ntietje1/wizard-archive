@@ -23,7 +23,7 @@ import { createLiveFileContentSource } from './live-file-content-source'
 import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 import { createLiveResourceBookmarks, createLiveWorkspaceSearch } from './live-workspace-discovery'
 import { useCommittedRuntime } from '../../committed-runtime'
-import { createLiveResourceAccessGateway } from './live-resource-access-gateway'
+import { createLiveResourceAccess } from './live-resource-access'
 import { createLiveNoteBlockAccessGateway } from './live-note-block-access-gateway'
 import { executeResourceWrite, resourceQueryScope } from './resource-query-scope'
 import type { LiveResourceContentAuthority } from './live-resource-content-authority'
@@ -359,42 +359,46 @@ function createScopedLiveResourceRuntime(
     base.applyProjection,
     (args) => convex.query(api.resources.queries.searchResources, args),
   )
-  const access = createLiveResourceAccessGateway(
-    currentScope.campaignId,
+  const access = createLiveResourceAccess(
     optimistic.index,
     currentScope.projection === 'dm'
-      ? (args) =>
-          write(() => convex.mutation(api.resources.mutations.executeResourceAccessCommand, args))
-      : null,
-    currentScope.projection === 'dm'
-      ? (resourceId, cursor, apply) => {
-          const watch = convex.watchQuery(api.resources.queries.loadResourceAccess, {
-            campaignId: currentScope.campaignId,
-            resourceId,
-            cursor,
-          })
-          return subscribeToWatch(watch, apply)
+      ? {
+          mode: 'editable',
+          campaignId: currentScope.campaignId,
+          execute: (args) =>
+            write(() =>
+              convex.mutation(api.resources.mutations.executeResourceAccessCommand, args),
+            ),
+          watchPresentation: (resourceId, cursor, apply) => {
+            const watch = convex.watchQuery(api.resources.queries.loadResourceAccess, {
+              campaignId: currentScope.campaignId,
+              resourceId,
+              cursor,
+            })
+            return subscribeToWatch(watch, apply)
+          },
         }
-      : null,
+      : { mode: 'readonly' },
   )
-  const noteBlockAccess = createLiveNoteBlockAccessGateway(
-    currentScope.campaignId,
+  const noteBlockAccess =
     currentScope.projection === 'dm'
-      ? (args) =>
-          write(() => convex.mutation(api.resources.mutations.executeNoteBlockAccessCommand, args))
-      : null,
-    currentScope.projection === 'dm'
-      ? (noteId, blockIds, cursor, apply) => {
-          const watch = convex.watchQuery(api.resources.queries.loadNoteBlockAccess, {
-            campaignId: currentScope.campaignId,
-            noteId,
-            blockIds: [...blockIds],
-            cursor,
-          })
-          return subscribeToWatch(watch, apply)
-        }
-      : null,
-  )
+      ? createLiveNoteBlockAccessGateway(
+          currentScope.campaignId,
+          (args) =>
+            write(() =>
+              convex.mutation(api.resources.mutations.executeNoteBlockAccessCommand, args),
+            ),
+          (noteId, blockIds, cursor, apply) => {
+            const watch = convex.watchQuery(api.resources.queries.loadNoteBlockAccess, {
+              campaignId: currentScope.campaignId,
+              noteId,
+              blockIds: [...blockIds],
+              cursor,
+            })
+            return subscribeToWatch(watch, apply)
+          },
+        )
+      : null
   const references = createLiveResourceReferenceSource(
     base.applyProjection,
     (resourceId, apply) => {
@@ -432,10 +436,9 @@ function createScopedLiveResourceRuntime(
     status: 'available',
     value: access,
   }
-  const noteBlockAccessCapability: EditorRuntime['resources']['noteBlockAccess'] =
-    currentScope.projection === 'dm'
-      ? { status: 'available', value: noteBlockAccess }
-      : { status: 'unavailable', reason: 'unauthorized' }
+  const noteBlockAccessCapability: EditorRuntime['resources']['noteBlockAccess'] = noteBlockAccess
+    ? { status: 'available', value: noteBlockAccess }
+    : { status: 'unavailable', reason: 'unauthorized' }
   const content = { notes, files, maps, canvases }
   const transfers =
     currentScope.projection === 'dm'
@@ -549,7 +552,7 @@ function createScopedLiveResourceRuntime(
       preferences.dispose()
       bookmarks.dispose()
       access.dispose()
-      noteBlockAccess.dispose()
+      noteBlockAccess?.dispose()
       references.dispose()
       noteOutlines.dispose()
       history?.dispose()

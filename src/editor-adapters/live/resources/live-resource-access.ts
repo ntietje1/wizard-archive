@@ -12,7 +12,10 @@ import {
 } from '@wizard-archive/editor/resources/command-protocol'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import type { ResourceAccessGateway } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type {
+  ResourceAccess,
+  ResourceAccessSource,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { WorkspaceResourceIndex } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceAccessPresentation } from '@wizard-archive/editor/resources/access-policy'
 import { createLivePaginatedPresentationStore } from './live-paginated-presentation-store'
@@ -29,19 +32,38 @@ type ResourceAccessPresentationPage = NonNullable<
   FunctionReturnType<typeof api.resources.queries.loadResourceAccess>['presentation']
 >
 
-type LiveResourceAccessGateway = ResourceAccessGateway & Readonly<{ dispose(): void }>
+type LiveResourceAccess = ResourceAccess & Readonly<{ dispose(): void }>
 
-export function createLiveResourceAccessGateway(
-  campaignId: CampaignId,
+type LiveResourceAccessInput =
+  | Readonly<{ mode: 'readonly' }>
+  | Readonly<{
+      mode: 'editable'
+      campaignId: CampaignId
+      execute: ExecuteMutation
+      watchPresentation: WatchPresentation
+    }>
+
+export function createLiveResourceAccess(
   index: WorkspaceResourceIndex,
-  executeMutation: ExecuteMutation | null,
-  watchPresentation: WatchPresentation | null = null,
-): LiveResourceAccessGateway {
+  input: LiveResourceAccessInput,
+): LiveResourceAccess {
+  const source: ResourceAccessSource = {
+    get: (resourceId) => {
+      const resource = index.getSnapshot().lookup(resourceId)
+      return resource.state === 'known'
+        ? { state: 'known', value: resource.value.permission }
+        : resource
+    },
+    subscribe: (listener) => index.subscribe(listener),
+  }
+  if (input.mode === 'readonly') {
+    return { mode: 'readonly', source, dispose: () => undefined }
+  }
   const presentations = createLivePaginatedPresentationStore<
     ResourceId,
     ResourceAccessPresentationPage,
     ResourceAccessPresentation
-  >(watchPresentation, (pages, participantsComplete): ResourceAccessPresentation => {
+  >(input.watchPresentation, (pages, participantsComplete): ResourceAccessPresentation => {
     const first = pages[0]
     if (!first) throw new TypeError('Resource access page is unavailable')
     return {
@@ -51,55 +73,47 @@ export function createLiveResourceAccessGateway(
     }
   })
   return {
-    get: (resourceId: ResourceId) => {
-      const resource = index.getSnapshot().lookup(resourceId)
-      return resource.state === 'known'
-        ? { state: 'known', value: resource.value.permission }
-        : resource
+    mode: 'editable',
+    source,
+    presentation: {
+      getPresentation: presentations.get,
+      loadMorePresentation: presentations.loadMore,
+      subscribe: presentations.subscribe,
     },
-    getPresentation: presentations.get,
-    loadMorePresentation: presentations.loadMore,
-    subscribe: (resourceId, listener) => {
-      const unsubscribeIndex = index.subscribe(listener)
-      const unsubscribePresentation = presentations.subscribe(resourceId, listener)
-      return () => {
-        unsubscribeIndex()
-        unsubscribePresentation()
-      }
-    },
-    execute: async (envelope) => {
-      if (envelope.campaignId !== campaignId) return scopeUnavailable()
-      if (!executeMutation) return unauthorized()
-      let command: ResourceAccessCommand
-      try {
-        command = normalizeResourceAccessCommand(envelope.command)
-      } catch (error) {
-        return {
-          status: 'received',
-          result: {
-            status: 'rejected',
-            reason: accessCommandInputRejection(error),
-          },
+    commands: {
+      execute: async (envelope) => {
+        if (envelope.campaignId !== input.campaignId) return scopeUnavailable()
+        let command: ResourceAccessCommand
+        try {
+          command = normalizeResourceAccessCommand(envelope.command)
+        } catch (error) {
+          return {
+            status: 'received',
+            result: {
+              status: 'rejected',
+              reason: accessCommandInputRejection(error),
+            },
+          }
         }
-      }
-      try {
-        const value = await executeMutation({
-          campaignId,
-          operationId: envelope.operationId,
-          command: mutationCommand(command),
-        })
-        const result = readResult(value)
-        if (
-          result.status === 'completed' &&
-          (result.receipt.campaignId !== campaignId ||
-            result.receipt.operationId !== envelope.operationId)
-        ) {
-          throw new TypeError('Resource access receipt does not match its envelope')
+        try {
+          const value = await input.execute({
+            campaignId: input.campaignId,
+            operationId: envelope.operationId,
+            command: mutationCommand(command),
+          })
+          const result = readResult(value)
+          if (
+            result.status === 'completed' &&
+            (result.receipt.campaignId !== input.campaignId ||
+              result.receipt.operationId !== envelope.operationId)
+          ) {
+            throw new TypeError('Resource access receipt does not match its envelope')
+          }
+          return { status: 'received', result }
+        } catch {
+          return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
         }
-        return { status: 'received', result }
-      } catch {
-        return { status: 'indeterminate', retryable: true, reason: 'response_lost' }
-      }
+      },
     },
     dispose: presentations.dispose,
   }
@@ -128,13 +142,6 @@ function readReceipt(
     resourceIds: value.resourceIds.map((resourceId) =>
       assertDomainId(DOMAIN_ID_KIND.resource, resourceId),
     ),
-  }
-}
-
-function unauthorized(): CommandDelivery<ResourceAccessCommandResult> {
-  return {
-    status: 'received',
-    result: { status: 'rejected', reason: 'unauthorized' },
   }
 }
 

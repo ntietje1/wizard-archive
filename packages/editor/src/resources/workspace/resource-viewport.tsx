@@ -272,12 +272,13 @@ function NoteViewport({
       <NoteSessionEditor
         blockAccess={
           runtime.resources.noteBlockAccess.status === 'available' &&
-          runtime.resources.access.status === 'available'
+          runtime.resources.access.status === 'available' &&
+          runtime.resources.access.value.mode === 'editable'
             ? {
                 campaignId: runtime.scope.campaignId,
                 gateway: runtime.resources.noteBlockAccess.value,
                 noteId: resource.id,
-                resourceAccess: runtime.resources.access.value,
+                resourceAccess: runtime.resources.access.value.commands,
               }
             : undefined
         }

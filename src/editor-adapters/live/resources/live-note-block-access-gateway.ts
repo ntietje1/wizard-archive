@@ -39,26 +39,23 @@ type LiveNoteBlockAccessGateway = NoteBlockAccessGateway & Readonly<{ dispose():
 
 export function createLiveNoteBlockAccessGateway(
   campaignId: CampaignId,
-  executeMutation: ExecuteMutation | null,
-  watchPresentation: WatchPresentation | null,
+  executeMutation: ExecuteMutation,
+  watchPresentation: WatchPresentation,
 ): LiveNoteBlockAccessGateway {
   const presentations = createLivePaginatedPresentationStore<
     string,
     PagePresentation,
     NoteBlockAccessPresentation
   >(
-    watchPresentation
-      ? (key, cursor, apply) => {
-          const selection = readSelectionKey(key)
-          return watchPresentation(selection.noteId, selection.blockIds, cursor, (value) =>
-            apply({
-              cursor: value.cursor,
-              presentation:
-                value.presentation === null ? null : readPresentation(value.presentation),
-            }),
-          )
-        }
-      : null,
+    (key, cursor, apply) => {
+      const selection = readSelectionKey(key)
+      return watchPresentation(selection.noteId, selection.blockIds, cursor, (value) =>
+        apply({
+          cursor: value.cursor,
+          presentation: value.presentation === null ? null : readPresentation(value.presentation),
+        }),
+      )
+    },
     (pages, participantsComplete) => {
       const first = pages[0]
       if (!first) throw new TypeError('Note block access page is unavailable')
@@ -85,7 +82,6 @@ export function createLiveNoteBlockAccessGateway(
       presentations.subscribe(selectionKey(noteId, blockIds), listener),
     execute: async (envelope) => {
       if (envelope.campaignId !== campaignId) return scopeUnavailable()
-      if (!executeMutation) return unauthorized()
       let command: NoteBlockAccessCommand
       try {
         command = normalizeNoteBlockAccessCommand(envelope.command)
@@ -167,13 +163,6 @@ function readReceipt(
     operationId: assertDomainId(DOMAIN_ID_KIND.operation, value.operationId),
     noteId: assertDomainId(DOMAIN_ID_KIND.resource, value.noteId),
     blockIds: value.blockIds.map((blockId) => assertDomainId(DOMAIN_ID_KIND.noteBlock, blockId)),
-  }
-}
-
-function unauthorized(): CommandDelivery<NoteBlockAccessCommandResult> {
-  return {
-    status: 'received',
-    result: { status: 'rejected', reason: 'unauthorized' },
   }
 }
 

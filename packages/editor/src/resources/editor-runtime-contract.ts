@@ -44,12 +44,25 @@ export type ResourceCapability<T> =
       readonly reason: 'capability_not_supported' | 'scope_unavailable' | 'unauthorized'
     }
 
-export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
+export interface ResourceAccessSource {
   get(resourceId: ResourceId): ResourceKnowledge<ResourcePermission>
+  subscribe(listener: () => void): () => void
+}
+
+export interface ResourceAccessPresentationSource {
   getPresentation(resourceId: ResourceId): ResourceKnowledge<ResourceAccessPresentation>
   loadMorePresentation(resourceId: ResourceId): void
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
+
+export type ResourceAccess =
+  | Readonly<{ mode: 'readonly'; source: ResourceAccessSource }>
+  | Readonly<{
+      mode: 'editable'
+      source: ResourceAccessSource
+      presentation: ResourceAccessPresentationSource
+      commands: ResourceAccessCommandGateway
+    }>
 
 export interface NoteBlockAccessGateway extends NoteBlockAccessCommandGateway {
   getPresentation(
@@ -347,7 +360,7 @@ export interface EditorRuntime {
     readonly index: WorkspaceResourceIndex
     readonly loader: ResourceIndexLoader
     readonly structure: ResourceCapability<ResourceStructureCommandGateway>
-    readonly access: ResourceCapability<ResourceAccessGateway>
+    readonly access: ResourceCapability<ResourceAccess>
     readonly noteBlockAccess: ResourceCapability<NoteBlockAccessGateway>
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly noteOutlines: ResourceCapability<NoteOutlineSource>

@@ -1,4 +1,4 @@
-import { useCallback, useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { ChevronDown, ChevronUp, LoaderCircle, Lock, Users } from 'lucide-react'
 import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
@@ -25,13 +25,16 @@ import {
 } from '@wizard-archive/ui/shadcn/components/tooltip'
 import { getInitials } from '@wizard-archive/ui/utils/get-initials'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
-import type { ResourceAccessCommand } from '../resource-command-contract'
+import type {
+  ResourceAccessCommand,
+  ResourceAccessCommandGateway,
+} from '../resource-command-contract'
 import type {
   ResourceAccessParticipant,
   ResourceAccessPresentation,
   ResourcePermission,
 } from '../resource-access-policy'
-import type { EditorRuntime, ResourceAccessGateway } from '../editor-runtime-contract'
+import type { EditorRuntime, ResourceAccessPresentationSource } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 
 type PermissionValue = 'default' | ResourcePermission
@@ -52,10 +55,11 @@ export function ResourceSharingControl({
   runtime: EditorRuntime
 }) {
   const capability = runtime.resources.access
-  if (capability.status !== 'available') return null
+  if (capability.status !== 'available' || capability.value.mode !== 'editable') return null
   return (
     <AvailableResourceSharingControl
-      access={capability.value}
+      commands={capability.value.commands}
+      presentation={capability.value.presentation}
       resource={resource}
       runtime={runtime}
     />
@@ -63,22 +67,21 @@ export function ResourceSharingControl({
 }
 
 function AvailableResourceSharingControl({
-  access,
+  commands,
+  presentation,
   resource,
   runtime,
 }: {
-  access: ResourceAccessGateway
+  commands: ResourceAccessCommandGateway
+  presentation: ResourceAccessPresentationSource
   resource: AuthorizedResourceSummary
   runtime: EditorRuntime
 }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
-  const subscribe = useCallback(
-    (listener: () => void) => access.subscribe(resource.id, listener),
-    [access, resource.id],
-  )
-  const getSnapshot = useCallback(() => access.getPresentation(resource.id), [access, resource.id])
+  const subscribe = (listener: () => void) => presentation.subscribe(resource.id, listener)
+  const getSnapshot = () => presentation.getPresentation(resource.id)
   const knowledge = useSyncExternalStore(subscribe, getSnapshot)
 
   const ready = knowledge.state === 'known'
@@ -89,7 +92,7 @@ function AvailableResourceSharingControl({
   const execute = async (command: ResourceAccessCommand) => {
     setPending(true)
     setError(false)
-    const delivery = await access.execute({
+    const delivery = await commands.execute({
       campaignId: runtime.scope.campaignId,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
       command,
@@ -129,7 +132,7 @@ function AvailableResourceSharingControl({
             disabled={pending}
             error={error}
             execute={execute}
-            loadMoreParticipants={() => access.loadMorePresentation(resource.id)}
+            loadMoreParticipants={() => presentation.loadMorePresentation(resource.id)}
             pending={pending}
             presentation={knowledge.value}
             resource={resource}

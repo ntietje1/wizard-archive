@@ -14,11 +14,11 @@ import {
 } from '@wizard-archive/ui/shadcn/components/select'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
 import type { CampaignMemberId, NoteBlockId, ResourceId } from '../../resources/domain-id'
-import type { NoteBlockAccessCommand } from '../../resources/resource-command-contract'
 import type {
-  NoteBlockAccessGateway,
-  ResourceAccessGateway,
-} from '../../resources/editor-runtime-contract'
+  NoteBlockAccessCommand,
+  ResourceAccessCommandGateway,
+} from '../../resources/resource-command-contract'
+import type { NoteBlockAccessGateway } from '../../resources/editor-runtime-contract'
 import {
   NOTE_BLOCK_VISIBILITY,
   projectNoteBlockSelectionAccess,
@@ -38,7 +38,7 @@ export type NoteBlockAccessMenuBinding = Readonly<{
   campaignId: Parameters<NoteBlockAccessGateway['execute']>[0]['campaignId']
   gateway: NoteBlockAccessGateway
   noteId: ResourceId
-  resourceAccess: ResourceAccessGateway
+  resourceAccess: ResourceAccessCommandGateway
 }>
 
 export function NoteBlockAccessMenuProvider({
@@ -52,7 +52,7 @@ export function NoteBlockAccessMenuProvider({
   children: ReactNode
   gateway: NoteBlockAccessGateway
   noteId: ResourceId
-  resourceAccess: ResourceAccessGateway
+  resourceAccess: ResourceAccessCommandGateway
 }) {
   const [menu, setMenu] = useState<NoteBlockAccessMenuState | null>(null)
   const [pending, setPending] = useState(false)

@@ -16,7 +16,7 @@ describe('createLiveNoteBlockAccessGateway', () => {
         receipt: { campaignId, operationId, noteId, blockIds: [blockId] },
       }),
     )
-    const gateway = createLiveNoteBlockAccessGateway(campaignId, execute, null)
+    const gateway = createLiveNoteBlockAccessGateway(campaignId, execute, () => () => undefined)
 
     await expect(
       gateway.execute({
@@ -123,25 +123,6 @@ describe('createLiveNoteBlockAccessGateway', () => {
     unsubscribe()
     expect(disposes[0]).toHaveBeenCalledOnce()
     expect(disposes[1]).toHaveBeenCalledOnce()
-  })
-
-  it('rejects mutation when the capability is not authoritative', async () => {
-    const gateway = createLiveNoteBlockAccessGateway(campaignId, null, null)
-    await expect(
-      gateway.execute({
-        campaignId,
-        operationId,
-        command: {
-          type: 'setNoteBlockAudienceAccess',
-          noteId,
-          blockIds: [blockId],
-          shared: true,
-        },
-      }),
-    ).resolves.toEqual({
-      status: 'received',
-      result: { status: 'rejected', reason: 'unauthorized' },
-    })
   })
 })
 
