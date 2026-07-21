@@ -343,13 +343,17 @@ export function CanvasEditorSurface({
           )
           const point = localPoint(event, event.currentTarget)
           const viewport = interactionController.get().viewport
-          setCanvasCollaborationCursor(collaboration, screenToCanvasPoint(point, viewport))
+          const canvasPoint = screenToCanvasPoint(point, viewport)
+          setCanvasCollaborationCursor(collaboration, canvasPoint)
           interactionController.updatePan(event.pointerId, point)
           if (canEdit && (event.buttons & 1) === 1) {
             updateCanvasEditGesture(
               interactionController,
               event.pointerId,
-              canvasPointerSamples(event, event.currentTarget, viewport),
+              canvasPoint,
+              event,
+              event.currentTarget,
+              viewport,
               event.shiftKey,
               event.metaKey || event.ctrlKey,
             )
@@ -370,7 +374,10 @@ export function CanvasEditorSurface({
             updateCanvasEditGesture(
               interactionController,
               event.pointerId,
-              canvasPointerSamples(event, event.currentTarget, snapshot.viewport),
+              canvasPoint,
+              event,
+              event.currentTarget,
+              snapshot.viewport,
               event.shiftKey,
               event.metaKey || event.ctrlKey,
             )
@@ -538,17 +545,36 @@ function beginCanvasSurfaceInteraction(
 function updateCanvasEditGesture(
   controller: CanvasInteractionController,
   pointerId: number,
-  drawingPoints: ReadonlyArray<CanvasDrawPoint>,
+  point: CanvasPoint,
+  event: PointerEvent<HTMLElement>,
+  surface: HTMLElement,
+  viewport: CanvasViewport,
   square: boolean,
   snap: boolean,
 ) {
-  const [x, y] = drawingPoints[drawingPoints.length - 1]!
-  const point = { x, y }
-  controller.updateDrawing(pointerId, drawingPoints, square)
-  controller.updateTextPlacement(pointerId, point, square)
-  controller.updateErasing(pointerId, point)
-  controller.updateConnection(pointerId, point)
-  controller.updateResize(pointerId, point, square, snap)
+  switch (controller.get().interaction.type) {
+    case 'drawing':
+      controller.updateDrawing(pointerId, canvasPointerSamples(event, surface, viewport), square)
+      return
+    case 'placing-text':
+      controller.updateTextPlacement(pointerId, point, square)
+      return
+    case 'erasing':
+      controller.updateErasing(pointerId, point)
+      return
+    case 'connecting':
+      controller.updateConnection(pointerId, point)
+      return
+    case 'resizing':
+      controller.updateResize(pointerId, point, square, snap)
+      return
+    case 'dragging':
+    case 'editing':
+    case 'idle':
+    case 'panning':
+    case 'selecting':
+      return
+  }
 }
 
 function commitTextPlacement(
