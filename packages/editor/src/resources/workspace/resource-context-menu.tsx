@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   Clipboard,
   ClipboardPaste,
-  ChevronRight,
   Copy,
   Download,
   ExternalLink,
@@ -45,6 +44,7 @@ import {
   WorkspaceMenu,
   WorkspaceMenuItem as MenuItem,
   WorkspaceMenuSeparator as MenuSeparator,
+  WorkspaceMenuSubmenu,
 } from './workspace-menu'
 
 type ResourceContextMenuCommonProps = Readonly<{
@@ -551,52 +551,29 @@ export function NewResourceSubmenu({
   onClose: () => void
   side: 'left' | 'right'
 }) {
-  const [open, setOpen] = useState(false)
   return (
-    <div className="relative" onPointerEnter={() => setOpen(true)}>
-      <button
-        role="menuitem"
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className="flex h-8 w-full items-center gap-2 rounded px-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted"
-        onClick={() => setOpen((current) => !current)}
-      >
-        <Plus className="size-4" />
-        <span className="min-w-0 flex-1">New…</span>
-        <ChevronRight className={`size-4 ${side === 'left' ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div
-          role="menu"
-          aria-label="New resource"
-          className={`absolute top-0 z-10 w-44 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md ${
-            side === 'left' ? 'right-full mr-1' : 'left-full ml-1'
-          }`}
-        >
-          {(['note', 'folder', 'map', 'canvas', 'file'] as const).map((kind) => {
-            const Icon = resourceKindIcon(kind)
-            const pending = creation.pendingControlId === kind
-            return (
-              <MenuItem
-                busy={pending}
-                disabled={creation.blocked}
-                key={kind}
-                icon={pending ? <Loader2 className="animate-spin" /> : <Icon />}
-                label={resourceKindLabel(kind)}
-                onActivate={() =>
-                  void creation
-                    .run(kind, (signal) => actions.create(kind, destinationParentId, '', signal))
-                    .then((settlement) => {
-                      if (settlement.status === 'completed') onClose()
-                    })
-                }
-              />
-            )
-          })}
-        </div>
-      )}
-    </div>
+    <WorkspaceMenuSubmenu icon={<Plus />} label="New…" menuLabel="New resource" side={side}>
+      {(['note', 'folder', 'map', 'canvas', 'file'] as const).map((kind) => {
+        const Icon = resourceKindIcon(kind)
+        const pending = creation.pendingControlId === kind
+        return (
+          <MenuItem
+            busy={pending}
+            disabled={creation.blocked}
+            key={kind}
+            icon={pending ? <Loader2 className="animate-spin" /> : <Icon />}
+            label={resourceKindLabel(kind)}
+            onActivate={() =>
+              void creation
+                .run(kind, (signal) => actions.create(kind, destinationParentId, '', signal))
+                .then((settlement) => {
+                  if (settlement.status === 'completed') onClose()
+                })
+            }
+          />
+        )
+      })}
+    </WorkspaceMenuSubmenu>
   )
 }
 

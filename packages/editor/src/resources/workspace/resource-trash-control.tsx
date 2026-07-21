@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { CircleHelp, RotateCcw, Trash2 } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@wizard-archive/ui/shadcn/components/popover'
 import type { ResourceId } from '../domain-id'
 import type { EditorRuntime } from '../editor-runtime-contract'
 import type { WorkspaceResourceIndexSnapshot } from '../resource-index-contract'
@@ -41,16 +46,6 @@ export function ResourceTrashControl({
       : []
   const [open, setOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<TrashConfirmation>({ type: 'none' })
-  const container = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const close = (event: PointerEvent) => {
-      if (!container.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [open])
 
   const mutate = async (
     resourceIds: ReadonlyArray<ResourceId>,
@@ -60,103 +55,107 @@ export function ResourceTrashControl({
     await actions.changeLifecycle(resourceIds, type)
   }
   return (
-    <div ref={container} className="relative">
-      <button
-        type="button"
-        aria-expanded={open}
-        data-workspace-drop-target="trash"
-        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-destructive"
-        onClick={() => setOpen((value) => !value)}
-        onDragOver={canEdit ? allowWorkspaceInternalResourceDrop : undefined}
-        onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
-        onDrop={canEdit ? (event) => void finishWorkspaceTrashDrop(event, actions) : undefined}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        nativeButton
+        render={
+          <button
+            type="button"
+            data-workspace-drop-target="trash"
+            className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground data-[drop-target=true]:ring-2 data-[drop-target=true]:ring-destructive"
+            onDragOver={canEdit ? allowWorkspaceInternalResourceDrop : undefined}
+            onDragLeave={canEdit ? leaveWorkspaceResourceDrop : undefined}
+            onDrop={canEdit ? (event) => void finishWorkspaceTrashDrop(event, actions) : undefined}
+          >
+            <Trash2 className="size-4" />
+            <span className="min-w-0 flex-1 text-left">Trash</span>
+            {resources.length > 0 && (
+              <span aria-hidden="true" className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                {resources.length}
+              </span>
+            )}
+          </button>
+        }
+      />
+      <PopoverContent
+        role="region"
+        aria-label="Trash"
+        align="start"
+        side="top"
+        sideOffset={4}
+        className="w-80 gap-0 rounded-md p-0"
       >
-        <Trash2 className="size-4" />
-        <span className="min-w-0 flex-1 text-left">Trash</span>
-        {resources.length > 0 && (
-          <span aria-hidden="true" className="rounded bg-muted px-1.5 py-0.5 text-xs">
-            {resources.length}
-          </span>
-        )}
-      </button>
-      {open && (
-        <div
-          role="region"
-          aria-label="Trash"
-          className="absolute bottom-9 left-0 z-50 flex w-80 flex-col rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
-        >
-          <div className="max-h-[300px] overflow-y-auto p-2">
-            {collection.state === 'unknown' && (
-              <p className="px-2 py-5 text-center text-sm text-muted-foreground">Loading trash…</p>
-            )}
-            {collection.state === 'known' && resources.length === 0 && (
-              <p className="px-2 py-5 text-center text-sm text-muted-foreground">Trash is empty</p>
-            )}
-            {resources.map((resource) => {
-              const Icon = resourceKindIcon(resource.kind)
-              const confirming =
-                confirmation.type === 'resource' && confirmation.resourceId === resource.id
-              return (
-                <div
-                  key={resource.id}
-                  className="group flex min-w-0 items-center rounded-md px-1 py-1 hover:bg-muted"
+        <div className="max-h-[300px] overflow-y-auto p-2">
+          {collection.state === 'unknown' && (
+            <p className="px-2 py-5 text-center text-sm text-muted-foreground">Loading trash…</p>
+          )}
+          {collection.state === 'known' && resources.length === 0 && (
+            <p className="px-2 py-5 text-center text-sm text-muted-foreground">Trash is empty</p>
+          )}
+          {resources.map((resource) => {
+            const Icon = resourceKindIcon(resource.kind)
+            const confirming =
+              confirmation.type === 'resource' && confirmation.resourceId === resource.id
+            return (
+              <div
+                key={resource.id}
+                className="group flex min-w-0 items-center rounded-md px-1 py-1 hover:bg-muted"
+              >
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  onClick={() => {
+                    actions.open(resource.id)
+                    setOpen(false)
+                  }}
                 >
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                    onClick={() => {
-                      actions.open(resource.id)
-                      setOpen(false)
-                    }}
-                  >
-                    <Icon className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{resource.title}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {resourceKindLabel(resource.kind)}
-                      </span>
+                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{resource.title}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {resourceKindLabel(resource.kind)}
                     </span>
-                  </button>
-                  {canEdit && (
-                    <>
-                      <button
-                        type="button"
-                        aria-label={`Restore ${resource.title}`}
-                        className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground"
-                        onClick={() => void mutate([resource.id], 'restore')}
-                      >
-                        <RotateCcw className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={
-                          confirming
-                            ? `Confirm delete ${resource.title} forever`
-                            : `Delete ${resource.title} forever`
-                        }
-                        className="inline-flex h-7 items-center justify-center rounded px-1.5 text-xs text-destructive hover:bg-background"
-                        onClick={() =>
-                          confirming
-                            ? void mutate([resource.id], 'permanentlyDelete')
-                            : setConfirmation({ type: 'resource', resourceId: resource.id })
-                        }
-                      >
-                        {confirming ? 'Confirm' : <Trash2 className="size-3.5" />}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-            <CircleHelp className="size-4 shrink-0 text-muted-foreground" />
-            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-              Items in Trash are permanently deleted after 30 days.
-            </p>
-          </div>
+                  </span>
+                </button>
+                {canEdit && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label={`Restore ${resource.title}`}
+                      className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground"
+                      onClick={() => void mutate([resource.id], 'restore')}
+                    >
+                      <RotateCcw className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={
+                        confirming
+                          ? `Confirm delete ${resource.title} forever`
+                          : `Delete ${resource.title} forever`
+                      }
+                      className="inline-flex h-7 items-center justify-center rounded px-1.5 text-xs text-destructive hover:bg-background"
+                      onClick={() =>
+                        confirming
+                          ? void mutate([resource.id], 'permanentlyDelete')
+                          : setConfirmation({ type: 'resource', resourceId: resource.id })
+                      }
+                    >
+                      {confirming ? 'Confirm' : <Trash2 className="size-3.5" />}
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          })}
         </div>
-      )}
-    </div>
+        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+          <CircleHelp className="size-4 shrink-0 text-muted-foreground" />
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Items in Trash are permanently deleted after 30 days.
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

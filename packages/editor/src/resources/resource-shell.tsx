@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { DragEvent, KeyboardEvent, PointerEvent, ReactNode } from 'react'
+import type { DragEvent, KeyboardEvent, ReactNode } from 'react'
 import { Menu, PanelLeftOpen } from 'lucide-react'
 import type { ResourceId } from './domain-id'
 import type { EditorRuntime } from './editor-runtime-contract'
@@ -11,7 +11,6 @@ import type {
 } from './resource-index-contract'
 import { DEFAULT_WORKSPACE_PREFERENCES } from './workspace-preferences'
 import type { WorkspacePreferencePatch } from './workspace-preferences'
-import { normalizeWorkspacePanelGeometry } from './workspace-panel-geometry'
 import { EMPTY_WORKSPACE_SELECTION, updateWorkspaceSelection } from './workspace-selection'
 import type { WorkspaceSelection, WorkspaceSelectionAction } from './workspace-selection'
 import { EMPTY_WORKSPACE_CLIPBOARD } from './workspace-clipboard'
@@ -39,6 +38,7 @@ import { ResourceHistoryPreview } from './workspace/resource-history-preview'
 import { useResourceSnapshot } from './workspace/use-resource-snapshot'
 import { useWorkspacePanelGeometry } from './workspace/use-workspace-panel-geometry'
 import { ResourceViewAsBanner } from './workspace/resource-view-as-banner'
+import { ResizableWorkspacePanel } from './workspace/resizable-workspace-panel'
 import type { ResourceRightSidebarPanel } from './workspace/resource-right-sidebar-panels'
 import { resourceRightSidebarPanels } from './workspace/resource-right-sidebar-panels'
 import { createWorkspaceActions } from './workspace/resource-operations'
@@ -201,7 +201,6 @@ export function ResourceShell({
       aria-label={ariaLabel}
       aria-busy="false"
       className="relative flex h-full min-h-0 overflow-hidden bg-background text-foreground"
-      onDrag={resourceDrag.move}
       onDragEnd={resourceDrag.end}
       onDragEnterCapture={resourceDrag.updateEffect}
       onDragLeave={resourceDrag.leave}
@@ -215,6 +214,7 @@ export function ResourceShell({
           panel="left"
           size={panelGeometry.left}
           onCommit={(size) => changePanelSize('left', size)}
+          onClose={() => patchPreference({ field: 'leftPanelVisible', value: false })}
         >
           <ResourceSidebar
             actions={actions}
@@ -291,6 +291,7 @@ export function ResourceShell({
           panel="right"
           size={panelGeometry.right}
           onCommit={(size) => changePanelSize('right', size)}
+          onClose={() => patchPreference({ field: 'rightPanelVisible', value: false })}
         >
           <ResourceRightSidebar
             actions={actions}
@@ -549,7 +550,16 @@ function useWorkspaceResourceDragOverlay(
   const [state, setState] = useState<WorkspaceResourceDragOverlayState>(null)
   const nativePreviewRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
   const lastFeedbackKey = useRef<string | null>(null)
+  useEffect(() => {
+    const position = (event: globalThis.DragEvent) => {
+      if (!dragging.current || (event.clientX === 0 && event.clientY === 0)) return
+      positionWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
+    }
+    document.addEventListener('dragover', position, true)
+    return () => document.removeEventListener('dragover', position, true)
+  }, [])
   const begin = (event: DragEvent<HTMLElement>) => {
     const drag = readWorkspaceResourceDrag(event.dataTransfer)
     if (!drag) return
@@ -564,6 +574,7 @@ function useWorkspaceResourceDragOverlay(
     if (nativePreviewRef.current) {
       event.dataTransfer.setDragImage(nativePreviewRef.current, 0, 0)
     }
+    dragging.current = true
     showWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
     lastFeedbackKey.current = null
     setState({
@@ -572,14 +583,9 @@ function useWorkspaceResourceDragOverlay(
       resource: source.value,
     })
   }
-  const move = (event: DragEvent<HTMLElement>) => {
-    if (event.clientX === 0 && event.clientY === 0) return
-    positionWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
-  }
   const updateEffect = (event: DragEvent<HTMLElement>) => {
     const target = event.target instanceof Element ? event.target : null
     const copy = event.altKey || event.ctrlKey || event.metaKey
-    positionWorkspaceDragOverlay(overlayRef.current, event.clientX, event.clientY)
     queueMicrotask(() => {
       const activeTarget = target?.closest<HTMLElement>('[data-drop-target=true]') ?? null
       const destination = workspaceDropTarget(activeTarget, snapshot, workspaceName)
@@ -603,7 +609,11 @@ function useWorkspaceResourceDragOverlay(
   }
   const end = (event: DragEvent<HTMLElement>) => {
     clearWorkspaceResourceDropTargets(event.currentTarget)
-    overlayRef.current?.classList.add('hidden')
+    dragging.current = false
+    if (overlayRef.current) {
+      overlayRef.current.classList.add('hidden')
+      overlayRef.current.style.willChange = ''
+    }
     lastFeedbackKey.current = null
     setState(null)
   }
@@ -611,7 +621,6 @@ function useWorkspaceResourceDragOverlay(
     begin,
     end,
     leave: clearWorkspaceResourceDropTargetsAfterLeave,
-    move,
     nativePreviewRef,
     overlayRef,
     state,
@@ -643,12 +652,13 @@ function workspaceDropTarget(
 
 function showWorkspaceDragOverlay(element: HTMLDivElement | null, x: number, y: number) {
   if (!element) return
+  element.style.willChange = 'transform'
   element.classList.remove('hidden')
   positionWorkspaceDragOverlay(element, x, y)
 }
 
 function positionWorkspaceDragOverlay(element: HTMLDivElement | null, x: number, y: number) {
-  if (element) element.style.transform = `translate(${x + 8}px, ${y + 8}px)`
+  if (element) element.style.transform = `translate3d(${x + 8}px, ${y + 8}px, 0)`
 }
 
 function clearWorkspaceResourceDropTargetsAfterLeave(event: DragEvent<HTMLElement>) {
@@ -1022,93 +1032,6 @@ function EmptyTopbar({
           <PanelLeftOpen className="size-4" />
         </button>
       )}
-    </div>
-  )
-}
-
-function ResizableWorkspacePanel({
-  children,
-  onCommit,
-  panel,
-  size,
-}: {
-  children: ReactNode
-  onCommit: (size: number) => void
-  panel: 'left' | 'right'
-  size: number
-}) {
-  const panelElement = useRef<HTMLDivElement>(null)
-  const contentElement = useRef<HTMLDivElement>(null)
-  const activeResize = useRef<AbortController | null>(null)
-  const draggedSize = useRef(size)
-  useEffect(
-    () => () => {
-      activeResize.current?.abort()
-    },
-    [],
-  )
-  const resize = (requestedSize: number) => {
-    const bounded = normalizeWorkspacePanelGeometry({ [panel]: requestedSize })[panel]
-    if (panelElement.current) panelElement.current.style.width = `${bounded}px`
-    if (contentElement.current) contentElement.current.style.width = `${bounded}px`
-    draggedSize.current = bounded
-    return bounded
-  }
-
-  const startResize = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return
-    event.preventDefault()
-    const startX = event.clientX
-    const startSize = panelElement.current?.getBoundingClientRect().width ?? size
-    activeResize.current?.abort()
-    const controller = new AbortController()
-    activeResize.current = controller
-    const resizeHandle = event.currentTarget
-    resizeHandle.setAttribute('data-resizing', 'true')
-    resize(startSize)
-    const move = (moveEvent: globalThis.PointerEvent) => {
-      const delta = moveEvent.clientX - startX
-      resize(startSize + (panel === 'left' ? delta : -delta))
-    }
-    const finish = () => {
-      controller.abort()
-      if (activeResize.current === controller) activeResize.current = null
-      resizeHandle.removeAttribute('data-resizing')
-      onCommit(draggedSize.current)
-    }
-    window.addEventListener('pointermove', move, { signal: controller.signal })
-    window.addEventListener('pointerup', finish, { signal: controller.signal })
-    window.addEventListener('pointercancel', finish, { signal: controller.signal })
-  }
-
-  return (
-    <div
-      ref={panelElement}
-      className={`relative z-20 h-full min-h-0 shrink-0 max-md:absolute max-md:inset-y-0 ${panel === 'left' ? 'max-md:left-0' : 'max-md:right-0'}`}
-      style={{ width: size }}
-    >
-      <div ref={contentElement} className="h-full overflow-hidden" style={{ width: size }}>
-        {children}
-      </div>
-      <div
-        role="separator"
-        aria-label={`Resize ${panel} sidebar`}
-        aria-orientation="vertical"
-        aria-valuemax={600}
-        aria-valuemin={200}
-        aria-valuenow={size}
-        className={`absolute inset-y-0 z-30 w-px cursor-col-resize touch-none bg-border transition-[width,background-color] duration-100 ease-out hover:w-1 hover:bg-border focus-visible:w-1 focus-visible:bg-primary focus-visible:outline-none data-[resizing=true]:w-1 data-[resizing=true]:bg-primary ${panel === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'}`}
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-          event.preventDefault()
-          const direction = event.key === 'ArrowRight' ? 1 : -1
-          const currentSize = panelElement.current?.getBoundingClientRect().width ?? size
-          const nextSize = resize(currentSize + direction * (panel === 'left' ? 10 : -10))
-          onCommit(nextSize)
-        }}
-        onPointerDown={startResize}
-      />
     </div>
   )
 }

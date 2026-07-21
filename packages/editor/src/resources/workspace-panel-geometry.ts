@@ -10,8 +10,8 @@ export const DEFAULT_WORKSPACE_PANEL_GEOMETRY: WorkspacePanelGeometry = {
   right: 280,
 }
 
-const MIN_WORKSPACE_PANEL_SIZE = 200
-const MAX_WORKSPACE_PANEL_SIZE = 600
+export const MIN_WORKSPACE_PANEL_SIZE = 200
+export const MAX_WORKSPACE_PANEL_SIZE = 600
 
 export function normalizeWorkspacePanelGeometry(value: unknown): WorkspacePanelGeometry {
   const geometry = isRecord(value) ? value : {}

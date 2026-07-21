@@ -29,6 +29,16 @@ vi.mock('react-zoom-pan-pinch', () => ({
   TransformComponent: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
+function dragEventWithPosition(
+  type: string,
+  dataTransfer: unknown,
+  position: Readonly<{ clientX: number; clientY: number }>,
+) {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, ...position })
+  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+  return event
+}
+
 describe('ResourceShell', () => {
   it('becomes ready only after the initial root collection is known', async () => {
     const { core } = await shellRuntime(true)
@@ -535,6 +545,7 @@ describe('ResourceShell', () => {
     const root = screen.getByLabelText('resources resource drop zone')
     fireEvent.contextMenu(root, { clientX: 10, clientY: 100 })
     const rootMenu = within(screen.getByRole('menu', { name: 'Sidebar actions' }))
+    expect(screen.getByRole('menu', { name: 'Sidebar actions' }).parentElement).toBe(document.body)
     expect(rootMenu.getByRole('menuitem', { name: 'Undo' })).toBeDisabled()
     expect(rootMenu.getByRole('menuitem', { name: 'Redo' })).toBeDisabled()
     expect(rootMenu.getByRole('menuitem', { name: 'New…' })).toBeVisible()
@@ -552,6 +563,7 @@ describe('ResourceShell', () => {
 
     fireEvent.contextMenu(root, { clientX: 10, clientY: 100 })
     fireEvent.click(screen.getByRole('menuitem', { name: 'New…' }))
+    expect(screen.getByRole('menu', { name: 'New resource' }).parentElement).toBe(document.body)
     fireEvent.click(
       within(screen.getByRole('menu', { name: 'New resource' })).getByRole('menuitem', {
         name: 'Folder',
@@ -861,11 +873,21 @@ describe('ResourceShell', () => {
     expect(dataTransfer.setDragImage).toHaveBeenCalledOnce()
     expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent(resource.title)
 
-    fireEvent.dragOver(screen.getByLabelText('resources resource drop zone'), {
-      clientX: 40,
-      clientY: 50,
-      dataTransfer,
-    })
+    const rootDropZone = screen.getByLabelText('resources resource drop zone')
+    fireEvent(
+      rootDropZone,
+      dragEventWithPosition('dragover', dataTransfer, { clientX: 40, clientY: 50 }),
+    )
+    expect(screen.getByTestId('resource-drag-overlay').style.transform).toBe(
+      'translate3d(48px, 58px, 0)',
+    )
+    fireEvent(
+      rootDropZone,
+      dragEventWithPosition('dragover', dataTransfer, { clientX: 80, clientY: 90 }),
+    )
+    expect(screen.getByTestId('resource-drag-overlay').style.transform).toBe(
+      'translate3d(88px, 98px, 0)',
+    )
     await waitFor(() =>
       expect(screen.getByTestId('resource-drag-overlay')).toHaveTextContent('Already in “DM view”'),
     )
@@ -1538,6 +1560,42 @@ describe('ResourceShell', () => {
     core.dispose()
   })
 
+  it('snaps a sidebar closed when resizing below the reference threshold', async () => {
+    const { core } = await shellRuntime(true)
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    const separator = await screen.findByRole('separator', { name: 'Resize left sidebar' })
+    const panel = separator.parentElement
+    if (!panel) throw new Error('expected resizable panel')
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({
+      bottom: 800,
+      height: 800,
+      left: 0,
+      right: 288,
+      top: 0,
+      width: 288,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    fireEvent.pointerDown(separator, { button: 0, clientX: 288 })
+    fireEvent.pointerMove(window, { clientX: 30 })
+    expect(panel).toHaveStyle({ width: '0px' })
+    fireEvent.pointerUp(window, { clientX: 30 })
+
+    await waitFor(() =>
+      expect(screen.queryByRole('navigation', { name: 'Sidebar' })).not.toBeInTheDocument(),
+    )
+    core.dispose()
+  })
+
   it('supports modifier ranges and keyboard movement across visible resources', async () => {
     const { core, resource } = await shellRuntime(true)
 
@@ -1829,6 +1887,12 @@ describe('ResourceShell', () => {
     )
 
     fireEvent.click(await screen.findByRole('button', { name: 'Trash' }))
+    expect(
+      within(screen.getByRole('navigation', { name: 'Sidebar' })).queryByRole('region', {
+        name: 'Trash',
+      }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Trash' })).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: `Restore ${resource.title}` }))
 
     await waitFor(() =>

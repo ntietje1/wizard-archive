@@ -32,7 +32,7 @@ export function WorkspaceResourceDragOverlay({
         ref={overlayRef}
         aria-hidden="true"
         data-testid="resource-drag-overlay"
-        className="pointer-events-none fixed left-0 top-0 z-[10000] hidden w-fit rounded-sm border border-border bg-background px-2 py-1 text-xs shadow-lg shadow-foreground/10"
+        className="pointer-events-none fixed left-0 top-0 z-[10000] hidden w-fit rounded-sm border border-border bg-background px-2 py-1 text-xs shadow-lg shadow-foreground/10 transition-none"
       >
         {state && Icon && (
           <>

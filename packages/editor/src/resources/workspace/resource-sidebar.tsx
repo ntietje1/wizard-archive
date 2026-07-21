@@ -741,7 +741,7 @@ function ResourceRowMenuButton({
       <button
         type="button"
         aria-label={`More options for ${resource.title}`}
-        className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+        className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
         onClick={(event) => {
           event.stopPropagation()
           onOpenContextMenu(resourceContextMenuRequest(event, resource, 'sidebar'))
